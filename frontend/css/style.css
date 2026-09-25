@@ -1,0 +1,38 @@
+@charset "UTF-8";
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #0b0f19 !important;
+  background: 
+    linear-gradient(135deg, rgba(11, 15, 25, 0.90) 0%, rgba(20, 24, 40, 0.88) 50%, rgba(11, 15, 25, 0.94) 100%),
+    url("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=2000&q=80") center/cover no-repeat fixed !important;
+}
+
+/* Tùy chỉnh thanh cuộn cho Sidebar và Main view chuẩn Enterprise */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.6);
+}
+
+/* Hoạt ảnh rung khi nhập sai thông tin */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
