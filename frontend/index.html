@@ -1,90 +1,301 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HRS - Hệ thống Tuyển dụng Nội bộ</title>
-  <!-- Font Awesome lấy icon vali, email, khóa, mắt ẩn/hiện -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-  <link rel="stylesheet" href="css/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>HR Recruit - Đăng nhập</title>
+
+    <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
-  <div class="login-wrapper">
-    <!-- CỘT TRÁI: BANNER XANH GRADIENT -->
-    <div class="hero-panel">
-      <div class="hero-circle circle-1"></div>
-      <div class="hero-circle circle-2"></div>
+<div class="login-page">
 
-      <!-- Header: Logo HRS -->
-      <div class="hero-top">
-        <div class="hrs-logo-box">
-          <i class="fa-solid fa-briefcase"></i>
+    <!-- =========================
+         PHẦN 1: LEFT HERO
+    ========================== -->
+    <section class="hero-section">
+
+        <div class="hero-content">
+
+            <!-- Logo -->
+            <div class="brand">
+                <div class="brand-icon">
+                    <span>♙</span>
+                </div>
+
+                <span>HR Recruit</span>
+            </div>
+
+
+            <!-- Nội dung giới thiệu -->
+            <div class="hero-text">
+
+                <h1>
+                    Nền tảng Tuyển dụng
+                    <span>Nội bộ Doanh nghiệp</span>
+                </h1>
+
+                <p>
+                    Hệ thống chuyên dụng tối ưu quy trình tìm kiếm,
+                    sàng lọc và phát triển nhân tài cho toàn bộ nhân sự
+                    HR thuộc hệ thống.
+                </p>
+
+            </div>
+
+
+            <!-- Hình minh họa -->
+            <div class="hero-illustration">
+
+                <div class="search-icon">
+                    🔍
+                </div>
+
+                <div class="candidate-card">
+
+                    <div class="card-top">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                    <div class="candidate">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <div class="candidate selected">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+
+                        <b>✓</b>
+                    </div>
+
+                    <div class="candidate">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <div class="candidate">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="people-icon">
+                    👥
+                </div>
+
+            </div>
+
+
+            <!-- Version -->
+            <div class="version">
+                Phiên bản 4.2.0 (Enterprise)
+            </div>
+
         </div>
-        <span class="hrs-brand-name">HRS</span>
-      </div>
 
-      <!-- Nội dung giới thiệu bên dưới -->
-      <div class="hero-bottom">
-        <div class="portal-badge">INTERNAL PORTAL</div>
-        <h1 class="hero-title">Hệ thống Tuyển dụng Nội bộ</h1>
-        <p class="hero-desc">
-          Nền tảng quản lý quy trình, kết nối ứng viên và tối ưu hóa hiệu suất tuyển dụng dành riêng cho nhân sự của tổ chức.
-        </p>
-      </div>
-    </div>
+    </section>
 
-    <!-- CỘT PHẢI: FORM ĐĂNG NHẬP -->
-    <div class="form-panel">
-      <div class="form-box">
-        <h2 class="auth-title">Đăng nhập</h2>
-        <p class="auth-subtitle">Sử dụng email công ty để truy cập hệ thống</p>
 
-        <!-- Khung thông báo lỗi / khóa tài khoản -->
-        <div id="login-alert" class="alert-box" style="display: none;"></div>
+    <!-- =========================
+         PHẦN 2 + 3: LOGIN
+    ========================== -->
+    <section class="login-section">
 
-        <form id="login-form">
-          <!-- Email -->
-          <div class="input-group">
-            <label class="input-label">Email công ty</label>
-            <div class="input-wrapper">
-              <i class="fa-regular fa-envelope input-icon"></i>
-              <input 
-                type="email" 
-                id="input-email" 
-                placeholder="ten.ban@congty.vn" 
-                required 
-              />
+        <div class="login-card">
+
+            <!-- =====================
+                 PHẦN 2: FORM ĐĂNG NHẬP
+            ====================== -->
+
+            <div class="login-header">
+
+                <h2>Chào mừng quay trở lại</h2>
+
+                <p>
+                    Đăng nhập vào cổng thông tin tuyển dụng
+                    nhân sự nội bộ
+                </p>
+
             </div>
-          </div>
 
-          <!-- Mật khẩu -->
-          <div class="input-group">
-            <div class="label-row">
-              <label class="input-label">Mật khẩu</label>
-              <a href="#" class="forgot-link" onclick="alert('Vui lòng liên hệ IT/Admin để lấy lại mật khẩu!'); return false;">Quên mật khẩu?</a>
-            </div>
-            <div class="input-wrapper">
-              <i class="fa-solid fa-lock input-icon"></i>
-              <input 
-                type="password" 
-                id="input-password" 
-                placeholder="••••••••" 
-                required 
-              />
-              <button type="button" id="btn-toggle-pass" class="toggle-pass-btn">
-                <i class="fa-regular fa-eye-slash" id="pass-eye-icon"></i>
-              </button>
-            </div>
-          </div>
 
-          <!-- Nút Đăng nhập -->
-          <button type="submit" id="btn-submit" class="btn-submit">Đăng nhập</button>
-        </form>
-      </div>
-    </div>
-  </div>
+            <form id="loginForm" novalidate>
 
-  <script src="js/script.js"></script>
+                <!-- Email -->
+                <div class="form-group">
+
+                    <label for="email">
+                        Email công ty
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            ✉
+                        </span>
+
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="email@company.com"
+                            autocomplete="email"
+                        >
+
+                    </div>
+
+                    <small
+                        class="error-message"
+                        id="emailError">
+                    </small>
+
+                </div>
+
+
+                <!-- Password -->
+                <div class="form-group">
+
+                    <label for="password">
+                        Mật khẩu
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            🔒
+                        </span>
+
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                        >
+
+                        <button
+                            type="button"
+                            class="show-password"
+                            id="showPassword">
+                            👁
+                        </button>
+
+                    </div>
+
+                    <small
+                        class="error-message"
+                        id="passwordError">
+                    </small>
+
+                </div>
+
+
+                <!-- Remember + Forgot -->
+                <div class="login-options">
+
+                    <label class="remember">
+
+                        <input
+                            type="checkbox"
+                            id="remember">
+
+                        <span>
+                            Ghi nhớ đăng nhập
+                        </span>
+
+                    </label>
+
+                    <a href="#" id="forgotPassword">
+                        Quên mật khẩu?
+                    </a>
+
+                </div>
+
+
+                <!-- =====================
+                     PHẦN 3: BUTTON LOGIN
+                ====================== -->
+
+                <button
+                    type="submit"
+                    class="login-button"
+                    id="loginButton">
+
+                    <span>Đăng nhập</span>
+
+                    <span class="arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <!-- Thông báo lỗi chung -->
+                <div
+                    class="general-error"
+                    id="generalError">
+                </div>
+
+
+                <!-- Divider -->
+                <div class="divider">
+
+                    <span></span>
+
+                    <p>Hoặc</p>
+
+                    <span></span>
+
+                </div>
+
+
+                <!-- Google -->
+                <button
+                    type="button"
+                    class="google-button"
+                    id="googleButton">
+
+                    <span class="google-icon">
+                        G
+                    </span>
+
+                    <span>
+                        Đăng nhập bằng Google
+                    </span>
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<script src="js/script.js"></script>
+
 </body>
 </html>
