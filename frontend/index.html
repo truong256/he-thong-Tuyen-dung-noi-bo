@@ -1,540 +1,90 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cổng Tuyển Dụng Nội Bộ - Enterprise HR Management</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font chữ Inter & Font Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <!-- Đường dẫn CSS theo đúng cây thư mục của bạn -->
-  <link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HRS - Hệ thống Tuyển dụng Nội bộ</title>
+  <!-- Font Awesome lấy icon vali, email, khóa, mắt ẩn/hiện -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="text-slate-100 min-h-screen relative font-sans overflow-x-hidden">
+<body>
 
-  <!-- ==================== 1. MÀN HÌNH ĐĂNG NHẬP ==================== -->
-  <div id="login-view" class="relative z-10 min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-12">
-    <div class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
-      
-      <!-- CỘT TRÁI: GIỚI THIỆU HỆ THỐNG NỘI BỘ -->
-      <div class="lg:col-span-7 flex flex-col justify-center text-left py-6 lg:py-0">
-        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold uppercase tracking-wider w-fit mb-6 backdrop-blur-md shadow-lg shadow-indigo-950/40">
-          <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-          </svg>
-          Phân Hệ Quản Trị Nhân Sự Doanh Nghiệp
+  <div class="login-wrapper">
+    <!-- CỘT TRÁI: BANNER XANH GRADIENT -->
+    <div class="hero-panel">
+      <div class="hero-circle circle-1"></div>
+      <div class="hero-circle circle-2"></div>
+
+      <!-- Header: Logo HRS -->
+      <div class="hero-top">
+        <div class="hrs-logo-box">
+          <i class="fa-solid fa-briefcase"></i>
         </div>
-
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight mb-4">
-          Cổng Quản Trị <br/>
-          <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-sky-300 to-indigo-200">
-            Dữ Liệu Tuyển Dụng Nội Bộ
-          </span>
-        </h1>
-
-        <p class="text-slate-300 text-base sm:text-lg leading-relaxed max-w-xl mb-8 font-light">
-          Khu vực bảo mật cấp doanh nghiệp. Hệ thống chỉ cho phép chuyên viên nhân sự nội bộ truy xuất dữ liệu định danh, tiến trình phỏng vấn và phê duyệt Offer[cite: 1].
-        </p>
-
-        <div class="flex flex-wrap items-center gap-6 pt-5 border-t border-slate-700/60">
-          <div class="flex items-center gap-2.5 text-xs text-slate-300">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-            Máy chủ bảo mật nội bộ
-          </div>
-          <div class="flex items-center gap-2.5 text-xs text-slate-300">
-            <span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span>
-            Mã hóa dữ liệu ứng viên
-          </div>
-        </div>
+        <span class="hrs-brand-name">HRS</span>
       </div>
 
-      <!-- CỘT PHẢI: KHUNG ĐĂNG NHẬP -->
-      <div class="lg:col-span-5 flex justify-end w-full">
-        <div class="w-full max-w-md bg-white text-slate-900 rounded-2xl shadow-2xl p-6 sm:p-8 border border-white/20 backdrop-blur-md relative overflow-hidden">
-          
-          <div class="mb-6">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-3 border border-indigo-100">
-              <svg class="w-3.5 h-3.5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-              </svg>
-              Xác thực chuyên viên nhân sự
-            </div>
-            <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Đăng nhập tài khoản</h2>
-            <p class="text-sm text-slate-500 mt-1">Sử dụng tài khoản doanh nghiệp để truy xuất hồ sơ</p>
-          </div>
+      <!-- Nội dung giới thiệu bên dưới -->
+      <div class="hero-bottom">
+        <div class="portal-badge">INTERNAL PORTAL</div>
+        <h1 class="hero-title">Hệ thống Tuyển dụng Nội bộ</h1>
+        <p class="hero-desc">
+          Nền tảng quản lý quy trình, kết nối ứng viên và tối ưu hóa hiệu suất tuyển dụng dành riêng cho nhân sự của tổ chức.
+        </p>
+      </div>
+    </div>
 
-          <!-- Thông báo lỗi -->
-          <div id="error-alert" class="hidden mb-4 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs sm:text-sm flex items-start gap-2.5 animate-shake">
-            <svg class="w-5 h-5 text-rose-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-            </svg>
-            <div class="flex-1">
-              <span class="font-semibold block">Đăng nhập thất bại</span>
-              <span>Email hoặc mật khẩu không chính xác, hoặc bạn chưa được phân quyền truy cập.</span>
-            </div>
-          </div>
+    <!-- CỘT PHẢI: FORM ĐĂNG NHẬP -->
+    <div class="form-panel">
+      <div class="form-box">
+        <h2 class="auth-title">Đăng nhập</h2>
+        <p class="auth-subtitle">Sử dụng email công ty để truy cập hệ thống</p>
 
-          <!-- Thông báo khóa tài khoản -->
-          <div id="lockout-alert" class="hidden mb-4 p-4 bg-amber-50 border border-amber-300 rounded-xl text-amber-900 text-xs sm:text-sm">
-            <div class="flex items-center gap-2 font-bold text-amber-800 text-sm mb-1">
-              <svg class="w-5 h-5 text-amber-600 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
-              </svg>
-              Tài khoản bị tạm khóa bảo mật 15 phút[cite: 1]
-            </div>
-            <p class="text-amber-800 leading-snug mb-2 font-medium">Bạn đã nhập sai 5 lần liên tiếp. Thời gian mở khóa tự động:</p>[cite: 1]
-            <div class="bg-amber-100/80 rounded-lg p-2 text-center border border-amber-200">
-              <span id="countdown-timer" class="font-mono text-xl font-bold text-amber-950">15:00</span>
+        <!-- Khung thông báo lỗi / khóa tài khoản -->
+        <div id="login-alert" class="alert-box" style="display: none;"></div>
+
+        <form id="login-form">
+          <!-- Email -->
+          <div class="input-group">
+            <label class="input-label">Email công ty</label>
+            <div class="input-wrapper">
+              <i class="fa-regular fa-envelope input-icon"></i>
+              <input 
+                type="email" 
+                id="input-email" 
+                placeholder="ten.ban@congty.vn" 
+                required 
+              />
             </div>
           </div>
 
-          <!-- Form đăng nhập -->
-          <form id="login-form" class="space-y-4" autocomplete="off" onsubmit="return false;">
-            <div>
-              <label for="email" class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Email doanh nghiệp</label>
-              <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
-                  </svg>
-                </div>
-                <input 
-                  type="text" 
-                  id="email" 
-                  autocomplete="off"
-                  placeholder="Hãy nhập địa chỉ email" 
-                  class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition"
-                />
-              </div>
+          <!-- Mật khẩu -->
+          <div class="input-group">
+            <div class="label-row">
+              <label class="input-label">Mật khẩu</label>
+              <a href="#" class="forgot-link" onclick="alert('Vui lòng liên hệ IT/Admin để lấy lại mật khẩu!'); return false;">Quên mật khẩu?</a>
             </div>
-
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <label for="password" class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Mật khẩu</label>
-                <a href="#" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition">Quên mật khẩu?</a>
-              </div>
-              <div class="relative flex items-center">
-                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-                  </svg>
-                </div>
-                <input 
-                  type="password" 
-                  id="password" 
-                  autocomplete="new-password"
-                  placeholder="Hãy nhập mật khẩu" 
-                  class="w-full pl-11 pr-12 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:bg-white transition"
-                />
-                <button 
-                  type="button" 
-                  id="toggle-password" 
-                  onclick="togglePasswordVisibility()"
-                  class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-indigo-600 cursor-pointer z-20"
-                >
-                  <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            <!-- Nút đăng nhập -->
-            <button 
-              type="button" 
-              id="submit-btn" 
-              onclick="doLogin()" 
-              class="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition duration-150 flex items-center justify-center gap-2 mt-2 cursor-pointer"
-            >
-              <span>Đăng nhập hệ thống</span>
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-              </svg>
-            </button>
-          </form>
-
-          <!-- Tài khoản mẫu -->
-          <div class="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-600">
-            <span class="font-semibold text-slate-800">Tài khoản kiểm thử:</span>
-            <div class="mt-1 font-mono text-[11px] text-slate-700">
-              Email: <span class="text-indigo-600 font-bold">hr@company.com</span> | Mật khẩu: <span class="text-indigo-600 font-bold">Admin@123</span>
+            <div class="input-wrapper">
+              <i class="fa-solid fa-lock input-icon"></i>
+              <input 
+                type="password" 
+                id="input-password" 
+                placeholder="••••••••" 
+                required 
+              />
+              <button type="button" id="btn-toggle-pass" class="toggle-pass-btn">
+                <i class="fa-regular fa-eye-slash" id="pass-eye-icon"></i>
+              </button>
             </div>
           </div>
 
-          <!-- FOOTER -->
-          <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-end gap-2 text-xs text-slate-400">
-            <span>Vai trò: <strong class="text-slate-600 font-medium">Nhân sự nội bộ</strong></span>
-            <span class="text-slate-300">•</span>
-            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-mono font-bold text-[11px] border border-slate-200">
-              Mã: S1-01
-            </span>
-          </div>
-
-        </div>
+          <!-- Nút Đăng nhập -->
+          <button type="submit" id="btn-submit" class="btn-submit">Đăng nhập</button>
+        </form>
       </div>
     </div>
   </div>
 
-
-  <!-- ==================== 2. MÀN HÌNH DASHBOARD QUẢN TRỊ NỘI BỘ ==================== -->
-  <div id="dashboard-view" class="hidden relative z-10 min-h-screen flex bg-[#0b0f19]">
-    
-    <!-- SIDEBAR BÊN TRÁI -->
-    <aside class="w-72 bg-[#0f172a] border-r border-slate-800 flex flex-col shrink-0 min-h-screen select-none z-30">
-      
-      <!-- Logo Header -->
-      <div class="h-16 px-6 flex items-center gap-3.5 border-b border-slate-800 bg-[#0d1527]">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 text-white font-black text-sm flex items-center justify-center shadow-md shadow-indigo-600/30">
-          HR
-        </div>
-        <div>
-          <span class="font-extrabold text-white tracking-wider text-sm block">ENTERPRISE HR</span>
-          <span class="text-[10px] text-emerald-400 font-semibold uppercase tracking-wider block">Portal Trực Tuyến</span>
-        </div>
-      </div>
-
-      <!-- Danh mục menu điều hướng -->
-      <div class="flex-1 py-5 px-3.5 space-y-6 overflow-y-auto text-xs">
-        
-        <!-- Nhóm: Tổng quan -->
-        <div>
-          <span class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">TỔNG QUAN HỆ THỐNG</span>
-          <div class="space-y-1">
-            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-xl bg-indigo-600/15 text-indigo-400 font-semibold border border-indigo-500/30 transition">
-              <div class="flex items-center gap-3">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                Bảng điều khiển
-              </div>
-              <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-            </a>
-            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition">
-              <div class="flex items-center gap-3">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                Thông báo nội bộ
-              </div>
-              <span class="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-bold">4 mới</span>
-            </a>
-          </div>
-        </div>
-
-        <!-- Nhóm: Tuyển dụng -->
-        <div>
-          <span class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">QUẢN LÝ TUYỂN DỤNG</span>
-          <div class="space-y-1">
-            <a href="#" class="flex items-center justify-between px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition">
-              <div class="flex items-center gap-3">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                Hồ sơ ứng viên (CV)
-              </div>
-              <span class="px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold">128</span>
-            </a>
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
-              Tin đăng tuyển dụng
-            </a>
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-              Lịch phỏng vấn tuần
-            </a>
-          </div>
-        </div>
-
-        <!-- Nhóm: Đánh giá & Offer -->
-        <div>
-          <span class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">VẬN HÀNH & ĐÁNH GIÁ</span>
-          <div class="space-y-1">
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-              Kết quả đánh giá vòng 2
-            </a>
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              Thư mời nhận việc (Offer)
-            </a>
-          </div>
-        </div>
-
-        <!-- Nhóm: Trợ lý AI -->
-        <div>
-          <span class="px-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">AI ASSISTANT</span>
-          <div class="space-y-1">
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 transition">
-              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              AI chấm điểm CV tự động
-            </a>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Avatar & Nút Đăng xuất ở chân Sidebar -->
-      <div class="p-4 border-t border-slate-800/80 bg-[#0d1527]">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-9 h-9 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-300 font-bold flex items-center justify-center text-xs">
-            HR
-          </div>
-          <div class="flex-1 min-w-0">
-            <p id="user-display-email" class="text-xs font-semibold text-white truncate">hr@company.com</p>
-            <p class="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Chuyên viên chính
-            </p>
-          </div>
-        </div>
-        <button id="logout-btn" onclick="doLogout()" class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition text-xs font-semibold cursor-pointer border border-slate-700/60">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-          Đăng xuất hệ thống
-        </button>
-      </div>
-    </aside>
-
-    <!-- NỘI DUNG CHÍNH (MAIN DASHBOARD) -->
-    <main class="flex-1 flex flex-col min-w-0 overflow-y-auto">
-      
-      <!-- Topbar Header -->
-      <header class="h-16 border-b border-slate-800/90 px-6 sm:px-8 flex items-center justify-between bg-[#0f172a]/70 backdrop-blur-md sticky top-0 z-20">
-        <!-- Ô tìm kiếm nhanh -->
-        <div class="relative w-full max-w-md hidden sm:block">
-          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-          </div>
-          <input 
-            type="text" 
-            placeholder="Tìm nhanh tên ứng viên, vị trí, kỹ năng... (Ctrl + K)" 
-            class="w-full pl-10 pr-4 py-1.5 bg-slate-800/70 border border-slate-700/80 rounded-xl text-xs text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
-        </div>
-
-        <!-- Trạng thái & Chuông thông báo -->
-        <div class="flex items-center gap-4 ml-auto">
-          <div class="hidden lg:flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-xs font-medium">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            Máy chủ bảo mật nội bộ
-          </div>
-
-          <button class="relative p-2 rounded-xl bg-slate-800/80 text-slate-400 hover:text-white border border-slate-700/60 transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-[#0f172a]"></span>
-          </button>
-        </div>
-      </header>
-
-      <!-- Nội dung trung tâm -->
-      <div class="p-6 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
-        
-        <!-- Lời chào & Tiêu đề -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Trung Tâm Quản Trị Tuyển Dụng</h2>
-            <p class="text-slate-400 text-xs sm:text-sm mt-1">Dữ liệu thời gian thực được đồng bộ hóa từ cổng ứng tuyển nội bộ doanh nghiệp.</p>
-          </div>
-          <div class="flex items-center gap-3">
-            <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center gap-2">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-              Tạo vị trí mới
-            </button>
-          </div>
-        </div>
-
-        <!-- 4 THẺ METRICS KPI DOANH NGHIỆP -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div class="bg-[#11192b] border border-slate-800/90 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-            <div class="flex items-center justify-between text-slate-400 mb-3 text-xs font-medium">
-              <span>Tổng hồ sơ tiếp nhận</span>
-              <span class="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-              </span>
-            </div>
-            <div class="text-2xl font-black text-white">128 <span class="text-xs font-semibold text-emerald-400 ml-1">+14% tuần này</span></div>
-          </div>
-
-          <div class="bg-[#11192b] border border-slate-800/90 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-            <div class="flex items-center justify-between text-slate-400 mb-3 text-xs font-medium">
-              <span>Đang xếp lịch phỏng vấn</span>
-              <span class="p-1.5 bg-amber-500/10 text-amber-400 rounded-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-              </span>
-            </div>
-            <div class="text-2xl font-black text-white">24 <span class="text-xs font-semibold text-amber-300 ml-1">3 lịch hôm nay</span></div>
-          </div>
-
-          <div class="bg-[#11192b] border border-slate-800/90 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-            <div class="flex items-center justify-between text-slate-400 mb-3 text-xs font-medium">
-              <span>Chờ phản hồi Offer</span>
-              <span class="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </span>
-            </div>
-            <div class="text-2xl font-black text-white">8 <span class="text-xs font-semibold text-emerald-400 ml-1">Tỷ lệ nhận 88%</span></div>
-          </div>
-
-          <div class="bg-[#11192b] border border-slate-800/90 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-            <div class="flex items-center justify-between text-slate-400 mb-3 text-xs font-medium">
-              <span>Thời gian tuyển TB (Time-to-hire)</span>
-              <span class="p-1.5 bg-indigo-500/10 text-indigo-400 rounded-lg">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </span>
-            </div>
-            <div class="text-2xl font-black text-white">18 <span class="text-xs font-normal text-slate-400">ngày</span></div>
-          </div>
-        </div>
-
-        <!-- THẺ THÔNG BÁO GỢI Ý HÀNH ĐỘNG (NHƯ FITCORE) -->
-        <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/20 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">HÀNH ĐỘNG CẦN XỬ LÝ</span>
-              <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-            </div>
-            <h4 class="text-white font-bold text-base mt-2">Duyệt hồ sơ đợt phỏng vấn kỹ thuật ngày 26/09</h4>
-            <p class="text-slate-400 text-xs sm:text-sm mt-0.5">Bộ phận Kỹ thuật đã gửi bảng đánh giá cho 3 ứng viên Senior Frontend. Vui lòng xem kết quả để gửi Offer.</p>
-          </div>
-          <button class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shrink-0 shadow-lg shadow-indigo-600/30 cursor-pointer">
-            Xem hồ sơ ngay
-          </button>
-        </div>
-
-        <!-- BẢNG DỮ LIỆU QUẢN TRỊ ỨNG VIÊN CHUYÊN NGHIỆP -->
-        <div class="bg-[#11192b] border border-slate-800/90 rounded-2xl overflow-hidden shadow-2xl">
-          
-          <!-- Thanh điều khiển bảng (Filter & Action) -->
-          <div class="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#0d1527]">
-            <div class="flex items-center gap-3">
-              <h3 class="font-bold text-white text-sm">Hồ sơ ứng viên đang xử lý</h3>
-              <span class="px-2.5 py-0.5 rounded-full text-[11px] bg-slate-800 text-slate-300 border border-slate-700 font-medium">3 bản ghi</span>
-            </div>
-
-            <!-- Nút lọc và xuất file -->
-            <div class="flex items-center gap-2.5">
-              <button class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs border border-slate-700/80 transition flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
-                Bộ lọc
-              </button>
-              <button class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs border border-slate-700/80 transition flex items-center gap-1.5">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                Xuất Excel
-              </button>
-            </div>
-          </div>
-
-          <!-- Bảng chi tiết -->
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs text-slate-300">
-              <thead class="bg-slate-800/60 uppercase text-[11px] text-slate-400 border-b border-slate-800 font-semibold tracking-wider">
-                <tr>
-                  <th class="px-6 py-3.5">Ứng viên</th>
-                  <th class="px-6 py-3.5">Vị trí ứng tuyển</th>
-                  <th class="px-6 py-3.5">Kinh nghiệm</th>
-                  <th class="px-6 py-3.5">Điểm đánh giá</th>
-                  <th class="px-6 py-3.5">Trạng thái vòng</th>
-                  <th class="px-6 py-3.5 text-right">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-800/80 font-normal">
-                <!-- Ứng viên 1 -->
-                <tr class="hover:bg-slate-800/30 transition">
-                  <td class="px-6 py-4 flex items-center gap-3 font-medium text-white">
-                    <div class="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-300 flex items-center justify-center font-bold text-xs">LC</div>
-                    <div>
-                      <span class="block">Nguyễn Linh Chi</span>
-                      <span class="text-[11px] text-slate-400">chi.nguyen@email.com</span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 text-slate-200">Senior Frontend Engineer</td>
-                  <td class="px-6 py-4">4 năm</td>
-                  <td class="px-6 py-4">
-                    <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">9.2 / 10</span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 rounded-full text-[11px] bg-amber-500/15 text-amber-300 border border-amber-500/30 font-medium">
-                      Phỏng vấn vòng 2
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-right space-x-2">
-                    <button class="text-indigo-400 hover:text-indigo-300 font-semibold hover:underline">Chi tiết CV</button>
-                    <span class="text-slate-600">|</span>
-                    <button class="text-emerald-400 hover:text-emerald-300 font-semibold hover:underline">Duyệt</button>
-                  </td>
-                </tr>
-
-                <!-- Ứng viên 2 -->
-                <tr class="hover:bg-slate-800/30 transition">
-                  <td class="px-6 py-4 flex items-center gap-3 font-medium text-white">
-                    <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center font-bold text-xs">TH</div>
-                    <div>
-                      <span class="block">Trần Minh Hoàng</span>
-                      <span class="text-[11px] text-slate-400">hoang.tm@email.com</span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 text-slate-200">Product Manager</td>
-                  <td class="px-6 py-4">6 năm</td>
-                  <td class="px-6 py-4">
-                    <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">9.5 / 10</span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 rounded-full text-[11px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-medium">
-                      Chờ gửi Offer
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-right space-x-2">
-                    <button class="text-indigo-400 hover:text-indigo-300 font-semibold hover:underline">Chi tiết CV</button>
-                    <span class="text-slate-600">|</span>
-                    <button class="text-emerald-400 hover:text-emerald-300 font-semibold hover:underline">Gửi Offer</button>
-                  </td>
-                </tr>
-
-                <!-- Ứng viên 3 -->
-                <tr class="hover:bg-slate-800/30 transition">
-                  <td class="px-6 py-4 flex items-center gap-3 font-medium text-white">
-                    <div class="w-8 h-8 rounded-full bg-sky-500/20 text-sky-300 flex items-center justify-center font-bold text-xs">TK</div>
-                    <div>
-                      <span class="block">Vũ Tuấn Kiệt</span>
-                      <span class="text-[11px] text-slate-400">kiet.vu@email.com</span>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4 text-slate-200">DevOps Engineer</td>
-                  <td class="px-6 py-4">3 năm</td>
-                  <td class="px-6 py-4">
-                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 font-bold border border-blue-500/20">8.6 / 10</span>
-                  </td>
-                  <td class="px-6 py-4">
-                    <span class="px-2.5 py-1 rounded-full text-[11px] bg-blue-500/15 text-blue-300 border border-blue-500/30 font-medium">
-                      Sàng lọc hồ sơ
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-right space-x-2">
-                    <button class="text-indigo-400 hover:text-indigo-300 font-semibold hover:underline">Chi tiết CV</button>
-                    <span class="text-slate-600">|</span>
-                    <button class="text-rose-400 hover:text-rose-300 font-semibold hover:underline">Từ chối</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Phân trang (Pagination) -->
-          <div class="p-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 bg-[#0d1527]">
-            <span>Hiển thị 1 đến 3 trong số 128 hồ sơ</span>
-            <div class="flex items-center gap-1.5">
-              <button class="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 disabled:opacity-50">Trước</button>
-              <button class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-bold">1</button>
-              <button class="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">2</button>
-              <button class="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Sau</button>
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-    </main>
-
-  </div>
-
-  <!-- Nạp file JavaScript theo cấu trúc thư mục của bạn -->
   <script src="js/script.js"></script>
 </body>
 </html>
