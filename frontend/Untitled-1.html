@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S1-09 · Quản lý người dùng &amp; phân quyền</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<style>
+  :root{
+    --bg-page:#F6F7FB;
+    --bg-surface:#FFFFFF;
+    --bg-surface-2:#F1F5F9;
+    --border:#E5E9F0;
+    --border-strong:#CBD5E1;
+    --text-1:#0F172A;
+    --text-2:#475569;
+    --text-3:#64748B;
+
+    --primary:#5B4FE9;
+    --primary-dark:#4338CA;
+    --primary-light:#EEF0FF;
+    --accent-2:#06B6D4;
+    --accent-3:#EC4899;
+
+    --success:#16A34A;   --success-light:#DCFCE7;
+    --warning:#D97706;   --warning-light:#FEF3C7;
+    --danger:#DC2626;    --danger-light:#FEE2E2;
+
+    --badge-admin-bg:#FEF3C7;      --badge-admin-fg:#B45309;
+    --badge-hiring-bg:#E0E7FF;     --badge-hiring-fg:#4338CA;
+    --badge-interviewer-bg:#DBEAFE;--badge-interviewer-fg:#1D4ED8;
+    --badge-recruiter-bg:#DCFCE7;  --badge-recruiter-fg:#15803D;
+    --badge-employee-bg:#F1F5F9;   --badge-employee-fg:#475569;
+
+    --radius-sm:8px; --radius-md:12px; --radius-lg:18px;
+    --shadow-sm:0 1px 2px rgba(15,23,42,.05), 0 1px 1px rgba(15,23,42,.04);
+    --shadow-md:0 8px 20px rgba(15,23,42,.08);
+    --shadow-lg:0 24px 60px rgba(15,23,42,.22);
+  }
+  [data-theme="dark"]{
+    --bg-page:#0A0F1C;
+    --bg-surface:#111827;
+    --bg-surface-2:#0D1424;
+    --border:#1F2A3D;
+    --border-strong:#2E3B52;
+    --text-1:#F1F5F9;
+    --text-2:#CBD5E1;
+    --text-3:#8B99AF;
+
+    --primary-light:rgba(91,79,233,.22);
+    --success-light:rgba(22,163,74,.2);
+    --warning-light:rgba(217,119,6,.2);
+    --danger-light:rgba(220,38,38,.2);
+
+    --badge-admin-bg:rgba(217,119,6,.22);       --badge-admin-fg:#FBBF24;
+    --badge-hiring-bg:rgba(91,79,233,.25);      --badge-hiring-fg:#B4AEFB;
+    --badge-interviewer-bg:rgba(29,78,216,.25); --badge-interviewer-fg:#93C5FD;
+    --badge-recruiter-bg:rgba(21,128,61,.25);   --badge-recruiter-fg:#86EFAC;
+    --badge-employee-bg:rgba(100,116,139,.28);  --badge-employee-fg:#CBD5E1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+    --shadow-md:0 8px 24px rgba(0,0,0,.45);
+    --shadow-lg:0 24px 70px rgba(0,0,0,.6);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0; min-height:100vh;
+    font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg-page); color:var(--text-1);
+    -webkit-font-smoothing:antialiased;
+    transition:background .25s ease, color .25s ease;
+    position:relative; overflow-x:hidden;
+  }
+  .glow{position:fixed;border-radius:50%;filter:blur(90px);opacity:.35;z-index:0;pointer-events:none;transition:opacity .3s ease;}
+  [data-theme="dark"] .glow{opacity:.22;}
+  .glow-1{width:520px;height:520px;top:-220px;right:-160px;background:radial-gradient(circle,var(--primary),transparent 70%);}
+  .glow-2{width:420px;height:420px;bottom:-180px;left:-140px;background:radial-gradient(circle,var(--accent-2),transparent 70%);}
+  .wrap{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:28px 24px 90px;}
+
+  /* Topbar */
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:14px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand-mark{
+    width:42px;height:42px;border-radius:12px;flex-shrink:0;
+    background:linear-gradient(135deg,var(--primary),var(--accent-2));
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;
+    box-shadow:0 6px 16px rgba(91,79,233,.35);
+  }
+  .brand-text b{display:block;font-size:12.5px;font-weight:700;letter-spacing:.06em;color:var(--text-3);text-transform:uppercase;}
+  .brand-text span{font-size:13px;color:var(--text-3);}
+  .topbar-actions{display:flex;align-items:center;gap:10px;}
+  .icon-toggle{
+    width:40px;height:40px;border-radius:11px;border:1px solid var(--border);background:var(--bg-surface);
+    color:var(--text-2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;
+    transition:all .15s ease;
+  }
+  .icon-toggle:hover{border-color:var(--border-strong);color:var(--text-1);}
+
+  .page-header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:22px;}
+  .page-header h1{font-size:27px;font-weight:800;margin:0 0 6px;letter-spacing:-.02em;}
+  .page-header p{margin:0;color:var(--text-3);font-size:14.5px;}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;border:none;border-radius:var(--radius-sm);
+    font-family:inherit;font-size:14px;font-weight:600;padding:10px 18px;cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease, background .15s ease, filter .15s ease;
+    white-space:nowrap;
+  }
+  .btn:active{transform:scale(.96);}
+  .btn-primary{background:linear-gradient(135deg,var(--primary),#7C6CF0);color:#fff;box-shadow:0 6px 16px rgba(91,79,233,.35);}
+  .btn-primary:hover{filter:brightness(1.06);box-shadow:0 8px 22px rgba(91,79,233,.45);}
+  .btn-ghost{background:var(--bg-surface);color:var(--text-2);border:1px solid var(--border);}
+  .btn-ghost:hover{background:var(--bg-surface-2);border-color:var(--border-strong);color:var(--text-1);}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn-danger:hover{filter:brightness(1.08);}
+  .btn-sm{padding:7px 13px;font-size:13px;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  /* Tabs */
+  .tabs{display:inline-flex;gap:4px;background:var(--bg-surface-2);padding:4px;border-radius:12px;border:1px solid var(--border);margin-bottom:22px;}
+  .tab-btn{padding:9px 18px;border-radius:9px;border:none;background:transparent;color:var(--text-3);
+    font-weight:600;font-size:13.5px;cursor:pointer;transition:all .15s ease;font-family:inherit;}
+  .tab-btn.active{background:var(--bg-surface);color:var(--primary);box-shadow:var(--shadow-sm);}
+  .tab-btn:not(.active):hover{color:var(--text-1);}
+
+  /* Stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px;}
+  .stat-card{
+    background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+    padding:20px;display:flex;flex-direction:column;gap:14px;
+    box-shadow:var(--shadow-sm);transition:box-shadow .2s ease, transform .2s ease;position:relative;overflow:hidden;
+  }
+  .stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);}
+  .stat-top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .stat-icon{width:44px;height:44px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+  .stat-icon.total{background:var(--primary-light);color:var(--primary);}
+  .stat-icon.admin{background:var(--warning-light);color:var(--warning);}
+  .stat-icon.active{background:var(--success-light);color:var(--success);}
+  .stat-icon.inactive{background:var(--bg-surface-2);color:var(--text-3);}
+  .trend{display:inline-flex;align-items:center;gap:3px;font-size:11.5px;font-weight:700;padding:4px 8px;border-radius:999px;}
+  .trend.up{background:var(--success-light);color:var(--success);}
+  .trend.down{background:var(--danger-light);color:var(--danger);}
+  .stat-value{font-size:26px;font-weight:800;line-height:1;}
+  .stat-label{color:var(--text-3);font-size:13px;margin-top:4px;}
+
+  /* Distribution card */
+  .dist-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow-sm);}
+  .dist-card h3{margin:0 0 16px;font-size:14.5px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .dist-card h3 i{color:var(--primary);}
+  .dist-row{display:flex;align-items:center;gap:12px;margin-bottom:13px;}
+  .dist-row:last-child{margin-bottom:0;}
+  .dist-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .dist-label{width:140px;font-size:13px;font-weight:600;color:var(--text-2);flex-shrink:0;}
+  .dist-bar-track{flex:1;height:8px;border-radius:999px;background:var(--bg-surface-2);overflow:hidden;}
+  .dist-bar-fill{height:100%;border-radius:999px;transition:width .7s cubic-bezier(.16,1,.3,1);}
+  .dist-count{width:60px;text-align:right;font-size:12.5px;font-weight:700;color:var(--text-1);flex-shrink:0;}
+
+  /* Toolbar */
+  .toolbar{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;
+    display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;box-shadow:var(--shadow-sm);align-items:center;}
+  .search-box{flex:1;min-width:220px;position:relative;}
+  .search-box i{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:15px;}
+  .search-box input{width:100%;padding:10px 40px 10px 38px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    font-family:inherit;font-size:14px;background:var(--bg-surface-2);color:var(--text-1);transition:all .15s ease;}
+  .search-box input:focus{outline:none;border-color:var(--primary);background:var(--bg-surface);box-shadow:0 0 0 3px var(--primary-light);}
+  .kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--text-3);
+    border:1px solid var(--border);padding:1px 6px;border-radius:5px;background:var(--bg-surface);pointer-events:none;}
+  select.filter-select{padding:10px 34px 10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    font-family:inherit;font-size:13.5px;background-color:var(--bg-surface-2);color:var(--text-2);
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2364748B" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>');
+    background-repeat:no-repeat;background-position:right 12px center;appearance:none;-webkit-appearance:none;cursor:pointer;transition:border-color .15s ease;}
+  select.filter-select:focus{outline:none;border-color:var(--primary);}
+  .toolbar-divider{width:1px;height:26px;background:var(--border);}
+
+  /* Bulk bar */
+  .bulk-bar{display:none;align-items:center;justify-content:space-between;gap:14px;
+    background:linear-gradient(135deg,var(--primary),#7C6CF0);color:#fff;padding:12px 18px;border-radius:14px;
+    margin-bottom:16px;box-shadow:0 10px 26px rgba(91,79,233,.35);animation:slideDown .2s ease;}
+  .bulk-bar.show{display:flex;flex-wrap:wrap;}
+  .bulk-bar .left{display:flex;align-items:center;gap:10px;font-size:13.5px;font-weight:600;}
+  .bulk-bar .right{display:flex;gap:8px;}
+  .bulk-bar .btn-ghost{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);}
+  .bulk-bar .btn-ghost:hover{background:rgba(255,255,255,.25);}
+  @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Table card */
+  .table-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden;}
+  .table-scroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;min-width:780px;}
+  thead th{text-align:left;font-size:12px;font-weight:700;color:var(--text-3);padding:14px 16px;
+    border-bottom:1px solid var(--border);background:var(--bg-surface-2);white-space:nowrap;user-select:none;}
+  th.sortable{cursor:pointer;}
+  th.sortable:hover{color:var(--text-1);}
+  th.sortable .bi{font-size:11px;margin-left:4px;opacity:.5;}
+  th.sortable.active .bi{opacity:1;color:var(--primary);}
+  tbody td{padding:14px 16px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tbody tr{transition:background .15s ease;}
+  tbody tr:hover{background:var(--bg-surface-2);}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.row-selected{background:var(--primary-light);}
+  .user-cell{display:flex;align-items:center;gap:12px;}
+  .avatar{width:38px;height:38px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:14px;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.15);position:relative;}
+  .avatar.ring-admin{box-shadow:0 0 0 2px var(--bg-surface),0 0 0 4px #F59E0B;}
+  .user-name{font-weight:600;font-size:14.5px;color:var(--text-1);}
+  .user-email{font-size:12.5px;color:var(--text-3);margin-top:1px;}
+  mark{background:#FDE68A;color:#78350F;border-radius:3px;padding:0 2px;}
+  [data-theme="dark"] mark{background:#92400E;color:#FEF3C7;}
+  .role-tags{display:flex;flex-wrap:wrap;gap:6px;max-width:260px;}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+  .badge i{font-size:10px;}
+  .badge-admin{background:var(--badge-admin-bg);color:var(--badge-admin-fg);}
+  .badge-hiring{background:var(--badge-hiring-bg);color:var(--badge-hiring-fg);}
+  .badge-interviewer{background:var(--badge-interviewer-bg);color:var(--badge-interviewer-fg);}
+  .badge-recruiter{background:var(--badge-recruiter-bg);color:var(--badge-recruiter-fg);}
+  .badge-employee{background:var(--badge-employee-bg);color:var(--badge-employee-fg);}
+  .badge-more{background:var(--bg-surface-2);color:var(--text-3);}
+  .status-pill{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .dot-on{background:var(--success);box-shadow:0 0 0 3px var(--success-light);}
+  .dot-off{background:var(--text-3);box-shadow:0 0 0 3px var(--bg-surface-2);}
+  .row-actions{display:flex;gap:6px;align-items:center;}
+  .icon-btn{width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-3);transition:all .15s ease;}
+  .icon-btn:hover{background:var(--bg-surface-2);color:var(--text-1);border-color:var(--border-strong);}
+  .icon-btn.danger:hover{background:var(--danger-light);color:var(--danger);border-color:var(--danger);}
+  .empty-row td{padding:56px 20px;text-align:center;color:var(--text-3);font-size:14px;}
+
+  /* checkbox */
+  .chk{position:relative;width:18px;height:18px;display:inline-flex;cursor:pointer;flex-shrink:0;}
+  .chk input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer;}
+  .chk .box{width:18px;height:18px;border-radius:5px;border:1.8px solid var(--border-strong);background:var(--bg-surface);
+    display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
+  .chk input:checked ~ .box, .chk input:indeterminate ~ .box{background:var(--primary);border-color:var(--primary);}
+  .chk .box i{font-size:11px;color:#fff;opacity:0;transform:scale(.5);transition:all .15s ease;position:absolute;}
+  .chk .chk-check{opacity:0;}
+  .chk .chk-dash{opacity:0;}
+  .chk input:checked ~ .box .chk-check{opacity:1;transform:scale(1);}
+  .chk input:indeterminate ~ .box .chk-check{opacity:0;}
+  .chk input:indeterminate ~ .box .chk-dash{opacity:1;transform:scale(1);}
+
+  /* Pagination */
+  .pagination-bar{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-top:1px solid var(--border);flex-wrap:wrap;gap:10px;}
+  .pagination-info{font-size:12.5px;color:var(--text-3);}
+  .pagination{display:flex;gap:6px;align-items:center;}
+  .page-btn{min-width:32px;height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--border);
+    background:var(--bg-surface);color:var(--text-2);font-size:13px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:4px;transition:all .15s ease;font-family:inherit;}
+  .page-btn:hover:not(:disabled){background:var(--bg-surface-2);}
+  .page-btn.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .page-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* Matrix page */
+  .matrix-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);overflow:hidden;}
+  .matrix-head{padding:20px 22px;border-bottom:1px solid var(--border);}
+  .matrix-head h3{margin:0 0 4px;font-size:16px;font-weight:700;}
+  .matrix-head p{margin:0;font-size:13px;color:var(--text-3);}
+  table.matrix{width:100%;border-collapse:collapse;min-width:680px;}
+  table.matrix th, table.matrix td{padding:13px 16px;text-align:center;border-bottom:1px solid var(--border);font-size:13px;}
+  table.matrix th{background:var(--bg-surface-2);font-weight:700;color:var(--text-2);font-size:12px;white-space:nowrap;}
+  table.matrix td:first-child, table.matrix th:first-child{text-align:left;font-weight:600;color:var(--text-1);}
+  .perm-cell{cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;transition:all .15s ease;}
+  .perm-cell:hover{background:var(--bg-surface-2);}
+  .perm-cell.on{color:var(--success);}
+  .perm-cell.off{color:var(--border-strong);}
+  .perm-cell i{font-size:17px;}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(10,15,28,.55);backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:1000;
+    opacity:0;pointer-events:none;transition:opacity .2s ease;}
+  .overlay.show{opacity:1;pointer-events:auto;}
+  .modal{background:var(--bg-surface);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);
+    width:100%;max-width:480px;max-height:90vh;overflow-y:auto;
+    transform:translateY(16px) scale(.98);opacity:0;transition:all .25s cubic-bezier(.16,1,.3,1);}
+  .overlay.show .modal{transform:translateY(0) scale(1);opacity:1;}
+  .modal.modal-sm{max-width:400px;}
+  .modal-head{padding:22px 24px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;}
+  .modal-head h2{margin:0 0 4px;font-size:18px;font-weight:700;}
+  .modal-head p{margin:0;font-size:13.5px;color:var(--text-3);}
+  .modal-close{background:none;border:none;font-size:17px;color:var(--text-3);cursor:pointer;padding:4px;line-height:1;border-radius:6px;}
+  .modal-close:hover{background:var(--bg-surface-2);color:var(--text-1);}
+  .modal-body{padding:20px 24px;}
+  .modal-foot{padding:16px 24px 22px;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--border);margin-top:4px;}
+
+  .target-user{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg-surface-2);border-radius:var(--radius-md);margin-bottom:18px;}
+  .target-user .avatar{width:44px;height:44px;font-size:15px;}
+  .avatar-stack{display:flex;}
+  .avatar-stack .avatar{width:36px;height:36px;font-size:12.5px;margin-left:-10px;box-shadow:0 0 0 2px var(--bg-surface-2);}
+  .avatar-stack .avatar:first-child{margin-left:0;}
+
+  .section-label{font-size:13px;font-weight:700;color:var(--text-2);margin-bottom:10px;}
+  .role-option{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border:1.5px solid var(--border);
+    border-radius:var(--radius-md);margin-bottom:10px;cursor:pointer;transition:all .15s ease;
+    animation:fadeInUp .3s ease backwards;}
+  .role-option:nth-child(1){animation-delay:.02s;} .role-option:nth-child(2){animation-delay:.06s;}
+  .role-option:nth-child(3){animation-delay:.1s;} .role-option:nth-child(4){animation-delay:.14s;} .role-option:nth-child(5){animation-delay:.18s;}
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+  .role-option:hover{border-color:var(--border-strong);background:var(--bg-surface-2);}
+  .role-option.checked{border-color:var(--primary);background:var(--primary-light);}
+  .role-option.locked{opacity:.6;cursor:not-allowed;}
+  .role-option input[type=checkbox]{display:none;}
+  .role-checkmark{width:20px;height:20px;border-radius:6px;border:2px solid var(--border-strong);flex-shrink:0;margin-top:1px;
+    display:flex;align-items:center;justify-content:center;transition:all .15s ease;background:var(--bg-surface);}
+  .role-option.checked .role-checkmark{background:var(--primary);border-color:var(--primary);}
+  .role-checkmark i{font-size:12px;color:#fff;opacity:0;transform:scale(.5);transition:all .15s ease;}
+  .role-option.checked .role-checkmark i{opacity:1;transform:scale(1);}
+  .role-icon{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px;}
+  .role-icon.badge-admin{background:var(--badge-admin-bg);color:var(--badge-admin-fg);}
+  .role-icon.badge-hiring{background:var(--badge-hiring-bg);color:var(--badge-hiring-fg);}
+  .role-icon.badge-interviewer{background:var(--badge-interviewer-bg);color:var(--badge-interviewer-fg);}
+  .role-icon.badge-recruiter{background:var(--badge-recruiter-bg);color:var(--badge-recruiter-fg);}
+  .role-icon.badge-employee{background:var(--badge-employee-bg);color:var(--badge-employee-fg);}
+  .role-info{flex:1;}
+  .role-info .r-name{font-weight:700;font-size:14px;color:var(--text-1);}
+  .role-info .r-desc{font-size:12.5px;color:var(--text-3);margin-top:1px;}
+
+  .warning-box{display:flex;gap:10px;background:var(--warning-light);border:1px solid #FDE68A;border-radius:var(--radius-md);
+    padding:12px 14px;margin-top:14px;font-size:13px;color:#92400E;line-height:1.5;}
+  [data-theme="dark"] .warning-box{color:#FDE68A;border-color:rgba(217,119,6,.4);}
+  .warning-box i{font-size:16px;flex-shrink:0;margin-top:1px;}
+  .warning-box strong{display:block;margin-bottom:2px;}
+  .danger-box{display:flex;gap:10px;background:var(--danger-light);border:1px solid #FCA5A5;border-radius:var(--radius-md);
+    padding:12px 14px;margin-top:6px;font-size:13px;color:#991B1B;line-height:1.5;}
+  [data-theme="dark"] .danger-box{color:#FCA5A5;border-color:rgba(220,38,38,.4);}
+  .danger-box i{font-size:18px;flex-shrink:0;}
+
+  .field{margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:700;color:var(--text-2);margin-bottom:6px;}
+  .field input[type=text], .field input[type=email], .field select{
+    width:100%;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);
+    font-family:inherit;font-size:14px;background:var(--bg-surface-2);color:var(--text-1);transition:border-color .15s ease;}
+  .field input:focus, .field select:focus{outline:none;border-color:var(--primary);background:var(--bg-surface);box-shadow:0 0 0 3px var(--primary-light);}
+  .field-error{font-size:12px;color:var(--danger);margin-top:5px;display:none;}
+  .field.invalid input{border-color:var(--danger);}
+  .field.invalid .field-error{display:block;}
+
+  /* Toast */
+  .toast-wrap{position:fixed;top:22px;right:22px;z-index:2000;display:flex;flex-direction:column;gap:10px;max-width:340px;}
+  .toast{display:flex;align-items:center;gap:10px;background:var(--text-1);color:var(--bg-page);
+    padding:13px 14px 13px 16px;border-radius:12px;box-shadow:var(--shadow-lg);font-size:13.5px;font-weight:500;
+    transform:translateX(120%);opacity:0;transition:all .3s cubic-bezier(.16,1,.3,1);border-left:4px solid transparent;}
+  .toast.show{transform:translateX(0);opacity:1;}
+  .toast.t-ok{border-left-color:var(--success);}
+  .toast.t-warn{border-left-color:var(--warning);}
+  .toast.t-danger{border-left-color:var(--danger);}
+  .toast i.ticon{font-size:16px;flex-shrink:0;}
+  .toast.t-ok i.ticon{color:var(--success);}
+  .toast.t-warn i.ticon{color:var(--warning);}
+  .toast.t-danger i.ticon{color:var(--danger);}
+  .toast span{flex:1;}
+  .toast-undo{background:none;border:none;color:var(--primary);font-weight:700;font-size:13px;cursor:pointer;padding:2px 6px;font-family:inherit;flex-shrink:0;}
+  [data-theme="dark"] .toast{color:var(--text-1);}
+
+  @media (max-width:900px){ .stats{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:760px){
+    .stats{grid-template-columns:1fr 1fr;}
+    thead{display:none;}
+    table:not(.matrix), table:not(.matrix) tbody, table:not(.matrix) tr, table:not(.matrix) td{display:block;width:100%;}
+    table:not(.matrix) tbody tr{border-bottom:1px solid var(--border);padding:12px 4px;}
+    table:not(.matrix) tbody td{padding:8px 16px;border:none;}
+    .pagination-bar{flex-direction:column;align-items:stretch;text-align:center;}
+    .matrix-card .table-scroll{overflow-x:auto;}
+  }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><i class="bi bi-shield-lock-fill"></i></div>
+      <div class="brand-text">
+        <b>HR System · S1-09</b>
+        <span>Access &amp; Role Management</span>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-toggle" id="themeToggle" title="Đổi giao diện sáng/tối"><i class="bi bi-moon-stars-fill"></i></button>
+      <button class="btn btn-ghost" id="exportCsvBtn"><i class="bi bi-download"></i> Xuất CSV</button>
+      <button class="btn btn-primary" id="btnAddUser"><i class="bi bi-plus-lg"></i> Thêm người dùng</button>
+    </div>
+  </div>
+
+  <div class="page-header">
+    <div>
+      <h1>Quản lý người dùng</h1>
+      <p>Quản lý tài khoản và phân quyền người dùng trong hệ thống</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="users">Người dùng</button>
+    <button class="tab-btn" data-tab="matrix">Ma trận phân quyền</button>
+  </div>
+
+  <!-- ============ USERS VIEW ============ -->
+  <div id="usersView">
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-top"><div class="stat-icon total"><i class="bi bi-people-fill"></i></div><span class="trend up"><i class="bi bi-arrow-up-short"></i>8</span></div>
+        <div><div class="stat-value" id="statTotal">128</div><div class="stat-label">Tổng người dùng</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top"><div class="stat-icon admin"><i class="bi bi-shield-lock-fill"></i></div><span class="trend up"><i class="bi bi-arrow-up-short"></i>1</span></div>
+        <div><div class="stat-value" id="statAdmin">3</div><div class="stat-label">Quản trị viên</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top"><div class="stat-icon active"><i class="bi bi-patch-check-fill"></i></div><span class="trend up"><i class="bi bi-arrow-up-short"></i>12</span></div>
+        <div><div class="stat-value" id="statActive">116</div><div class="stat-label">Đang hoạt động</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-top"><div class="stat-icon inactive"><i class="bi bi-pause-circle-fill"></i></div><span class="trend down"><i class="bi bi-arrow-down-short"></i>3</span></div>
+        <div><div class="stat-value" id="statInactive">12</div><div class="stat-label">Không hoạt động</div></div>
+      </div>
+    </div>
+
+    <div class="dist-card">
+      <h3><i class="bi bi-bar-chart-fill"></i> Phân bổ vai trò</h3>
+      <div id="distList"></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên hoặc email...">
+        <span class="kbd">/</span>
+      </div>
+      <select class="filter-select" id="roleFilter">
+        <option value="">Tất cả vai trò</option>
+        <option value="Admin">Admin</option>
+        <option value="Hiring Manager">Hiring Manager</option>
+        <option value="Interviewer">Interviewer</option>
+        <option value="Recruiter">Recruiter</option>
+        <option value="Employee">Employee</option>
+      </select>
+      <select class="filter-select" id="statusFilter">
+        <option value="">Tất cả trạng thái</option>
+        <option value="active">Hoạt động</option>
+        <option value="inactive">Không hoạt động</option>
+      </select>
+      <div class="toolbar-divider"></div>
+      <select class="filter-select" id="sortSelect">
+        <option value="default">Sắp xếp: Mặc định</option>
+        <option value="name-asc">Tên A → Z</option>
+        <option value="name-desc">Tên Z → A</option>
+        <option value="newest">Mới thêm trước</option>
+      </select>
+    </div>
+
+    <div class="bulk-bar" id="bulkBar">
+      <div class="left"><i class="bi bi-check2-square"></i> <span id="bulkCount">0</span> người dùng đã chọn</div>
+      <div class="right">
+        <button class="btn btn-ghost btn-sm" id="bulkRoleBtn"><i class="bi bi-shield-plus"></i> Gán vai trò hàng loạt</button>
+        <button class="btn btn-ghost btn-sm" id="bulkDeleteBtn"><i class="bi bi-trash3"></i> Xóa</button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:40px;">
+                <label class="chk"><input type="checkbox" id="selectAllChk"><span class="box"><i class="bi bi-check-lg chk-check"></i><i class="bi bi-dash-lg chk-dash"></i></span></label>
+              </th>
+              <th class="sortable" data-sort="name">Người dùng <i class="bi bi-arrow-down-up"></i></th>
+              <th>Vai trò</th>
+              <th class="sortable" data-sort="status">Trạng thái <i class="bi bi-arrow-down-up"></i></th>
+              <th style="text-align:right;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination-bar">
+        <div class="pagination-info" id="pageInfo"></div>
+        <div class="pagination" id="paginationEl"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MATRIX VIEW ============ -->
+  <div id="matrixView" style="display:none;">
+    <div class="matrix-card">
+      <div class="matrix-head">
+        <h3>Ma trận phân quyền theo vai trò</h3>
+        <p>Bấm vào một ô để bật/tắt quyền tương ứng (bản minh họa giao diện).</p>
+      </div>
+      <div class="table-scroll">
+        <table class="matrix" id="matrixTable"></table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL: Quản lý vai trò (đơn / hàng loạt) -->
+<div class="overlay" id="roleModalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="rmTitle">Quản lý vai trò</h2>
+        <p>Phân quyền cho người dùng</p>
+      </div>
+      <button class="modal-close" id="closeRoleModal"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div id="rmSingleTarget" class="target-user">
+        <div class="avatar" id="rmAvatar">NA</div>
+        <div>
+          <div class="user-name" id="rmName">Nguyễn Văn An</div>
+          <div class="user-email" id="rmEmail">an.nguyen@gmail.com</div>
+        </div>
+      </div>
+      <div id="rmBulkTarget" class="target-user" style="display:none;">
+        <div class="avatar-stack" id="rmAvatarStack"></div>
+        <div><div class="user-name" id="rmBulkLabel">Áp dụng cho 0 người dùng</div>
+        <div class="user-email">Vai trò chung sẽ được ghi đè cho tất cả</div></div>
+      </div>
+
+      <div class="section-label">Vai trò của người dùng</div>
+      <div id="roleOptionsList"></div>
+
+      <div class="warning-box" id="adminWarning" style="display:none;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <div><strong>Bạn không thể tự thu hồi vai trò</strong>Quản trị hệ thống của chính mình.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelRoleModal">Hủy</button>
+      <button class="btn btn-primary" id="saveRoleModal"><i class="bi bi-check-lg"></i> Lưu thay đổi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Thêm / Sửa người dùng -->
+<div class="overlay" id="userFormOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <h2 id="ufTitle">Thêm người dùng</h2>
+        <p id="ufSubtitle">Tạo tài khoản mới trong hệ thống</p>
+      </div>
+      <button class="modal-close" id="closeUserForm"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="field" id="fNameWrap">
+        <label>Họ và tên</label>
+        <input type="text" id="fName" placeholder="Nhập họ và tên">
+        <div class="field-error">Vui lòng nhập họ và tên</div>
+      </div>
+      <div class="field" id="fEmailWrap">
+        <label>Email</label>
+        <input type="email" id="fEmail" placeholder="Nhập địa chỉ email">
+        <div class="field-error">Vui lòng nhập email hợp lệ</div>
+      </div>
+      <div class="field">
+        <label>Vai trò</label>
+        <select id="fRole">
+          <option value="Admin">Admin</option>
+          <option value="Hiring Manager">Hiring Manager</option>
+          <option value="Interviewer">Interviewer</option>
+          <option value="Recruiter" selected>Recruiter</option>
+          <option value="Employee">Employee</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Trạng thái</label>
+        <select id="fStatus">
+          <option value="active">Hoạt động</option>
+          <option value="inactive">Không hoạt động</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelUserForm">Hủy</button>
+      <button class="btn btn-primary" id="confirmUserForm"><i class="bi bi-check-lg"></i> <span id="ufBtnLabel">Thêm người dùng</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Xác nhận xóa -->
+<div class="overlay" id="deleteModalOverlay">
+  <div class="modal modal-sm">
+    <div class="modal-head">
+      <div><h2 id="delTitle">Xóa người dùng?</h2><p>Hành động này có thể hoàn tác trong ít giây</p></div>
+      <button class="modal-close" id="closeDeleteModal"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="danger-box"><i class="bi bi-exclamation-octagon-fill"></i>
+        <div id="delMessage">Bạn có chắc muốn xóa người dùng <strong>Nguyễn Văn An</strong>? Tài khoản sẽ bị vô hiệu hóa quyền truy cập.</div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="cancelDeleteModal">Hủy</button>
+      <button class="btn btn-danger" id="confirmDeleteModal"><i class="bi bi-trash3"></i> Xóa</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ============ THEME ============ */
+const root = document.documentElement;
+function applyTheme(t){
+  root.setAttribute('data-theme', t);
+  document.getElementById('themeToggle').innerHTML = t === 'dark' ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-stars-fill"></i>';
+  try{ localStorage.setItem('s109-theme', t); }catch(e){}
+}
+let savedTheme = 'light';
+try{ savedTheme = localStorage.getItem('s109-theme') || 'light'; }catch(e){}
+applyTheme(savedTheme);
+document.getElementById('themeToggle').addEventListener('click', ()=>{
+  applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('usersView').style.display = tab === 'users' ? 'block' : 'none';
+    document.getElementById('matrixView').style.display = tab === 'matrix' ? 'block' : 'none';
+    if(tab === 'matrix') renderMatrix();
+  });
+});
+
+/* ============ DATA ============ */
+const ROLE_META = {
+  "Admin":            { badge:"badge-admin",       icon:"bi-shield-lock-fill",   desc:"Toàn quyền quản lý hệ thống" },
+  "Hiring Manager":   { badge:"badge-hiring",       icon:"bi-briefcase-fill",     desc:"Quản lý hoạt động tuyển dụng" },
+  "Interviewer":      { badge:"badge-interviewer",  icon:"bi-person-video3",      desc:"Đánh giá và phỏng vấn ứng viên" },
+  "Recruiter":        { badge:"badge-recruiter",    icon:"bi-person-lines-fill",  desc:"Quản lý ứng viên và hồ sơ" },
+  "Employee":         { badge:"badge-employee",     icon:"bi-person-fill",        desc:"Người dùng thông thường" }
+};
+const ROLE_ORDER = ["Admin","Hiring Manager","Interviewer","Recruiter","Employee"];
+const ROLE_COLOR_DOT = { "Admin":"#D97706","Hiring Manager":"#5B4FE9","Interviewer":"#1D4ED8","Recruiter":"#16A34A","Employee":"#64748B" };
+const AVATAR_COLORS = ["#6366F1","#0EA5E9","#F59E0B","#10B981","#EC4899","#8B5CF6","#EF4444","#14B8A6","#F97316","#3B82F6"];
+
+const PERMISSIONS = [
+  { key:"view_candidates", label:"Xem ứng viên" },
+  { key:"manage_jobs", label:"Quản lý tin tuyển dụng" },
+  { key:"review_resumes", label:"Duyệt hồ sơ" },
+  { key:"conduct_interviews", label:"Phỏng vấn ứng viên" },
+  { key:"view_reports", label:"Xem báo cáo" },
+  { key:"manage_users", label:"Quản lý người dùng" },
+  { key:"system_settings", label:"Cấu hình hệ thống" }
+];
+const ROLE_PERMISSIONS = {
+  "Admin":            { view_candidates:true, manage_jobs:true, review_resumes:true, conduct_interviews:true, view_reports:true, manage_users:true, system_settings:true },
+  "Hiring Manager":   { view_candidates:true, manage_jobs:true, review_resumes:true, conduct_interviews:true, view_reports:true, manage_users:false, system_settings:false },
+  "Interviewer":      { view_candidates:true, manage_jobs:false, review_resumes:false, conduct_interviews:true, view_reports:false, manage_users:false, system_settings:false },
+  "Recruiter":        { view_candidates:true, manage_jobs:true, review_resumes:true, conduct_interviews:false, view_reports:false, manage_users:false, system_settings:false },
+  "Employee":         { view_candidates:false, manage_jobs:false, review_resumes:false, conduct_interviews:false, view_reports:false, manage_users:false, system_settings:false }
+};
+
+let users = [
+  { id:1, name:"Nguyễn Văn An",   email:"an.nguyen@gmail.com",   roles:["Admin","Hiring Manager","Interviewer"], status:"active",   isSelf:true  },
+  { id:2, name:"Trần Văn Bình",   email:"binh.tran@gmail.com",   roles:["Hiring Manager"],                        status:"active",   isSelf:false },
+  { id:3, name:"Lê Minh Anh",     email:"anh.le@gmail.com",      roles:["Recruiter","Employee"],                  status:"active",   isSelf:false },
+  { id:4, name:"Phạm Thu Hà",     email:"ha.pham@gmail.com",     roles:["Interviewer"],                           status:"active",   isSelf:false },
+  { id:5, name:"Hoàng Đức Long",  email:"long.hoang@gmail.com",  roles:["Employee"],                              status:"inactive", isSelf:false },
+  { id:6, name:"Đỗ Thị Mai",      email:"mai.do@gmail.com",      roles:["Recruiter"],                             status:"active",   isSelf:false },
+  { id:7, name:"Vũ Quang Huy",    email:"huy.vu@gmail.com",      roles:["Admin"],                                 status:"active",   isSelf:false },
+  { id:8, name:"Ngô Bảo Ngọc",    email:"ngoc.ngo@gmail.com",    roles:["Hiring Manager","Recruiter"],            status:"inactive", isSelf:false },
+  { id:9, name:"Bùi Xuân Sơn",    email:"son.bui@gmail.com",     roles:["Employee"],                              status:"active",   isSelf:false },
+  { id:10,name:"Cao Thị Linh",    email:"linh.cao@gmail.com",    roles:["Interviewer","Employee"],                status:"active",   isSelf:false }
+];
+
+let nextId = 11;
+let currentPage = 1;
+const PAGE_SIZE = 5;
+let selectedIds = new Set();
+let sortState = { key:null, dir:1 };
+let sortMode = 'default';
+let roleModalUserIds = [];
+let userFormMode = 'add';
+let editingUserId = null;
+let deleteTargetIds = [];
+let lastDeleted = null;
+
+/* ============ HELPERS ============ */
+function initials(name){
+  const parts = name.trim().split(" ");
+  return (parts[parts.length-2]?.[0] || "") + (parts[parts.length-1]?.[0] || "");
+}
+function avatarColor(id){ return AVATAR_COLORS[id % AVATAR_COLORS.length]; }
+function escapeHtml(s){ return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function highlight(text, q){
+  if(!q) return escapeHtml(text);
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if(idx === -1) return escapeHtml(text);
+  return escapeHtml(text.slice(0,idx)) + '<mark>' + escapeHtml(text.slice(idx,idx+q.length)) + '</mark>' + escapeHtml(text.slice(idx+q.length));
+}
+function roleBadge(role, q){
+  const m = ROLE_META[role];
+  return `<span class="badge ${m.badge}"><i class="bi ${m.icon}"></i>${role}</span>`;
+}
+
+function getFilteredUsers(){
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const roleF = document.getElementById('roleFilter').value;
+  const statusF = document.getElementById('statusFilter').value;
+  let list = users.filter(u=>{
+    const matchQ = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+    const matchRole = !roleF || u.roles.includes(roleF);
+    const matchStatus = !statusF || u.status === statusF;
+    return matchQ && matchRole && matchStatus;
+  });
+  if(sortMode === 'name-asc') list = list.slice().sort((a,b)=>a.name.localeCompare(b.name,'vi'));
+  else if(sortMode === 'name-desc') list = list.slice().sort((a,b)=>b.name.localeCompare(a.name,'vi'));
+  else if(sortMode === 'newest') list = list.slice().sort((a,b)=>b.id-a.id);
+  if(sortState.key){
+    list = list.slice().sort((a,b)=>{
+      let av = a[sortState.key], bv = b[sortState.key];
+      if(typeof av === 'string') return av.localeCompare(bv,'vi') * sortState.dir;
+      return (av > bv ? 1 : av < bv ? -1 : 0) * sortState.dir;
+    });
+  }
+  return list;
+}
+
+/* ============ RENDER TABLE ============ */
+function renderTable(){
+  const q = document.getElementById('searchInput').value.trim();
+  const filtered = getFilteredUsers();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage-1) * PAGE_SIZE;
+  const pageItems = filtered.slice(start, start+PAGE_SIZE);
+
+  const tbody = document.getElementById('userTableBody');
+  if(pageItems.length === 0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5"><i class="bi bi-inbox" style="font-size:24px;display:block;margin-bottom:8px;color:var(--border-strong);"></i>Không tìm thấy người dùng phù hợp</td></tr>`;
+  } else {
+    tbody.innerHTML = pageItems.map(u => {
+      const isAdmin = u.roles.includes('Admin');
+      const visibleRoles = u.roles.slice(0,2);
+      const extra = u.roles.length - visibleRoles.length;
+      return `
+      <tr class="${selectedIds.has(u.id)?'row-selected':''}">
+        <td><label class="chk"><input type="checkbox" class="rowChk" data-id="${u.id}" ${selectedIds.has(u.id)?'checked':''}><span class="box"><i class="bi bi-check-lg chk-check"></i><i class="bi bi-dash-lg chk-dash"></i></span></label></td>
+        <td>
+          <div class="user-cell">
+            <div class="avatar ${isAdmin?'ring-admin':''}" style="background:${avatarColor(u.id)}">${initials(u.name)}</div>
+            <div>
+              <div class="user-name">${highlight(u.name,q)}${u.isSelf ? ' <span style="color:var(--text-3);font-weight:500;font-size:12px;">(Bạn)</span>' : ''}</div>
+              <div class="user-email">${highlight(u.email,q)}</div>
+            </div>
+          </div>
+        </td>
+        <td><div class="role-tags">${visibleRoles.map(r=>roleBadge(r)).join('')}${extra>0?`<span class="badge badge-more">+${extra}</span>`:''}</div></td>
+        <td>
+          <span class="status-pill">
+            <span class="dot ${u.status==='active' ? 'dot-on' : 'dot-off'}"></span>
+            ${u.status==='active' ? 'Hoạt động' : 'Không hoạt động'}
+          </span>
+        </td>
+        <td>
+          <div class="row-actions" style="justify-content:flex-end;">
+            <button class="btn btn-ghost btn-sm" onclick="openRoleModal([${u.id}])"><i class="bi bi-shield-lock"></i> Vai trò</button>
+            <button class="icon-btn" title="Sửa" onclick="openEditUser(${u.id})"><i class="bi bi-pencil"></i></button>
+            <button class="icon-btn danger" title="Xóa" onclick="openDeleteModal([${u.id}])"><i class="bi bi-trash3"></i></button>
+          </div>
+        </td>
+      </tr>
+    `;}).join('');
+  }
+
+  document.getElementById('pageInfo').textContent =
+    filtered.length === 0 ? "Không có kết quả" :
+    `Hiển thị ${start+1}–${Math.min(start+PAGE_SIZE, filtered.length)} trong ${filtered.length} người dùng`;
+
+  renderPagination(totalPages);
+  renderStats();
+  renderDistribution();
+  updateSelectAllState(pageItems);
+  updateBulkBar();
+
+  tbody.querySelectorAll('.rowChk').forEach(chk=>{
+    chk.addEventListener('change', ()=>{
+      const id = Number(chk.dataset.id);
+      if(chk.checked) selectedIds.add(id); else selectedIds.delete(id);
+      renderTable();
+    });
+  });
+}
+
+function renderPagination(totalPages){
+  const el = document.getElementById('paginationEl');
+  let html = `<button class="page-btn" ${currentPage===1?'disabled':''} onclick="goPage(${currentPage-1})"><i class="bi bi-chevron-left"></i></button>`;
+  for(let p=1;p<=totalPages;p++){
+    html += `<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+  }
+  html += `<button class="page-btn" ${currentPage===totalPages?'disabled':''} onclick="goPage(${currentPage+1})"><i class="bi bi-chevron-right"></i></button>`;
+  el.innerHTML = html;
+}
+function goPage(p){ currentPage = p; renderTable(); }
+
+function renderStats(){
+  document.getElementById('statTotal').textContent = users.length;
+  document.getElementById('statAdmin').textContent = users.filter(u=>u.roles.includes('Admin')).length;
+  document.getElementById('statActive').textContent = users.filter(u=>u.status==='active').length;
+  document.getElementById('statInactive').textContent = users.filter(u=>u.status==='inactive').length;
+}
+
+function renderDistribution(){
+  const total = users.length || 1;
+  const el = document.getElementById('distList');
+  el.innerHTML = ROLE_ORDER.map(role=>{
+    const count = users.filter(u=>u.roles.includes(role)).length;
+    const pct = Math.round((count/total)*100);
+    return `
+      <div class="dist-row">
+        <span class="dist-dot" style="background:${ROLE_COLOR_DOT[role]}"></span>
+        <span class="dist-label">${role}</span>
+        <div class="dist-bar-track"><div class="dist-bar-fill" style="width:${pct}%;background:${ROLE_COLOR_DOT[role]}"></div></div>
+        <span class="dist-count">${count} · ${pct}%</span>
+      </div>`;
+  }).join('');
+}
+
+/* select-all logic */
+document.getElementById('selectAllChk').addEventListener('change', function(){
+  const filtered = getFilteredUsers();
+  const start = (currentPage-1)*PAGE_SIZE;
+  const pageItems = filtered.slice(start, start+PAGE_SIZE);
+  if(this.checked) pageItems.forEach(u=>selectedIds.add(u.id));
+  else pageItems.forEach(u=>selectedIds.delete(u.id));
+  renderTable();
+});
+function updateSelectAllState(pageItems){
+  const chk = document.getElementById('selectAllChk');
+  if(pageItems.length === 0){ chk.checked=false; chk.indeterminate=false; return; }
+  const selectedOnPage = pageItems.filter(u=>selectedIds.has(u.id)).length;
+  chk.checked = selectedOnPage === pageItems.length;
+  chk.indeterminate = selectedOnPage > 0 && selectedOnPage < pageItems.length;
+}
+
+function updateBulkBar(){
+  const bar = document.getElementById('bulkBar');
+  const count = selectedIds.size;
+  document.getElementById('bulkCount').textContent = count;
+  bar.classList.toggle('show', count > 0);
+}
+
+/* ============ SEARCH / FILTER / SORT ============ */
+document.getElementById('searchInput').addEventListener('input', ()=>{ currentPage=1; renderTable(); });
+document.getElementById('roleFilter').addEventListener('change', ()=>{ currentPage=1; renderTable(); });
+document.getElementById('statusFilter').addEventListener('change', ()=>{ currentPage=1; renderTable(); });
+document.getElementById('sortSelect').addEventListener('change', (e)=>{ sortMode = e.target.value; sortState={key:null,dir:1}; document.querySelectorAll('th.sortable').forEach(t=>t.classList.remove('active')); renderTable(); });
+
+document.querySelectorAll('th.sortable').forEach(th=>{
+  th.addEventListener('click', ()=>{
+    const key = th.dataset.sort;
+    if(sortState.key === key) sortState.dir *= -1;
+    else { sortState.key = key; sortState.dir = 1; }
+    sortMode = 'default';
+    document.getElementById('sortSelect').value = 'default';
+    document.querySelectorAll('th.sortable').forEach(t=>{
+      t.classList.remove('active');
+      t.querySelector('.bi').className = 'bi bi-arrow-down-up';
+    });
+    th.classList.add('active');
+    th.querySelector('.bi').className = sortState.dir === 1 ? 'bi bi-sort-alpha-down' : 'bi bi-sort-alpha-up';
+    renderTable();
+  });
+});
+
+/* ============ ROLE MODAL (single + bulk) ============ */
+const roleModalOverlay = document.getElementById('roleModalOverlay');
+let pendingRoleSelection = [];
+
+function openRoleModal(userIds){
+  roleModalUserIds = userIds;
+  const targets = users.filter(u=>userIds.includes(u.id));
+  if(targets.length === 0) return;
+  const includesSelf = targets.some(t=>t.isSelf);
+
+  if(targets.length === 1){
+    const u = targets[0];
+    document.getElementById('rmSingleTarget').style.display = 'flex';
+    document.getElementById('rmBulkTarget').style.display = 'none';
+    document.getElementById('rmAvatar').textContent = initials(u.name);
+    document.getElementById('rmAvatar').style.background = avatarColor(u.id);
+    document.getElementById('rmName').textContent = u.name;
+    document.getElementById('rmEmail').textContent = u.email;
+    document.getElementById('rmTitle').textContent = 'Quản lý vai trò';
+    pendingRoleSelection = [...u.roles];
+  } else {
+    document.getElementById('rmSingleTarget').style.display = 'none';
+    document.getElementById('rmBulkTarget').style.display = 'flex';
+    document.getElementById('rmBulkLabel').textContent = `Áp dụng cho ${targets.length} người dùng`;
+    document.getElementById('rmAvatarStack').innerHTML = targets.slice(0,5).map(u=>`<div class="avatar" style="background:${avatarColor(u.id)}">${initials(u.name)}</div>`).join('');
+    document.getElementById('rmTitle').textContent = 'Gán vai trò hàng loạt';
+    // intersection of roles as pre-checked baseline
+    pendingRoleSelection = ROLE_ORDER.filter(r=>targets.every(t=>t.roles.includes(r)));
+  }
+
+  document.getElementById('adminWarning').style.display = includesSelf ? 'flex' : 'none';
+  renderRoleOptions(includesSelf);
+  roleModalOverlay.classList.add('show');
+}
+
+function renderRoleOptions(lockAdmin){
+  const list = document.getElementById('roleOptionsList');
+  list.innerHTML = ROLE_ORDER.map(role=>{
+    const m = ROLE_META[role];
+    const checked = pendingRoleSelection.includes(role);
+    const lockThis = lockAdmin && role === 'Admin';
+    return `
+      <label class="role-option ${checked?'checked':''} ${lockThis?'locked':''}" data-role="${role}">
+        <input type="checkbox" ${checked?'checked':''} ${lockThis?'disabled':''}>
+        <div class="role-checkmark"><i class="bi bi-check-lg"></i></div>
+        <div class="role-icon ${m.badge}"><i class="bi ${m.icon}"></i></div>
+        <div class="role-info">
+          <div class="r-name">${role}${lockThis?' <i class="bi bi-lock-fill" style="font-size:11px;color:var(--text-3);"></i>':''}</div>
+          <div class="r-desc">${m.desc}</div>
+        </div>
+      </label>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.role-option').forEach(opt=>{
+    const role = opt.dataset.role;
+    const checkbox = opt.querySelector('input[type=checkbox]');
+    if(checkbox.disabled) return;
+    opt.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const idx = pendingRoleSelection.indexOf(role);
+      if(idx > -1) pendingRoleSelection.splice(idx,1);
+      else pendingRoleSelection.push(role);
+      checkbox.checked = pendingRoleSelection.includes(role);
+      opt.classList.toggle('checked', checkbox.checked);
+    });
+  });
+}
+
+function closeRoleModal(){ roleModalOverlay.classList.remove('show'); roleModalUserIds = []; }
+document.getElementById('closeRoleModal').addEventListener('click', closeRoleModal);
+document.getElementById('cancelRoleModal').addEventListener('click', closeRoleModal);
+roleModalOverlay.addEventListener('click', (e)=>{ if(e.target === roleModalOverlay) closeRoleModal(); });
+
+document.getElementById('saveRoleModal').addEventListener('click', ()=>{
+  if(pendingRoleSelection.length === 0){ showToast('Vui lòng chọn ít nhất một vai trò','warn'); return; }
+  const finalRoles = ROLE_ORDER.filter(r=>pendingRoleSelection.includes(r));
+  roleModalUserIds.forEach(id=>{
+    const u = users.find(x=>x.id===id);
+    if(u) u.roles = [...finalRoles];
+  });
+  const count = roleModalUserIds.length;
+  closeRoleModal();
+  selectedIds.clear();
+  renderTable();
+  showToast(count > 1 ? `Cập nhật vai trò cho ${count} người dùng thành công` : 'Cập nhật vai trò thành công', 'ok');
+});
+
+document.getElementById('bulkRoleBtn').addEventListener('click', ()=>{ if(selectedIds.size) openRoleModal([...selectedIds]); });
+
+/* ============ ADD / EDIT USER MODAL ============ */
+const userFormOverlay = document.getElementById('userFormOverlay');
+
+function resetFormErrors(){
+  document.getElementById('fNameWrap').classList.remove('invalid');
+  document.getElementById('fEmailWrap').classList.remove('invalid');
+}
+
+document.getElementById('btnAddUser').addEventListener('click', ()=>{
+  userFormMode = 'add'; editingUserId = null; resetFormErrors();
+  document.getElementById('ufTitle').textContent = 'Thêm người dùng';
+  document.getElementById('ufSubtitle').textContent = 'Tạo tài khoản mới trong hệ thống';
+  document.getElementById('ufBtnLabel').textContent = 'Thêm người dùng';
+  document.getElementById('fName').value = '';
+  document.getElementById('fEmail').value = '';
+  document.getElementById('fRole').value = 'Recruiter';
+  document.getElementById('fStatus').value = 'active';
+  userFormOverlay.classList.add('show');
+});
+
+function openEditUser(id){
+  const u = users.find(x=>x.id===id);
+  if(!u) return;
+  userFormMode = 'edit'; editingUserId = id; resetFormErrors();
+  document.getElementById('ufTitle').textContent = 'Sửa người dùng';
+  document.getElementById('ufSubtitle').textContent = u.name;
+  document.getElementById('ufBtnLabel').textContent = 'Lưu thay đổi';
+  document.getElementById('fName').value = u.name;
+  document.getElementById('fEmail').value = u.email;
+  document.getElementById('fRole').value = u.roles[0] || 'Employee';
+  document.getElementById('fStatus').value = u.status;
+  userFormOverlay.classList.add('show');
+}
+
+function closeUserForm(){ userFormOverlay.classList.remove('show'); }
+document.getElementById('closeUserForm').addEventListener('click', closeUserForm);
+document.getElementById('cancelUserForm').addEventListener('click', closeUserForm);
+userFormOverlay.addEventListener('click', (e)=>{ if(e.target === userFormOverlay) closeUserForm(); });
+
+document.getElementById('confirmUserForm').addEventListener('click', ()=>{
+  const name = document.getElementById('fName').value.trim();
+  const email = document.getElementById('fEmail').value.trim();
+  const role = document.getElementById('fRole').value;
+  const status = document.getElementById('fStatus').value;
+  resetFormErrors();
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  let hasError = false;
+  if(!name){ document.getElementById('fNameWrap').classList.add('invalid'); hasError = true; }
+  if(!emailOk){ document.getElementById('fEmailWrap').classList.add('invalid'); hasError = true; }
+  if(hasError) return;
+
+  if(userFormMode === 'add'){
+    users.unshift({ id: nextId++, name, email, roles:[role], status, isSelf:false });
+    closeUserForm(); currentPage = 1; renderTable();
+    showToast('Thêm người dùng thành công', 'ok');
+  } else {
+    const u = users.find(x=>x.id===editingUserId);
+    if(u){ u.name = name; u.email = email; u.status = status; if(!u.roles.includes(role)) u.roles = [role, ...u.roles.filter(r=>r!==role)]; }
+    closeUserForm(); renderTable();
+    showToast('Cập nhật người dùng thành công', 'ok');
+  }
+});
+
+/* ============ DELETE ============ */
+const deleteModalOverlay = document.getElementById('deleteModalOverlay');
+function openDeleteModal(ids){
+  deleteTargetIds = ids;
+  const targets = users.filter(u=>ids.includes(u.id));
+  document.getElementById('delTitle').textContent = ids.length>1 ? `Xóa ${ids.length} người dùng?` : 'Xóa người dùng?';
+  document.getElementById('delMessage').innerHTML = ids.length>1
+    ? `Bạn có chắc muốn xóa <strong>${ids.length}</strong> người dùng đã chọn? Các tài khoản sẽ bị vô hiệu hóa quyền truy cập.`
+    : `Bạn có chắc muốn xóa người dùng <strong>${escapeHtml(targets[0]?.name||'')}</strong>? Tài khoản sẽ bị vô hiệu hóa quyền truy cập.`;
+  deleteModalOverlay.classList.add('show');
+}
+function closeDeleteModal(){ deleteModalOverlay.classList.remove('show'); }
+document.getElementById('closeDeleteModal').addEventListener('click', closeDeleteModal);
+document.getElementById('cancelDeleteModal').addEventListener('click', closeDeleteModal);
+deleteModalOverlay.addEventListener('click', (e)=>{ if(e.target === deleteModalOverlay) closeDeleteModal(); });
+document.getElementById('bulkDeleteBtn').addEventListener('click', ()=>{ if(selectedIds.size) openDeleteModal([...selectedIds]); });
+
+document.getElementById('confirmDeleteModal').addEventListener('click', ()=>{
+  const removed = [];
+  deleteTargetIds.forEach(id=>{
+    const idx = users.findIndex(u=>u.id===id);
+    if(idx > -1){ removed.push({user:users[idx], index:idx}); users.splice(idx,1); selectedIds.delete(id); }
+  });
+  lastDeleted = removed;
+  closeDeleteModal();
+  renderTable();
+  showToast(removed.length>1 ? `Đã xóa ${removed.length} người dùng` : 'Đã xóa người dùng', 'danger', true);
+});
+
+function undoDelete(){
+  if(!lastDeleted) return;
+  lastDeleted.sort((a,b)=>a.index-b.index).forEach(r=> users.splice(Math.min(r.index,users.length),0,r.user));
+  lastDeleted = null;
+  renderTable();
+  showToast('Đã khôi phục', 'ok');
+}
+
+/* ============ EXPORT CSV ============ */
+document.getElementById('exportCsvBtn').addEventListener('click', ()=>{
+  const list = getFilteredUsers();
+  const rows = [["Họ và tên","Email","Vai trò","Trạng thái"]];
+  list.forEach(u=> rows.push([u.name, u.email, u.roles.join("; "), u.status==='active'?'Hoạt động':'Không hoạt động']));
+  const csv = "\uFEFF" + rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = "danh-sach-nguoi-dung.csv";
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('Đã xuất file CSV', 'ok');
+});
+
+/* ============ PERMISSION MATRIX ============ */
+function renderMatrix(){
+  const table = document.getElementById('matrixTable');
+  let html = '<thead><tr><th>Quyền hạn</th>' + ROLE_ORDER.map(r=>`<th>${r}</th>`).join('') + '</tr></thead><tbody>';
+  PERMISSIONS.forEach(p=>{
+    html += `<tr><td>${p.label}</td>`;
+    ROLE_ORDER.forEach(role=>{
+      const on = ROLE_PERMISSIONS[role][p.key];
+      html += `<td><span class="perm-cell ${on?'on':'off'}" data-role="${role}" data-perm="${p.key}"><i class="bi ${on?'bi-check-circle-fill':'bi-x-circle'}"></i></span></td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+
+  table.querySelectorAll('.perm-cell').forEach(cell=>{
+    cell.addEventListener('click', ()=>{
+      const role = cell.dataset.role, perm = cell.dataset.perm;
+      const newVal = !ROLE_PERMISSIONS[role][perm];
+      ROLE_PERMISSIONS[role][perm] = newVal;
+      cell.classList.toggle('on', newVal);
+      cell.classList.toggle('off', !newVal);
+      cell.querySelector('i').className = newVal ? 'bi bi-check-circle-fill' : 'bi bi-x-circle';
+      showToast(`Đã ${newVal?'bật':'tắt'} quyền "${PERMISSIONS.find(p=>p.key===perm).label}" cho ${role}`, newVal?'ok':'warn');
+    });
+  });
+}
+
+/* ============ TOAST ============ */
+function showToast(message, type='ok', withUndo=false){
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast t-' + (type==='ok'?'ok':type==='danger'?'danger':'warn');
+  const icon = type==='ok' ? 'bi-check-circle-fill' : type==='danger' ? 'bi-trash3-fill' : 'bi-exclamation-circle-fill';
+  t.innerHTML = `<i class="bi ${icon} ticon"></i><span>${message}</span>${withUndo?'<button class="toast-undo">Hoàn tác</button>':''}`;
+  wrap.appendChild(t);
+  requestAnimationFrame(()=> t.classList.add('show'));
+  if(withUndo){
+    t.querySelector('.toast-undo').addEventListener('click', ()=>{ undoDelete(); t.classList.remove('show'); setTimeout(()=>t.remove(),300); });
+  }
+  setTimeout(()=>{ t.classList.remove('show'); setTimeout(()=> t.remove(), 300); }, withUndo ? 5000 : 2800);
+}
+
+/* ============ KEYBOARD SHORTCUTS ============ */
+document.addEventListener('keydown', (e)=>{
+  const tag = (e.target.tagName||'').toLowerCase();
+  const typing = tag==='input' || tag==='select' || tag==='textarea';
+  if(e.key === '/' && !typing){ e.preventDefault(); document.getElementById('searchInput').focus(); }
+  if(e.key === 'Escape'){ closeRoleModal(); closeUserForm(); closeDeleteModal(); }
+});
+
+/* ============ INIT ============ */
+renderTable();
+</script>
+
+</body>
+</html>
