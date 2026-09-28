@@ -36,10 +36,25 @@ public class AdminUserService {
 
     @Transactional(readOnly = true)
     public Page<UserSummaryDto> listUsers(String search, String status, Pageable pageable) {
-        String querySearch = (search != null && !search.isBlank()) ? search.trim() : null;
+        String querySearch = (search != null && !search.isBlank()) ? search.trim().toLowerCase() : null;
         String queryStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) ? status.trim().toUpperCase() : null;
 
-        Page<User> users = userRepository.searchUsers(querySearch, queryStatus, pageable);
+        org.springframework.data.jpa.domain.Specification<User> spec = (root, query, cb) -> {
+            java.util.List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            if (querySearch != null) {
+                String pattern = "%" + querySearch + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(root.get("email")), pattern),
+                    cb.like(cb.lower(root.get("fullName")), pattern)
+                ));
+            }
+            if (queryStatus != null) {
+                predicates.add(cb.equal(root.get("status"), queryStatus));
+            }
+            return predicates.isEmpty() ? cb.conjunction() : cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+        };
+
+        Page<User> users = userRepository.findAll(spec, pageable);
         return users.map(this::mapToSummary);
     }
 
