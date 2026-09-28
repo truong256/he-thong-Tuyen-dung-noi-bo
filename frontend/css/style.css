@@ -858,3 +858,594 @@ body {
     }
 
 }
+/* =====================================
+   TÌM KIẾM VÀ LỌC TÀI KHOẢN
+===================================== */
+
+.account-filter {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    margin-bottom: 20px;
+}
+
+
+/* ================================
+   Ô TÌM KIẾM
+================================ */
+
+.account-filter .search-box {
+    position: relative;
+
+    flex: 1;
+}
+
+
+.account-filter .search-box::before {
+    content: "🔍";
+
+    position: absolute;
+
+    left: 14px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    font-size: 15px;
+
+    opacity: 0.65;
+
+    pointer-events: none;
+}
+
+
+.account-filter .search-box input {
+    width: 100%;
+
+    height: 44px;
+
+    padding: 0 15px 0 42px;
+
+    border: 1px solid #d8e2f0;
+
+    border-radius: 9px;
+
+    outline: none;
+
+    background: #ffffff;
+
+    color: #14213d;
+
+    font-size: 14px;
+
+    transition: 0.2s;
+}
+
+
+.account-filter .search-box input::placeholder {
+    color: #9aa9bd;
+}
+
+
+.account-filter .search-box input:focus {
+    border-color: #2470ed;
+
+    box-shadow:
+        0 0 0 3px rgba(36,112,237,0.1);
+}
+
+
+/* ================================
+   SELECT
+================================ */
+
+.account-filter select {
+    height: 44px;
+
+    min-width: 150px;
+
+    padding: 0 35px 0 13px;
+
+    border: 1px solid #d8e2f0;
+
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    color: #425675;
+
+    font-size: 14px;
+
+    outline: none;
+
+    cursor: pointer;
+
+    transition: 0.2s;
+}
+
+
+.account-filter select:focus {
+    border-color: #2470ed;
+
+    box-shadow:
+        0 0 0 3px rgba(36,112,237,0.1);
+}
+
+
+/* ================================
+   NÚT ĐẶT LẠI
+================================ */
+
+.account-filter #resetFilter {
+    height: 44px;
+
+    padding: 0 18px;
+
+    border: 1px solid #d8e2f0;
+
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    color: #526581;
+
+    font-size: 14px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    white-space: nowrap;
+
+    transition: 0.2s;
+}
+
+
+.account-filter #resetFilter:hover {
+    background: #f1f6ff;
+
+    border-color: #2470ed;
+
+    color: #2470ed;
+}
+
+
+/* =====================================
+   DANH SÁCH TÀI KHOẢN
+===================================== */
+
+.account-list {
+    width: 100%;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 10px;
+}
+
+
+/* =====================================
+   TỪNG TÀI KHOẢN
+===================================== */
+
+.account-item {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 16px 18px;
+
+    background: #ffffff;
+
+    border: 1px solid #e5ebf4;
+
+    border-radius: 10px;
+
+    transition: 0.2s;
+}
+
+
+.account-item:hover {
+    border-color: #bfd2f1;
+
+    box-shadow:
+        0 5px 18px rgba(20,55,100,0.06);
+
+    transform: translateY(-1px);
+}
+
+
+/* =====================================
+   THÔNG TIN TÀI KHOẢN
+===================================== */
+
+.account-info {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 4px;
+}
+
+
+.account-name {
+    font-size: 15px;
+
+    font-weight: 700;
+
+    color: #14213d;
+}
+
+
+.account-email {
+    font-size: 13px;
+
+    color: #71819b;
+}
+
+
+.account-phone {
+    font-size: 13px;
+
+    color: #71819b;
+}
+
+
+/* =====================================
+   ROLE + STATUS
+===================================== */
+
+.account-meta {
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+
+    flex-wrap: wrap;
+}
+
+
+.account-role,
+.account-status {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-height: 30px;
+
+    padding: 4px 10px;
+
+    border-radius: 6px;
+
+    font-size: 12px;
+
+    font-weight: 600;
+}
+
+
+/* Vai trò */
+
+.account-role {
+    background: #eef4ff;
+
+    color: #2463c9;
+}
+
+
+/* Hoạt động */
+
+.account-status.active {
+    background: #eaf9f0;
+
+    color: #198754;
+}
+
+
+/* Chờ duyệt */
+
+.account-status.pending {
+    background: #fff6df;
+
+    color: #b77900;
+}
+
+
+/* Đã khóa */
+
+.account-status.locked {
+    background: #fff0f0;
+
+    color: #dc3545;
+}
+
+
+/* =====================================
+   KHÔNG CÓ KẾT QUẢ
+===================================== */
+
+.no-result {
+    display: none;
+
+    padding: 35px 20px;
+
+    text-align: center;
+
+    border: 1px dashed #cbd8e8;
+
+    border-radius: 10px;
+
+    background: #fafcff;
+
+    color: #71819b;
+
+    font-size: 14px;
+}
+
+
+.no-result.show {
+    display: block;
+}
+
+
+/* =====================================
+   RESPONSIVE - ACCOUNT FILTER
+===================================== */
+
+@media (max-width: 900px) {
+
+    .account-filter {
+        flex-wrap: wrap;
+    }
+
+    .account-filter .search-box {
+        width: 100%;
+
+        flex: none;
+    }
+
+    .account-filter select {
+        flex: 1;
+
+        min-width: 0;
+    }
+
+    .account-filter #resetFilter {
+        width: auto;
+    }
+
+    .account-item {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .account-filter {
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .account-filter .search-box {
+        width: 100%;
+    }
+
+    .account-filter select {
+        width: 100%;
+    }
+
+    .account-filter #resetFilter {
+        width: 100%;
+    }
+
+    .account-item {
+        padding: 14px;
+    }
+
+    .account-meta {
+        width: 100%;
+    }
+
+}
+/* =====================================
+   FIX TRÀN MÀN HÌNH
+===================================== */
+
+html,
+body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* =====================================
+   ACCOUNT SECTION
+===================================== */
+
+.account-section {
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    padding: 40px;
+    overflow-x: hidden;
+}
+
+.account-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* =====================================
+   ACCOUNT HEADER
+===================================== */
+
+.account-header {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 25px;
+}
+
+.account-header h2 {
+    font-size: 28px;
+    color: #14213d;
+    margin-bottom: 8px;
+}
+
+.account-header p {
+    color: #71819b;
+    font-size: 14px;
+}
+
+/* =====================================
+   FIX BỘ LỌC
+===================================== */
+
+.account-filter {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.account-filter .search-box {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.account-filter .search-box input {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.account-filter select {
+    max-width: 100%;
+    flex-shrink: 1;
+}
+
+.account-filter #resetFilter {
+    flex-shrink: 0;
+}
+
+/* =====================================
+   FIX DANH SÁCH TÀI KHOẢN
+===================================== */
+
+.account-list {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.account-item {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.account-info {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1;
+}
+
+.account-name,
+.account-email,
+.account-phone {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+.account-meta {
+    max-width: 100%;
+    flex-shrink: 0;
+}
+
+/* =====================================
+   MOBILE
+===================================== */
+
+@media (max-width: 900px) {
+
+    .account-section {
+        padding: 30px 20px;
+    }
+
+    .account-filter {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .account-filter .search-box {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .account-filter select {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .account-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .account-meta {
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .account-section {
+        padding: 20px 15px;
+    }
+
+    .account-header h2 {
+        font-size: 24px;
+    }
+
+    .account-filter {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .account-filter .search-box {
+        width: 100%;
+        flex: none;
+    }
+
+    .account-filter select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .account-filter #resetFilter {
+        width: 100%;
+    }
+
+    .account-item {
+        width: 100%;
+        padding: 14px;
+    }
+}

@@ -1,682 +1,440 @@
 // ============================================
 // LẤY ELEMENT
 // ============================================
+const mainContainer = document.getElementById("mainContainer");
+const loginForm = document.getElementById("loginForm");
+const email = document.getElementById("email");
+const password = document.getElementById("password");
+const remember = document.getElementById("remember");
+const showPassword = document.getElementById("showPassword");
+const loginButton = document.getElementById("loginButton");
+const googleButton = document.getElementById("googleButton");
+const forgotPassword = document.getElementById("forgotPassword");
+const emailError = document.getElementById("emailError");
+const passwordError = document.getElementById("passwordError");
+const generalError = document.getElementById("generalError");
 
-const loginForm =
-    document.getElementById("loginForm");
+const heroSection = document.getElementById("heroSection");
+const loginSection = document.getElementById("loginSection");
+const accountSection = document.getElementById("accountSection");
 
-const email =
-    document.getElementById("email");
-
-const password =
-    document.getElementById("password");
-
-const remember =
-    document.getElementById("remember");
-
-const showPassword =
-    document.getElementById("showPassword");
-
-const loginButton =
-    document.getElementById("loginButton");
-
-const googleButton =
-    document.getElementById("googleButton");
-
-const emailError =
-    document.getElementById("emailError");
-
-const passwordError =
-    document.getElementById("passwordError");
-
-const generalError =
-    document.getElementById("generalError");
-
+const searchAccount = document.getElementById("searchAccount");
+const roleFilter = document.getElementById("roleFilter");
+const statusFilter = document.getElementById("statusFilter");
+const resetFilter = document.getElementById("resetFilter");
+const accountList = document.getElementById("accountList");
+const noResult = document.getElementById("noResult");
 
 // ============================================
-// CẤU HÌNH
+// CẤU HÌNH & TRẠNG THÁI
 // ============================================
-
 const MAX_ATTEMPTS = 5;
-
-// 15 phút
-const LOCK_TIME = 15 * 60 * 1000;
-
+const LOCK_TIME = 15 * 60 * 1000; // 15 phút
+let lockTimer = null;
 
 // ============================================
-// LOCAL STORAGE
+// LOCAL STORAGE HELPERS
 // ============================================
-
 function getFailedAttempts() {
-
-    return Number(
-        localStorage.getItem("loginFailedAttempts") || 0
-    );
-
+    return Number(localStorage.getItem("loginFailedAttempts") || 0);
 }
-
 
 function setFailedAttempts(value) {
-
-    localStorage.setItem(
-        "loginFailedAttempts",
-        value
-    );
-
+    localStorage.setItem("loginFailedAttempts", value);
 }
-
 
 function getLockTime() {
-
-    return Number(
-        localStorage.getItem("loginLockedUntil") || 0
-    );
-
+    return Number(localStorage.getItem("loginLockedUntil") || 0);
 }
-
 
 function setLockTime(time) {
-
-    localStorage.setItem(
-        "loginLockedUntil",
-        time
-    );
-
+    localStorage.setItem("loginLockedUntil", time);
 }
 
-
 // ============================================
-// HIỂN THỊ LỖI
+// XỬ LÝ LỖI
 // ============================================
-
 function showError(input, errorElement, message) {
-
-    input.classList.add("input-error");
-
-    errorElement.textContent = message;
-
+    if (input) input.classList.add("input-error");
+    if (errorElement) errorElement.textContent = message;
 }
-
 
 function clearError(input, errorElement) {
-
-    input.classList.remove("input-error");
-
-    errorElement.textContent = "";
-
+    if (input) input.classList.remove("input-error");
+    if (errorElement) errorElement.textContent = "";
 }
-
 
 function clearAllErrors() {
-
     clearError(email, emailError);
-
     clearError(password, passwordError);
 
-    generalError.textContent = "";
-
-    generalError.classList.remove("show");
-
+    if (generalError) {
+        generalError.textContent = "";
+        generalError.classList.remove("show");
+        generalError.style.background = "";
+        generalError.style.borderColor = "";
+        generalError.style.color = "";
+    }
 }
-
-
-// ============================================
-// VALIDATE EMAIL
-// ============================================
-
-function isValidEmail(value) {
-
-    const emailRegex =
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    return emailRegex.test(value);
-
-}
-
 
 // ============================================
 // VALIDATE FORM
 // ============================================
-
-function validateForm() {
-
-    let valid = true;
-
-    clearAllErrors();
-
-
-    // -----------------------------
-    // EMAIL
-    // -----------------------------
-
-    const emailValue =
-        email.value.trim();
-
-
-    if (emailValue === "") {
-
-        showError(
-            email,
-            emailError,
-            "Vui lòng nhập email công ty."
-        );
-
-        valid = false;
-
-    }
-
-    else if (!isValidEmail(emailValue)) {
-
-        showError(
-            email,
-            emailError,
-            "Email không đúng định dạng."
-        );
-
-        valid = false;
-
-    }
-
-
-    // -----------------------------
-    // PASSWORD
-    // -----------------------------
-
-    const passwordValue =
-        password.value;
-
-
-    if (passwordValue.trim() === "") {
-
-        showError(
-            password,
-            passwordError,
-            "Vui lòng nhập mật khẩu."
-        );
-
-        valid = false;
-
-    }
-
-
-    return valid;
-
+function isValidEmail(val) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(val);
 }
 
+function validateForm() {
+    let valid = true;
+    clearAllErrors();
+
+    const emailValue = email ? email.value.trim() : "";
+    if (emailValue === "") {
+        showError(email, emailError, "Vui lòng nhập email công ty.");
+        valid = false;
+    } else if (!isValidEmail(emailValue)) {
+        showError(email, emailError, "Email không đúng định dạng.");
+        valid = false;
+    }
+
+    const passwordValue = password ? password.value : "";
+    if (passwordValue.trim() === "") {
+        showError(password, passwordError, "Vui lòng nhập mật khẩu.");
+        valid = false;
+    }
+
+    return valid;
+}
 
 // ============================================
 // HIỆN / ẨN PASSWORD
 // ============================================
-
-showPassword.addEventListener(
-    "click",
-    function () {
-
+if (showPassword && password) {
+    showPassword.addEventListener("click", function () {
         if (password.type === "password") {
-
             password.type = "text";
-
             showPassword.textContent = "🙈";
-
-        }
-
-        else {
-
+        } else {
             password.type = "password";
-
             showPassword.textContent = "👁";
-
         }
-
-    }
-);
-
-
-// ============================================
-// XÓA LỖI KHI USER NHẬP
-// ============================================
-
-email.addEventListener(
-    "input",
-    function () {
-
-        if (email.value.trim() !== "") {
-
-            clearError(
-                email,
-                emailError
-            );
-
-        }
-
-    }
-);
-
-
-password.addEventListener(
-    "input",
-    function () {
-
-        if (password.value.trim() !== "") {
-
-            clearError(
-                password,
-                passwordError
-            );
-
-        }
-
-    }
-);
-
-
-// ============================================
-// KIỂM TRA ĐANG BỊ KHÓA
-// ============================================
-
-function isAccountLocked() {
-
-    const lockedUntil =
-        getLockTime();
-
-    if (!lockedUntil) {
-        return false;
-    }
-
-
-    const now =
-        Date.now();
-
-
-    // Nếu đã hết 15 phút
-    if (now >= lockedUntil) {
-
-        localStorage.removeItem(
-            "loginLockedUntil"
-        );
-
-        localStorage.removeItem(
-            "loginFailedAttempts"
-        );
-
-        return false;
-
-    }
-
-
-    return true;
-
+    });
 }
 
+// Xóa lỗi input khi nhập
+if (email) {
+    email.addEventListener("input", function () {
+        if (email.value.trim() !== "") clearError(email, emailError);
+    });
+}
+
+if (password) {
+    password.addEventListener("input", function () {
+        if (password.value.trim() !== "") clearError(password, passwordError);
+    });
+}
 
 // ============================================
-// HIỂN THỊ THỜI GIAN KHÓA
+// XỬ LÝ KHÓA TÀI KHOẢN
 // ============================================
+function isAccountLocked() {
+    const lockedUntil = getLockTime();
+    if (!lockedUntil) return false;
+
+    const now = Date.now();
+    if (now >= lockedUntil) {
+        localStorage.removeItem("loginLockedUntil");
+        localStorage.removeItem("loginFailedAttempts");
+        return false;
+    }
+    return true;
+}
 
 function getRemainingTime() {
-
-    const lockedUntil =
-        getLockTime();
-
-    const remaining =
-        lockedUntil - Date.now();
-
-
-    if (remaining <= 0) {
-        return 0;
-    }
-
-
-    return Math.ceil(
-        remaining / 1000
-    );
-
+    const lockedUntil = getLockTime();
+    const remaining = lockedUntil - Date.now();
+    return remaining <= 0 ? 0 : Math.ceil(remaining / 1000);
 }
-
 
 function formatTime(seconds) {
-
-    const minutes =
-        Math.floor(seconds / 60);
-
-    const secs =
-        seconds % 60;
-
-
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
     return `${minutes}:${String(secs).padStart(2, "0")}`;
-
 }
-
-
-// ============================================
-// HIỂN THỊ TRẠNG THÁI KHÓA
-// ============================================
-
-let lockTimer = null;
-
 
 function showLockMessage() {
-
     if (!isAccountLocked()) {
-
-        loginButton.disabled = false;
-
+        if (loginButton) loginButton.disabled = false;
+        if (generalError) generalError.classList.remove("show");
+        if (lockTimer) clearInterval(lockTimer);
         return;
-
     }
 
+    if (loginButton) loginButton.disabled = true;
 
-    loginButton.disabled = true;
+    const updateTimerDisplay = () => {
+        if (!isAccountLocked()) {
+            clearInterval(lockTimer);
+            if (generalError) generalError.classList.remove("show");
+            if (loginButton) loginButton.disabled = false;
+            return;
+        }
 
+        const remaining = getRemainingTime();
+        if (generalError) {
+            generalError.textContent = `Tài khoản đang bị khóa do nhập sai nhiều lần. Vui lòng thử lại sau ${formatTime(remaining)}.`;
+            generalError.classList.add("show");
+        }
+    };
 
-    const seconds =
-        getRemainingTime();
+    updateTimerDisplay();
 
-
-    generalError.textContent =
-        `Tài khoản đang bị khóa. Vui lòng thử lại sau ${formatTime(seconds)}.`;
-
-    generalError.classList.add("show");
-
-
-    if (lockTimer) {
-        clearInterval(lockTimer);
-    }
-
-
-    lockTimer = setInterval(
-        function () {
-
-            if (!isAccountLocked()) {
-
-                clearInterval(lockTimer);
-
-                generalError.classList.remove(
-                    "show"
-                );
-
-                loginButton.disabled = false;
-
-                return;
-
-            }
-
-
-            const remaining =
-                getRemainingTime();
-
-
-            generalError.textContent =
-                `Tài khoản đang bị khóa. Vui lòng thử lại sau ${formatTime(remaining)}.`;
-
-        },
-        1000
-    );
-
+    if (lockTimer) clearInterval(lockTimer);
+    lockTimer = setInterval(updateTimerDisplay, 1000);
 }
 
+// ============================================
+// CHUYỂN MÀN HÌNH QUẢN LÝ TÀI KHOẢN
+// ============================================
+// ĐOẠN ĐÃ SỬA (thêm đúng 1 dòng để không bị bó hẹp giao diện):
+function showAccountManagement() {
+    const loginPage = document.querySelector(".login-page");
+    if (loginPage) {
+        loginPage.style.display = "block"; // <--- THÊM DÒNG NÀY để thẻ cha không ép flex
+    }
+
+    if (heroSection) {
+        heroSection.style.display = "none";
+    }
+
+    if (loginSection) {
+        loginSection.style.display = "none";
+    }
+
+    if (accountSection) {
+        accountSection.style.display = "block";
+        accountSection.style.width = "100%";
+        accountSection.style.minHeight = "100vh";
+    }
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+
+    if (accountList) {
+        renderAccounts(accounts);
+    }
+}
 
 // ============================================
-// ĐĂNG NHẬP
+// DỮ LIỆU TÀI KHOẢN DEMO
 // ============================================
+const accounts = [
+    { name: "Nguyễn Văn A", email: "nguyenvana@company.com", phone: "0987654321", role: "admin", status: "active" },
+    { name: "Trần Văn B", email: "tranvanb@company.com", phone: "0912345678", role: "hr", status: "active" },
+    { name: "Lê Văn C", email: "levanc@company.com", phone: "0901234567", role: "employee", status: "pending" },
+    { name: "Phạm Thị D", email: "phamthid@company.com", phone: "0978123456", role: "employee", status: "locked" },
+    { name: "Hoàng Văn E", email: "hoangvane@company.com", phone: "0965432109", role: "hr", status: "active" }
+];
 
-loginForm.addEventListener(
-    "submit",
-    function (event) {
+function getRoleName(role) {
+    const roles = { admin: "Admin", hr: "HR", employee: "Nhân viên" };
+    return roles[role] || role;
+}
 
+function getStatusName(status) {
+    const statuses = { active: "Hoạt động", pending: "Chờ duyệt", locked: "Đã khóa" };
+    return statuses[status] || status;
+}
+
+// ============================================
+// RENDER DANH SÁCH (CHỐNG XSS)
+// ============================================
+function renderAccounts(data) {
+    if (!accountList) return;
+    accountList.innerHTML = "";
+
+    if (data.length === 0) {
+        if (noResult) noResult.classList.add("show");
+        return;
+    }
+
+    if (noResult) noResult.classList.remove("show");
+
+    data.forEach(account => {
+        const item = document.createElement("div");
+        item.className = "account-item";
+
+        const infoDiv = document.createElement("div");
+        infoDiv.className = "account-info";
+
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "account-name";
+        nameDiv.textContent = account.name;
+
+        const emailDiv = document.createElement("div");
+        emailDiv.className = "account-email";
+        emailDiv.textContent = account.email;
+
+        const phoneDiv = document.createElement("div");
+        phoneDiv.className = "account-phone";
+        phoneDiv.textContent = account.phone;
+
+        infoDiv.appendChild(nameDiv);
+        infoDiv.appendChild(emailDiv);
+        infoDiv.appendChild(phoneDiv);
+
+        const metaDiv = document.createElement("div");
+        metaDiv.className = "account-meta";
+
+        const roleSpan = document.createElement("span");
+        roleSpan.className = "account-role";
+        roleSpan.textContent = getRoleName(account.role);
+
+        const statusSpan = document.createElement("span");
+        statusSpan.className = `account-status ${account.status}`;
+        statusSpan.textContent = getStatusName(account.status);
+
+        metaDiv.appendChild(roleSpan);
+        metaDiv.appendChild(statusSpan);
+
+        item.appendChild(infoDiv);
+        item.appendChild(metaDiv);
+
+        accountList.appendChild(item);
+    });
+}
+
+// ============================================
+// TÌM KIẾM & LỌC
+// ============================================
+function filterAccounts() {
+    if (!searchAccount || !roleFilter || !statusFilter) return;
+
+    const keyword = searchAccount.value.trim().toLowerCase();
+    const selectedRole = roleFilter.value;
+    const selectedStatus = statusFilter.value;
+
+    const result = accounts.filter(account => {
+        const matchName = account.name.toLowerCase().includes(keyword);
+        const matchEmail = account.email.toLowerCase().includes(keyword);
+        const matchPhone = account.phone.includes(keyword);
+        const matchKeyword = matchName || matchEmail || matchPhone;
+
+        const matchRole = selectedRole === "" || account.role === selectedRole;
+        const matchStatus = selectedStatus === "" || account.status === selectedStatus;
+
+        return matchKeyword && matchRole && matchStatus;
+    });
+
+    renderAccounts(result);
+}
+
+if (searchAccount) searchAccount.addEventListener("input", filterAccounts);
+if (roleFilter) roleFilter.addEventListener("change", filterAccounts);
+if (statusFilter) statusFilter.addEventListener("change", filterAccounts);
+
+if (resetFilter) {
+    resetFilter.addEventListener("click", function () {
+        if (searchAccount) searchAccount.value = "";
+        if (roleFilter) roleFilter.value = "";
+        if (statusFilter) statusFilter.value = "";
+        renderAccounts(accounts);
+    });
+}
+
+// ============================================
+// XỬ LÝ SUBMIT FORM ĐĂNG NHẬP
+// ============================================
+if (loginForm) {
+    loginForm.addEventListener("submit", function (event) {
         event.preventDefault();
 
-
-        // --------------------------------
-        // Kiểm tra tài khoản đang khóa
-        // --------------------------------
-
         if (isAccountLocked()) {
-
             showLockMessage();
-
             return;
-
         }
 
+        if (!validateForm()) return;
 
-        // --------------------------------
-        // Kiểm tra input
-        // --------------------------------
+        const emailValue = email.value.trim();
+        const passwordValue = password.value;
 
-        if (!validateForm()) {
+        const DEMO_EMAIL = "admin@company.com";
+        const DEMO_PASSWORD = "123456";
 
-            return;
-
-        }
-
-
-        const emailValue =
-            email.value.trim();
-
-        const passwordValue =
-            password.value;
-
-
-        // --------------------------------
-        // DEMO TÀI KHOẢN
-        // --------------------------------
-        //
-        // Sau này thay phần này bằng API
-        // backend của bạn.
-        //
-
-        const DEMO_EMAIL =
-            "admin@company.com";
-
-        const DEMO_PASSWORD =
-            "123456";
-
-
-        // --------------------------------
-        // KIỂM TRA ĐĂNG NHẬP
-        // --------------------------------
-
-        if (
-            emailValue !== DEMO_EMAIL ||
-            passwordValue !== DEMO_PASSWORD
-        ) {
-
-            let attempts =
-                getFailedAttempts();
-
-            attempts++;
-
+        if (emailValue !== DEMO_EMAIL || passwordValue !== DEMO_PASSWORD) {
+            let attempts = getFailedAttempts() + 1;
             setFailedAttempts(attempts);
 
-
-            // -----------------------------
-            // ĐỦ 5 LẦN
-            // -----------------------------
-
             if (attempts >= MAX_ATTEMPTS) {
-
-                const lockedUntil =
-                    Date.now() + LOCK_TIME;
-
-                setLockTime(lockedUntil);
-
-
-                generalError.textContent =
-                    "Bạn đã đăng nhập sai 5 lần. Tài khoản bị khóa trong 15 phút.";
-
-                generalError.classList.add(
-                    "show"
-                );
-
-
-                loginButton.disabled = true;
-
-
+                setLockTime(Date.now() + LOCK_TIME);
                 showLockMessage();
-
-
                 return;
-
             }
 
-
-            // -----------------------------
-            // CHƯA ĐỦ 5 LẦN
-            // -----------------------------
-
-            const remainingAttempts =
-                MAX_ATTEMPTS - attempts;
-
-
-            generalError.textContent =
-                `Email hoặc mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử.`;
-
-            generalError.classList.add(
-                "show"
-            );
-
-
+            const remainingAttempts = MAX_ATTEMPTS - attempts;
+            if (generalError) {
+                generalError.textContent = `Email hoặc mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử.`;
+                generalError.classList.add("show");
+            }
             return;
-
         }
 
+        // Đăng nhập thành công
+        localStorage.removeItem("loginFailedAttempts");
+        localStorage.removeItem("loginLockedUntil");
 
-        // =================================
-        // ĐĂNG NHẬP THÀNH CÔNG
-        // =================================
-
-        localStorage.removeItem(
-            "loginFailedAttempts"
-        );
-
-        localStorage.removeItem(
-            "loginLockedUntil"
-        );
-
-
-        // Ghi nhớ email
-        if (remember.checked) {
-
-            localStorage.setItem(
-                "rememberEmail",
-                emailValue
-            );
-
+        if (remember && remember.checked) {
+            localStorage.setItem("rememberEmail", emailValue);
+        } else {
+            localStorage.removeItem("rememberEmail");
         }
 
-        else {
-
-            localStorage.removeItem(
-                "rememberEmail"
-            );
-
+        if (generalError) {
+            generalError.textContent = "Đăng nhập thành công!";
+            generalError.style.background = "#effcf4";
+            generalError.style.borderColor = "#b8e7ca";
+            generalError.style.color = "#198754";
+            generalError.classList.add("show");
         }
 
+        setTimeout(() => {
+            showAccountManagement();
+        }, 600);
+    });
+}
 
-        generalError.textContent =
-            "Đăng nhập thành công!";
+// ============================================
+// NÚT PHỤ & KHỞI TẠO TRANG
+// ============================================
+if (googleButton) {
+    googleButton.addEventListener("click", function () {
+        alert("Chức năng đăng nhập Google sẽ được kết nối với Google OAuth ở backend.");
+    });
+}
 
-        generalError.style.background =
-            "#effcf4";
+if (forgotPassword) {
+    forgotPassword.addEventListener("click", function (e) {
+        e.preventDefault();
+        alert("Chức năng khôi phục mật khẩu đang được phát triển.");
+    });
+}
 
-        generalError.style.borderColor =
-            "#b8e7ca";
-
-        generalError.style.color =
-            "#198754";
-
-        generalError.classList.add(
-            "show"
-        );
-
-
-        // Demo chuyển trang
-        setTimeout(
-            function () {
-
-                alert(
-                    "Đăng nhập thành công!"
-                );
-
-                // Sau này:
-                // window.location.href = "dashboard.html";
-
-            },
-            500
-        );
-
+window.addEventListener("DOMContentLoaded", function () {
+    if (accountSection) {
+        accountSection.style.display = "none";
     }
-);
 
-
-// ============================================
-// GOOGLE LOGIN
-// ============================================
-
-googleButton.addEventListener(
-    "click",
-    function () {
-
-        alert(
-            "Chức năng đăng nhập Google sẽ được kết nối với Google OAuth ở backend."
-        );
-
+    const savedEmail = localStorage.getItem("rememberEmail");
+    if (savedEmail && email) {
+        email.value = savedEmail;
+        if (remember) remember.checked = true;
     }
-);
 
-
-// ============================================
-// QUÊN MẬT KHẨU
-// ============================================
-
-document
-    .getElementById("forgotPassword")
-    .addEventListener(
-        "click",
-        function (event) {
-
-            event.preventDefault();
-
-            alert(
-                "Chức năng khôi phục mật khẩu."
-            );
-
-        }
-    );
-
-
-// ============================================
-// LOAD EMAIL ĐÃ GHI NHỚ
-// ============================================
-
-window.addEventListener(
-    "DOMContentLoaded",
-    function () {
-
-        const savedEmail =
-            localStorage.getItem(
-                "rememberEmail"
-            );
-
-
-        if (savedEmail) {
-
-            email.value =
-                savedEmail;
-
-            remember.checked =
-                true;
-
-        }
-
-
-        // Kiểm tra khóa khi mở trang
-        if (isAccountLocked()) {
-
-            showLockMessage();
-
-        }
-
+    if (isAccountLocked()) {
+        showLockMessage();
     }
-);
+});
