@@ -122,9 +122,9 @@ public class AuthService {
 
     @Transactional
     public RefreshToken createRefreshToken(User user) {
-        refreshTokenRepository.deleteByUser(user);
+        RefreshToken refreshToken = refreshTokenRepository.findByUser(user)
+                .orElseGet(RefreshToken::new);
 
-        RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(user);
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
         refreshToken.setToken(UUID.randomUUID().toString());
@@ -132,6 +132,7 @@ public class AuthService {
 
         return refreshTokenRepository.save(refreshToken);
     }
+
 
     @Transactional
     public RefreshToken createRefreshToken(String identifier) {
