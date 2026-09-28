@@ -1,12 +1,9 @@
 package com.example.auth_service.controller;
 
-import com.example.auth_service.dto.LoginRequest;
-import com.example.auth_service.dto.LoginResponse;
-import com.example.auth_service.dto.UserSummaryDto;
+import com.example.auth_service.dto.*;
 import com.example.auth_service.exception.AccountLockedException;
+import com.example.auth_service.exception.GlobalExceptionHandler;
 import com.example.auth_service.exception.InvalidCredentialsException;
-import com.example.auth_service.repository.RefreshTokenRepository;
-import com.example.auth_service.security.JwtUtils;
 import com.example.auth_service.service.AuthService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,10 +19,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -38,12 +37,6 @@ class AuthControllerTest {
     @Mock
     private AuthService authService;
 
-    @Mock
-    private RefreshTokenRepository refreshTokenRepository;
-
-    @Mock
-    private JwtUtils jwtUtils;
-
     @InjectMocks
     private AuthController authController;
 
@@ -51,7 +44,9 @@ class AuthControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(authController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -99,7 +94,7 @@ class AuthControllerTest {
     void testApiLoginLockedAccount() throws Exception {
         Instant lockedUntil = Instant.now().plus(15, ChronoUnit.MINUTES);
         when(authService.login(any(LoginRequest.class)))
-                .thenThrow(new AccountLockedException("Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.", lockedUntil));
+                .thenThrow(new AccountLockedException(lockedUntil));
 
         LoginRequest request = new LoginRequest("recruiter@company.com", "WrongPassword");
 
@@ -109,5 +104,35 @@ class AuthControllerTest {
                 .andExpect(status().isLocked())
                 .andExpect(jsonPath("$.message").value(containsString("Tài khoản tạm thời bị khóa")))
                 .andExpect(jsonPath("$.lockedUntil").exists());
+    }
+
+    @Test
+    @DisplayName("API: POST /api/auth/forgot-password trả về 200 generic message")
+    void testApiForgotPassword() throws Exception {
+        when(authService.forgotPassword(any(ForgotPasswordRequest.class)))
+                .thenReturn(Map.of("message", "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi."));
+
+        ForgotPasswordRequest request = new ForgotPasswordRequest("user@company.com");
+
+        mockMvc.perform(post("/api/auth/forgot-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi."));
+    }
+
+    @Test
+    @DisplayName("API: POST /api/auth/reset-password trả về 200 khi thành công")
+    void testApiResetPassword() throws Exception {
+        when(authService.resetPassword(any(ResetPasswordRequest.class)))
+                .thenReturn(Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới."));
+
+        ResetPasswordRequest request = new ResetPasswordRequest("token-123", "NewPassword123@", "NewPassword123@");
+
+        mockMvc.perform(post("/api/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value(containsString("Đặt lại mật khẩu thành công")));
     }
 }
