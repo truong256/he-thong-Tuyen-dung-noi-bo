@@ -231,7 +231,7 @@ export const LoginPage: React.FC = () => {
           </form>
 
           <div className="dev-accounts-hint">
-            <strong>Tài khoản mẫu thử nghiệm (Mật khẩu: 123456):</strong>
+            <strong>Tài khoản mẫu thử nghiệm (Mật khẩu: Password123@):</strong>
             <ul>
               <li><code>admin@company.com</code> (Admin)</li>
               <li><code>recruiter@company.com</code> (Recruiter)</li>

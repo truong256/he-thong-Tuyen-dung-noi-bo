@@ -33,25 +33,27 @@ public class DataInitializer {
             }
 
             // 2. Helper to create user if not exists
-            createUserIfMissing(userRepository, passwordEncoder, "admin@company.com", "123456",
+            String defaultSeedPassword = System.getenv().getOrDefault("SEED_ACCOUNT_PASSWORD", "Password123@");
+
+            createUserIfMissing(userRepository, passwordEncoder, "admin@company.com", defaultSeedPassword,
                     "Quản trị viên Hệ thống", Set.of(roleMap.get(RoleName.ADMIN), roleMap.get(RoleName.HR_MANAGER)));
 
-            createUserIfMissing(userRepository, passwordEncoder, "recruiter@company.com", "123456",
+            createUserIfMissing(userRepository, passwordEncoder, "recruiter@company.com", defaultSeedPassword,
                     "Chuyên viên Tuyển dụng", Set.of(roleMap.get(RoleName.RECRUITER)));
 
-            createUserIfMissing(userRepository, passwordEncoder, "hr_manager@company.com", "123456",
+            createUserIfMissing(userRepository, passwordEncoder, "hr_manager@company.com", defaultSeedPassword,
                     "Trưởng phòng Nhân sự", Set.of(roleMap.get(RoleName.HR_MANAGER)));
 
-            createUserIfMissing(userRepository, passwordEncoder, "interviewer@company.com", "123456",
+            createUserIfMissing(userRepository, passwordEncoder, "interviewer@company.com", defaultSeedPassword,
                     "Người Phỏng vấn Kỹ thuật", Set.of(roleMap.get(RoleName.INTERVIEWER)));
 
-            createUserIfMissing(userRepository, passwordEncoder, "hiring_manager@company.com", "123456",
+            createUserIfMissing(userRepository, passwordEncoder, "hiring_manager@company.com", defaultSeedPassword,
                     "Quản lý Bộ phận Tuyển dụng", Set.of(roleMap.get(RoleName.HIRING_MANAGER)));
 
-            createUserIfMissing(userRepository, passwordEncoder, "approver@company.com", "123456",
+            createUserIfMissing(userRepository, passwordEncoder, "approver@company.com", defaultSeedPassword,
                     "Người Phê duyệt Tuyển dụng", Set.of(roleMap.get(RoleName.APPROVER)));
 
-            createUserIfMissing(userRepository, passwordEncoder, "candidate@company.com", "123456",
+            createUserIfMissing(userRepository, passwordEncoder, "candidate@company.com", defaultSeedPassword,
                     "Ứng viên Nguyễn Văn A", Set.of(roleMap.get(RoleName.CANDIDATE)));
         };
     }
