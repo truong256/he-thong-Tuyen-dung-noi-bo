@@ -31,4 +31,23 @@ public class JwtUtils {
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
+    public String getUsernameFromJwt(String token) {
+    return Jwts.parserBuilder()
+            .setSigningKey(getSigningKey())
+            .build()
+            .parseClaimsJws(token)
+            .getBody()
+            .getSubject();
 }
+
+public boolean validateJwtToken(String token) {
+    try {
+        getUsernameFromJwt(token);
+        return true;
+    } catch (Exception e) {
+        return false;
+    }
+}
+}
+
