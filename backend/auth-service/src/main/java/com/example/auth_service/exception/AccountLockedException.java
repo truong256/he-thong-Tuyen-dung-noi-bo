@@ -11,6 +11,11 @@ public class AccountLockedException extends RuntimeException {
         this.lockedUntil = lockedUntil;
     }
 
+    public AccountLockedException(Instant lockedUntil) {
+        super("Tài khoản tạm thời bị khóa do đăng nhập sai nhiều lần. Vui lòng thử lại sau.");
+        this.lockedUntil = lockedUntil;
+    }
+
     public Instant getLockedUntil() {
         return lockedUntil;
     }

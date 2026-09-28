@@ -1,26 +1,26 @@
 package com.example.auth_service.service;
 
-import com.example.auth_service.dto.LoginRequest;
-import com.example.auth_service.dto.LoginResponse;
-import com.example.auth_service.dto.UserSummaryDto;
-import com.example.auth_service.entity.RefreshToken;
-import com.example.auth_service.entity.User;
+import com.example.auth_service.dto.*;
+import com.example.auth_service.entity.*;
 import com.example.auth_service.exception.AccountLockedException;
+import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.InvalidCredentialsException;
+import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.auth_service.repository.PasswordResetTokenRepository;
 import com.example.auth_service.repository.RefreshTokenRepository;
+import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.JwtUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class AuthService {
@@ -34,18 +34,38 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
+    private RoleRepository roleRepository;
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+    private MailService mailService;
 
     @Value("${jwt.refresh-token-expiration-ms:604800000}")
-    private Long refreshTokenDurationMs;
+    private Long refreshTokenDurationMs = 604800000L;
+
+    @Value("${jwt.password-reset-expiration-ms:1800000}")
+    private Long passwordResetDurationMs = 1800000L;
+
+    @Autowired
+    public AuthService(RefreshTokenRepository refreshTokenRepository,
+                       UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtUtils jwtUtils,
+                       RoleRepository roleRepository,
+                       PasswordResetTokenRepository passwordResetTokenRepository,
+                       MailService mailService) {
+        this.refreshTokenRepository = refreshTokenRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
+        this.roleRepository = roleRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.mailService = mailService;
+    }
 
     public AuthService(RefreshTokenRepository refreshTokenRepository,
                        UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
                        JwtUtils jwtUtils) {
-        this.refreshTokenRepository = refreshTokenRepository;
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtils = jwtUtils;
+        this(refreshTokenRepository, userRepository, passwordEncoder, jwtUtils, null, null, null);
     }
 
     @Transactional(noRollbackFor = { InvalidCredentialsException.class, AccountLockedException.class })
@@ -58,33 +78,25 @@ public class AuthService {
         String email = request.getEmail().trim().toLowerCase();
         String password = request.getPassword();
 
-        // Tìm user theo email hoặc username dự phòng
         Optional<User> userOptional = userRepository.findByEmail(email);
-        if (userOptional.isEmpty()) {
-            userOptional = userRepository.findByUsername(email);
-        }
 
         if (userOptional.isEmpty()) {
-            // Chạy hash giả lập để chống timing attack / user enumeration
             passwordEncoder.matches(password, DUMMY_BCRYPT_HASH);
             throw new InvalidCredentialsException(GENERIC_ERROR_MESSAGE);
         }
 
         User user = userOptional.get();
 
-        // Kiểm tra xem tài khoản có đang bị khóa tạm thời hay không
         if (user.getLockedUntil() != null) {
-            if (user.getLockedUntil().isAfter(Instant.now())) {
-                throw new AccountLockedException("Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.", user.getLockedUntil());
+            if (Instant.now().isBefore(user.getLockedUntil())) {
+                throw new AccountLockedException(user.getLockedUntil());
             } else {
-                // Đã hết 15 phút khóa -> Cho phép đăng nhập lại, reset lock state
                 user.setLockedUntil(null);
                 user.setFailedLoginAttempts(0);
                 userRepository.saveAndFlush(user);
             }
         }
 
-        // Kiểm tra mật khẩu
         if (!passwordEncoder.matches(password, user.getPassword())) {
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
@@ -93,30 +105,232 @@ public class AuthService {
                 Instant lockUntil = Instant.now().plus(Duration.ofMinutes(LOCK_DURATION_MINUTES));
                 user.setLockedUntil(lockUntil);
                 userRepository.saveAndFlush(user);
-                throw new AccountLockedException("Tài khoản tạm thời bị khóa. Vui lòng thử lại sau.", lockUntil);
+                throw new AccountLockedException(lockUntil);
             }
 
             userRepository.saveAndFlush(user);
             throw new InvalidCredentialsException(GENERIC_ERROR_MESSAGE);
         }
 
-        // Đăng nhập thành công -> Reset số lần thất bại và trạng thái khóa
-        user.setFailedLoginAttempts(0);
-        user.setLockedUntil(null);
-        userRepository.saveAndFlush(user);
+        if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
+            user.setFailedLoginAttempts(0);
+            user.setLockedUntil(null);
+            userRepository.saveAndFlush(user);
+        }
 
-
-        // Tạo access token và refresh token
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), user.getRole());
+        Set<String> roleNames = extractRoleNames(user);
+        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
         RefreshToken refreshToken = createRefreshToken(user);
 
-        UserSummaryDto userSummary = new UserSummaryDto(user.getId(), user.getEmail(), user.getRole());
+        UserSummaryDto userSummary = new UserSummaryDto(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                roleNames,
+                user.getStatus()
+        );
 
         return new LoginResponse(
                 "Đăng nhập thành công!",
                 accessToken,
                 refreshToken.getToken(),
                 userSummary
+        );
+    }
+
+    @Transactional
+    public LoginResponse register(RegisterRequest request) {
+        if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
+            throw new BadRequestException("Email không được để trống.");
+        }
+        if (request.getPassword() == null || request.getPassword().length() < 6) {
+            throw new BadRequestException("Mật khẩu phải có ít nhất 6 ký tự.");
+        }
+
+        String email = request.getEmail().trim().toLowerCase();
+        if (userRepository.existsByEmail(email)) {
+            throw new BadRequestException("Email đã được sử dụng.");
+        }
+
+        User user = new User(email, passwordEncoder.encode(request.getPassword()));
+        user.setFullName(request.getFullName() != null && !request.getFullName().isBlank() ? request.getFullName().trim() : email.split("@")[0]);
+        user.setStatus("ACTIVE");
+
+        RoleName assignedRole = RoleName.CANDIDATE;
+        if (request.getRole() != null) {
+            try {
+                assignedRole = RoleName.valueOf(request.getRole().trim().toUpperCase());
+            } catch (Exception ignored) {}
+        }
+
+        if (roleRepository != null) {
+            Role role = roleRepository.findByName(assignedRole)
+                    .orElseGet(() -> roleRepository.save(new Role(RoleName.CANDIDATE, "Ứng viên")));
+            user.setRoles(Set.of(role));
+        } else {
+            user.setRole(assignedRole.name());
+        }
+
+        userRepository.save(user);
+
+        Set<String> roleNames = extractRoleNames(user);
+        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+        RefreshToken refreshToken = createRefreshToken(user);
+
+        UserSummaryDto userSummary = new UserSummaryDto(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                roleNames,
+                user.getStatus()
+        );
+
+        return new LoginResponse("Đăng ký thành công!", accessToken, refreshToken.getToken(), userSummary);
+    }
+
+    @Transactional
+    public LoginResponse refreshToken(RefreshTokenRequest request) {
+        if (request == null || request.getRefreshToken() == null || request.getRefreshToken().isBlank()) {
+            throw new BadRequestException("Refresh token không hợp lệ.");
+        }
+
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(request.getRefreshToken())
+                .orElseThrow(() -> new BadRequestException("Refresh token không tồn tại."));
+
+        if (refreshToken.isRevoked() || refreshToken.getExpiryDate().isBefore(Instant.now())) {
+            throw new BadRequestException("Refresh token đã hết hạn hoặc bị thu hồi.");
+        }
+
+        User user = refreshToken.getUser();
+        Set<String> roleNames = extractRoleNames(user);
+        String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+
+        UserSummaryDto userSummary = new UserSummaryDto(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                roleNames,
+                user.getStatus()
+        );
+
+        return new LoginResponse("Làm mới token thành công!", newAccessToken, refreshToken.getToken(), userSummary);
+    }
+
+    @Transactional
+    public void logout(String userEmail) {
+        if (userEmail != null) {
+            userRepository.findByEmail(userEmail).ifPresent(user -> {
+                refreshTokenRepository.findByUser(user).ifPresent(token -> {
+                    token.setRevoked(true);
+                    refreshTokenRepository.save(token);
+                });
+            });
+        }
+    }
+
+    @Transactional
+    public Map<String, String> forgotPassword(ForgotPasswordRequest request) {
+        String genericMessage = "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi.";
+        if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
+            return Map.of("message", genericMessage);
+        }
+
+        String email = request.getEmail().trim().toLowerCase();
+        Optional<User> userOpt = userRepository.findByEmail(email);
+
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            String token = UUID.randomUUID().toString();
+
+            if (passwordResetTokenRepository != null) {
+                PasswordResetToken resetToken = passwordResetTokenRepository.findByUser(user)
+                        .orElseGet(PasswordResetToken::new);
+                resetToken.setUser(user);
+                resetToken.setToken(token);
+                resetToken.setExpiryDate(Instant.now().plusMillis(passwordResetDurationMs));
+                resetToken.setUsed(false);
+                passwordResetTokenRepository.save(resetToken);
+            }
+
+            if (mailService != null) {
+                mailService.sendPasswordResetEmail(user.getEmail(), token);
+            }
+        }
+
+        return Map.of("message", genericMessage);
+    }
+
+    @Transactional
+    public Map<String, String> resetPassword(ResetPasswordRequest request) {
+        if (request == null || request.getToken() == null || request.getToken().isBlank()) {
+            throw new BadRequestException("Mã token đặt lại mật khẩu không hợp lệ.");
+        }
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
+            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự.");
+        }
+        if (request.getConfirmPassword() != null && !request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Mật khẩu xác nhận không khớp.");
+        }
+
+        if (passwordResetTokenRepository == null) {
+            throw new BadRequestException("Dịch vụ đặt lại mật khẩu chưa khả dụng.");
+        }
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new BadRequestException("Mã token không hợp lệ hoặc không tồn tại."));
+
+        if (resetToken.isUsed() || resetToken.isExpired()) {
+            throw new BadRequestException("Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng.");
+        }
+
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setFailedLoginAttempts(0);
+        user.setLockedUntil(null);
+        userRepository.save(user);
+
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        return Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới.");
+    }
+
+    @Transactional
+    public Map<String, String> changePassword(String email, ChangePasswordRequest request) {
+        if (request == null || request.getCurrentPassword() == null || request.getNewPassword() == null) {
+            throw new BadRequestException("Thông tin đổi mật khẩu không hợp lệ.");
+        }
+        if (request.getNewPassword().length() < 6) {
+            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự.");
+        }
+        if (request.getConfirmPassword() != null && !request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadRequestException("Mật khẩu xác nhận không khớp.");
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại."));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BadRequestException("Mật khẩu hiện tại không chính xác.");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        return Map.of("message", "Đổi mật khẩu thành công.");
+    }
+
+    @Transactional(readOnly = true)
+    public UserSummaryDto getCurrentUser(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại."));
+
+        return new UserSummaryDto(
+                user.getId(),
+                user.getEmail(),
+                user.getFullName(),
+                extractRoleNames(user),
+                user.getStatus()
         );
     }
 
@@ -133,27 +347,20 @@ public class AuthService {
         return refreshTokenRepository.save(refreshToken);
     }
 
-
     @Transactional
     public RefreshToken createRefreshToken(String identifier) {
         User user = userRepository.findByEmail(identifier)
                 .or(() -> userRepository.findByUsername(identifier))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User không tồn tại"));
-
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + identifier));
         return createRefreshToken(user);
     }
 
-    public RefreshToken verifyExpiration(RefreshToken token) {
-        if (token.getExpiryDate().compareTo(Instant.now()) < 0) {
-            refreshTokenRepository.delete(token);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refresh token đã hết hạn!");
+    private Set<String> extractRoleNames(User user) {
+        if (user.getRoles() != null && !user.getRoles().isEmpty()) {
+            return user.getRoles().stream()
+                    .map(role -> role.getName().name())
+                    .collect(Collectors.toSet());
         }
-        return token;
-    }
-
-    @Transactional
-    public void logout(String refreshToken) {
-        refreshTokenRepository.findByToken(refreshToken)
-                .ifPresent(refreshTokenRepository::delete);
+        return Set.of(user.getRole() != null ? user.getRole() : "RECRUITER");
     }
 }

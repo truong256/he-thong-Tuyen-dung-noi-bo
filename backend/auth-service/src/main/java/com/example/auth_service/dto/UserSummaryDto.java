@@ -1,40 +1,38 @@
 package com.example.auth_service.dto;
 
-public class UserSummaryDto {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
+import java.util.Set;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserSummaryDto {
     private Long id;
     private String email;
+    private String fullName;
     private String role;
-
-    public UserSummaryDto() {}
+    private Set<String> roles = new HashSet<>();
+    private String status;
 
     public UserSummaryDto(Long id, String email, String role) {
         this.id = id;
         this.email = email;
         this.role = role;
+        if (role != null) {
+            this.roles.add(role);
+        }
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
+    public UserSummaryDto(Long id, String email, String fullName, Set<String> roles, String status) {
         this.id = id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
         this.email = email;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
+        this.fullName = fullName;
+        this.roles = roles != null ? roles : new HashSet<>();
+        this.role = !this.roles.isEmpty() ? this.roles.iterator().next() : "RECRUITER";
+        this.status = status;
     }
 }

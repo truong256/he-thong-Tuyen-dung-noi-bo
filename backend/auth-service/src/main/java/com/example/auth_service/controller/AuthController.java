@@ -1,18 +1,11 @@
 package com.example.auth_service.controller;
 
-import com.example.auth_service.dto.AuthErrorResponse;
-import com.example.auth_service.dto.LoginRequest;
-import com.example.auth_service.dto.LoginResponse;
-import com.example.auth_service.entity.RefreshToken;
-import com.example.auth_service.exception.AccountLockedException;
-import com.example.auth_service.exception.InvalidCredentialsException;
-import com.example.auth_service.repository.RefreshTokenRepository;
-import com.example.auth_service.security.JwtUtils;
+import com.example.auth_service.dto.*;
 import com.example.auth_service.service.AuthService;
-import org.springframework.http.HttpStatus;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -20,71 +13,72 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final JwtUtils jwtUtils;
     private final AuthService authService;
-    private final RefreshTokenRepository refreshTokenRepository;
 
-    public AuthController(JwtUtils jwtUtils, AuthService authService, RefreshTokenRepository refreshTokenRepository) {
-        this.jwtUtils = jwtUtils;
+    public AuthController(AuthService authService) {
         this.authService = authService;
-        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody Map<String, String> request) {
-        return ResponseEntity.ok(Map.of("message", "Đăng ký thành công!"));
+    public ResponseEntity<LoginResponse> registerUser(@Valid @RequestBody RegisterRequest request) {
+        LoginResponse response = authService.register(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> loginUser(@RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> loginUser(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
-        String requestRefreshToken = request.get("refreshToken");
-        if (requestRefreshToken == null || requestRefreshToken.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "RefreshToken không được trống!");
-        }
-
-        return refreshTokenRepository.findByToken(requestRefreshToken)
-                .map(authService::verifyExpiration)
-                .map(RefreshToken::getUser)
-                .map(user -> {
-                    String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), user.getRole());
-                    return ResponseEntity.ok(Map.of(
-                        "accessToken", newAccessToken,
-                        "refreshToken", requestRefreshToken
-                    ));
-                })
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Refresh token không tồn tại!"));
+    public ResponseEntity<LoginResponse> refreshToken(@RequestBody Map<String, String> request) {
+        String token = request.get("refreshToken");
+        LoginResponse response = authService.refreshToken(new RefreshTokenRequest(token));
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logoutUser(@RequestBody Map<String, String> request) {
-        String refreshToken = request.get("refreshToken");
-        if (refreshToken != null) {
-            authService.logout(refreshToken);
+    public ResponseEntity<?> logoutUser(@RequestBody(required = false) Map<String, String> request,
+                                       Authentication authentication) {
+        String email = authentication != null ? authentication.getName() : null;
+        if (email == null && request != null) {
+            email = request.get("email");
+        }
+        if (email != null) {
+            authService.logout(email);
         }
         return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công!"));
     }
 
-    @ExceptionHandler(InvalidCredentialsException.class)
-    public ResponseEntity<AuthErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new AuthErrorResponse(ex.getMessage()));
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        Map<String, String> response = authService.forgotPassword(request);
+        return ResponseEntity.ok(response);
     }
 
-    @ExceptionHandler(AccountLockedException.class)
-    public ResponseEntity<AuthErrorResponse> handleAccountLocked(AccountLockedException ex) {
-        return ResponseEntity.status(HttpStatus.LOCKED)
-                .body(new AuthErrorResponse(ex.getMessage(), ex.getLockedUntil()));
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        Map<String, String> response = authService.resetPassword(request);
+        return ResponseEntity.ok(response);
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<AuthErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new AuthErrorResponse(ex.getMessage()));
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest request,
+                                            Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Yêu cầu đăng nhập"));
+        }
+        Map<String, String> response = authService.changePassword(authentication.getName(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserSummaryDto> getCurrentUser(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        UserSummaryDto user = authService.getCurrentUser(authentication.getName());
+        return ResponseEntity.ok(user);
     }
 }
