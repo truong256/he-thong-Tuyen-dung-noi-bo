@@ -1,6 +1,7 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.entity.RefreshToken;
+import com.example.auth_service.entity.User;
 import com.example.auth_service.repository.RefreshTokenRepository;
 import com.example.auth_service.security.JwtUtils;
 import com.example.auth_service.service.AuthService;
@@ -31,21 +32,34 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        if (username == null || username.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username không được trống!");
-        }
+public ResponseEntity<?> loginUser(
+        @RequestBody Map<String, String> request) {
 
-        String accessToken = jwtUtils.generateAccessToken(username);
-        RefreshToken refreshToken = authService.createRefreshToken(username);
+    String username = request.get("username");
+    String password = request.get("password");
 
-        return ResponseEntity.ok(Map.of(
+    if (username == null || username.isBlank()
+            || password == null || password.isBlank()) {
+        throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST,
+                "Username và password không được để trống");
+    }
+
+    // Kiểm tra thông tin đăng nhập trước khi cấp token
+    User user = authService.authenticate(username, password);
+
+    String accessToken =
+            jwtUtils.generateAccessToken(user.getUsername());
+
+    RefreshToken refreshToken =
+            authService.createRefreshToken(user.getUsername());
+
+    return ResponseEntity.ok(Map.of(
             "message", "Đăng nhập thành công!",
             "accessToken", accessToken,
             "refreshToken", refreshToken.getToken()
-        ));
-    }
+    ));
+}
 
     @PostMapping("/refresh-token")
     public ResponseEntity<?> refreshToken(@RequestBody Map<String, String> request) {
