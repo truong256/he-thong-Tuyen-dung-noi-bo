@@ -1,6 +1,11 @@
 package com.example.auth_service.controller;
 
+import com.example.auth_service.dto.AuthErrorResponse;
+import com.example.auth_service.dto.LoginRequest;
+import com.example.auth_service.dto.LoginResponse;
 import com.example.auth_service.entity.RefreshToken;
+import com.example.auth_service.exception.AccountLockedException;
+import com.example.auth_service.exception.InvalidCredentialsException;
 import com.example.auth_service.repository.RefreshTokenRepository;
 import com.example.auth_service.security.JwtUtils;
 import com.example.auth_service.service.AuthService;
@@ -31,20 +36,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> request) {
-        String username = request.get("username");
-        if (username == null || username.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Username không được trống!");
-        }
-
-        String accessToken = jwtUtils.generateAccessToken(username);
-        RefreshToken refreshToken = authService.createRefreshToken(username);
-
-        return ResponseEntity.ok(Map.of(
-            "message", "Đăng nhập thành công!",
-            "accessToken", accessToken,
-            "refreshToken", refreshToken.getToken()
-        ));
+    public ResponseEntity<LoginResponse> loginUser(@RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh-token")
@@ -58,7 +52,7 @@ public class AuthController {
                 .map(authService::verifyExpiration)
                 .map(RefreshToken::getUser)
                 .map(user -> {
-                    String newAccessToken = jwtUtils.generateAccessToken(user.getUsername());
+                    String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), user.getRole());
                     return ResponseEntity.ok(Map.of(
                         "accessToken", newAccessToken,
                         "refreshToken", requestRefreshToken
@@ -74,5 +68,23 @@ public class AuthController {
             authService.logout(refreshToken);
         }
         return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công!"));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<AuthErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new AuthErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<AuthErrorResponse> handleAccountLocked(AccountLockedException ex) {
+        return ResponseEntity.status(HttpStatus.LOCKED)
+                .body(new AuthErrorResponse(ex.getMessage(), ex.getLockedUntil()));
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<AuthErrorResponse> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new AuthErrorResponse(ex.getMessage()));
     }
 }

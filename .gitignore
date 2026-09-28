@@ -5,6 +5,17 @@
 
 # dotenv files
 .env
+.env.local
+.env.*.local
+!.env.example
+application-local.properties
+**/application-local.properties
+
+# Build output & dependencies
+target/
+**/target/
+node_modules/
+**/node_modules/
 
 # User-specific files
 *.rsuser
