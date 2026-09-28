@@ -8,6 +8,7 @@ interface PasswordFieldProps {
   required?: boolean;
   placeholder?: string;
   autoComplete?: string;
+  error?: string | null;
 }
 
 export const PasswordField: React.FC<PasswordFieldProps> = ({
@@ -16,8 +17,9 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
   onChange,
   disabled = false,
   required = true,
-  placeholder = 'Nhập mật khẩu',
+  placeholder = 'Mật khẩu',
   autoComplete = 'current-password',
+  error,
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -26,23 +28,8 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
   };
 
   return (
-    <div className="form-group password-group">
-      <div className="form-label-row">
-        <label htmlFor={id} className="form-label">
-          Mật khẩu
-        </label>
-        <button
-          type="button"
-          className="text-toggle-btn"
-          onClick={toggleShow}
-          disabled={disabled}
-          aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-        >
-          {showPassword ? 'Ẩn' : 'Hiện'}
-        </button>
-      </div>
-
-      <div className="input-container">
+    <div className="neumorphic-form-group">
+      <div className="neumorphic-input-wrap">
         <input
           id={id}
           type={showPassword ? 'text' : 'password'}
@@ -52,9 +39,21 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
           required={required}
           placeholder={placeholder}
           autoComplete={autoComplete}
-          className="clean-input"
+          className="neumorphic-input has-toggle"
+          aria-label="Mật khẩu"
         />
+        <button
+          type="button"
+          className="neumorphic-toggle-btn"
+          onClick={toggleShow}
+          disabled={disabled}
+          aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+          tabIndex={0}
+        >
+          {showPassword ? 'Ẩn' : 'Hiện'}
+        </button>
       </div>
+      {error && <span className="field-inline-error">{error}</span>}
     </div>
   );
 };

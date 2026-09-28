@@ -1,0 +1,445 @@
+/* ==========================================================================
+   HR RECRUIT ATS - SOFT UI / NEUMORPHIC AUTHENTICATION DESIGN
+   Inspired by Minimal Soft Extruded Aesthetic
+   ========================================================================== */
+
+/* Fullscreen Centered Container */
+.soft-login-viewport {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: linear-gradient(135deg, #EEF2F8 0%, #F8FAFC 50%, #EEF2F7 100%);
+  padding: 24px 16px;
+  overflow-x: hidden;
+  font-family: 'Be Vietnam Pro', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #27344F;
+}
+
+/* Ambient Soft Glowing Orbs for Depth */
+.soft-ambient-orb-1 {
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: #BFDBFE;
+  filter: blur(80px);
+  opacity: 0.22;
+  top: 18%;
+  left: 32%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.soft-ambient-orb-2 {
+  position: absolute;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: #E0E7FF;
+  filter: blur(85px);
+  opacity: 0.24;
+  bottom: 18%;
+  right: 32%;
+  pointer-events: none;
+  transform: translate(50%, 50%);
+  z-index: 0;
+}
+
+/* Floating Card Wrapper */
+.soft-card-wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Soft Neumorphic Login Card */
+.neumorphic-login-card {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  padding: 38px 34px 34px;
+  border-radius: 30px;
+  background: rgba(245, 247, 252, 0.94);
+  box-shadow:
+    -12px -12px 28px rgba(255, 255, 255, 0.92),
+    12px 12px 30px rgba(148, 163, 184, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  animation: softCardEntrance 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: transform 250ms ease, box-shadow 250ms ease;
+  backdrop-filter: blur(8px);
+}
+
+@keyframes softCardEntrance {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Top Avatar / Brand Badge */
+.neumorphic-avatar-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #F1F4F9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  box-shadow:
+    -6px -6px 14px rgba(255, 255, 255, 0.95),
+    6px 6px 14px rgba(148, 163, 184, 0.22);
+  user-select: none;
+  animation: softFadeIn 450ms 80ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Card Header (Title & Subtitle) */
+.neumorphic-header-text {
+  text-align: center;
+  animation: softFadeIn 450ms 120ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.neumorphic-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #27344F;
+  text-align: center;
+  margin-top: 22px;
+  margin-bottom: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.neumorphic-subtitle {
+  font-size: 13.5px;
+  color: #94A3B8;
+  text-align: center;
+  margin-top: 6px;
+  margin-bottom: 30px;
+  font-weight: 400;
+}
+
+@keyframes softFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Form Container */
+.neumorphic-form-body {
+  animation: softFadeIn 450ms 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.neumorphic-form-group {
+  margin-bottom: 20px;
+}
+
+/* Soft Inset Neumorphic Input */
+.neumorphic-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.neumorphic-input {
+  height: 52px;
+  width: 100%;
+  border: none;
+  border-radius: 15px;
+  background: #EEF2F7;
+  padding: 0 18px;
+  font-size: 14px;
+  color: #334155;
+  font-family: inherit;
+  box-shadow:
+    inset 4px 4px 9px rgba(148, 163, 184, 0.17),
+    inset -4px -4px 9px rgba(255, 255, 255, 0.90);
+  transition: background 180ms ease, box-shadow 180ms ease, color 180ms ease;
+  outline: none;
+}
+
+.neumorphic-input::placeholder {
+  color: #A0AABC;
+  font-weight: 400;
+}
+
+.neumorphic-input:hover:not(:disabled) {
+  background: #F5F7FB;
+}
+
+.neumorphic-input:focus {
+  background: #F8FAFC;
+  box-shadow:
+    inset 2px 2px 6px rgba(148, 163, 184, 0.12),
+    inset -2px -2px 6px rgba(255, 255, 255, 0.95),
+    0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.neumorphic-input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.neumorphic-input.has-toggle {
+  padding-right: 58px;
+}
+
+/* Clean Text Password Toggle Button */
+.neumorphic-toggle-btn {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 150ms ease, background 150ms ease;
+  font-family: inherit;
+  user-select: none;
+}
+
+.neumorphic-toggle-btn:hover:not(:disabled) {
+  color: #2563EB;
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.neumorphic-toggle-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Field Inline Validation Error */
+.field-inline-error {
+  display: block;
+  font-size: 12px;
+  color: #DC2626;
+  margin-top: 6px;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+/* Remember Me & Forgot Password Row */
+.neumorphic-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  margin-bottom: 22px;
+  font-size: 12.5px;
+}
+
+.neumorphic-remember-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748B;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 400;
+}
+
+.neumorphic-checkbox {
+  width: 15px;
+  height: 15px;
+  accent-color: #2563EB;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.neumorphic-forgot-link {
+  font-size: 12.5px;
+  color: #475569;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 150ms ease, text-decoration 150ms ease;
+}
+
+.neumorphic-forgot-link:hover {
+  color: #2563EB;
+  text-decoration: underline;
+}
+
+/* Soft Extruded Submit Button */
+.neumorphic-submit-btn {
+  width: 100%;
+  height: 52px;
+  margin-top: 24px;
+  border: none;
+  border-radius: 15px;
+  background: #EEF2F7;
+  color: #334155;
+  font-weight: 700;
+  font-size: 14.5px;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow:
+    6px 6px 14px rgba(148, 163, 184, 0.22),
+    -6px -6px 14px rgba(255, 255, 255, 0.95);
+  transition: transform 200ms ease, box-shadow 200ms ease, color 200ms ease, background 200ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.neumorphic-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    8px 8px 18px rgba(148, 163, 184, 0.25),
+    -8px -8px 18px rgba(255, 255, 255, 0.98);
+  color: #1E40AF;
+  background: #F3F6FB;
+}
+
+.neumorphic-submit-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  box-shadow:
+    inset 3px 3px 7px rgba(148, 163, 184, 0.18),
+    inset -3px -3px 7px rgba(255, 255, 255, 0.85);
+  color: #1E40AF;
+}
+
+.neumorphic-submit-btn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-pulse-text {
+  animation: softPulse 1.2s ease-in-out infinite;
+}
+
+@keyframes softPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Error Banner */
+.neumorphic-error-banner {
+  font-size: 12px;
+  color: #DC2626;
+  background: rgba(254, 226, 226, 0.65);
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-top: 14px;
+  text-align: center;
+  border: 1px solid rgba(254, 202, 202, 0.7);
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lock-timer-text {
+  font-weight: 700;
+  font-size: 11.5px;
+}
+
+/* Minimal Brand / Copyright Footer */
+.neumorphic-footer-brand {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 12.5px;
+  color: #94A3B8;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+/* ==========================================================================
+   DESKTOP HOVER & PARALLAX MICRO-EFFECTS
+   ========================================================================== */
+@media (hover: hover) and (pointer: fine) {
+  .neumorphic-login-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      -14px -14px 32px rgba(255, 255, 255, 0.95),
+      14px 14px 34px rgba(148, 163, 184, 0.24);
+  }
+}
+
+/* ==========================================================================
+   PREFERS-REDUCED-MOTION
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .neumorphic-login-card,
+  .neumorphic-avatar-circle,
+  .neumorphic-header-text,
+  .neumorphic-form-body,
+  .neumorphic-submit-btn,
+  .btn-pulse-text {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN (360px -> 1920px)
+   ========================================================================== */
+@media (max-width: 480px) {
+  .soft-login-viewport {
+    padding: 16px 12px;
+  }
+
+  .neumorphic-login-card {
+    width: 100%;
+    max-width: 380px;
+    padding: 30px 22px 28px;
+    border-radius: 24px;
+  }
+
+  .neumorphic-avatar-circle {
+    width: 52px;
+    height: 52px;
+    font-size: 15px;
+  }
+
+  .neumorphic-title {
+    font-size: 23px;
+    margin-top: 18px;
+  }
+
+  .neumorphic-subtitle {
+    font-size: 12.5px;
+    margin-bottom: 24px;
+  }
+
+  .neumorphic-input {
+    height: 50px;
+    font-size: 13.5px;
+  }
+
+  .neumorphic-submit-btn {
+    height: 50px;
+    font-size: 14px;
+  }
+
+  .neumorphic-footer-brand {
+    margin-top: 18px;
+    font-size: 12px;
+  }
+}

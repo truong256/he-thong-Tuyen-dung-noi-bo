@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
-import { LoginForm } from '../components/auth/LoginForm';
+import { LoginCard } from '../components/auth/LoginCard';
 import { AuthContext } from '../contexts/AuthContext';
 
 const mockLogin = vi.fn();
@@ -23,24 +23,26 @@ const renderWithContext = () => {
       }}
     >
       <BrowserRouter>
-        <LoginForm />
+        <LoginCard />
       </BrowserRouter>
     </AuthContext.Provider>
   );
 };
 
-describe('LoginForm Component', () => {
+describe('LoginCard Neumorphic Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  it('renders login form without any demo accounts or credentials card', () => {
+  it('renders soft neumorphic login card with HR badge and without demo credentials', () => {
     renderWithContext();
 
+    expect(screen.getByText('HR')).toBeInTheDocument();
     expect(screen.getByText('Chào mừng trở lại')).toBeInTheDocument();
-    expect(screen.getByLabelText('Email công ty')).toBeInTheDocument();
-    expect(screen.getByLabelText('Mật khẩu')).toBeInTheDocument();
+    expect(screen.getByText('Đăng nhập để tiếp tục')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Email công ty')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Mật khẩu')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Đăng nhập' })).toBeInTheDocument();
 
     // Verify completely purged demo references
@@ -52,7 +54,7 @@ describe('LoginForm Component', () => {
   it('toggles password visibility with text-only button "Hiện" / "Ẩn"', () => {
     renderWithContext();
 
-    const passwordInput = screen.getByLabelText('Mật khẩu') as HTMLInputElement;
+    const passwordInput = screen.getByPlaceholderText('Mật khẩu') as HTMLInputElement;
     const toggleBtn = screen.getByRole('button', { name: /Hiện mật khẩu/i });
 
     expect(passwordInput.type).toBe('password');
@@ -69,11 +71,24 @@ describe('LoginForm Component', () => {
     expect(toggleBtn.textContent).toBe('Hiện');
   });
 
-  it('invokes auth login on form submit with email and password', async () => {
+  it('validates required fields before calling login API', async () => {
     renderWithContext();
 
-    const emailInput = screen.getByLabelText('Email công ty');
-    const passwordInput = screen.getByLabelText('Mật khẩu');
+    const submitBtn = screen.getByRole('button', { name: 'Đăng nhập' });
+
+    // Submit with empty inputs
+    fireEvent.click(submitBtn);
+
+    expect(screen.getByText('Vui lòng nhập email.')).toBeInTheDocument();
+    expect(screen.getByText('Vui lòng nhập mật khẩu.')).toBeInTheDocument();
+    expect(mockLogin).not.toHaveBeenCalled();
+  });
+
+  it('invokes auth login on form submit with valid email and password', async () => {
+    renderWithContext();
+
+    const emailInput = screen.getByPlaceholderText('Email công ty');
+    const passwordInput = screen.getByPlaceholderText('Mật khẩu');
     const submitBtn = screen.getByRole('button', { name: 'Đăng nhập' });
 
     fireEvent.change(emailInput, { target: { value: 'hr_lead@company.com' } });

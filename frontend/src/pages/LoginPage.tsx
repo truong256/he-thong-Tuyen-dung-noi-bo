@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import HeroPanel from '../components/auth/HeroPanel';
-import LoginForm from '../components/auth/LoginForm';
+import LoginCard from '../components/auth/LoginCard';
+import '../styles/login.css';
 
 export const LoginPage: React.FC = () => {
   const { isAuthenticated } = useAuth();
@@ -18,14 +18,13 @@ export const LoginPage: React.FC = () => {
   }, [isAuthenticated, navigate, redirectPath]);
 
   return (
-    <div className="auth-split-layout">
-      {/* Left Column: Visual & Brand Hero */}
-      <HeroPanel />
+    <div className="soft-login-viewport">
+      {/* Subtle Ambient Glowing Orbs for Depth */}
+      <div className="soft-ambient-orb-1" aria-hidden="true" />
+      <div className="soft-ambient-orb-2" aria-hidden="true" />
 
-      {/* Right Column: Clean Authentication Form */}
-      <main className="auth-form-panel" aria-label="Khu vực đăng nhập">
-        <LoginForm onSuccessRedirect={redirectPath} />
-      </main>
+      {/* Main Centered Neumorphic Card */}
+      <LoginCard onSuccessRedirect={redirectPath} />
     </div>
   );
 };
