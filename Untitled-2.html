@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hệ thống Tuyển dụng nội bộ</title>
+<style>
+:root{--navy:#0F2747;--blue:#1F5A94;--blue-h:#174A7A;--bg:#F4F6F8;--white:#fff;--text:#1E293B;--muted:#64748B;--line:#D9E0E7;--red:#C2413B;--red-bg:#FDECEC}
+*{box-sizing:border-box}
+html,body{margin:0;overflow-x:hidden}
+body{font-family:"Segoe UI",Arial,sans-serif;font-size:15px;line-height:1.5;color:var(--text);background:var(--bg)}
+button,select{font:inherit}
+.app{display:flex;min-height:100vh}
+.sidebar{width:248px;flex:none;background:var(--navy);color:#cbd5e1;overflow-y:auto}
+.brand{padding:20px;font-weight:700;font-size:15px;color:#fff;letter-spacing:.04em;border-bottom:1px solid rgba(255,255,255,.12)}
+.grp{padding:16px 20px 6px;font-size:12px;font-weight:600;color:#8ea3bd;letter-spacing:.06em}
+.nav-link{display:block;width:100%;padding:10px 20px;border:0;border-left:3px solid transparent;background:none;color:#cbd5e1;text-align:left;cursor:pointer;font-size:15px}
+.nav-link:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-link.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:#fff;font-weight:600}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;gap:12px;height:60px;padding:0 24px;background:var(--white);border-bottom:1px solid var(--line)}
+.sys-name{font-weight:600;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.bell,.menu-btn{position:relative;width:40px;height:40px;border:1px solid var(--line);border-radius:6px;background:var(--white);cursor:pointer;font-size:17px}
+.bell:hover,.menu-btn:hover{background:var(--bg)}
+.dot{position:absolute;top:8px;right:9px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.menu-btn{display:none}
+.user{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:600;font-size:14px}
+.user-text{display:flex;flex-direction:column;line-height:1.25}
+.user-text span{font-size:13px;color:var(--muted)}
+.content{padding:24px;max-width:1100px;width:100%;margin:0 auto}
+.crumbs{list-style:none;display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px;padding:0;font-size:14px;color:var(--muted)}
+.crumbs li+li::before{content:"/";margin-right:6px}
+.crumbs a{color:var(--blue);text-decoration:none}.crumbs a:hover{text-decoration:underline}
+.crumbs li:last-child{color:var(--text);font-weight:600}
+.card{background:var(--white);border:1px solid var(--line);border-radius:8px}
+h1,h2{margin:0;color:var(--navy)}
+.page-title{font-size:22px;margin-bottom:16px}
+.p-muted{color:var(--muted);margin:0 0 16px}
+/* Trang lỗi */
+.error-card{max-width:680px;margin:8px auto 0;padding:32px;border-top:4px solid var(--red);animation:rise .3s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.err-icon{width:56px;height:56px;border-radius:50%;background:var(--red-bg);color:var(--red);display:grid;place-items:center;font-size:26px;margin:0 auto 16px}
+.error-card h1{text-align:center;font-size:26px;color:var(--red)}
+.lead{text-align:center;font-weight:600;font-size:17px;margin:8px 0 6px}
+.explain{text-align:center;color:var(--muted);margin:0 auto 24px;max-width:56ch}
+.info{display:grid;grid-template-columns:200px 1fr;margin:0 0 24px;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.info dt,.info dd{margin:0;padding:10px 14px;border-bottom:1px solid var(--line)}
+.info dt{background:var(--bg);color:var(--muted);font-size:14px}
+.info dt:nth-last-of-type(1),.info dd:last-of-type{border-bottom:0}
+.badge{display:inline-block;padding:2px 10px;border-radius:4px;background:var(--red-bg);color:var(--red);font-weight:600;font-size:14px}
+.actions{display:flex;gap:12px;justify-content:center}
+.btn{min-height:44px;padding:0 22px;border-radius:6px;border:1px solid var(--blue);font-weight:600;cursor:pointer;transition:background .15s}
+.btn-primary{background:var(--blue);color:#fff}.btn-primary:hover{background:var(--blue-h)}
+.btn-secondary{background:var(--white);color:var(--blue)}.btn-secondary:hover{background:var(--bg)}
+.hint{margin:20px 0 0;padding:12px 14px;background:var(--bg);border-left:3px solid var(--blue);border-radius:4px;font-size:14px;color:var(--muted)}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+/* Demo */
+.demo{padding:20px;margin-top:20px}
+.demo h2{font-size:17px;margin-bottom:4px}
+.demo-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;align-items:end;margin:14px 0}
+.demo label{display:block;font-size:14px;color:var(--muted);margin-bottom:4px}
+.demo select{width:100%;height:42px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--white);color:var(--text)}
+.result{margin-top:12px;padding:12px 14px;border-radius:6px;border:1px solid var(--line);background:var(--bg);font-size:14px}
+.result.deny{background:var(--red-bg);border-color:#f1c4c1;color:var(--red);font-weight:600}
+.result.ok{background:#EAF2F9;border-color:#c5d9ec;color:var(--blue-h);font-weight:600}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.tile{padding:16px}.tile strong{display:block;font-size:24px;color:var(--navy)}.tile span{color:var(--muted);font-size:14px}
+.scrim{display:none}
+@media (max-width:900px){
+  .menu-btn{display:block}
+  .sidebar{position:fixed;inset:0 auto 0 0;z-index:20;transform:translateX(-100%);transition:transform .2s}
+  body.nav-open .sidebar{transform:none}
+  body.nav-open .scrim{display:block;position:fixed;inset:0;z-index:10;background:rgba(15,39,71,.45)}
+}
+@media (max-width:600px){
+  .topbar{padding:0 12px}.content{padding:16px 12px}
+  .user-text{display:none}.sys-name{font-size:14px}
+  .error-card{padding:24px 16px}.error-card h1{font-size:21px}
+  .info{grid-template-columns:1fr}.info dt{border-bottom:0;padding-bottom:0}.info dd{padding-top:2px}
+  .actions{flex-direction:column}.btn{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Menu chính">
+    <div class="brand">HỆ THỐNG TUYỂN DỤNG</div>
+    <nav id="nav"></nav>
+  </aside>
+  <div class="scrim" id="scrim"></div>
+  <div class="main">
+    <header class="topbar">
+      <button class="menu-btn" id="menuBtn" aria-label="Mở menu" aria-controls="sidebar" aria-expanded="false">☰</button>
+      <div class="sys-name">Hệ thống Tuyển dụng nội bộ</div>
+      <div class="top-right">
+        <button class="bell" aria-label="Thông báo">🔔<span class="dot"></span></button>
+        <div class="user">
+          <div class="avatar" id="avatar" aria-hidden="true">ND</div>
+          <div class="user-text"><strong>Người dùng</strong><span id="userRole"></span></div>
+        </div>
+      </div>
+    </header>
+    <main class="content">
+      <ol class="crumbs" id="crumbs" aria-label="Đường dẫn"></ol>
+      <div id="view"></div>
+    </main>
+  </div>
+</div>
+<script>
+(function () {
+  'use strict';
+  // ===== Dữ liệu mô phỏng (không có backend) =====
+  // Phần kiểm tra quyền trong giao diện được mô phỏng để kiểm thử luồng.
+  // Việc kiểm tra quyền thực tế cần được thực hiện ở phía máy chủ.
+  var ROLES = {
+    candidate: 'Ứng viên (Candidate)',
+    recruiter: 'Nhân viên tuyển dụng (Recruiter)',
+    hiring_manager: 'Trưởng bộ phận (Hiring Manager)',
+    interviewer: 'Người phỏng vấn (Interviewer)',
+    hr_manager: 'Trưởng phòng Nhân sự (HR Manager)',
+    approver: 'Người duyệt (Approver)',
+    admin: 'Quản trị hệ thống (Admin)'
+  };
+  var USER = { role: 'recruiter' };
+  var STORE_KEY = 's1-07-role';
+  try { var saved = sessionStorage.getItem(STORE_KEY); if (saved && ROLES[saved]) USER.role = saved; } catch (e) {}
+  function setRole(r) { USER.role = r; try { sessionStorage.setItem(STORE_KEY, r); } catch (e) {} renderUser(); }
+  // Chỉ "Phân quyền" có yêu cầu quyền được xác định (quyền quản trị = vai trò Admin).
+  // Các chức năng khác chưa có quy tắc nên không bị chặn ở giao diện mô phỏng.
+  var PERM_LABEL = { admin: 'Quyền quản trị' };
+  var MENU = [
+    ['TỔNG QUAN', [['tong-quan', 'Tổng quan', null, 'Tổng quan']]],
+    ['TUYỂN DỤNG', [['vi-tri', 'Vị trí tuyển dụng', null, 'Vị trí tuyển dụng'], ['tin', 'Tin tuyển dụng', null, 'Tin tuyển dụng'], ['ung-vien', 'Ứng viên', null, 'Ứng viên']]],
+    ['QUY TRÌNH', [['phong-van', 'Phỏng vấn', null, 'Phỏng vấn'], ['danh-gia', 'Đánh giá', null, 'Đánh giá'], ['de-xuat', 'Đề xuất tuyển dụng', null, 'Đề xuất tuyển dụng']]],
+    ['NHÂN SỰ', [['nhan-vien', 'Nhân viên', null, 'Nhân viên']]],
+    ['QUẢN TRỊ', [['phan-quyen', 'Phân quyền', 'admin', 'Quản lý phân quyền'], ['cai-dat', 'Cài đặt', null, 'Cài đặt']]]
+  ];
+  var ROUTES = {};
+  MENU.forEach(function (g) { g[1].forEach(function (m) { ROUTES[m[0]] = { label: m[1], perm: m[2], fn: m[3], group: g[0] }; }); });
+
+  function can(role, perm) { return !perm || (perm === 'admin' && role === 'admin'); }
+  function roleName() { return ROLES[USER.role]; }
+  function renderUser() { $('userRole').textContent = roleName().replace(/ \(.*\)/, ''); }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  // ===== Điều hướng (History API) =====
+  // history.state.i = số bước lịch sử trong ứng dụng; i = 0 nghĩa là không có trang trước.
+  function curIdx() { return (history.state && typeof history.state.i === 'number') ? history.state.i : 0; }
+  function navigate(hash, replace) {
+    if (!replace && hash === location.hash) return;
+    if (replace) history.replaceState({ i: curIdx() }, '', hash);
+    else history.pushState({ i: curIdx() + 1 }, '', hash);
+    route();
+  }
+  function goHome() { navigate('#/'); }
+  function goBack() { if (curIdx() > 0) history.back(); else navigate('#/', true); }
+
+  function renderNav(active) {
+    var h = '';
+    MENU.forEach(function (g) {
+      h += '<div class="grp">' + g[0] + '</div>';
+      g[1].forEach(function (m) {
+        h += '<button class="nav-link' + (m[0] === active ? ' active' : '') + '"' + (m[0] === active ? ' aria-current="page"' : '') + ' data-go="' + m[0] + '">' + m[1] + '</button>';
+      });
+    });
+    $('nav').innerHTML = h;
+  }
+  function renderCrumbs(items) {
+    $('crumbs').innerHTML = items.map(function (c, i) {
+      return '<li>' + (c[1] ? '<a href="' + c[1] + '">' + esc(c[0]) + '</a>' : esc(c[0])) + '</li>';
+    }).join('');
+  }
+
+  // ===== Các trang =====
+  function viewHome() {
+    renderCrumbs([['Trang chủ']]);
+    var roleOpts = Object.keys(ROLES).map(function (r) { return '<option value="' + r + '"' + (r === USER.role ? ' selected' : '') + '>' + ROLES[r] + '</option>'; }).join('');
+    $('view').innerHTML =
+      '<h1 class="page-title">Tổng quan</h1>' +
+      '<div class="card" style="padding:20px"><p class="p-muted" style="margin:0">Chọn một chức năng ở menu bên trái để bắt đầu. Nếu tài khoản chưa được cấp quyền, hệ thống sẽ hướng dẫn bạn bước tiếp theo.</p></div>' +
+      '<section class="card demo" aria-labelledby="demoT"><h2 id="demoT">Kiểm tra quyền truy cập (mô phỏng)</h2>' +
+      '<p class="p-muted" style="margin:0">Chọn vai trò để kiểm tra chức năng <strong>Quản lý phân quyền</strong>.</p>' +
+      '<div class="demo-form"><div><label for="selRole">Vai trò</label><select id="selRole">' + roleOpts + '</select></div>' +
+      '<div><button class="btn btn-primary" id="btnCheck" style="width:100%">Kiểm tra quyền</button></div></div>' +
+      '<div class="result" id="result" role="status">Chưa kiểm tra. Bạn cũng có thể chọn "Phân quyền" ở menu bên trái.</div>' +
+      '<p class="hint">Phần kiểm tra quyền trong giao diện được mô phỏng để kiểm thử luồng. Việc kiểm tra quyền thực tế cần được thực hiện ở phía máy chủ.</p></section>';
+    function preview() {
+      var ok = can($('selRole').value, 'admin'), el = $('result');
+      el.className = 'result ' + (ok ? 'ok' : 'deny');
+      el.innerHTML = '<span>' + (ok ? 'Được phép truy cập: Quản lý phân quyền' : 'Không đủ quyền truy cập: Quản lý phân quyền') + '</span><br><button class="btn btn-secondary" data-go="phan-quyen" style="margin-top:10px">Truy cập Phân quyền</button>';
+    }
+    $('btnCheck').onclick = function () { setRole($('selRole').value); preview(); };
+    $('selRole').onchange = function () { setRole(this.value); };
+  }
+  function viewModule(key) {
+    var r = ROUTES[key];
+    renderCrumbs([['Trang chủ', '#/'], [r.group.charAt(0) + r.group.slice(1).toLowerCase(), null], [r.label]]);
+    $('view').innerHTML = '<h1 class="page-title">' + esc(r.fn) + '</h1><div class="card" style="padding:20px"><p class="p-muted" style="margin:0">Bạn đang truy cập với vai trò <strong>' + esc(roleName()) + '</strong>. Quyền truy cập hợp lệ. Nội dung chức năng này thuộc phần việc của thành viên khác.</p></div>';
+  }
+  function errorPage(o) {
+    $('view').innerHTML =
+      '<section class="card error-card" role="alert"><div class="err-icon" aria-hidden="true">🔒</div>' +
+      '<h1>' + o.title + '</h1><p class="lead">' + o.lead + '</p><p class="explain">' + o.explain + '</p>' + (o.info || '') +
+      '<div class="actions"><button class="btn btn-primary" data-act="back">← Quay lại</button><button class="btn btn-secondary" data-act="home">Về trang chủ</button></div>' +
+      '<p class="hint">' + o.hint + '</p></section>';
+  }
+  function view403(r) {
+    renderCrumbs(r ? [['Trang chủ', '#/'], [r.group.charAt(0) + r.group.slice(1).toLowerCase(), null], [r.label]] : [['Trang chủ', '#/'], ['Không đủ quyền truy cập']]);
+    errorPage({
+      title: 'KHÔNG ĐỦ QUYỀN TRUY CẬP',
+      lead: 'Bạn không được cấp quyền thực hiện chức năng này.',
+      explain: 'Tài khoản hiện tại chưa được cấp quyền truy cập vào ' + (r ? 'chức năng ' + esc(r.fn) : 'chức năng này') + '. Vui lòng quay lại trang trước hoặc liên hệ quản trị viên nếu bạn cần sử dụng chức năng này.',
+      info: '<dl class="info"><dt>Vai trò hiện tại</dt><dd>' + esc(roleName()) + '</dd><dt>Chức năng yêu cầu</dt><dd>' + (r ? esc(r.fn) : 'Không xác định') + '</dd><dt>Quyền cần thiết</dt><dd>' + (r ? PERM_LABEL[r.perm] : 'Không xác định') + '</dd><dt>Trạng thái</dt><dd><span class="badge">Không được phép truy cập</span></dd><dt>Mã lỗi</dt><dd><strong>403</strong></dd></dl>',
+      hint: 'Bạn không cần thực hiện lại thao tác. Hãy quay lại trang trước hoặc liên hệ quản trị viên để được cấp quyền.'
+    });
+  }
+  function view404() {
+    renderCrumbs([['Trang chủ', '#/'], ['Không tìm thấy trang']]);
+    errorPage({
+      title: 'KHÔNG TÌM THẤY TRANG',
+      lead: 'Đường dẫn bạn truy cập không tồn tại.',
+      explain: 'Trang có thể đã được di chuyển hoặc đường dẫn bị nhập sai. Hãy quay lại trang trước hoặc chọn chức năng từ menu bên trái.',
+      info: '<dl class="info"><dt>Mã lỗi</dt><dd><strong>404</strong></dd></dl>',
+      hint: 'Bạn có thể tiếp tục công việc bằng cách quay lại trang trước hoặc về trang chủ.'
+    });
+  }
+
+  // Kiểm tra quyền tại một chỗ duy nhất: mọi đường vào (menu, nút, gõ địa chỉ, lịch sử) đều đi qua route().
+  function route() {
+    if (!history.state) history.replaceState({ i: 1 }, '');
+    renderUser();
+    var parts = location.hash.replace(/^#\/?/, '').split('?');
+    var key = parts[0], params = new URLSearchParams(parts[1] || '');
+    document.body.classList.remove('nav-open');
+    $('menuBtn').setAttribute('aria-expanded', 'false');
+    if (key === '') { renderNav(''); viewHome(); }
+    else if (key === '403') {
+      var fn = ROUTES[params.get('fn')] ? params.get('fn') : '';
+      if (fn && can(USER.role, ROUTES[fn].perm)) { navigate('#/' + fn, true); return; } // đã có quyền
+      renderNav(fn); view403(fn ? ROUTES[fn] : null);
+    }
+    else if (!ROUTES[key]) { renderNav(''); view404(); }
+    else if (!can(USER.role, ROUTES[key].perm)) { navigate('#/403?fn=' + key, true); return; } // thay thế mục lịch sử để Quay lại không bị kẹt
+    else { renderNav(key); viewModule(key); }
+    window.scrollTo(0, 0);
+    var t = $('view').querySelector('h1'); if (t) { t.setAttribute('tabindex', '-1'); t.focus({ preventScroll: true }); }
+  }
+
+  document.addEventListener('click', function (e) {
+    var go = e.target.closest('[data-go]'), act = e.target.closest('[data-act]'), a = e.target.closest('a[href^="#/"]');
+    if (go) navigate('#/' + go.getAttribute('data-go'));
+    else if (act) act.getAttribute('data-act') === 'back' ? goBack() : goHome();
+    else if (a) { e.preventDefault(); navigate(a.getAttribute('href')); }
+  });
+  $('menuBtn').onclick = function () { var o = document.body.classList.toggle('nav-open'); this.setAttribute('aria-expanded', o); };
+  $('scrim').onclick = function () { document.body.classList.remove('nav-open'); };
+  window.addEventListener('popstate', route);
+  if (!history.state) history.replaceState({ i: 0 }, '');
+  route();
+})();
+</script>
+</body>
+</html>
