@@ -29,19 +29,19 @@ const renderWithContext = () => {
   );
 };
 
-describe('LoginCard Neumorphic Component', () => {
+describe('LoginCard Reference UI Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  it('renders soft neumorphic login card with HR badge and without demo credentials', () => {
-    renderWithContext();
+  it('renders modern reference card with user avatar and without demo credentials', () => {
+    const { container } = renderWithContext();
 
-    expect(screen.getByText('HR')).toBeInTheDocument();
+    expect(container.querySelector('.auth-avatar-circle')).toBeInTheDocument();
     expect(screen.getByText('Chào mừng trở lại')).toBeInTheDocument();
     expect(screen.getByText('Đăng nhập để tiếp tục')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Email công ty')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Email hoặc tài khoản')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Mật khẩu')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Đăng nhập' })).toBeInTheDocument();
 
@@ -49,26 +49,26 @@ describe('LoginCard Neumorphic Component', () => {
     expect(screen.queryByText(/Tài khoản mẫu/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/123456/)).not.toBeInTheDocument();
     expect(screen.queryByText(/admin@company.com/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/dtc245200851/)).not.toBeInTheDocument();
   });
 
-  it('toggles password visibility with text-only button "Hiện" / "Ẩn"', () => {
+  it('toggles password visibility with eye icon toggle button', () => {
     renderWithContext();
 
     const passwordInput = screen.getByPlaceholderText('Mật khẩu') as HTMLInputElement;
     const toggleBtn = screen.getByRole('button', { name: /Hiện mật khẩu/i });
 
     expect(passwordInput.type).toBe('password');
-    expect(toggleBtn.textContent).toBe('Hiện');
 
     fireEvent.click(toggleBtn);
 
     expect(passwordInput.type).toBe('text');
-    expect(toggleBtn.textContent).toBe('Ẩn');
+    expect(screen.getByRole('button', { name: /Ẩn mật khẩu/i })).toBeInTheDocument();
 
-    fireEvent.click(toggleBtn);
+    fireEvent.click(screen.getByRole('button', { name: /Ẩn mật khẩu/i }));
 
     expect(passwordInput.type).toBe('password');
-    expect(toggleBtn.textContent).toBe('Hiện');
+    expect(screen.getByRole('button', { name: /Hiện mật khẩu/i })).toBeInTheDocument();
   });
 
   it('validates required fields before calling login API', async () => {
@@ -87,7 +87,7 @@ describe('LoginCard Neumorphic Component', () => {
   it('invokes auth login on form submit with valid email and password', async () => {
     renderWithContext();
 
-    const emailInput = screen.getByPlaceholderText('Email công ty');
+    const emailInput = screen.getByPlaceholderText('Email hoặc tài khoản');
     const passwordInput = screen.getByPlaceholderText('Mật khẩu');
     const submitBtn = screen.getByRole('button', { name: 'Đăng nhập' });
 
