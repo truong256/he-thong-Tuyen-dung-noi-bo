@@ -140,6 +140,42 @@ export const DashboardPage: React.FC = () => {
         </div>
       )}
 
+      {hasRole('HIRING_MANAGER') && !hasRole('ADMIN') && (
+        <div className="role-dashboard hiring-manager-view">
+          <h2 className="section-title"><i className="bi bi-person-workspace"></i> Trưởng bộ phận Tuyển dụng (Hiring Manager)</h2>
+          <div className="dashboard-cards-grid">
+            <div className="card">
+              <h3><i className="bi bi-file-earmark-plus"></i> Tạo Requisition</h3>
+              <p>Đề xuất nhu cầu tuyển dụng bổ sung cho đội ngũ của bộ phận.</p>
+            </div>
+            <div className="card">
+              <h3><i className="bi bi-person-lines-fill"></i> Ứng viên Bộ phận</h3>
+              <p>Xem xét hồ sơ đã qua vòng lọc của Recruiter.</p>
+            </div>
+            <div className="card">
+              <h3><i className="bi bi-check-circle"></i> Quyết định Tuyển chọn</h3>
+              <p>Gửi phản hồi chấp thuận hoặc từ chối sau phỏng vấn.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {hasRole('APPROVER') && !hasRole('ADMIN') && (
+        <div className="role-dashboard approver-view">
+          <h2 className="section-title"><i className="bi bi-shield-check"></i> Người duyệt Headcount & Offer (Approver)</h2>
+          <div className="dashboard-cards-grid">
+            <div className="card">
+              <h3><i className="bi bi-clipboard-check"></i> Duyệt Requisition</h3>
+              <p>Phê duyệt hoặc từ chối yêu cầu tuyển dụng mới từ các phòng ban.</p>
+            </div>
+            <div className="card">
+              <h3><i className="bi bi-award"></i> Duyệt Đề xuất Offer</h3>
+              <p>Xem xét các gói đãi ngộ đặc biệt cho ứng viên tiềm năng.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {hasRole('INTERVIEWER') && (
         <div className="role-dashboard interviewer-view">
           <h2 className="section-title"><i className="bi bi-camera-video"></i> Lịch phỏng vấn (Interviewer)</h2>
@@ -162,3 +198,4 @@ export const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
+
