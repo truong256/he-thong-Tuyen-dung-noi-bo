@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Recruit - Trang chủ vai trò</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dashboard-header {
+            background-color: #1e293b;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #334155;
+        }
+
+        .brand-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #38bdf8;
+        }
+
+        .user-nav {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .user-email {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .role-badge {
+            display: inline-block;
+            margin-top: 4px;
+            padding: 2px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            background-color: #0284c7;
+            color: #ffffff;
+            text-transform: uppercase;
+        }
+
+        .logout-btn {
+            background-color: #ef4444;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background-color: #dc2626;
+        }
+
+        .dashboard-container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 24px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .welcome-card {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            border: 1px solid #475569;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .welcome-card h1 {
+            margin-top: 0;
+            font-size: 1.85rem;
+            color: #ffffff;
+        }
+
+        .welcome-card p {
+            color: #cbd5e1;
+            font-size: 1.05rem;
+            line-height: 1.6;
+        }
+
+        .role-modules {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 20px;
+            margin-top: 28px;
+        }
+
+        .module-box {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 20px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .module-box:hover {
+            transform: translateY(-2px);
+            border-color: #38bdf8;
+        }
+
+        .module-box h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            color: #38bdf8;
+        }
+
+        .module-box p {
+            font-size: 0.9rem;
+            color: #94a3b8;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="dashboard-header">
+        <div class="brand-title">
+            <span>♙</span> HR Recruit ATS
+        </div>
+        <div class="user-nav">
+            <div class="user-info">
+                <span class="user-email" id="displayEmail">user@company.com</span>
+                <span class="role-badge" id="displayRole">RECRUITER</span>
+            </div>
+            <button class="logout-btn" id="logoutButton">Đăng xuất</button>
+        </div>
+    </header>
+
+    <main class="dashboard-container">
+        <div class="welcome-card">
+            <h1 id="homeTitle">Trang chủ tuyển dụng</h1>
+            <p id="homeDescription">
+                Chào mừng bạn đã đăng nhập vào hệ thống Tuyển dụng Nội bộ. Dưới đây là các phân hệ quyền hạn dành riêng cho vai trò của bạn.
+            </p>
+
+            <div class="role-modules" id="moduleContainer">
+                <!-- Modules hiển thị theo vai trò -->
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE_URL = "http://localhost:8080";
+
+        // Kiểm tra phiên đăng nhập
+        const accessToken = localStorage.getItem("accessToken");
+        const currentUserJson = localStorage.getItem("currentUser");
+
+        if (!accessToken) {
+            window.location.href = "index.html";
+        }
+
+        let currentUser = {};
+        try {
+            currentUser = JSON.parse(currentUserJson || "{}");
+        } catch (e) {
+            currentUser = {};
+        }
+
+        const role = (currentUser.role || "RECRUITER").toUpperCase();
+        const email = currentUser.email || "user@company.com";
+
+        document.getElementById("displayEmail").textContent = email;
+        document.getElementById("displayRole").textContent = role;
+
+        // Nội dung trang chủ theo từng vai trò (AC1)
+        const roleContentMap = {
+            "ADMIN": {
+                title: "Trang chủ Quản trị Hệ thống (Admin)",
+                description: "Cổng quản trị tối cao dành cho Admin: Quản lý tài khoản, vai trò phân quyền (RBAC), danh mục tổ chức dùng chung và nhật ký hệ thống.",
+                modules: [
+                    { title: "Quản trị Tài khoản", desc: "Tạo mới, khóa, mở khóa và quản lý danh sách người dùng nội bộ." },
+                    { title: "Phân quyền (RBAC)", desc: "Cấu hình vai trò và gán quyền thao tác trên hệ thống." },
+                    { title: "Nhật ký Hệ thống", desc: "Theo dõi lịch sử đăng nhập và các thao tác nhạy cảm." }
+                ]
+            },
+            "HR_MANAGER": {
+                title: "Trang chủ Quản lý Tuyển dụng (HR Manager)",
+                description: "Cổng điều hành của Trưởng phòng Nhân sự: Theo dõi hiệu quả toàn bộ chiến dịch tuyển dụng, ngân sách headcount và báo cáo tổng thể.",
+                modules: [
+                    { title: "Kế hoạch Headcount", desc: "Quản lý ngân sách tuyển dụng theo phòng ban và quý." },
+                    { title: "Báo cáo Tuyển dụng", desc: "Thống kê Time-to-hire, Cost-per-hire và tỷ lệ chuyển đổi funnel." },
+                    { title: "Duyệt Yêu cầu Tuyển dụng", desc: "Xem xét và phê duyệt các requisition từ các bộ phận." }
+                ]
+            },
+            "RECRUITER": {
+                title: "Trang chủ Tuyển dụng & Điều phối Pipeline (Recruiter)",
+                description: "Không gian làm việc hàng ngày của Recruiter: Tiếp nhận hồ sơ, sàng lọc CV, kéo thả trạng thái trên Kanban và đặt lịch phỏng vấn.",
+                modules: [
+                    { title: "Pipeline Kanban", desc: "Quản lý tiến độ ứng viên từ Nộp hồ sơ đến Nhận việc." },
+                    { title: "Hồ sơ Ứng viên", desc: "Tra cứu, đánh dấu trùng lặp và lưu trữ talent pool." },
+                    { title: "Lịch Phỏng vấn", desc: "Xếp lịch phỏng vấn và gửi email thư mời tự động." }
+                ]
+            },
+            "HIRING_MANAGER": {
+                title: "Trang chủ Trưởng bộ phận Tuyển dụng (Hiring Manager)",
+                description: "Cổng phối hợp dành cho Trưởng bộ phận: Tạo requisition yêu cầu tuyển dụng, xem danh sách ứng viên và ra quyết định chọn người.",
+                modules: [
+                    { title: "Tạo Requisition", desc: "Đề xuất nhu cầu tuyển dụng bổ sung cho đội ngũ." },
+                    { title: "Ứng viên Bộ phận", desc: "Xem xét hồ sơ đã qua vòng lọc của Recruiter." },
+                    { title: "Quyết định Tuyển chọn", desc: "Gửi phản hồi chấp thuận hoặc từ chối sau phỏng vấn." }
+                ]
+            },
+            "INTERVIEWER": {
+                title: "Trang chủ Phỏng vấn viên (Interviewer)",
+                description: "Cổng làm việc của Phỏng vấn viên: Xem lịch phỏng vấn được gán, đọc CV ứng viên và điền phiếu đánh giá năng lực.",
+                modules: [
+                    { title: "Lịch Phỏng vấn Cá nhân", desc: "Xem danh sách các ca phỏng vấn sắp tới." },
+                    { title: "Hồ sơ Phỏng vấn", desc: "Xem CV và lịch sử ghi chú về ứng viên." },
+                    { title: "Phiếu Đánh giá Năng lực", desc: "Điền điểm và nhận xét theo khung năng lực chuẩn." }
+                ]
+            },
+            "APPROVER": {
+                title: "Trang chủ Người duyệt Headcount & Offer (Approver)",
+                description: "Cổng phê duyệt cấp cao: Xem xét các đề xuất mở vị trí mới và các offer lương thưởng vượt hạn mức thông thường.",
+                modules: [
+                    { title: "Duyệt Requisition", desc: "Phê duyệt hoặc từ chối yêu cầu tuyển dụng mới." },
+                    { title: "Duyệt Đề xuất Offer", desc: "Xem xét các gói đãi ngộ đặc biệt cho ứng viên tiềm năng." }
+                ]
+            },
+            "CANDIDATE": {
+                title: "Cổng Thông tin Ứng viên (Candidate)",
+                description: "Cổng thông tin tự phục vụ dành cho Ứng viên: Tra cứu trạng thái hồ sơ, xác nhận lịch hẹn phỏng vấn và xem phản hồi offer.",
+                modules: [
+                    { title: "Trạng thái Hồ sơ", desc: "Theo dõi vị trí đã ứng tuyển và tiến trình xử lý." },
+                    { title: "Lịch Hẹn Phỏng vấn", desc: "Xác nhận tham gia hoặc phản hồi lịch phỏng vấn." }
+                ]
+            }
+        };
+
+        const config = roleContentMap[role] || roleContentMap["RECRUITER"];
+        document.getElementById("homeTitle").textContent = config.title;
+        document.getElementById("homeDescription").textContent = config.description;
+
+        const container = document.getElementById("moduleContainer");
+        container.innerHTML = "";
+        config.modules.forEach(m => {
+            const box = document.createElement("div");
+            box.className = "module-box";
+            box.innerHTML = `<h3>${m.title}</h3><p>${m.desc}</p>`;
+            container.appendChild(box);
+        });
+
+        // Xử lý Đăng xuất
+        document.getElementById("logoutButton").addEventListener("click", async function () {
+            const refreshToken = localStorage.getItem("refreshToken");
+            if (refreshToken) {
+                try {
+                    await fetch(`${API_BASE_URL}/api/auth/logout`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ refreshToken: refreshToken })
+                    });
+                } catch (e) {
+                    console.error("Logout request failed:", e);
+                }
+            }
+
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("currentUser");
+            window.location.href = "index.html";
+        });
+    </script>
+</body>
+</html>

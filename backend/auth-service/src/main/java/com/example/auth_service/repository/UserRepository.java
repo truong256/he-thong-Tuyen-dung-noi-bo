@@ -1,32 +1,23 @@
 package com.example.auth_service.repository;
 
 import com.example.auth_service.entity.User;
-
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User, Long> {
-
-    // Tìm tài khoản theo username
-    User findByUsername(String username);
-
-    // Kiểm tra username đã tồn tại chưa
-    boolean existsByUsername(String username);
-
-    // Tìm tài khoản theo email
-    User findByEmail(String email);
-
-    // Kiểm tra email đã tồn tại chưa
-    boolean existsByEmail(String email);
-
-    // Kiểm tra email có thuộc tài khoản khác không
+@Repository
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
+    Optional<User> findByEmail(String email);
+    Optional<User> findByUsername(String username);
+    Boolean existsByEmail(String email);
+    Boolean existsByUsername(String username);
     boolean existsByEmailAndIdNot(String email, Long id);
 
-    // Tìm kiếm tài khoản theo username, fullName, email
-    // Có thể kết hợp lọc theo status
     @Query("""
         SELECT u FROM User u
         WHERE

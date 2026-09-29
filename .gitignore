@@ -5,6 +5,21 @@
 
 # dotenv files
 .env
+.env.local
+.env.*.local
+!.env.example
+application-local.properties
+**/application-local.properties
+
+# Build output & dependencies
+target/
+**/target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
 
 # User-specific files
 *.rsuser
@@ -384,12 +399,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# VS Code files for those working on multiple tools
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# VS Code files
+.vscode/
 *.code-workspace
 
 # Local History for Visual Studio Code
@@ -480,3 +491,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Postman
+.postman/
+postman/

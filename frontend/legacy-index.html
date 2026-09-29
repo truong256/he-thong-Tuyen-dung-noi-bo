@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Recruit - Đăng nhập</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* CSS BỔ SUNG CHO MENU & USER INFO (SCRUM-43, SCRUM-27, SCRUM-28) */
+        .app-header {
+            background-color: #1e293b;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            position: relative;
+            z-index: 100;
+        }
+        .app-header .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .app-header .header-logo {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .main-nav ul {
+            display: flex;
+            list-style: none;
+            gap: 15px;
+            margin: 0;
+            padding: 0;
+        }
+        .main-nav a {
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 6px 10px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .main-nav a:hover, .main-nav a.active {
+            color: #ffffff;
+            background-color: #334155;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: #334155;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        .user-profile .avatar-img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: #38bdf8;
+            color: #0f172a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+        .user-profile .user-details {
+            display: flex;
+            flex-direction: column;
+            font-size: 0.8rem;
+        }
+        .user-profile .user-name { font-weight: 600; color: #f8fafc; }
+        .user-profile .user-role { font-size: 0.7rem; color: #94a3b8; }
+
+        /* RESPONSIVE CHO ĐIỆN THOẠI (SCRUM-28) */
+        @media (max-width: 768px) {
+            .app-header { flex-direction: column; gap: 12px; align-items: flex-start; }
+            .main-nav ul { flex-wrap: wrap; gap: 8px; }
+            .user-profile { align-self: flex-end; } /* Đã sửa chính xác ở đây */
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- ====================================================
+     BỔ SUNG HEADER: MENU & THÔNG TIN NGƯỜI DÙNG (SCRUM-43, 27, 28)
+========================================================= -->
+<header class="app-header">
+    <div class="header-left">
+        <div class="header-logo">
+            <span>♙</span> HR Recruit
+        </div>
+        <!-- SCRUM-27: Menu điều hướng phân quyền -->
+        <nav class="main-nav">
+            <ul>
+                <li><a href="#" class="active">Trang chủ</a></li>
+                <li><a href="#">Quản lý tuyển dụng</a></li>
+                <li><a href="#">Hồ sơ ứng viên</a></li>
+                <li><a href="#">Báo cáo</a></li>
+            </ul>
+        </nav>
+    </div>
+
+    <!-- SCRUM-43: Thông tin người dùng đang đăng nhập -->
+    <div class="user-profile">
+        <div class="avatar-img">HR</div>
+        <div class="user-details">
+            <span class="user-name">Nguyễn Văn A</span>
+            <span class="user-role">HR Admin</span>
+        </div>
+    </div>
+</header>
+
+<div class="login-page">
+
+    <!-- =========================
+         PHẦN 1: LEFT HERO
+    ========================== -->
+    <section class="hero-section">
+
+        <div class="hero-content">
+
+            <!-- Logo -->
+            <div class="brand">
+                <div class="brand-icon">
+                    <span>♙</span>
+                </div>
+
+                <span>HR Recruit</span>
+            </div>
+
+
+            <!-- Nội dung giới thiệu -->
+            <div class="hero-text">
+
+                <h1>
+                    Nền tảng Tuyển dụng
+                    <span>Nội bộ Doanh nghiệp</span>
+                </h1>
+
+                <p>
+                    Hệ thống chuyên dụng tối ưu quy trình tìm kiếm,
+                    sàng lọc và phát triển nhân tài cho toàn bộ nhân sự
+                    HR thuộc hệ thống.
+                </p>
+
+            </div>
+
+
+            <!-- Hình minh họa -->
+            <div class="hero-illustration">
+
+                <div class="search-icon">
+                    🔍
+                </div>
+
+                <div class="candidate-card">
+
+                    <div class="card-top">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+
+                    <div class="candidate">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <div class="candidate selected">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+
+                        <b>✓</b>
+                    </div>
+
+                    <div class="candidate">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                    <div class="candidate">
+                        <div class="avatar">👤</div>
+
+                        <div class="candidate-info">
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="people-icon">
+                    👥
+                </div>
+
+            </div>
+
+
+            <!-- Version -->
+            <div class="version">
+                Phiên bản 4.2.0 (Enterprise)
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         PHẦN 2 + 3: LOGIN
+    ========================== -->
+    <section class="login-section">
+
+        <div class="login-card">
+
+            <!-- =====================
+                 PHẦN 2: FORM ĐĂNG NHẬP
+            ====================== -->
+
+            <div class="login-header">
+
+                <h2>Chào mừng quay trở lại</h2>
+
+                <p>
+                    Đăng nhập vào cổng thông tin tuyển dụng
+                    nhân sự nội bộ
+                </p>
+
+            </div>
+
+
+            <form id="loginForm" novalidate>
+
+                <!-- Email -->
+                <div class="form-group">
+
+                    <label for="email">
+                        Email công ty
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            ✉
+                        </span>
+
+                        <input
+                            type="email"
+                            id="email"
+                            placeholder="email@company.com"
+                            autocomplete="email"
+                        >
+
+                    </div>
+
+                    <small
+                        class="error-message"
+                        id="emailError">
+                    </small>
+
+                </div>
+
+
+                <!-- Password -->
+                <div class="form-group">
+
+                    <label for="password">
+                        Mật khẩu
+                    </label>
+
+                    <div class="input-wrapper">
+
+                        <span class="input-icon">
+                            🔒
+                        </span>
+
+                        <input
+                            type="password"
+                            id="password"
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                        >
+
+                        <button
+                            type="button"
+                            class="show-password"
+                            id="showPassword">
+                            👁
+                        </button>
+
+                    </div>
+
+                    <small
+                        class="error-message"
+                        id="passwordError">
+                    </small>
+
+                </div>
+
+
+                <!-- Remember + Forgot -->
+                <div class="login-options">
+
+                    <label class="remember">
+
+                        <input
+                            type="checkbox"
+                            id="remember">
+
+                        <span>
+                            Ghi nhớ đăng nhập
+                        </span>
+
+                    </label>
+
+                    <a href="#" id="forgotPassword">
+                        Quên mật khẩu?
+                    </a>
+
+                </div>
+
+
+                <!-- =====================
+                     PHẦN 3: BUTTON LOGIN
+                ====================== -->
+
+                <button
+                    type="submit"
+                    class="login-button"
+                    id="loginButton">
+
+                    <span>Đăng nhập</span>
+
+                    <span class="arrow">
+                        →
+                    </span>
+
+                </button>
+
+
+                <!-- Thông báo lỗi chung -->
+                <div
+                    class="general-error"
+                    id="generalError">
+                </div>
+
+
+                <!-- Divider -->
+                <div class="divider">
+
+                    <span></span>
+
+                    <p>Hoặc</p>
+
+                    <span></span>
+
+                </div>
+
+
+                <!-- Google -->
+                <button
+                    type="button"
+                    class="google-button"
+                    id="googleButton">
+
+                    <span class="google-icon">
+                        G
+                    </span>
+
+                    <span>
+                        Đăng nhập bằng Google
+                    </span>
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </section>
+
+</div>
+
+
+<script src="js/script.js"></script>
+
+</body>
+</html>
