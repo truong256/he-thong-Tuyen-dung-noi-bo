@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>403 | Không có quyền truy cập</title>
+
+    <link rel="stylesheet" href="error.css">
+</head>
+
+<body>
+
+    <!-- Background decoration -->
+    <div class="background">
+        <div class="glow glow-1"></div>
+        <div class="glow glow-2"></div>
+        <div class="grid"></div>
+    </div>
+
+    <main class="error-page">
+
+        <section class="error-card">
+
+            <!-- Header -->
+            <div class="brand">
+                <div class="brand-logo">
+                    <span>R</span>
+                </div>
+
+                <div class="brand-name">
+                    Recruitment<span>AI</span>
+                </div>
+            </div>
+
+            <!-- Error icon -->
+            <div class="icon-wrapper">
+                <div class="error-icon">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M12 9V13"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                        />
+
+                        <path
+                            d="M12 17.01L12.01 17"
+                            stroke="currentColor"
+                            stroke-width="2.5"
+                            stroke-linecap="round"
+                        />
+
+                        <path
+                            d="M10.29 3.86L2.82 17C2.05 18.35 3.03 20 4.58 20H19.42C20.97 20 21.95 18.35 21.18 17L13.71 3.86C12.94 2.51 11.06 2.51 10.29 3.86Z"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Error code -->
+            <div class="error-code">
+                403
+            </div>
+
+            <!-- Content -->
+            <div class="content">
+
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    ACCESS DENIED
+                </div>
+
+                <h1>
+                    Bạn không có quyền
+                    <span>truy cập trang này</span>
+                </h1>
+
+                <p>
+                    Tài khoản của bạn chưa được cấp quyền để thực hiện
+                    thao tác này. Vui lòng quay lại trang trước hoặc
+                    liên hệ quản trị viên nếu bạn cho rằng đây là một lỗi.
+                </p>
+
+            </div>
+
+            <!-- Actions -->
+            <div class="actions">
+
+                <button
+                    class="btn btn-secondary"
+                    onclick="goBack()">
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M19 12H5"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                        />
+
+                        <path
+                            d="M12 19L5 12L12 5"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+
+                    Quay lại
+                </button>
+
+                <a
+                    href="../index.html"
+                    class="btn btn-primary">
+
+                    Về trang chủ
+
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M5 12H19"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                        />
+
+                        <path
+                            d="M13 6L19 12L13 18"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        />
+                    </svg>
+
+                </a>
+
+            </div>
+
+            <!-- Help -->
+            <div class="help-box">
+
+                <div class="help-icon">
+                    ?
+                </div>
+
+                <div class="help-text">
+                    <strong>Cần hỗ trợ?</strong>
+
+                    <span>
+                        Liên hệ quản trị viên hệ thống để được cấp quyền.
+                    </span>
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <span>RecruitmentAI</span>
+                <span class="separator">•</span>
+                <span>Internal Recruitment System</span>
+            </div>
+s
+        </section>
+
+    </main>
+
+    <script>
+        function goBack() {
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = "../index.html";
+            }
+        }
+    </script>
+
+</body>
+</html>
