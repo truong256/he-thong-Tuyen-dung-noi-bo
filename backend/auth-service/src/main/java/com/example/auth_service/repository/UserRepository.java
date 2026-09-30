@@ -2,11 +2,11 @@ package com.example.auth_service.repository;
 
 import com.example.auth_service.entity.User;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import java.util.List;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
@@ -25,17 +25,28 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Kiểm tra email có thuộc tài khoản khác không
     boolean existsByEmailAndIdNot(String email, Long id);
 
-    // Tìm kiếm tài khoản theo username, fullName, email
-    // Có thể kết hợp lọc theo status
+    // Tìm kiếm theo username, họ tên, email, phòng ban
+    // Kết hợp lọc theo role, status và hỗ trợ phân trang
     @Query("""
         SELECT u FROM User u
         WHERE
             (
                 :keyword IS NULL
                 OR :keyword = ''
-                OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(COALESCE(u.username, ''))
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(COALESCE(u.fullName, ''))
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(COALESCE(u.email, ''))
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(COALESCE(u.department, ''))
+                    LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+            AND
+            (
+                :role IS NULL
+                OR :role = ''
+                OR u.role = :role
             )
             AND
             (
@@ -44,8 +55,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
                 OR u.status = :status
             )
         """)
-    List<User> searchUsers(
+    Page<User> searchUsers(
             @Param("keyword") String keyword,
-            @Param("status") String status
+            @Param("role") String role,
+            @Param("status") String status,
+            Pageable pageable
     );
 }

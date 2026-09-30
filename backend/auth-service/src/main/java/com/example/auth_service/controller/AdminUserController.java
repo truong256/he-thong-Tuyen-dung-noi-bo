@@ -2,6 +2,12 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.entity.User;
 import com.example.auth_service.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -165,15 +171,38 @@ public ResponseEntity<?> updateUser(
 @GetMapping
 public ResponseEntity<?> searchUsers(
         @RequestParam(required = false) String keyword,
-        @RequestParam(required = false) String status) {
+        @RequestParam(required = false) String role,
+        @RequestParam(required = false) String status,
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "20") int size) {
 
-    List<User> users = userRepository.searchUsers(keyword, status);
+    if (page < 0 || size < 1 || size > 100) {
+        return ResponseEntity.badRequest()
+                .body("page phải >= 0, size phải từ 1 đến 100");
+    }
 
-    List<Map<String, Object>> result = users.stream()
-            .map(this::toResponse)
-            .toList();
+    Pageable pageable = PageRequest.of(
+            page,
+            size,
+            Sort.by(Sort.Direction.ASC, "id")
+    );
 
-    return ResponseEntity.ok(result);
+    Page<User> users = userRepository.searchUsers(
+            keyword, role, status, pageable
+    );
+
+    Page<Map<String, Object>> result = users.map(this::toResponse);
+
+    Map<String, Object> response = new HashMap<>();
+    response.put("content", result.getContent());
+    response.put("currentPage", result.getNumber());
+    response.put("pageSize", result.getSize());
+    response.put("totalElements", result.getTotalElements());
+    response.put("totalPages", result.getTotalPages());
+    response.put("first", result.isFirst());
+    response.put("last", result.isLast());
+
+    return ResponseEntity.ok(response);
 }
 private Map<String, Object> toResponse(User user) {
     Map<String, Object> result = new HashMap<>();
