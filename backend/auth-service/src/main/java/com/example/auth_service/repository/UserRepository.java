@@ -1,7 +1,6 @@
 package com.example.auth_service.repository;
 
 import com.example.auth_service.entity.User;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,23 +9,18 @@ import org.springframework.data.repository.query.Param;
 
 public interface UserRepository extends JpaRepository<User, Long> {
 
-    // Tìm tài khoản theo username
     User findByUsername(String username);
 
-    // Kiểm tra username đã tồn tại chưa
     boolean existsByUsername(String username);
 
-    // Tìm tài khoản theo email
     User findByEmail(String email);
 
-    // Kiểm tra email đã tồn tại chưa
     boolean existsByEmail(String email);
 
-    // Kiểm tra email có thuộc tài khoản khác không
     boolean existsByEmailAndIdNot(String email, Long id);
 
-    // Tìm kiếm theo username, họ tên, email, phòng ban
-    // Kết hợp lọc theo role, status và hỗ trợ phân trang
+    User findByActivationToken(String activationToken);
+
     @Query("""
         SELECT u FROM User u
         WHERE

@@ -1,7 +1,9 @@
 package com.example.auth_service.entity;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
 @Entity
 @Table(name = "users")
 public class User {
@@ -30,10 +32,15 @@ public class User {
     private String role = "INTERVIEWER";
 
     @Column(length = 30)
-    private String status = "ACTIVE";
+    private String status = "INACTIVE";
 
     @Column(nullable = false)
-    private boolean mustChangePassword = false;
+    private boolean mustChangePassword = true;
+
+    @Column(length = 255)
+    private String activationToken;
+
+    private LocalDateTime activationTokenExpiry;
 
     public User() {
     }
@@ -114,4 +121,19 @@ public class User {
     public void setMustChangePassword(boolean mustChangePassword) {
         this.mustChangePassword = mustChangePassword;
     }
+    public String getActivationToken() {
+    return activationToken;
+}
+
+public void setActivationToken(String activationToken) {
+    this.activationToken = activationToken;
+}
+
+public LocalDateTime getActivationTokenExpiry() {
+    return activationTokenExpiry;
+}
+
+public void setActivationTokenExpiry(LocalDateTime activationTokenExpiry) {
+    this.activationTokenExpiry = activationTokenExpiry;
+}
 }
