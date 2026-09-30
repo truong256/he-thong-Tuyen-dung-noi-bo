@@ -11,6 +11,7 @@ import com.example.auth_service.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@PreAuthorize("hasAuthority('USER_MANAGE')")
 public class AdminUserService {
 
     private final UserRepository userRepository;
@@ -35,6 +37,7 @@ public class AdminUserService {
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('USER_READ')")
     public Page<UserSummaryDto> listUsers(String search, String status, Pageable pageable) {
         String querySearch = (search != null && !search.isBlank()) ? search.trim().toLowerCase() : null;
         String queryStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) ? status.trim().toUpperCase() : null;
@@ -59,6 +62,7 @@ public class AdminUserService {
     }
 
     @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('USER_READ')")
     public UserSummaryDto getUserById(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
@@ -133,6 +137,7 @@ public class AdminUserService {
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('ROLE_MANAGE')")
     public UserSummaryDto updateRoles(Long id, UpdateRolesRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
@@ -167,9 +172,7 @@ public class AdminUserService {
             }
         }
         if (roles.isEmpty()) {
-            Role defaultRole = roleRepository.findByName(RoleName.RECRUITER)
-                    .orElseGet(() -> roleRepository.save(new Role(RoleName.RECRUITER, "Chuyên viên tuyển dụng")));
-            roles.add(defaultRole);
+            throw new BadRequestException("Phải chọn ít nhất một vai trò hợp lệ.");
         }
         return roles;
     }
@@ -177,7 +180,7 @@ public class AdminUserService {
     private UserSummaryDto mapToSummary(User user) {
         Set<String> roleNames = user.getRoles() != null && !user.getRoles().isEmpty()
                 ? user.getRoles().stream().map(r -> r.getName().name()).collect(Collectors.toSet())
-                : Set.of(user.getRole() != null ? user.getRole() : "RECRUITER");
+                : Set.of();
 
         return new UserSummaryDto(
                 user.getId(),

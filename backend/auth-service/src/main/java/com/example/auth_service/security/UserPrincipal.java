@@ -16,6 +16,7 @@ public class UserPrincipal implements UserDetails {
     private final String fullName;
     private final String password;
     private final String status;
+    private boolean accountNonLocked = true;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(Long id, String email, String fullName, String password, String status,
@@ -34,11 +35,17 @@ public class UserPrincipal implements UserDetails {
             authorities = user.getRoles().stream()
                     .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName().name()))
                     .collect(Collectors.toList());
+            user.getRoles().stream()
+                    .flatMap(role -> RolePermissions.forRole(role.getName()).stream())
+                    .distinct()
+                    .map(permission -> new SimpleGrantedAuthority(permission.name()))
+                    .forEach(authorities::add);
         } else {
-            authorities = List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+            // user_roles is authoritative. A stale legacy role must not restore revoked access.
+            authorities = List.of();
         }
 
-        return new UserPrincipal(
+        UserPrincipal principal = new UserPrincipal(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
@@ -46,6 +53,8 @@ public class UserPrincipal implements UserDetails {
                 user.getStatus(),
                 authorities
         );
+        principal.accountNonLocked = user.isAccountNonLocked();
+        return principal;
     }
 
     public Long getId() { return id; }
@@ -75,7 +84,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return !"LOCKED".equalsIgnoreCase(status);
+        return accountNonLocked && !"LOCKED".equalsIgnoreCase(status);
     }
 
     @Override

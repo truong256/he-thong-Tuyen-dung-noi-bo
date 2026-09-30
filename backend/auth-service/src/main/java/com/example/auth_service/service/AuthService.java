@@ -196,10 +196,8 @@ public class AuthService {
         user.setStatus("ACTIVE");
 
         RoleName assignedRole = RoleName.CANDIDATE;
-        if (request.getRole() != null) {
-            try {
-                assignedRole = RoleName.valueOf(request.getRole().trim().toUpperCase());
-            } catch (Exception ignored) {}
+        if (request.getRole() != null && !"CANDIDATE".equalsIgnoreCase(request.getRole().trim())) {
+            throw new BadRequestException("Đăng ký công khai chỉ được tạo tài khoản ứng viên.");
         }
 
         if (roleRepository != null) {
@@ -437,6 +435,6 @@ public class AuthService {
                     .map(role -> role.getName().name())
                     .collect(Collectors.toSet());
         }
-        return Set.of(user.getRole() != null ? user.getRole() : "RECRUITER");
+        return Set.of();
     }
 }

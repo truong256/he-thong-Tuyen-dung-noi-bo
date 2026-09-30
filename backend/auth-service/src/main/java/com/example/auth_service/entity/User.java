@@ -129,9 +129,11 @@ public class User {
 
     public Set<Role> getRoles() { return roles; }
     public void setRoles(Set<Role> roles) {
-        this.roles = roles != null ? roles : new HashSet<>();
+        this.roles = roles != null ? new HashSet<>(roles) : new HashSet<>();
         if (!this.roles.isEmpty()) {
             this.role = this.roles.iterator().next().getName().name();
+        } else {
+            this.role = null;
         }
     }
 

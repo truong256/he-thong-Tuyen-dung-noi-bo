@@ -42,12 +42,6 @@ public class AuthController {
     public ResponseEntity<?> logoutUser(@RequestBody(required = false) Map<String, String> request,
                                        Authentication authentication) {
         String email = authentication != null ? authentication.getName() : null;
-        if (email == null && request != null) {
-            email = request.get("email");
-            if (email == null) {
-                email = request.get("refreshToken");
-            }
-        }
         if (email != null) {
             authService.logout(email);
         }
