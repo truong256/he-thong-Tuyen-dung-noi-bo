@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecruitmentAI - Quản lý vai trò</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-logo">R</div>
+            <div>
+                <h1>RecruitmentAI</h1>
+                <span>ADMIN SYSTEM</span>
+            </div>
+        </div>
+
+        <nav class="menu">
+
+            <a href="#" class="menu-item">
+                <span>⌂</span>
+                Tổng quan
+            </a>
+
+            <a href="#" class="menu-item active">
+                <span>👥</span>
+                Người dùng
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>💼</span>
+                Tuyển dụng
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>📋</span>
+                Ứng viên
+            </a>
+
+            <a href="#" class="menu-item">
+                <span>⚙</span>
+                Cài đặt
+            </a>
+
+        </nav>
+
+        <div class="sidebar-bottom">
+            <div class="admin-profile">
+                <div class="avatar avatar-admin">AD</div>
+                <div>
+                    <strong>Administrator</strong>
+                    <small>Quản trị hệ thống</small>
+                </div>
+            </div>
+
+            <button class="logout-btn">
+                ⇥ Đăng xuất
+            </button>
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <!-- TOPBAR -->
+        <header class="topbar">
+
+            <div>
+                <div class="breadcrumb">
+                    Quản trị hệ thống / Người dùng
+                </div>
+
+                <h2>Quản lý người dùng</h2>
+
+                <p>
+                    Quản lý tài khoản và phân quyền cho nhân sự trong hệ thống.
+                </p>
+            </div>
+
+            <div class="top-actions">
+
+                <button class="notification">
+                    🔔
+                    <span></span>
+                </button>
+
+                <div class="top-user">
+                    <div class="avatar avatar-admin">AD</div>
+                    <div>
+                        <strong>Administrator</strong>
+                        <small>ADMIN</small>
+                    </div>
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <!-- STATISTICS -->
+        <section class="statistics">
+
+            <div class="stat-card">
+                <div class="stat-icon purple">👥</div>
+                <div>
+                    <span>Tổng người dùng</span>
+                    <strong id="totalUsers">6</strong>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon green">✓</div>
+                <div>
+                    <span>Đang hoạt động</span>
+                    <strong>6</strong>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon blue">🛡</div>
+                <div>
+                    <span>Quản trị viên</span>
+                    <strong>2</strong>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon orange">🏷</div>
+                <div>
+                    <span>Tổng vai trò</span>
+                    <strong id="totalRoles">11</strong>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- CONTENT CARD -->
+        <section class="content-card">
+
+            <div class="content-header">
+
+                <div>
+                    <h3>Danh sách người dùng</h3>
+                    <p>
+                        Gán hoặc thu hồi nhiều vai trò cho một người dùng.
+                    </p>
+                </div>
+
+                <button class="primary-btn" onclick="openAddUser()">
+                    <span>＋</span>
+                    Thêm người dùng
+                </button>
+
+            </div>
+
+
+            <!-- TOOLBAR -->
+            <div class="toolbar">
+
+                <div class="search-box">
+
+                    <span>⌕</span>
+
+                    <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Tìm theo tên, username hoặc email..."
+                        oninput="searchUsers()"
+                    >
+
+                </div>
+
+                <select id="roleFilter" onchange="searchUsers()">
+
+                    <option value="">Tất cả vai trò</option>
+                    <option value="ADMIN">Admin</option>
+                    <option value="RECRUITER">Recruiter</option>
+                    <option value="HIRING_MANAGER">Hiring Manager</option>
+                    <option value="INTERVIEWER">Interviewer</option>
+                    <option value="HR_MANAGER">HR Manager</option>
+                    <option value="APPROVER">Approver</option>
+                    <option value="CANDIDATE">Candidate</option>
+
+                </select>
+
+            </div>
+
+
+            <!-- TABLE -->
+            <div class="table-wrapper">
+
+                <table>
+
+                    <thead>
+
+                    <tr>
+                        <th>NGƯỜI DÙNG</th>
+                        <th>EMAIL</th>
+                        <th>PHÒNG BAN</th>
+                        <th>VAI TRÒ</th>
+                        <th>TRẠNG THÁI</th>
+                        <th>THAO TÁC</th>
+                    </tr>
+
+                    </thead>
+
+                    <tbody id="userTable">
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <div class="table-footer">
+
+                <span id="resultText">
+                    Hiển thị 6 người dùng
+                </span>
+
+                <div class="pagination">
+                    <button disabled>‹</button>
+                    <button class="current">1</button>
+                    <button disabled>›</button>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<!-- ROLE MODAL -->
+
+<div class="modal-overlay" id="roleModal">
+
+    <div class="modal">
+
+        <div class="modal-header">
+
+            <div>
+                <span class="modal-label">PHÂN QUYỀN</span>
+                <h3>Quản lý vai trò</h3>
+            </div>
+
+            <button class="close-btn" onclick="closeRoleModal()">×</button>
+
+        </div>
+
+
+        <div class="selected-user">
+
+            <div class="avatar" id="modalAvatar">
+                NV
+            </div>
+
+            <div>
+                <strong id="modalName">
+                    Nguyễn Văn A
+                </strong>
+
+                <span id="modalEmail">
+                    email@example.com
+                </span>
+            </div>
+
+        </div>
+
+
+        <div class="role-section">
+
+            <label>VAI TRÒ HIỆN TẠI</label>
+
+            <div class="current-roles" id="currentRoles">
+            </div>
+
+        </div>
+
+
+        <div class="role-section">
+
+            <label>THÊM / THAY ĐỔI VAI TRÒ</label>
+
+            <div class="role-grid">
+
+                <label class="role-option">
+                    <input type="checkbox" value="ADMIN">
+                    <span>
+                        <b>ADMIN</b>
+                        <small>Quản trị hệ thống</small>
+                    </span>
+                </label>
+
+                <label class="role-option">
+                    <input type="checkbox" value="RECRUITER">
+                    <span>
+                        <b>RECRUITER</b>
+                        <small>Nhân viên tuyển dụng</small>
+                    </span>
+                </label>
+
+                <label class="role-option">
+                    <input type="checkbox" value="HIRING_MANAGER">
+                    <span>
+                        <b>HIRING MANAGER</b>
+                        <small>Quản lý tuyển dụng</small>
+                    </span>
+                </label>
+
+                <label class="role-option">
+                    <input type="checkbox" value="INTERVIEWER">
+                    <span>
+                        <b>INTERVIEWER</b>
+                        <small>Người phỏng vấn</small>
+                    </span>
+                </label>
+
+                <label class="role-option">
+                    <input type="checkbox" value="HR_MANAGER">
+                    <span>
+                        <b>HR MANAGER</b>
+                        <small>Quản lý nhân sự</small>
+                    </span>
+                </label>
+
+                <label class="role-option">
+                    <input type="checkbox" value="APPROVER">
+                    <span>
+                        <b>APPROVER</b>
+                        <small>Người phê duyệt</small>
+                    </span>
+                </label>
+
+                <label class="role-option">
+                    <input type="checkbox" value="CANDIDATE">
+                    <span>
+                        <b>CANDIDATE</b>
+                        <small>Ứng viên</small>
+                    </span>
+                </label>
+
+            </div>
+
+        </div>
+
+
+        <div class="security-warning">
+
+            <span>🛡</span>
+
+            <div>
+                <strong>Lưu ý bảo mật</strong>
+                <p>
+                    Quản trị viên không thể tự thu hồi vai trò
+                    ADMIN của chính mình.
+                </p>
+            </div>
+
+        </div>
+
+
+        <div class="modal-footer">
+
+            <button class="secondary-btn" onclick="closeRoleModal()">
+                Hủy
+            </button>
+
+            <button class="primary-btn" onclick="saveRoles()">
+                Lưu thay đổi
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- TOAST -->
+
+<div class="toast" id="toast">
+
+    <div class="toast-icon">✓</div>
+
+    <div>
+        <strong id="toastTitle">
+            Thành công
+        </strong>
+
+        <span id="toastMessage">
+            Cập nhật thành công.
+        </span>
+    </div>
+
+</div>
+
+
+<script src="app.js"></script>
+
+</body>
+</html>
