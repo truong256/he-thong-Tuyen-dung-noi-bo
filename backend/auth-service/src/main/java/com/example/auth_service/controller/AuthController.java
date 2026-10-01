@@ -41,16 +41,12 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<?> logoutUser(@RequestBody(required = false) Map<String, String> request,
                                        Authentication authentication) {
-        String email = authentication != null ? authentication.getName() : null;
-        if (email == null && request != null) {
-            email = request.get("email");
-            if (email == null) {
-                email = request.get("refreshToken");
-            }
-        }
-        if (email != null) {
-            authService.logout(email);
-        }
+        String refreshToken = request != null ? request.get("refreshToken") : null;
+        String authenticatedEmail = (authentication != null && authentication.isAuthenticated())
+                ? authentication.getName()
+                : null;
+
+        authService.logout(refreshToken, authenticatedEmail);
         return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công!"));
     }
 
