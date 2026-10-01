@@ -222,4 +222,82 @@ class AdminUserServiceTest {
         assertThat(res.getRoles()).containsExactly("HR_MANAGER");
         verify(userRepository).save(any(User.class));
     }
+
+    // =========================================================================
+    // S1-10: Lock / Unlock Account & Handover Warning
+    // =========================================================================
+
+    @Test
+    @DisplayName("S1-10: Khóa tài khoản không có lý do -> Bị từ chối")
+    void testUpdateStatus_LockWithoutReason_Rejected() {
+        User user = new User("staff@company.com", "pass");
+        user.setId(7L);
+        when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+
+        UpdateStatusRequest req = new UpdateStatusRequest("LOCKED", "", null);
+
+        assertThatThrownBy(() -> adminUserService.updateStatus(7L, req))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Bắt buộc ghi lý do khóa tài khoản");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("S1-10: Khóa tài khoản hợp lệ -> Lưu reason, note, thu hồi refresh token, gắn cảnh báo bàn giao")
+    void testUpdateStatus_LockWithReason_RevokesSessionsAndFlagsHandover() {
+        User user = new User("recruiter@company.com", "pass");
+        user.setId(8L);
+        when(userRepository.findById(8L)).thenReturn(Optional.of(user));
+
+        // Mock assignments
+        RequisitionAssignment assignment = new RequisitionAssignment();
+        assignment.setId(100L);
+        assignment.setRequisitionId(50L);
+        assignment.setUserId(8L);
+        assignment.setRole(RoleName.RECRUITER);
+        when(requisitionAssignmentRepository.findByUserId(8L)).thenReturn(List.of(assignment));
+
+        RecruitmentRequisition req = new RecruitmentRequisition();
+        req.setId(50L);
+        req.setRequisitionCode("REQ-2026-001");
+        req.setTitle("Senior Java Developer");
+        when(recruitmentRequisitionRepository.findById(50L)).thenReturn(Optional.of(req));
+
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateStatusRequest statusReq = new UpdateStatusRequest("LOCKED", "Chấm dứt hợp đồng lao động", "Quyết định số 123/QĐ-NS");
+        UserSummaryDto res = adminUserService.updateStatus(8L, statusReq);
+
+        assertThat(res.getStatus()).isEqualTo("LOCKED");
+        assertThat(res.getLockReason()).isEqualTo("Chấm dứt hợp đồng lao động");
+        assertThat(res.getLockNote()).isEqualTo("Quyết định số 123/QĐ-NS");
+        assertThat(res.getHandoverWarnings()).contains("REQ-2026-001 - Senior Java Developer");
+
+        // Verify refresh tokens were revoked
+        verify(refreshTokenRepository).revokeAllByUser(user);
+
+        // Verify assignment handover was flagged
+        assertThat(assignment.isHandoverRequired()).isTrue();
+        verify(requisitionAssignmentRepository).save(assignment);
+    }
+
+    @Test
+    @DisplayName("S1-10: Mở khóa tài khoản -> Status ACTIVE, không xóa cảnh báo bàn giao")
+    void testUpdateStatus_UnlockAccount_RestoresActive() {
+        User user = new User("locked_staff@company.com", "pass");
+        user.setId(9L);
+        user.setStatus("LOCKED");
+        user.setFailedLoginAttempts(5);
+        user.setLockedUntil(Instant.now().plusSeconds(3600));
+        when(userRepository.findById(9L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateStatusRequest req = new UpdateStatusRequest("ACTIVE");
+        UserSummaryDto res = adminUserService.updateStatus(9L, req);
+
+        assertThat(res.getStatus()).isEqualTo("ACTIVE");
+        assertThat(user.getFailedLoginAttempts()).isEqualTo(0);
+        assertThat(user.getLockedUntil()).isNull();
+    }
 }

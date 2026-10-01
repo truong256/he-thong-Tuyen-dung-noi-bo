@@ -274,6 +274,46 @@ class RbacIntegrationTest {
     }
 
     @Test
+    void adminLockRequiresReasonAndFlagsHandoverAndRevokesAccess() throws Exception {
+        User admin = user("rbac-lock-admin", RoleName.ADMIN);
+        String adminToken = token(admin);
+
+        // Lock without reason -> 400 Bad Request
+        mvc.perform(patch("/api/admin/users/" + recruiter.getId() + "/status")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"LOCKED\"}"))
+                .andExpect(status().isBadRequest());
+
+        // Lock with reason -> 200 OK
+        mvc.perform(patch("/api/admin/users/" + recruiter.getId() + "/status")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"LOCKED\",\"reason\":\"Vi phạm kỷ luật\",\"note\":\"Quyết định số 45\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("LOCKED"))
+                .andExpect(jsonPath("$.lockReason").value("Vi phạm kỷ luật"))
+                .andExpect(jsonPath("$.handoverWarnings[0]").exists());
+
+        // Verify assignment was flagged for handover
+        List<RequisitionAssignment> userAssignments = assignments.findByUserId(recruiter.getId());
+        assertThat(userAssignments).isNotEmpty();
+        assertThat(userAssignments.get(0).isHandoverRequired()).isTrue();
+
+        // Existing token is now rejected on protected APIs
+        mvc.perform(get("/api/candidates/" + visible.getId()).header("Authorization", token(recruiter)))
+                .andExpect(status().isUnauthorized());
+
+        // Unlock account -> 200 OK
+        mvc.perform(patch("/api/admin/users/" + recruiter.getId() + "/status")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"ACTIVE\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
     void corsPreflightStillWorks() throws Exception {
         mvc.perform(options("/api/candidates").header("Origin", "http://localhost:5173")
                 .header("Access-Control-Request-Method", "GET").header("Access-Control-Request-Headers", "Authorization"))

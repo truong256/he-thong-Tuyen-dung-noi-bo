@@ -19,4 +19,7 @@ public class RequisitionAssignment {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
     private RoleName role;
+
+    @Column(name = "handover_required", nullable = false)
+    private boolean handoverRequired = false;
 }
