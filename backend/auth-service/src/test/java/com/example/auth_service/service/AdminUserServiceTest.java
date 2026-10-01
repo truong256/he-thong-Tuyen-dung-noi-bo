@@ -35,6 +35,7 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -111,8 +112,11 @@ class AdminUserServiceTest {
         assertThat(savedUser.getPassword()).isEqualTo("$2a$10$encodedTempPass");
         assertThat(savedUser.getDepartment()).isEqualTo("Công nghệ thông tin");
 
-        // Verify activation email dispatched
-        verify(mailService).sendAccountActivationEmail(eq("new_user@company.com"), anyString());
+        // Verify activation email dispatched with 12-char temp password
+        verify(mailService).sendAccountActivationEmail(
+                eq("new_user@company.com"),
+                argThat(pwd -> pwd != null && pwd.length() == 12)
+        );
     }
 
     @Test
@@ -299,5 +303,19 @@ class AdminUserServiceTest {
         assertThat(res.getStatus()).isEqualTo("ACTIVE");
         assertThat(user.getFailedLoginAttempts()).isEqualTo(0);
         assertThat(user.getLockedUntil()).isNull();
+    }
+
+    @Test
+    @DisplayName("S1-08: Sinh mật khẩu tạm thời đúng 12 ký tự ngẫu nhiên, an toàn và đủ độ phức tạp")
+    void testGenerateTemporaryPassword_Generates12CharComplexPassword() {
+        for (int i = 0; i < 20; i++) {
+            String tempPassword = AdminUserService.generateTemporaryPassword();
+            assertThat(tempPassword).isNotNull();
+            assertThat(tempPassword).hasSize(12);
+            assertThat(tempPassword).matches(".*[A-Z].*");
+            assertThat(tempPassword).matches(".*[a-z].*");
+            assertThat(tempPassword).matches(".*[0-9].*");
+            assertThat(tempPassword).matches(".*[!@#$%^&*].*");
+        }
     }
 }

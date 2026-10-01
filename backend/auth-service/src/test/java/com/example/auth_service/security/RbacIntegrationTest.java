@@ -3,6 +3,8 @@ package com.example.auth_service.security;
 import com.example.auth_service.domain.sprint2.*;
 import com.example.auth_service.entity.*;
 import com.example.auth_service.repository.*;
+import com.example.auth_service.service.DevMailService;
+import com.example.auth_service.service.MailService;
 import com.example.auth_service.service.RecruitmentReadService;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,6 +17,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
@@ -22,6 +25,9 @@ import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -39,6 +45,7 @@ class RbacIntegrationTest {
     @Autowired RequisitionAssignmentRepository assignments;
     @Autowired SalaryRangeRepository salaries;
     @Autowired RecruitmentReadService readService;
+    @MockitoSpyBean MailService mailService;
 
     User recruiter, otherRecruiter, candidate, otherCandidate, interviewer;
     RecruitmentRequisition owned, other;
@@ -311,6 +318,45 @@ class RbacIntegrationTest {
                 .content("{\"status\":\"ACTIVE\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    @DisplayName("S1-08: Admin tạo tài khoản qua REST API gửi activation email thật và gọi sendAccountActivationEmail")
+    void adminCreateUserDispatchesActivationEmail() throws Exception {
+        User admin = user("rbac-admin-mail-test", RoleName.ADMIN);
+        String adminToken = token(admin);
+
+        String payload = """
+            {
+                "email": "integration-activation-target@example.com",
+                "fullName": "Nguyen Van Test",
+                "department": "IT DevOps",
+                "roles": ["RECRUITER"]
+            }
+            """;
+
+        mvc.perform(post("/api/admin/users")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("integration-activation-target@example.com"))
+                .andExpect(jsonPath("$.fullName").value("Nguyen Van Test"))
+                .andExpect(jsonPath("$.department").value("IT DevOps"))
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        // Xác nhận mailService.sendAccountActivationEmail được gọi với email đích và password tạm 12 ký tự
+        verify(mailService, atLeastOnce()).sendAccountActivationEmail(
+                eq("integration-activation-target@example.com"),
+                argThat(pwd -> pwd != null && pwd.length() == 12)
+        );
+
+        // Xác nhận qua danh sách nhận email của DevMailService
+        if (mailService instanceof DevMailService devMail) {
+            assertThat(devMail.getSentActivationRecipients())
+                    .contains("integration-activation-target@example.com");
+        }
     }
 
     @Test
