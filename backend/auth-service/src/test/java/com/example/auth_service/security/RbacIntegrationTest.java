@@ -45,6 +45,7 @@ class RbacIntegrationTest {
     @Autowired RequisitionAssignmentRepository assignments;
     @Autowired SalaryRangeRepository salaries;
     @Autowired RecruitmentReadService readService;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @MockitoSpyBean MailService mailService;
 
     User recruiter, otherRecruiter, candidate, otherCandidate, interviewer;
@@ -357,6 +358,41 @@ class RbacIntegrationTest {
             assertThat(devMail.getSentActivationRecipients())
                     .contains("integration-activation-target@example.com");
         }
+    }
+
+    @Test
+    @DisplayName("S1-08 Hardening: POST /api/admin/users có password do client gửi vẫn không được dùng; luôn sinh 12 ký tự ngẫu nhiên")
+    void adminCreateUserWithClientPasswordPayload_NeverUsesClientPassword_UsesGenerated12CharPassword() throws Exception {
+        User admin = user("rbac-admin-override-test", RoleName.ADMIN);
+        String adminToken = token(admin);
+
+        String payload = """
+            {
+                "email": "client-override-attempt@example.com",
+                "password": "ClientHackPassword123!",
+                "fullName": "Override Attempt User",
+                "department": "Security",
+                "roles": ["RECRUITER"]
+            }
+            """;
+
+        mvc.perform(post("/api/admin/users")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("client-override-attempt@example.com"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        // Xác minh trong DB: mật khẩu được mã hóa KHÔNG PHẢI là client-supplied password
+        User createdUser = users.findByEmail("client-override-attempt@example.com").orElseThrow();
+        assertThat(passwordEncoder.matches("ClientHackPassword123!", createdUser.getPassword())).isFalse();
+
+        // Xác minh email activation nhận mật khẩu tạm thời 12 ký tự, không phải mật khẩu do client gửi
+        verify(mailService, atLeastOnce()).sendAccountActivationEmail(
+                eq("client-override-attempt@example.com"),
+                argThat(pwd -> pwd != null && pwd.length() == 12 && !pwd.equals("ClientHackPassword123!"))
+        );
     }
 
     @Test

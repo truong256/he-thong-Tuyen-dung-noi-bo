@@ -22,8 +22,7 @@ public class DevMailService implements MailService {
         sentPasswordResetRecipients.add(toEmail);
         logger.info("==================================================================");
         logger.info("[DEV MAIL SERVICE] Password reset email simulated for: {}", toEmail);
-        logger.info("[DEV MAIL SERVICE] Reset Token: {}", resetToken);
-        logger.info("[DEV MAIL SERVICE] Reset Link: http://localhost:5173/reset-password?token={}", resetToken);
+        logger.info("[DEV MAIL SERVICE] Password reset token dispatched (masked for security)");
         logger.info("==================================================================");
     }
 

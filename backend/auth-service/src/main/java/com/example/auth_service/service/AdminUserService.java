@@ -124,12 +124,8 @@ public class AdminUserService {
             throw new BadRequestException("Email này đã tồn tại trong hệ thống.");
         }
 
-        String rawPassword;
-        if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            rawPassword = request.getPassword().trim();
-        } else {
-            rawPassword = generateTemporaryPassword();
-        }
+        // S1-08 Hardening: Client cannot supply or override password. Server strictly generates a 12-char temporary password.
+        String rawPassword = generateTemporaryPassword();
 
         User user = new User(email, passwordEncoder.encode(rawPassword));
         user.setFullName(request.getFullName() != null ? request.getFullName().trim() : "");

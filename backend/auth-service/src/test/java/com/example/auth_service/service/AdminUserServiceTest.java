@@ -120,6 +120,37 @@ class AdminUserServiceTest {
     }
 
     @Test
+    @DisplayName("S1-08 Hardening: Client gửi password vẫn bị bỏ qua, luôn sinh temporary password 12 ký tự và gửi qua email")
+    void testCreateUser_ClientSuppliedPasswordIsIgnored_AlwaysGenerates12CharTempPassword() {
+        CreateUserRequest req = new CreateUserRequest();
+        req.setEmail("custom_pass@company.com");
+        req.setFullName("User Client Pass Attempt");
+        req.setRoles(Set.of("RECRUITER"));
+        req.setPassword("ClientHackPass123!@#");
+
+        when(userRepository.existsByEmailIgnoreCase("custom_pass@company.com")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenAnswer(inv -> "hash_" + inv.getArgument(0));
+
+        Role recruiterRole = new Role(RoleName.RECRUITER, "Vai trò RECRUITER");
+        when(roleRepository.findByName(RoleName.RECRUITER)).thenReturn(Optional.of(recruiterRole));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        adminUserService.createUser(req);
+
+        ArgumentCaptor<String> passwordCaptor = ArgumentCaptor.forClass(String.class);
+        verify(passwordEncoder).encode(passwordCaptor.capture());
+        String encodedRaw = passwordCaptor.getValue();
+
+        assertThat(encodedRaw).isNotEqualTo("ClientHackPass123!@#");
+        assertThat(encodedRaw).hasSize(12);
+
+        verify(mailService).sendAccountActivationEmail(
+                eq("custom_pass@company.com"),
+                argThat(pwd -> pwd != null && pwd.length() == 12 && !pwd.equals("ClientHackPass123!@#") && pwd.equals(encodedRaw))
+        );
+    }
+
+    @Test
     @DisplayName("S1-08: Từ chối tạo tài khoản khi email đã tồn tại (case-insensitive)")
     void testCreateUser_RejectsDuplicateEmailCaseInsensitive() {
         CreateUserRequest req = new CreateUserRequest();
