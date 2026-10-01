@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
@@ -251,6 +252,25 @@ class RbacIntegrationTest {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
         assertThatThrownBy(() -> readService.salary(1L)).isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void adminUserListDefaultPageSizeIs20() throws Exception {
+        User admin = user("rbac-page-admin", RoleName.ADMIN);
+        mvc.perform(get("/api/admin/users").header("Authorization", token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(20));
+    }
+
+    @Test
+    void adminCannotSelfRevokeAdminRole() throws Exception {
+        User admin = user("rbac-self-admin", RoleName.ADMIN);
+        String adminToken = token(admin);
+        mvc.perform(put("/api/admin/users/" + admin.getId() + "/roles")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"roles\":[\"RECRUITER\"]}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
