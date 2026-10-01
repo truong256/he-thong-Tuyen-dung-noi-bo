@@ -26,9 +26,13 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Optional: automatically clear storage or trigger logout event if token expired
-      if (!error.config?.url?.includes('/api/auth/login')) {
-        // Clear local credentials on unhandled 401
+      const url = error.config?.url || '';
+      const isAuthPublic = url.includes('/api/auth/login') || url.includes('/api/auth/register') || url.includes('/api/auth/forgot-password') || url.includes('/api/auth/reset-password');
+      if (!isAuthPublic) {
+        // Trigger session expired notification in app
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('ats:session-expired'));
+        }
       }
     }
     return Promise.reject(error);

@@ -1,26 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, Eye, EyeOff, Lock, ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
-import authApi from '../api/auth';
+import React, { useState } from 'react';
+import { Eye, EyeOff, KeyRound, Check, X, ShieldCheck } from 'lucide-react';
+import authApi from '../../api/auth';
 
-export const ResetPasswordPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+interface ChangePasswordModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+}
 
-  const [token, setToken] = useState('');
+export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+}) => {
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    const t = searchParams.get('token');
-    if (t) setToken(t);
-  }, [searchParams]);
+  if (!isOpen) return null;
 
   const isMinLength = newPassword.length >= 6;
   const hasLetter = /[a-zA-Z]/.test(newPassword);
@@ -42,90 +47,128 @@ export const ResetPasswordPage: React.FC = () => {
 
   const strength = calculateStrength();
 
+  const handleReset = () => {
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setErrorMsg(null);
+    setSuccessMsg(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token.trim()) {
-      setMessage({ text: 'Vui lòng cung cấp mã token đặt lại mật khẩu.', isError: true });
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (!currentPassword) {
+      setErrorMsg('Vui lòng nhập mật khẩu hiện tại.');
       return;
     }
+
     if (!isMinLength) {
-      setMessage({ text: 'Mật khẩu mới phải có ít nhất 6 ký tự.', isError: true });
+      setErrorMsg('Mật khẩu mới phải có ít nhất 6 ký tự.');
       return;
     }
+
     if (newPassword !== confirmPassword) {
-      setMessage({ text: 'Mật khẩu xác nhận không khớp.', isError: true });
+      setErrorMsg('Mật khẩu xác nhận không khớp với mật khẩu mới.');
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      setErrorMsg('Mật khẩu mới không được trùng với mật khẩu hiện tại.');
       return;
     }
 
     setIsSubmitting(true);
-    setMessage(null);
-
     try {
-      const res = await authApi.resetPassword({
-        token: token.trim(),
+      const res = await authApi.changePassword({
+        currentPassword,
         newPassword,
         confirmPassword,
       });
-      setMessage({ text: res.message || 'Đặt lại mật khẩu thành công! Đang chuyển hướng...', isError: false });
-      setTimeout(() => navigate('/login', { replace: true }), 2000);
+      setSuccessMsg(res.message || 'Đổi mật khẩu thành công!');
+      handleReset();
+      setTimeout(() => {
+        onSuccess?.();
+        onClose();
+      }, 1500);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.';
-      setMessage({ text: msg, isError: true });
+      const msg = err.response?.data?.message || 'Đổi mật khẩu không thành công. Vui lòng kiểm tra lại mật khẩu hiện tại.';
+      setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="auth-simple-page" data-testid="reset-password-page">
-      <div className="auth-card">
-        <div className="card-header">
-          <div className="auth-card-icon-wrap" aria-hidden="true">
-            <ShieldCheck size={28} className="auth-card-icon" />
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="change-pwd-title">
+      <div className="modal-box change-pwd-modal">
+        <div className="modal-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div className="modal-title-icon">
+              <KeyRound size={20} />
+            </div>
+            <h3 id="change-pwd-title">Đổi mật khẩu</h3>
           </div>
-          <h2>Đặt lại mật khẩu</h2>
-          <p>Nhập mật khẩu mới an toàn cho tài khoản của bạn</p>
+          <button
+            type="button"
+            className="close-btn"
+            onClick={onClose}
+            aria-label="Đóng cửa sổ"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        {message && (
-          <div className={`alert-box ${message.isError ? 'error' : 'success'}`} role="alert">
-            {message.isError ? (
-              <AlertCircle size={16} style={{ flexShrink: 0 }} />
-            ) : (
-              <Check size={16} style={{ flexShrink: 0 }} />
-            )}
-            <div>{message.text}</div>
-          </div>
-        )}
-
         <form onSubmit={handleSubmit} noValidate>
-          {!searchParams.get('token') && (
-            <div className="form-group">
-              <label htmlFor="token">
-                Mã Token đặt lại mật khẩu <span className="text-danger">*</span>
-              </label>
-              <input
-                id="token"
-                type="text"
-                required
-                value={token}
-                onChange={(e) => {
-                  setToken(e.target.value);
-                  if (message) setMessage(null);
-                }}
-                placeholder="Dán mã token khôi phục vào đây..."
-                disabled={isSubmitting}
-              />
+          {errorMsg && (
+            <div className="alert-box error" role="alert">
+              <X size={16} />
+              <span>{errorMsg}</span>
             </div>
           )}
 
+          {successMsg && (
+            <div className="alert-box success" role="alert">
+              <ShieldCheck size={16} />
+              <span>{successMsg}</span>
+            </div>
+          )}
+
+          {/* Current Password */}
+          <div className="form-group">
+            <label htmlFor="currentPassword">Mật khẩu hiện tại <span className="text-danger">*</span></label>
+            <div className="input-with-eye">
+              <input
+                id="currentPassword"
+                type={showCurrent ? 'text' : 'password'}
+                required
+                value={currentPassword}
+                onChange={(e) => {
+                  setCurrentPassword(e.target.value);
+                  if (errorMsg) setErrorMsg(null);
+                }}
+                placeholder="Nhập mật khẩu hiện tại..."
+                disabled={isSubmitting}
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                className="eye-toggle-btn"
+                onClick={() => setShowCurrent(!showCurrent)}
+                aria-label={showCurrent ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={-1}
+              >
+                {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
           {/* New Password */}
           <div className="form-group">
-            <label htmlFor="newPassword">
-              Mật khẩu mới <span className="text-danger">*</span>
-            </label>
+            <label htmlFor="newPassword">Mật khẩu mới <span className="text-danger">*</span></label>
             <div className="input-with-eye">
-              <Lock size={16} className="input-icon-left" aria-hidden="true" />
               <input
                 id="newPassword"
                 type={showNew ? 'text' : 'password'}
@@ -133,12 +176,11 @@ export const ResetPasswordPage: React.FC = () => {
                 value={newPassword}
                 onChange={(e) => {
                   setNewPassword(e.target.value);
-                  if (message) setMessage(null);
+                  if (errorMsg) setErrorMsg(null);
                 }}
                 placeholder="Tối thiểu 6 ký tự..."
                 disabled={isSubmitting}
                 autoComplete="new-password"
-                className="has-left-icon"
               />
               <button
                 type="button"
@@ -167,13 +209,10 @@ export const ResetPasswordPage: React.FC = () => {
             )}
           </div>
 
-          {/* Confirm Password */}
+          {/* Confirm New Password */}
           <div className="form-group">
-            <label htmlFor="confirmPassword">
-              Xác nhận mật khẩu mới <span className="text-danger">*</span>
-            </label>
+            <label htmlFor="confirmPassword">Xác nhận mật khẩu mới <span className="text-danger">*</span></label>
             <div className="input-with-eye">
-              <Lock size={16} className="input-icon-left" aria-hidden="true" />
               <input
                 id="confirmPassword"
                 type={showConfirm ? 'text' : 'password'}
@@ -181,12 +220,11 @@ export const ResetPasswordPage: React.FC = () => {
                 value={confirmPassword}
                 onChange={(e) => {
                   setConfirmPassword(e.target.value);
-                  if (message) setMessage(null);
+                  if (errorMsg) setErrorMsg(null);
                 }}
                 placeholder="Nhập lại mật khẩu mới..."
                 disabled={isSubmitting}
                 autoComplete="new-password"
-                className="has-left-icon"
               />
               <button
                 type="button"
@@ -213,7 +251,7 @@ export const ResetPasswordPage: React.FC = () => {
             )}
           </div>
 
-          {/* Criteria Checklist */}
+          {/* Password checklist criteria */}
           <div className="pwd-criteria-list">
             <span className="pwd-criteria-title">Yêu cầu bảo mật:</span>
             <div className={`pwd-criteria-item ${isMinLength ? 'met' : ''}`}>
@@ -226,32 +264,34 @@ export const ResetPasswordPage: React.FC = () => {
             </div>
           </div>
 
-          <button
-            type="submit"
-            className="btn-submit"
-            disabled={isSubmitting || !isMinLength || (confirmPassword.length > 0 && !isMatch)}
-            style={{ marginTop: '16px' }}
-          >
-            {isSubmitting ? (
-              <span className="auth-btn-loading">
-                <span className="auth-spinner" style={{ width: 14, height: 14, borderTopColor: '#fff' }} />
-                <span>Đang cập nhật...</span>
-              </span>
-            ) : (
-              <span>Xác nhận đặt lại mật khẩu</span>
-            )}
-          </button>
+          <div className="modal-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isSubmitting || !isMinLength || (confirmPassword.length > 0 && !isMatch)}
+            >
+              {isSubmitting ? (
+                <>
+                  <span className="auth-spinner" style={{ width: 14, height: 14, borderTopColor: '#fff' }} />
+                  <span>Đang cập nhật...</span>
+                </>
+              ) : (
+                <span>Lưu mật khẩu</span>
+              )}
+            </button>
+          </div>
         </form>
-
-        <div className="auth-card-footer">
-          <Link to="/login" className="auth-back-link">
-            <ArrowLeft size={15} />
-            <span>Quay lại Đăng nhập</span>
-          </Link>
-        </div>
       </div>
     </div>
   );
 };
 
-export default ResetPasswordPage;
+export default ChangePasswordModal;
