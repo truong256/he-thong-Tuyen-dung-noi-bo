@@ -10,15 +10,17 @@ export interface PageResponse<T> {
 
 export interface CreateUserPayload {
   email: string;
-  password: string;
   fullName: string;
+  department?: string;
   roles: string[];
   status?: string;
+  password?: string;
 }
 
 export interface UpdateUserPayload {
   fullName: string;
   email: string;
+  department?: string;
 }
 
 export interface UpdateRolesPayload {
@@ -27,6 +29,8 @@ export interface UpdateRolesPayload {
 
 export interface UpdateStatusPayload {
   status: string;
+  reason?: string;
+  note?: string;
 }
 
 export type { UserSummary };

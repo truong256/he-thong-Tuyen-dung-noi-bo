@@ -16,4 +16,11 @@ public class UpdateUserRequest {
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không hợp lệ")
     private String email;
+
+    private String department;
+
+    public UpdateUserRequest(String fullName, String email) {
+        this.fullName = fullName;
+        this.email = email;
+    }
 }
