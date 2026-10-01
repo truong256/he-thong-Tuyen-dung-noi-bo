@@ -17,6 +17,12 @@ public class CreateUserRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
 
+    /**
+     * @deprecated Password cannot be specified by the client. The system strictly generates
+     * a secure 12-character temporary password server-side and dispatches it via activation email.
+     * Any value supplied in this field will be completely ignored.
+     */
+    @Deprecated
     private String password;
 
     @NotBlank(message = "Họ tên không được để trống")
@@ -29,6 +35,19 @@ public class CreateUserRequest {
 
     private String status = "ACTIVE";
 
+    public CreateUserRequest(String email, String fullName, String department, Set<String> roles, String status) {
+        this.email = email;
+        this.fullName = fullName;
+        this.department = department;
+        this.roles = roles;
+        this.status = status;
+    }
+
+    public CreateUserRequest(String email, String fullName, Set<String> roles, String status) {
+        this(email, fullName, null, roles, status);
+    }
+
+    @Deprecated
     public CreateUserRequest(String email, String password, String fullName, Set<String> roles, String status) {
         this.email = email;
         this.password = password;
