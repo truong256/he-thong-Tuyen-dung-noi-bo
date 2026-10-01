@@ -6,5 +6,6 @@ import java.util.Optional;
 
 public interface RequisitionAssignmentRepository extends JpaRepository<RequisitionAssignment, Long> {
     Optional<RequisitionAssignment> findByRequisitionIdAndUserId(Long requisitionId, Long userId);
+    java.util.List<RequisitionAssignment> findByUserId(Long userId);
     void deleteByRequisitionIdAndUserId(Long requisitionId, Long userId);
 }

@@ -29,11 +29,12 @@ public class AdminUserController {
     public ResponseEntity<Page<UserSummaryDto>> listUsers(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "20") int size
     ) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<UserSummaryDto> users = adminUserService.listUsers(search, status, pageable);
+        Page<UserSummaryDto> users = adminUserService.listUsers(search, status, role, pageable);
         return ResponseEntity.ok(users);
     }
 

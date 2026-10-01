@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search,
-  Filter,
   UserPlus,
   FileSpreadsheet,
   ShieldCheck,
@@ -12,9 +11,8 @@ import {
   ChevronRight,
   AlertCircle,
   X,
-  Eye,
-  EyeOff,
   UserCheck,
+  Mail,
 } from 'lucide-react';
 import adminApi from '../api/admin';
 import { UserSummary } from '../types/user';
@@ -23,24 +21,22 @@ import RoleAssignmentModal from '../components/admin/RoleAssignmentModal';
 import LockAccountModal from '../components/admin/LockAccountModal';
 import RbacMatrixModal from '../components/admin/RbacMatrixModal';
 import { ATS_ROLES_INFO } from '../constants/rbac';
-import { validatePasswordPolicy } from '../utils/passwordPolicy';
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuth();
 
-  // Data states
+  // Data states (S1-08: Default pageSize = 20)
   const [users, setUsers] = useState<UserSummary[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Filters
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [roleFilter, setRoleFilter] = useState('ALL');
-  const [deptFilter, setDeptFilter] = useState('ALL');
 
   // Loading & Error states
   const [isLoading, setIsLoading] = useState(false);
@@ -54,13 +50,12 @@ export const UserManagementPage: React.FC = () => {
   const [showRbacMatrixModal, setShowRbacMatrixModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
 
-  // Add User Form states
+  // Add User Form states (S1-08: Admin does not manually input temporary password)
   const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [newFullName, setNewFullName] = useState('');
+  const [newDepartment, setNewDepartment] = useState('');
   const [newRoles, setNewRoles] = useState<string[]>(['RECRUITER']);
   const [newStatus, setNewStatus] = useState('ACTIVE');
-  const [showNewPassword, setShowNewPassword] = useState(false);
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
 
   // Debounce search input
@@ -74,7 +69,7 @@ export const UserManagementPage: React.FC = () => {
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 4000);
   };
 
   const fetchUsers = useCallback(async () => {
@@ -84,6 +79,7 @@ export const UserManagementPage: React.FC = () => {
       const data = await adminApi.listUsers(
         debouncedSearch.trim() || undefined,
         statusFilter,
+        roleFilter,
         currentPage,
         pageSize
       );
@@ -97,40 +93,27 @@ export const UserManagementPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, statusFilter, currentPage, pageSize]);
+  }, [debouncedSearch, statusFilter, roleFilter, currentPage, pageSize]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
 
-  // Client-side role filter refinement if selected
-  const displayedUsers = useMemo(() => {
-    if (roleFilter === 'ALL') return users;
-    return users.filter((u) => {
-      const userRoles = u.roles && u.roles.length > 0 ? u.roles : [u.role];
-      return userRoles.some((r) => r.toUpperCase() === roleFilter.toUpperCase());
-    });
-  }, [users, roleFilter]);
+  // Server-side filtered users list
+  const displayedUsers = users;
 
   const handleResetFilters = () => {
     setSearch('');
     setDebouncedSearch('');
     setStatusFilter('ALL');
     setRoleFilter('ALL');
-    setDeptFilter('ALL');
     setCurrentPage(0);
   };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail.trim() || !newPassword || !newFullName.trim() || newRoles.length === 0) {
+    if (!newEmail.trim() || !newFullName.trim() || newRoles.length === 0) {
       showToast('Vui lòng điền đầy đủ các thông tin bắt buộc.', 'error');
-      return;
-    }
-
-    const pwdPolicy = validatePasswordPolicy(newPassword);
-    if (!pwdPolicy.isValid) {
-      showToast('Mật khẩu ban đầu phải có tối thiểu 8 ký tự, bao gồm ít nhất 1 chữ cái và 1 chữ số.', 'error');
       return;
     }
 
@@ -138,16 +121,16 @@ export const UserManagementPage: React.FC = () => {
     try {
       await adminApi.createUser({
         email: newEmail.trim(),
-        password: newPassword,
         fullName: newFullName.trim(),
+        department: newDepartment.trim() || undefined,
         roles: newRoles,
         status: newStatus,
       });
-      showToast(`Tạo thành công tài khoản cho ${newEmail.trim()}!`);
+      showToast(`Tạo thành công tài khoản cho ${newEmail.trim()}! Mật khẩu tạm thời đã được gửi qua email kích hoạt.`);
       setShowAddModal(false);
       setNewEmail('');
-      setNewPassword('');
       setNewFullName('');
+      setNewDepartment('');
       setNewRoles(['RECRUITER']);
       setNewStatus('ACTIVE');
       fetchUsers();
@@ -164,10 +147,10 @@ export const UserManagementPage: React.FC = () => {
       showToast('Không có dữ liệu để xuất file CSV.', 'error');
       return;
     }
-    const headers = ['ID,Họ và tên,Email,Vai trò,Trạng thái\n'];
+    const headers = ['ID,Họ và tên,Email,Phòng ban,Vai trò,Trạng thái\n'];
     const rows = displayedUsers.map((u) => {
       const rolesStr = (u.roles || [u.role]).join('; ');
-      return `"${u.id}","${u.fullName || ''}","${u.email}","${rolesStr}","${u.status}"\n`;
+      return `"${u.id}","${u.fullName || ''}","${u.email}","${u.department || ''}","${rolesStr}","${u.status}"\n`;
     });
     const blob = new Blob(['\uFEFF' + headers.concat(rows).join('')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -242,7 +225,7 @@ export const UserManagementPage: React.FC = () => {
           <Search size={16} className="search-icon" aria-hidden="true" />
           <input
             type="text"
-            placeholder="Tìm theo email hoặc họ tên..."
+            placeholder="Tìm theo họ tên, email hoặc phòng ban..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Tìm kiếm người dùng"
@@ -299,54 +282,26 @@ export const UserManagementPage: React.FC = () => {
             </select>
           </div>
 
-          {/* Department Filter (Sprint 2 indicator) */}
-          <div className="filter-select">
-            <label htmlFor="dept-filter">Phòng ban:</label>
-            <select
-              id="dept-filter"
-              value={deptFilter}
-              onChange={(e) => setDeptFilter(e.target.value)}
-              title="Tính năng lọc phòng ban đang được hoàn thiện ở Sprint 2"
-            >
-              <option value="ALL">Tất cả phòng ban</option>
-              <option value="TECH" disabled>Công nghệ thông tin (Sprint 2)</option>
-              <option value="HR" disabled>Nhân sự (Sprint 2)</option>
-              <option value="SALES" disabled>Kinh doanh (Sprint 2)</option>
-            </select>
-          </div>
-
-          {/* Reset Filters Button */}
-          {(search || statusFilter !== 'ALL' || roleFilter !== 'ALL' || deptFilter !== 'ALL') && (
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={handleResetFilters}
-              title="Đặt lại tất cả bộ lọc"
-            >
-              <Filter size={14} />
-              <span>Đặt lại</span>
-            </button>
-          )}
-
+          {/* Refresh Button */}
           <button
             type="button"
-            className="btn btn-icon"
-            onClick={fetchUsers}
+            className="btn btn-outline btn-icon-only"
+            onClick={() => fetchUsers()}
             title="Làm mới danh sách"
+            aria-label="Làm mới danh sách"
             disabled={isLoading}
-            aria-label="Tải lại danh sách"
           >
-            <RefreshCw size={16} className={isLoading ? 'spin' : ''} />
+            <RefreshCw size={16} className={isLoading ? 'spinning' : ''} />
           </button>
         </div>
       </div>
 
       {/* Error state */}
       {fetchError && !isLoading && (
-        <div className="alert-box error" style={{ marginBottom: '16px' }} role="alert">
+        <div className="alert-banner error" role="alert">
           <AlertCircle size={18} />
-          <div style={{ flex: 1 }}>{fetchError}</div>
-          <button type="button" className="btn btn-outline btn-sm" onClick={fetchUsers}>
+          <span>{fetchError}</span>
+          <button type="button" className="btn btn-link" onClick={() => fetchUsers()}>
             Thử lại
           </button>
         </div>
@@ -357,17 +312,18 @@ export const UserManagementPage: React.FC = () => {
         <table className="custom-table" aria-label="Bảng danh sách người dùng">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '25%' }}>Họ và tên</th>
-              <th scope="col" style={{ width: '25%' }}>Email</th>
-              <th scope="col" style={{ width: '25%' }}>Vai trò (RBAC)</th>
-              <th scope="col" style={{ width: '13%' }}>Trạng thái</th>
-              <th scope="col" style={{ width: '12%', textAlign: 'right' }}>Thao tác</th>
+              <th scope="col" style={{ width: '22%' }}>Họ và tên</th>
+              <th scope="col" style={{ width: '22%' }}>Email</th>
+              <th scope="col" style={{ width: '15%' }}>Phòng ban</th>
+              <th scope="col" style={{ width: '20%' }}>Vai trò (RBAC)</th>
+              <th scope="col" style={{ width: '11%' }}>Trạng thái</th>
+              <th scope="col" style={{ width: '10%', textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="table-loading-cell">
+                <td colSpan={6} className="table-loading-cell">
                   <div className="loading-state-wrapper">
                     <span className="auth-spinner" style={{ width: 22, height: 22 }} />
                     <span>Đang tải danh sách người dùng...</span>
@@ -376,7 +332,7 @@ export const UserManagementPage: React.FC = () => {
               </tr>
             ) : displayedUsers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="table-empty-cell">
+                <td colSpan={6} className="table-empty-cell">
                   <div className="empty-state-wrapper">
                     <div className="empty-state-icon">
                       <Search size={32} />
@@ -417,6 +373,9 @@ export const UserManagementPage: React.FC = () => {
                       <span className="user-email-text">{u.email}</span>
                     </td>
                     <td>
+                      <span className="user-department-text">{u.department || '—'}</span>
+                    </td>
+                    <td>
                       <div className="role-tags">
                         {userRoles.map((r) => (
                           <span key={r} className={`tag ${getRoleBadgeClass(r)}`}>
@@ -451,9 +410,9 @@ export const UserManagementPage: React.FC = () => {
 
                         <button
                           type="button"
-                          className={`btn-icon ${isLocked ? 'text-green' : 'text-orange'}`}
-                          title={isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                          aria-label={`${isLocked ? 'Mở khóa' : 'Khóa'} tài khoản ${u.email}`}
+                          className={`btn-icon ${isLocked ? 'unlock-btn' : 'lock-btn'}`}
+                          title={isSelf ? 'Không thể tự khóa tài khoản của chính mình' : isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                          aria-label={isLocked ? `Mở khóa cho ${u.email}` : `Khóa ${u.email}`}
                           disabled={!!isSelf}
                           onClick={() => {
                             setSelectedUser(u);
@@ -472,17 +431,16 @@ export const UserManagementPage: React.FC = () => {
         </table>
       </div>
 
-      {/* Mobile Card View (Adaptation for <= 640px) */}
-      <div className="mobile-user-cards-list">
+      {/* Mobile view cards */}
+      <div className="mobile-cards-list">
         {isLoading ? (
-          <div className="loading-state-wrapper" style={{ padding: '24px 0' }}>
-            <span className="auth-spinner" style={{ width: 20, height: 20 }} />
-            <span>Đang tải dữ liệu...</span>
+          <div className="loading-state-wrapper" style={{ padding: '24px' }}>
+            <span className="auth-spinner" style={{ width: 22, height: 22 }} />
+            <span>Đang tải danh sách người dùng...</span>
           </div>
         ) : displayedUsers.length === 0 ? (
-          <div className="empty-state-wrapper" style={{ padding: '24px 0' }}>
-            <Search size={28} />
-            <p style={{ marginTop: '8px' }}>Không có tài khoản phù hợp</p>
+          <div className="empty-state-wrapper" style={{ padding: '24px' }}>
+            <p>Không tìm thấy người dùng nào phù hợp.</p>
           </div>
         ) : (
           displayedUsers.map((u) => {
@@ -491,12 +449,17 @@ export const UserManagementPage: React.FC = () => {
             const isSelf = currentUser && u.email.toLowerCase() === currentUser.email.toLowerCase();
 
             return (
-              <div key={u.id} className={`mobile-user-card ${isLocked ? 'card-locked' : ''}`}>
+              <div key={u.id} className={`mobile-user-card ${isLocked ? 'locked' : ''}`}>
                 <div className="mobile-card-header">
                   <div>
                     <strong>{u.fullName || u.email.split('@')[0]}</strong>
                     {isSelf && <span className="tag-self">Bạn</span>}
-                    <div className="mobile-card-email">{u.email}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{u.email}</div>
+                    {u.department && (
+                      <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px' }}>
+                        Phòng ban: <strong>{u.department}</strong>
+                      </div>
+                    )}
                   </div>
                   <span className={`status-pill ${u.status ? u.status.toLowerCase() : 'active'}`}>
                     {u.status === 'ACTIVE' ? 'Hoạt động' : u.status === 'LOCKED' ? 'Bị khóa' : 'Vô hiệu hóa'}
@@ -545,7 +508,7 @@ export const UserManagementPage: React.FC = () => {
         )}
       </div>
 
-      {/* Pagination Controls UI (S1-08) */}
+      {/* Pagination Controls UI (S1-08: Default 20) */}
       <div className="pagination-bar">
         <div className="pagination-info">
           <span>
@@ -568,45 +531,43 @@ export const UserManagementPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="pagination-nav">
+        <div className="pagination-actions">
           <button
             type="button"
-            className="btn btn-outline btn-sm pagination-btn"
+            className="btn btn-outline btn-sm"
+            onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
             disabled={currentPage === 0 || isLoading}
-            onClick={() => setCurrentPage((prev) => Math.max(0, prev - 1))}
             aria-label="Trang trước"
           >
             <ChevronLeft size={16} />
-            <span>Trước</span>
+            <span>Trang trước</span>
           </button>
-
-          <span className="pagination-current-page">
-            Trang <strong>{currentPage + 1}</strong> / {Math.max(1, totalPages)}
+          <span className="pagination-page-indicator">
+            Trang <strong>{currentPage + 1}</strong> / {totalPages || 1}
           </span>
-
           <button
             type="button"
-            className="btn btn-outline btn-sm pagination-btn"
+            className="btn btn-outline btn-sm"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
             disabled={currentPage >= totalPages - 1 || isLoading}
-            onClick={() => setCurrentPage((prev) => prev + 1)}
-            aria-label="Trang tiếp theo"
+            aria-label="Trang sau"
           >
-            <span>Tiếp</span>
+            <span>Trang sau</span>
             <ChevronRight size={16} />
           </button>
         </div>
       </div>
 
-      {/* Add User Modal */}
+      {/* Modal Thêm người dùng mới (S1-08: Activation & Temp Password by System) */}
       {showAddModal && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="add-user-title">
-          <div className="modal-box">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="add-user-modal-title">
+          <div className="modal-box user-form-modal-box">
             <div className="modal-header">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div className="modal-title-icon">
                   <UserPlus size={20} />
                 </div>
-                <h3 id="add-user-title">Thêm người dùng mới</h3>
+                <h3 id="add-user-modal-title">Thêm tài khoản người dùng nội bộ</h3>
               </div>
               <button
                 type="button"
@@ -651,29 +612,20 @@ export const UserManagementPage: React.FC = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="newPassword">
-                  Mật khẩu ban đầu <span className="text-danger">*</span>
-                </label>
-                <div className="input-with-eye">
-                  <input
-                    id="newPassword"
-                    type={showNewPassword ? 'text' : 'password'}
-                    required
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Tối thiểu 8 ký tự (chữ và số)"
-                    disabled={isSubmittingAdd}
-                  />
-                  <button
-                    type="button"
-                    className="eye-toggle-btn"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                    tabIndex={-1}
-                    aria-label={showNewPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                  >
-                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
+                <label htmlFor="newDepartment">Phòng ban (tùy chọn)</label>
+                <input
+                  id="newDepartment"
+                  type="text"
+                  value={newDepartment}
+                  onChange={(e) => setNewDepartment(e.target.value)}
+                  placeholder="Ví dụ: Nhân sự, Công nghệ thông tin, Tuyển dụng..."
+                  disabled={isSubmittingAdd}
+                />
+              </div>
+
+              <div className="alert-box info" style={{ marginBottom: '16px' }}>
+                <Mail size={16} style={{ flexShrink: 0 }} />
+                <span>Mật khẩu tạm thời sẽ được hệ thống tạo tự động và gửi qua email kích hoạt cho nhân viên.</span>
               </div>
 
               <div className="form-group">
@@ -764,10 +716,17 @@ export const UserManagementPage: React.FC = () => {
         isOpen={showLockModal}
         user={selectedUser}
         onClose={() => setShowLockModal(false)}
-        onSuccess={(_, status) => {
-          showToast(
-            `Đã ${status === 'LOCKED' ? 'khóa' : 'mở khóa'} tài khoản ${selectedUser?.email} thành công!`
-          );
+        onSuccess={(updatedUser, status) => {
+          if (status === 'LOCKED' && updatedUser.handoverWarnings && updatedUser.handoverWarnings.length > 0) {
+            showToast(
+              `Đã khóa tài khoản ${selectedUser?.email}. CẢNH BÁO: Nhân sự đang phụ trách ${updatedUser.handoverWarnings.length} vị trí tuyển dụng (${updatedUser.handoverWarnings.join(', ')}) cần bàn giao!`,
+              'error'
+            );
+          } else {
+            showToast(
+              `Đã ${status === 'LOCKED' ? 'khóa' : 'mở khóa'} tài khoản ${selectedUser?.email} thành công!`
+            );
+          }
           fetchUsers();
         }}
         onError={(msg) => showToast(msg, 'error')}

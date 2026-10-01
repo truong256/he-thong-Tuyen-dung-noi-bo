@@ -68,7 +68,10 @@ describe('LockAccountModal Component (S1-10)', () => {
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
-      expect(adminApi.updateStatus).toHaveBeenCalledWith(5, { status: 'LOCKED' });
+      expect(adminApi.updateStatus).toHaveBeenCalledWith(5, expect.objectContaining({
+        status: 'LOCKED',
+        reason: expect.any(String),
+      }));
       expect(handleSuccess).toHaveBeenCalled();
       expect(handleClose).toHaveBeenCalled();
     });

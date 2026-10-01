@@ -11,4 +11,11 @@ import lombok.NoArgsConstructor;
 public class UpdateStatusRequest {
     @NotBlank(message = "Trạng thái không được để trống")
     private String status;
+
+    private String reason;
+    private String note;
+
+    public UpdateStatusRequest(String status) {
+        this.status = status;
+    }
 }

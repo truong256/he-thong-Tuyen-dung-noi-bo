@@ -25,7 +25,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Transient
+    @Column(name = "department", length = 100)
     private String department;
 
     @Transient
@@ -39,6 +39,18 @@ public class User {
 
     @Column(name = "locked_until")
     private Instant lockedUntil;
+
+    @Column(name = "lock_reason", length = 255)
+    private String lockReason;
+
+    @Column(name = "lock_note", columnDefinition = "TEXT")
+    private String lockNote;
+
+    @Column(name = "locked_at")
+    private Instant lockedAt;
+
+    @Column(name = "locked_by", length = 100)
+    private String lockedBy;
 
     @Column(name = "role", length = 50)
     private String role = "RECRUITER";
@@ -126,6 +138,18 @@ public class User {
 
     public Instant getLockedUntil() { return lockedUntil; }
     public void setLockedUntil(Instant lockedUntil) { this.lockedUntil = lockedUntil; }
+
+    public String getLockReason() { return lockReason; }
+    public void setLockReason(String lockReason) { this.lockReason = lockReason; }
+
+    public String getLockNote() { return lockNote; }
+    public void setLockNote(String lockNote) { this.lockNote = lockNote; }
+
+    public Instant getLockedAt() { return lockedAt; }
+    public void setLockedAt(Instant lockedAt) { this.lockedAt = lockedAt; }
+
+    public String getLockedBy() { return lockedBy; }
+    public void setLockedBy(String lockedBy) { this.lockedBy = lockedBy; }
 
     public Set<Role> getRoles() { return roles; }
     public void setRoles(Set<Role> roles) {

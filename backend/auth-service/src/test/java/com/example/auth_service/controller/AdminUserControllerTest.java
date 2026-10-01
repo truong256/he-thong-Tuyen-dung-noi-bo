@@ -54,8 +54,8 @@ class AdminUserControllerTest {
         UserSummaryDto user1 = new UserSummaryDto(1L, "admin@company.com", "Admin User", Set.of("ADMIN"), "ACTIVE");
         UserSummaryDto user2 = new UserSummaryDto(2L, "recruiter@company.com", "Recruiter User", Set.of("RECRUITER"), "ACTIVE");
 
-        when(adminUserService.listUsers(any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(user1, user2), PageRequest.of(0, 10), 2));
+        when(adminUserService.listUsers(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(user1, user2), PageRequest.of(0, 20), 2));
 
         mockMvc.perform(get("/api/admin/users"))
                 .andExpect(status().isOk())

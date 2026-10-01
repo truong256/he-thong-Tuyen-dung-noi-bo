@@ -40,7 +40,12 @@ export const LockAccountModal: React.FC<LockAccountModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const updated = await adminApi.updateStatus(user.id, { status: nextStatus });
+      const payload = {
+        status: nextStatus,
+        reason: isLocking ? reason : undefined,
+        note: isLocking && note.trim() ? note.trim() : undefined,
+      };
+      const updated = await adminApi.updateStatus(user.id, payload);
       onSuccess(updated, nextStatus);
       onClose();
     } catch (err: any) {

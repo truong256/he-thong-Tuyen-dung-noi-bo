@@ -3,7 +3,6 @@ package com.example.auth_service.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,19 +17,23 @@ public class CreateUserRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
 
-    @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 8, message = "Mật khẩu tối thiểu 8 ký tự")
-    @jakarta.validation.constraints.Pattern(
-            regexp = "^(?=.*[a-zA-Z])(?=.*\\d).+$",
-            message = "Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số"
-    )
     private String password;
 
     @NotBlank(message = "Họ tên không được để trống")
     private String fullName;
 
+    private String department;
+
     @NotEmpty(message = "Phải gán ít nhất 1 vai trò")
     private Set<String> roles;
 
     private String status = "ACTIVE";
+
+    public CreateUserRequest(String email, String password, String fullName, Set<String> roles, String status) {
+        this.email = email;
+        this.password = password;
+        this.fullName = fullName;
+        this.roles = roles;
+        this.status = status;
+    }
 }
