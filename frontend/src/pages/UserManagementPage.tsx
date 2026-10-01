@@ -23,6 +23,7 @@ import RoleAssignmentModal from '../components/admin/RoleAssignmentModal';
 import LockAccountModal from '../components/admin/LockAccountModal';
 import RbacMatrixModal from '../components/admin/RbacMatrixModal';
 import { ATS_ROLES_INFO } from '../constants/rbac';
+import { validatePasswordPolicy } from '../utils/passwordPolicy';
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -127,8 +128,9 @@ export const UserManagementPage: React.FC = () => {
       return;
     }
 
-    if (newPassword.length < 6) {
-      showToast('Mật khẩu ban đầu phải có ít nhất 6 ký tự.', 'error');
+    const pwdPolicy = validatePasswordPolicy(newPassword);
+    if (!pwdPolicy.isValid) {
+      showToast('Mật khẩu ban đầu phải có tối thiểu 8 ký tự, bao gồm ít nhất 1 chữ cái và 1 chữ số.', 'error');
       return;
     }
 
@@ -659,7 +661,7 @@ export const UserManagementPage: React.FC = () => {
                     required
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Tối thiểu 6 ký tự"
+                    placeholder="Tối thiểu 8 ký tự (chữ và số)"
                     disabled={isSubmittingAdd}
                   />
                   <button

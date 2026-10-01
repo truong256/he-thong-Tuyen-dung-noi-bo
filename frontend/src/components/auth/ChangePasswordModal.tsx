@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, KeyRound, Check, X, ShieldCheck } from 'lucide-react';
 import authApi from '../../api/auth';
+import { validatePasswordPolicy } from '../../utils/passwordPolicy';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
@@ -27,25 +28,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
   if (!isOpen) return null;
 
-  const isMinLength = newPassword.length >= 6;
-  const hasLetter = /[a-zA-Z]/.test(newPassword);
-  const hasNumber = /[0-9]/.test(newPassword);
+  const policy = validatePasswordPolicy(newPassword);
   const isMatch = confirmPassword.length > 0 && newPassword === confirmPassword;
-
-  const calculateStrength = (): { text: string; color: string; percent: number } => {
-    if (!newPassword) return { text: '', color: '', percent: 0 };
-    let score = 0;
-    if (newPassword.length >= 6) score += 25;
-    if (newPassword.length >= 8) score += 25;
-    if (hasLetter) score += 25;
-    if (hasNumber) score += 25;
-
-    if (score <= 50) return { text: 'Yếu', color: '#ef4444', percent: 35 };
-    if (score <= 75) return { text: 'Trung bình', color: '#f59e0b', percent: 65 };
-    return { text: 'Mạnh', color: '#10b981', percent: 100 };
-  };
-
-  const strength = calculateStrength();
+  const strength = policy.strength;
 
   const handleReset = () => {
     setCurrentPassword('');
@@ -65,8 +50,13 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
       return;
     }
 
-    if (!isMinLength) {
-      setErrorMsg('Mật khẩu mới phải có ít nhất 6 ký tự.');
+    if (!policy.hasMinLength) {
+      setErrorMsg('Mật khẩu mới phải có tối thiểu 8 ký tự.');
+      return;
+    }
+
+    if (!policy.hasLetter || !policy.hasNumber) {
+      setErrorMsg('Mật khẩu mới phải chứa ít nhất 1 chữ cái và 1 chữ số.');
       return;
     }
 
@@ -178,7 +168,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   setNewPassword(e.target.value);
                   if (errorMsg) setErrorMsg(null);
                 }}
-                placeholder="Tối thiểu 6 ký tự..."
+                placeholder="Tối thiểu 8 ký tự (chữ và số)..."
                 disabled={isSubmitting}
                 autoComplete="new-password"
               />
@@ -254,13 +244,17 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
           {/* Password checklist criteria */}
           <div className="pwd-criteria-list">
             <span className="pwd-criteria-title">Yêu cầu bảo mật:</span>
-            <div className={`pwd-criteria-item ${isMinLength ? 'met' : ''}`}>
-              {isMinLength ? <Check size={13} /> : <span className="dot" />}
-              <span>Ít nhất 6 ký tự</span>
+            <div className={`pwd-criteria-item ${policy.hasMinLength ? 'met' : ''}`}>
+              {policy.hasMinLength ? <Check size={13} /> : <span className="dot" />}
+              <span>Tối thiểu 8 ký tự</span>
             </div>
-            <div className={`pwd-criteria-item ${hasLetter && hasNumber ? 'met' : ''}`}>
-              {hasLetter && hasNumber ? <Check size={13} /> : <span className="dot" />}
-              <span>Khuyến nghị gồm cả chữ cái và số</span>
+            <div className={`pwd-criteria-item ${policy.hasLetter ? 'met' : ''}`}>
+              {policy.hasLetter ? <Check size={13} /> : <span className="dot" />}
+              <span>Có ít nhất 1 chữ cái (a-z, A-Z)</span>
+            </div>
+            <div className={`pwd-criteria-item ${policy.hasNumber ? 'met' : ''}`}>
+              {policy.hasNumber ? <Check size={13} /> : <span className="dot" />}
+              <span>Có ít nhất 1 chữ số (0-9)</span>
             </div>
           </div>
 
@@ -276,7 +270,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={isSubmitting || !isMinLength || (confirmPassword.length > 0 && !isMatch)}
+              disabled={isSubmitting || !policy.isValid || (confirmPassword.length > 0 && !isMatch)}
             >
               {isSubmitting ? (
                 <>

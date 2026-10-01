@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Eye, EyeOff, Lock, ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
 import authApi from '../api/auth';
+import { validatePasswordPolicy } from '../utils/passwordPolicy';
 
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -22,25 +23,9 @@ export const ResetPasswordPage: React.FC = () => {
     if (t) setToken(t);
   }, [searchParams]);
 
-  const isMinLength = newPassword.length >= 6;
-  const hasLetter = /[a-zA-Z]/.test(newPassword);
-  const hasNumber = /[0-9]/.test(newPassword);
+  const policy = validatePasswordPolicy(newPassword);
   const isMatch = confirmPassword.length > 0 && newPassword === confirmPassword;
-
-  const calculateStrength = (): { text: string; color: string; percent: number } => {
-    if (!newPassword) return { text: '', color: '', percent: 0 };
-    let score = 0;
-    if (newPassword.length >= 6) score += 25;
-    if (newPassword.length >= 8) score += 25;
-    if (hasLetter) score += 25;
-    if (hasNumber) score += 25;
-
-    if (score <= 50) return { text: 'Yếu', color: '#ef4444', percent: 35 };
-    if (score <= 75) return { text: 'Trung bình', color: '#f59e0b', percent: 65 };
-    return { text: 'Mạnh', color: '#10b981', percent: 100 };
-  };
-
-  const strength = calculateStrength();
+  const strength = policy.strength;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,8 +33,12 @@ export const ResetPasswordPage: React.FC = () => {
       setMessage({ text: 'Vui lòng cung cấp mã token đặt lại mật khẩu.', isError: true });
       return;
     }
-    if (!isMinLength) {
-      setMessage({ text: 'Mật khẩu mới phải có ít nhất 6 ký tự.', isError: true });
+    if (!policy.hasMinLength) {
+      setMessage({ text: 'Mật khẩu mới phải có tối thiểu 8 ký tự.', isError: true });
+      return;
+    }
+    if (!policy.hasLetter || !policy.hasNumber) {
+      setMessage({ text: 'Mật khẩu mới phải chứa ít nhất 1 chữ cái và 1 chữ số.', isError: true });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -135,7 +124,7 @@ export const ResetPasswordPage: React.FC = () => {
                   setNewPassword(e.target.value);
                   if (message) setMessage(null);
                 }}
-                placeholder="Tối thiểu 6 ký tự..."
+                placeholder="Tối thiểu 8 ký tự (chữ và số)..."
                 disabled={isSubmitting}
                 autoComplete="new-password"
                 className="has-left-icon"
@@ -216,20 +205,24 @@ export const ResetPasswordPage: React.FC = () => {
           {/* Criteria Checklist */}
           <div className="pwd-criteria-list">
             <span className="pwd-criteria-title">Yêu cầu bảo mật:</span>
-            <div className={`pwd-criteria-item ${isMinLength ? 'met' : ''}`}>
-              {isMinLength ? <Check size={13} /> : <span className="dot" />}
-              <span>Ít nhất 6 ký tự</span>
+            <div className={`pwd-criteria-item ${policy.hasMinLength ? 'met' : ''}`}>
+              {policy.hasMinLength ? <Check size={13} /> : <span className="dot" />}
+              <span>Tối thiểu 8 ký tự</span>
             </div>
-            <div className={`pwd-criteria-item ${hasLetter && hasNumber ? 'met' : ''}`}>
-              {hasLetter && hasNumber ? <Check size={13} /> : <span className="dot" />}
-              <span>Khuyến nghị gồm cả chữ cái và số</span>
+            <div className={`pwd-criteria-item ${policy.hasLetter ? 'met' : ''}`}>
+              {policy.hasLetter ? <Check size={13} /> : <span className="dot" />}
+              <span>Có ít nhất 1 chữ cái (a-z, A-Z)</span>
+            </div>
+            <div className={`pwd-criteria-item ${policy.hasNumber ? 'met' : ''}`}>
+              {policy.hasNumber ? <Check size={13} /> : <span className="dot" />}
+              <span>Có ít nhất 1 chữ số (0-9)</span>
             </div>
           </div>
 
           <button
             type="submit"
             className="btn-submit"
-            disabled={isSubmitting || !isMinLength || (confirmPassword.length > 0 && !isMatch)}
+            disabled={isSubmitting || !policy.isValid || (confirmPassword.length > 0 && !isMatch)}
             style={{ marginTop: '16px' }}
           >
             {isSubmitting ? (
