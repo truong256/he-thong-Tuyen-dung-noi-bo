@@ -39,7 +39,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = jwtUtils.getUsernameFromJwtToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (userDetails != null && userDetails.isEnabled() && userDetails.isAccountNonLocked()) {
+                if (userDetails == null || !userDetails.isEnabled() || !userDetails.isAccountNonLocked()
+                        || !userDetails.isAccountNonExpired() || !userDetails.isCredentialsNonExpired()) {
+                    SecurityContextHolder.clearContext();
+                    logger.warn("JWT authentication rejected for inactive, expired or locked user: {}", username);
+                } else {
                     UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
@@ -49,11 +53,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                } else {
-                    logger.warn("JWT authentication rejected for inactive or locked user: {}", username);
                 }
             }
         } catch (Exception e) {
+            SecurityContextHolder.clearContext();
             logger.error("Cannot set user authentication: {}", e.getMessage());
         }
 

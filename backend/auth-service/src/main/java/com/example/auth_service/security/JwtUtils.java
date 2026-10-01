@@ -27,7 +27,7 @@ public class JwtUtils {
     }
 
     public String generateAccessToken(String username) {
-        return generateAccessToken(username, "RECRUITER");
+        return generateAccessToken(username, Set.of());
     }
 
     public String generateAccessToken(String email, String role) {
@@ -38,7 +38,7 @@ public class JwtUtils {
 
     public String generateAccessToken(String email, Set<String> roles) {
         List<String> roleList = roles != null ? new ArrayList<>(roles) : new ArrayList<>();
-        String primaryRole = !roleList.isEmpty() ? roleList.get(0) : "RECRUITER";
+        String primaryRole = !roleList.isEmpty() ? roleList.get(0) : null;
 
         return Jwts.builder()
                 .setSubject(email)
