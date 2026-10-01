@@ -19,7 +19,11 @@ public class CreateUserRequest {
     private String email;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, message = "Mật khẩu tối thiểu 6 ký tự")
+    @Size(min = 8, message = "Mật khẩu tối thiểu 8 ký tự")
+    @jakarta.validation.constraints.Pattern(
+            regexp = "^(?=.*[a-zA-Z])(?=.*\\d).+$",
+            message = "Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số"
+    )
     private String password;
 
     @NotBlank(message = "Họ tên không được để trống")
