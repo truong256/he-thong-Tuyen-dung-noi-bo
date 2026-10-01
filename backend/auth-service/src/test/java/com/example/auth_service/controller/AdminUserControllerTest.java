@@ -67,9 +67,12 @@ class AdminUserControllerTest {
     @Test
     @DisplayName("Admin API: POST /api/admin/users tạo người dùng mới thành công")
     void testCreateUser() throws Exception {
-        CreateUserRequest request = new CreateUserRequest(
-                "new_hr@company.com", "Password123@", "Nguyễn Thị HR", Set.of("HR_MANAGER"), "ACTIVE"
-        );
+        CreateUserRequest request = new CreateUserRequest();
+        request.setEmail("new_hr@company.com");
+        request.setFullName("Nguyễn Thị HR");
+        request.setRoles(Set.of("HR_MANAGER"));
+        request.setStatus("ACTIVE");
+        // Note: password is NOT set - server generates it server-side (S1-08 hardening)
         UserSummaryDto response = new UserSummaryDto(3L, "new_hr@company.com", "Nguyễn Thị HR", Set.of("HR_MANAGER"), "ACTIVE");
 
         when(adminUserService.createUser(any(CreateUserRequest.class))).thenReturn(response);

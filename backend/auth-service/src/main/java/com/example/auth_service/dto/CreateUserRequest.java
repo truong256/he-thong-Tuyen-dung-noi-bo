@@ -3,7 +3,6 @@ package com.example.auth_service.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
-import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,7 +10,6 @@ import java.util.Set;
 
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
 public class CreateUserRequest {
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không hợp lệ")
@@ -47,12 +45,5 @@ public class CreateUserRequest {
         this(email, fullName, null, roles, status);
     }
 
-    @Deprecated
-    public CreateUserRequest(String email, String password, String fullName, Set<String> roles, String status) {
-        this.email = email;
-        this.password = password;
-        this.fullName = fullName;
-        this.roles = roles;
-        this.status = status;
-    }
+    // NOTE: @Deprecated password field is set via setter only. No constructor accepts it to prevent accidental use.
 }
