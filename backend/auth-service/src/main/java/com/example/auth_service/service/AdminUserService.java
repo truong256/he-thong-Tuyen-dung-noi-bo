@@ -302,7 +302,7 @@ public class AdminUserService {
         sb.append(special.charAt(random.nextInt(special.length())));
 
         String allChars = upper + lower + digits + special;
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 8; i++) {
             sb.append(allChars.charAt(random.nextInt(allChars.length())));
         }
 
