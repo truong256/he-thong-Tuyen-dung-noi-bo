@@ -1,111 +1,86 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShieldAlert, ArrowLeft, Home, LogIn } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
-const UnauthorizedPage: React.FC = () => {
+interface UnauthorizedPageProps {
+  statusCode?: 401 | 403;
+  title?: string;
+  message?: string;
+}
+
+export const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({
+  statusCode = 403,
+  title,
+  message,
+}) => {
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
+
+  const is401 = statusCode === 401 || !isAuthenticated;
+  const displayCode = is401 ? '401' : '403';
+  const displayTitle = title || (is401 ? 'Chưa xác thực danh tính' : 'Không đủ quyền truy cập');
+  const displayMessage = message || (
+    is401
+      ? 'Bạn chưa đăng nhập hoặc phiên làm việc đã kết thúc. Vui lòng đăng nhập để tiếp tục truy cập.'
+      : 'Tài khoản của bạn không có quyền truy cập vào chức năng này. Vui lòng liên hệ quản trị viên nếu bạn cần được cấp thêm quyền.'
+  );
+
+  const primaryRole = user?.roles && user.roles.length > 0 ? user.roles[0] : (user?.role || 'N/A');
+
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: '#f4f8fc',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '520px',
-          background: '#ffffff',
-          borderRadius: '16px',
-          padding: '50px 35px',
-          textAlign: 'center',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.08)',
-        }}
-      >
-        {/* Icon */}
-        <div
-          style={{
-            width: '80px',
-            height: '80px',
-            margin: '0 auto 20px',
-            borderRadius: '50%',
-            background: '#fff1f2',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <i
-            className="bi bi-shield-lock-fill"
-            style={{
-              fontSize: '40px',
-              color: '#e63946',
-            }}
-          ></i>
+    <div className="unauthorized-page-wrapper" data-testid="unauthorized-page">
+      <div className="unauthorized-card">
+        {/* Shield Icon */}
+        <div className="unauthorized-icon-circle" aria-hidden="true">
+          <ShieldAlert size={42} className="unauthorized-icon" />
         </div>
 
-        {/* 403 */}
-        <h1
-          style={{
-            fontSize: '64px',
-            margin: '0',
-            color: '#102b86',
-            fontWeight: 700,
-          }}
-        >
-          403
-        </h1>
+        {/* Status Code */}
+        <div className="unauthorized-code">{displayCode}</div>
 
         {/* Title */}
-        <h2
-          style={{
-            margin: '10px 0',
-            color: '#1e293b',
-          }}
-        >
-          Không đủ quyền truy cập
-        </h2>
+        <h1 className="unauthorized-title">{displayTitle}</h1>
 
-        {/* Description */}
-        <p
-          style={{
-            color: '#64748b',
-            lineHeight: '1.7',
-            margin: '15px auto 30px',
-            maxWidth: '420px',
-          }}
-        >
-          Tài khoản của bạn không có quyền truy cập vào chức năng này.
-          Vui lòng liên hệ quản trị viên nếu bạn cần được cấp quyền.
-        </p>
+        {/* Subtitle badge / text so RoleGuard and users get clear status */}
+        <div className="unauthorized-badge">
+          <span>Truy cập bị từ chối</span>
+        </div>
 
-        {/* Buttons */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '12px',
-            flexWrap: 'wrap',
-          }}
-        >
+        {/* Message */}
+        <p className="unauthorized-message">{displayMessage}</p>
+
+        {/* User context if logged in */}
+        {isAuthenticated && user && (
+          <div className="unauthorized-user-pill">
+            <span>Tài khoản: <strong>{user.email}</strong></span>
+            <span className="unauthorized-role-tag">Vai trò: {primaryRole}</span>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="unauthorized-actions">
           <button
             type="button"
-            className="btn btn-outline-secondary"
-            onClick={() => window.history.back()}
+            className="btn btn-outline"
+            onClick={() => navigate(-1)}
+            aria-label="Quay lại trang trước"
           >
-            <i className="bi bi-arrow-left"></i>{' '}
-            Quay lại
+            <ArrowLeft size={16} />
+            <span>Quay lại</span>
           </button>
 
-          <Link
-            to="/dashboard"
-            className="btn btn-primary"
-          >
-            <i className="bi bi-house-door-fill"></i>{' '}
-            Về trang chủ
-          </Link>
+          {is401 ? (
+            <Link to="/login" className="btn btn-primary" aria-label="Đi đến trang đăng nhập">
+              <LogIn size={16} />
+              <span>Đăng nhập lại</span>
+            </Link>
+          ) : (
+            <Link to="/dashboard" className="btn btn-primary" aria-label="Về trang chủ">
+              <Home size={16} />
+              <span>Về trang chủ</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

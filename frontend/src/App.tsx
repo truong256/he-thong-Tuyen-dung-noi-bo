@@ -9,6 +9,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
+import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 
 export const App: React.FC = () => {
@@ -20,6 +21,9 @@ export const App: React.FC = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route path="/403" element={<UnauthorizedPage statusCode={403} />} />
+          <Route path="/401" element={<UnauthorizedPage statusCode={401} />} />
 
           {/* Authenticated application layout */}
           <Route
