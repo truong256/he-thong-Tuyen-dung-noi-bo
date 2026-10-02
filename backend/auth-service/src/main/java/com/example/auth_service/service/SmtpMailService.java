@@ -91,70 +91,79 @@ public class SmtpMailService implements MailService {
             rawSocket.connect(new InetSocketAddress(host, port), timeout);
             rawSocket.setSoTimeout(timeout);
 
-            Socket socket = rawSocket;
+            Socket initialSocket = rawSocket;
             if (port == 465) {
-                socket = ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                SSLSocket sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
                         .createSocket(rawSocket, host, port, true);
-                ((SSLSocket) socket).startHandshake();
+                sslSocket.startHandshake();
+                initialSocket = sslSocket;
             }
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+            try (Socket socket = initialSocket) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
-            readResponse(reader, 220);
-            sendCommand(writer, "EHLO " + getLocalHostName());
-            readResponse(reader, 250);
-
-            if (port != 465 && starttls) {
-                sendCommand(writer, "STARTTLS");
                 readResponse(reader, 220);
-                SSLSocket sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
-                        .createSocket(socket, host, port, true);
-                sslSocket.startHandshake();
-                socket = sslSocket;
-                reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-                writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
-
                 sendCommand(writer, "EHLO " + getLocalHostName());
                 readResponse(reader, 250);
+
+                if (port != 465 && starttls) {
+                    sendCommand(writer, "STARTTLS");
+                    readResponse(reader, 220);
+                    try (SSLSocket tlsSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                            .createSocket(socket, host, port, true)) {
+                        tlsSocket.startHandshake();
+                        BufferedReader tlsReader = new BufferedReader(new InputStreamReader(tlsSocket.getInputStream(), StandardCharsets.UTF_8));
+                        BufferedWriter tlsWriter = new BufferedWriter(new OutputStreamWriter(tlsSocket.getOutputStream(), StandardCharsets.UTF_8));
+
+                        sendCommand(tlsWriter, "EHLO " + getLocalHostName());
+                        readResponse(tlsReader, 250);
+
+                        performSmtpTransaction(tlsReader, tlsWriter, toEmail, subject, bodyHtml);
+                    }
+                } else {
+                    performSmtpTransaction(reader, writer, toEmail, subject, bodyHtml);
+                }
             }
-
-            if (auth && username != null && !username.isBlank()) {
-                sendCommand(writer, "AUTH LOGIN");
-                readResponse(reader, 334);
-                sendCommand(writer, Base64.getEncoder().encodeToString(username.getBytes(StandardCharsets.UTF_8)));
-                readResponse(reader, 334);
-                sendCommand(writer, Base64.getEncoder().encodeToString((password != null ? password : "").getBytes(StandardCharsets.UTF_8)));
-                readResponse(reader, 235);
-            }
-
-            sendCommand(writer, "MAIL FROM:<" + fromEmail + ">");
-            readResponse(reader, 250);
-
-            sendCommand(writer, "RCPT TO:<" + toEmail + ">");
-            readResponse(reader, 250);
-
-            sendCommand(writer, "DATA");
-            readResponse(reader, 354);
-
-            writer.write("From: " + fromEmail + "\r\n");
-            writer.write("To: " + toEmail + "\r\n");
-            writer.write("Subject: =?UTF-8?B?" + Base64.getEncoder().encodeToString(subject.getBytes(StandardCharsets.UTF_8)) + "?=\r\n");
-            writer.write("MIME-Version: 1.0\r\n");
-            writer.write("Content-Type: text/html; charset=UTF-8\r\n");
-            writer.write("Content-Transfer-Encoding: 8bit\r\n");
-            writer.write("\r\n");
-            writer.write(bodyHtml);
-            writer.write("\r\n.\r\n");
-            writer.flush();
-            readResponse(reader, 250);
-
-            sendCommand(writer, "QUIT");
         } catch (Exception e) {
             // SMTP responses can echo message contents. Never log server text or credentials.
             logger.error("Failed to transmit email via SMTP ({})", e.getClass().getSimpleName());
             throw new RuntimeException("Gửi email qua SMTP thất bại.");
         }
+    }
+
+    private void performSmtpTransaction(BufferedReader reader, BufferedWriter writer, String toEmail, String subject, String bodyHtml) throws IOException {
+        if (auth && username != null && !username.isBlank()) {
+            sendCommand(writer, "AUTH LOGIN");
+            readResponse(reader, 334);
+            sendCommand(writer, Base64.getEncoder().encodeToString(username.getBytes(StandardCharsets.UTF_8)));
+            readResponse(reader, 334);
+            sendCommand(writer, Base64.getEncoder().encodeToString((password != null ? password : "").getBytes(StandardCharsets.UTF_8)));
+            readResponse(reader, 235);
+        }
+
+        sendCommand(writer, "MAIL FROM:<" + fromEmail + ">");
+        readResponse(reader, 250);
+
+        sendCommand(writer, "RCPT TO:<" + toEmail + ">");
+        readResponse(reader, 250);
+
+        sendCommand(writer, "DATA");
+        readResponse(reader, 354);
+
+        writer.write("From: " + fromEmail + "\r\n");
+        writer.write("To: " + toEmail + "\r\n");
+        writer.write("Subject: =?UTF-8?B?" + Base64.getEncoder().encodeToString(subject.getBytes(StandardCharsets.UTF_8)) + "?=\r\n");
+        writer.write("MIME-Version: 1.0\r\n");
+        writer.write("Content-Type: text/html; charset=UTF-8\r\n");
+        writer.write("Content-Transfer-Encoding: 8bit\r\n");
+        writer.write("\r\n");
+        writer.write(bodyHtml);
+        writer.write("\r\n.\r\n");
+        writer.flush();
+        readResponse(reader, 250);
+
+        sendCommand(writer, "QUIT");
     }
 
     private void sendCommand(BufferedWriter writer, String command) throws IOException {

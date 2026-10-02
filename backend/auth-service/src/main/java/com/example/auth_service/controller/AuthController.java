@@ -80,4 +80,14 @@ public class AuthController {
         UserSummaryDto user = authService.getCurrentUser(authentication.getName());
         return ResponseEntity.ok(user);
     }
+
+    @PutMapping("/profile")
+    public ResponseEntity<UserSummaryDto> updateProfile(@Valid @RequestBody UpdateProfileRequest request,
+                                                        Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        UserSummaryDto updated = authService.updateProfile(authentication.getName(), request);
+        return ResponseEntity.ok(updated);
+    }
 }

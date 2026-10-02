@@ -3,6 +3,7 @@ import { Lock, Eye, EyeOff } from 'lucide-react';
 
 interface PasswordFieldProps {
   id?: string;
+  label?: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
@@ -14,6 +15,7 @@ interface PasswordFieldProps {
 
 export const PasswordField: React.FC<PasswordFieldProps> = ({
   id = 'login-password',
+  label,
   value,
   onChange,
   disabled = false,
@@ -30,6 +32,11 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
 
   return (
     <div className="auth-field-group">
+      {label && (
+        <label htmlFor={id} className="auth-field-label">
+          {label} {required && <span className="auth-required-star">*</span>}
+        </label>
+      )}
       <div className="auth-input-wrapper">
         <Lock size={18} className="auth-input-leading-icon" aria-hidden="true" />
         <input

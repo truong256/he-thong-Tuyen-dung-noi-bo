@@ -12,6 +12,7 @@ import {
   Star,
   Briefcase,
   FileText,
+  User,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -72,6 +73,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 >
                   <LayoutDashboard size={18} />
                   <span>Tổng quan</span>
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  to="/profile"
+                  className={({ isActive }) => (isActive ? 'active' : '')}
+                  onClick={handleLinkClick}
+                >
+                  <User size={18} />
+                  <span>Hồ sơ cá nhân</span>
                 </NavLink>
               </li>
 
