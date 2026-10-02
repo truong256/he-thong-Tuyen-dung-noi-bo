@@ -197,9 +197,16 @@ public class AdminUserService {
                 throw new BadRequestException("Bắt buộc ghi lý do khóa tài khoản.");
             }
 
+            String reason = request.getReason().trim();
+            String note = request.getNote() != null ? request.getNote().trim() : null;
+
+            if (reason.toLowerCase().contains("khác") && (note == null || note.isBlank())) {
+                throw new BadRequestException("Vui lòng ghi rõ lý do chi tiết trong phần ghi chú khi chọn lý do khác.");
+            }
+
             user.setStatus("LOCKED");
-            user.setLockReason(request.getReason().trim());
-            user.setLockNote(request.getNote() != null ? request.getNote().trim() : null);
+            user.setLockReason(reason);
+            user.setLockNote(note);
             user.setLockedAt(Instant.now());
 
             String actor = getAuthenticatedUsername();

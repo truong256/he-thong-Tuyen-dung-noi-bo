@@ -1893,6 +1893,30 @@ body {
   opacity: 0.7;
 }
 
+.form-group select.has-error,
+.form-group input:not([type="checkbox"]):not([type="radio"]).has-error,
+.form-group textarea.has-error {
+  border-color: #ef4444;
+  background: #fffdfd;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.form-group select.has-error:focus,
+.form-group input:not([type="checkbox"]):not([type="radio"]).has-error:focus,
+.form-group textarea.has-error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.2);
+}
+
+.form-field-error {
+  display: block;
+  font-size: 0.82rem;
+  color: #dc2626;
+  margin-top: 4px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
 /* Universal checkbox reset to prevent accidental stretched inputs */
 input[type="checkbox"] {
   width: 16px !important;
