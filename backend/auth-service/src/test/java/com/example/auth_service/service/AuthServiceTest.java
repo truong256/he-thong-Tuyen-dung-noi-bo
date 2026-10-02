@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -227,11 +228,26 @@ class AuthServiceTest {
     void test10_forgotPassword_securityGenericMessage() {
         User user = new User("target@company.com", encodedPassword, "CANDIDATE");
         when(userRepository.findByEmail("target@company.com")).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("missing@company.com")).thenReturn(Optional.empty());
 
+        Instant before = Instant.now();
         Map<String, String> response = authService.forgotPassword(new ForgotPasswordRequest("target@company.com"));
+        Instant after = Instant.now();
+        Map<String, String> missingResponse = authService.forgotPassword(new ForgotPasswordRequest("missing@company.com"));
 
-        assertNotNull(response.get("message"));
-        verify(mailService, times(1)).sendPasswordResetEmail(eq("target@company.com"), anyString());
+        assertEquals(Map.of("message", "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi."), response);
+        assertEquals(response, missingResponse);
+        ArgumentCaptor<String> rawToken = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<PasswordResetToken> storedToken = ArgumentCaptor.forClass(PasswordResetToken.class);
+        verify(mailService).sendPasswordResetEmail(eq("target@company.com"), rawToken.capture());
+        verify(passwordResetTokenRepository).save(storedToken.capture());
+        assertEquals(AuthService.hashToken(rawToken.getValue()), storedToken.getValue().getToken());
+        assertNotEquals(rawToken.getValue(), storedToken.getValue().getToken());
+        assertFalse(storedToken.getValue().isUsed());
+        assertFalse(storedToken.getValue().getExpiryDate().isBefore(before.plus(Duration.ofMinutes(30))));
+        assertFalse(storedToken.getValue().getExpiryDate().isAfter(after.plus(Duration.ofMinutes(30))));
+        verify(passwordResetTokenRepository, never()).findByUser(argThat(candidate -> candidate != user));
+        verifyNoMoreInteractions(mailService);
     }
 
     @Test
@@ -255,6 +271,57 @@ class AuthServiceTest {
         assertTrue(token.isUsed());
         assertTrue(passwordEncoder.matches("NewSecret123@", user.getPassword()));
         verify(refreshTokenRepository).revokeAllByUser(user);
+
+        String passwordAfterReset = user.getPassword();
+        BadRequestException replay = assertThrows(BadRequestException.class, () ->
+                authService.resetPassword(new ResetPasswordRequest(rawToken, "OtherSecret123@", "OtherSecret123@")));
+        assertTrue(replay.getMessage().contains("hết hạn hoặc đã được sử dụng"));
+        assertEquals(passwordAfterReset, user.getPassword());
+        verify(userRepository, times(1)).save(user);
+        verify(passwordResetTokenRepository, times(1)).save(token);
+        verify(refreshTokenRepository, times(1)).revokeAllByUser(user);
+    }
+
+    @Test
+    @DisplayName("S1-03: Token hết hạn sau 30 phút không đổi mật khẩu hay thu hồi phiên")
+    void resetPassword_expiredAfterThirtyMinutes_rejectedWithoutSideEffects() {
+        User user = new User("expired@company.com", encodedPassword, "CANDIDATE");
+        String rawToken = "expired-reset-token";
+        PasswordResetToken token = new PasswordResetToken();
+        token.setUser(user);
+        token.setToken(AuthService.hashToken(rawToken));
+        Instant issuedAt = Instant.now().minus(Duration.ofMinutes(30)).minusSeconds(1);
+        token.setExpiryDate(issuedAt.plus(Duration.ofMinutes(30)));
+        token.setUsed(false);
+        when(passwordResetTokenRepository.findByToken(token.getToken())).thenReturn(Optional.of(token));
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () ->
+                authService.resetPassword(new ResetPasswordRequest(rawToken, "NewSecret123@", "NewSecret123@")));
+
+        assertTrue(ex.getMessage().contains("hết hạn hoặc đã được sử dụng"));
+        assertEquals(encodedPassword, user.getPassword());
+        assertFalse(token.isUsed());
+        verify(userRepository, never()).save(any(User.class));
+        verify(passwordResetTokenRepository, never()).save(any(PasswordResetToken.class));
+        verifyNoInteractions(refreshTokenRepository, mailService, jwtUtils);
+    }
+
+    @Test
+    @DisplayName("S1-03: SMTP lỗi vẫn trả cùng thông báo với email không tồn tại, không lộ token")
+    void forgotPassword_mailFailure_keepsGenericResponse() {
+        User user = new User("mail-failure@company.com", encodedPassword, "CANDIDATE");
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(userRepository.findByEmail("missing@company.com")).thenReturn(Optional.empty());
+        doThrow(new RuntimeException("SMTP unavailable"))
+                .when(mailService).sendPasswordResetEmail(eq(user.getEmail()), anyString());
+
+        Map<String, String> failedDelivery = authService.forgotPassword(new ForgotPasswordRequest(user.getEmail()));
+        Map<String, String> missingEmail = authService.forgotPassword(new ForgotPasswordRequest("missing@company.com"));
+
+        assertEquals(missingEmail, failedDelivery);
+        assertEquals(Set.of("message"), failedDelivery.keySet());
+        verify(mailService, times(1)).sendPasswordResetEmail(eq(user.getEmail()), anyString());
+        verify(passwordResetTokenRepository, times(1)).save(any(PasswordResetToken.class));
     }
 
     @Test

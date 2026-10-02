@@ -362,7 +362,7 @@ public class AuthService {
                 try {
                     mailService.sendPasswordResetEmail(user.getEmail(), rawToken);
                 } catch (Exception ex) {
-                    logger.warn("Could not deliver password reset email: {}", ex.getMessage());
+                    logger.warn("Could not deliver password reset email ({})", ex.getClass().getSimpleName());
                 }
             }
         }

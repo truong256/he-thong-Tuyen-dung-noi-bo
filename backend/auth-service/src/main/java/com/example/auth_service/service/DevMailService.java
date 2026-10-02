@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
-@Profile({"dev", "test"})
+@Profile("test | (dev & !smtp)")
 public class DevMailService implements MailService {
 
     private static final Logger logger = LoggerFactory.getLogger(DevMailService.class);

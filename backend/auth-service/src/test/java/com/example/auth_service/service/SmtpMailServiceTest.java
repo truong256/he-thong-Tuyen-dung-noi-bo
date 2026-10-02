@@ -3,6 +3,9 @@ package com.example.auth_service.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.*;
@@ -18,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@ExtendWith(OutputCaptureExtension.class)
 class SmtpMailServiceTest {
 
     private SmtpMailService smtpMailService;
@@ -123,6 +127,32 @@ class SmtpMailServiceTest {
         }
     }
 
+    @Test
+    void passwordResetEmailUsesConfiguredFrontendUrl() throws Exception {
+        try (FakeSmtpServer fakeServer = new FakeSmtpServer()) {
+            smtpMailService.setPort(fakeServer.getPort());
+            ReflectionTestUtils.setField(smtpMailService, "frontendUrl", "https://ats.example.com/");
+            smtpMailService.sendPasswordResetEmail("reset@company.com", "test-only-reset-token");
+
+            String payload = fakeServer.getReceivedDataPayload(3000);
+            assertThat(payload).contains("https://ats.example.com/reset-password?token=test-only-reset-token");
+            assertThat(payload).contains("30 phút");
+            assertThat(payload).doesNotContain("localhost:5173");
+        }
+    }
+
+    @Test
+    void smtpResponseCannotLeakResetTokenToLogsOrException(CapturedOutput output) throws Exception {
+        String secret = "test-only-sensitive-reset-token";
+        try (FakeSmtpServer fakeServer = new FakeSmtpServer("550 Delivery rejected for " + secret)) {
+            smtpMailService.setPort(fakeServer.getPort());
+            assertThatThrownBy(() -> smtpMailService.sendPasswordResetEmail("reset@company.com", secret))
+                    .hasMessage("Gửi email qua SMTP thất bại.")
+                    .hasNoCause();
+            assertThat(output.getAll()).doesNotContain(secret);
+        }
+    }
+
     /**
      * In-process RFC 5321 compliant SMTP test server.
      */
@@ -131,9 +161,15 @@ class SmtpMailServiceTest {
         private final List<String> receivedCommands = Collections.synchronizedList(new ArrayList<>());
         private final CompletableFuture<String> dataPayloadFuture = new CompletableFuture<>();
         private final Thread listenerThread;
+        private final String dataResponse;
         private volatile boolean running = true;
 
         public FakeSmtpServer() throws IOException {
+            this("250 2.0.0 OK message accepted for delivery");
+        }
+
+        public FakeSmtpServer(String dataResponse) throws IOException {
+            this.dataResponse = dataResponse;
             this.serverSocket = new ServerSocket(0); // auto-assigned available port
             this.listenerThread = new Thread(this::listen);
             this.listenerThread.setDaemon(true);
@@ -170,7 +206,7 @@ class SmtpMailServiceTest {
                         if (".".equals(line)) {
                             inData = false;
                             dataPayloadFuture.complete(dataBuffer.toString());
-                            writer.write("250 2.0.0 OK message accepted for delivery\r\n");
+                            writer.write(dataResponse + "\r\n");
                             writer.flush();
                         } else {
                             dataBuffer.append(line).append("\n");

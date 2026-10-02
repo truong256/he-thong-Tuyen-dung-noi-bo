@@ -17,10 +17,11 @@ import java.util.Base64;
 
 /**
  * Production and default implementation of MailService using real SMTP protocol.
- * Active for all profiles except 'dev' and 'test'.
+ * Also available in development by explicitly enabling the 'smtp' profile.
+ * The 'test' profile always uses the simulated transport.
  */
 @Service
-@Profile("!dev & !test")
+@Profile("!test & (!dev | smtp)")
 public class SmtpMailService implements MailService {
 
     private static final Logger logger = LoggerFactory.getLogger(SmtpMailService.class);
@@ -49,10 +50,13 @@ public class SmtpMailService implements MailService {
     @Value("${spring.mail.properties.mail.smtp.timeout:10000}")
     private int timeout;
 
+    @Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl = "http://localhost:5173";
+
     @Override
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
         String subject = "[Tuyển dụng nội bộ] Yêu cầu đặt lại mật khẩu";
-        String resetLink = "http://localhost:5173/reset-password?token=" + resetToken;
+        String resetLink = frontendUrl.replaceAll("/+$", "") + "/reset-password?token=" + resetToken;
         String body = "<p>Kính gửi Quý nhân viên,</p>"
                 + "<p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản tại Hệ thống Tuyển dụng Nội bộ.</p>"
                 + "<p>Vui lòng truy cập liên kết sau để đặt lại mật khẩu của bạn:</p>"
@@ -147,8 +151,9 @@ public class SmtpMailService implements MailService {
 
             sendCommand(writer, "QUIT");
         } catch (Exception e) {
-            logger.error("Failed to transmit email via SMTP to {}: {}", toEmail, e.getMessage());
-            throw new RuntimeException("Gửi email qua SMTP thất bại: " + e.getMessage(), e);
+            // SMTP responses can echo message contents. Never log server text or credentials.
+            logger.error("Failed to transmit email via SMTP ({})", e.getClass().getSimpleName());
+            throw new RuntimeException("Gửi email qua SMTP thất bại.");
         }
     }
 
