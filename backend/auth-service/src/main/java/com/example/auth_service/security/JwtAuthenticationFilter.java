@@ -37,8 +37,20 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUsernameFromJwtToken(jwt);
+                Integer tokenVersion = jwtUtils.getTokenVersionFromJwtToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                if (userDetails instanceof UserPrincipal principal) {
+                    if (tokenVersion == null || tokenVersion != principal.getTokenVersion()) {
+                        SecurityContextHolder.clearContext();
+                        logger.warn("JWT authentication rejected: stale token version for user {}. Token v={}, DB v={}",
+                                username, tokenVersion, principal.getTokenVersion());
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+                }
+
                 if (userDetails == null || !userDetails.isEnabled() || !userDetails.isAccountNonLocked()
                         || !userDetails.isAccountNonExpired() || !userDetails.isCredentialsNonExpired()) {
                     SecurityContextHolder.clearContext();

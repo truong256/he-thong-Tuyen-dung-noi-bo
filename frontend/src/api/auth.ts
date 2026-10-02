@@ -17,8 +17,11 @@ export const authApi = {
     return res.data;
   },
 
-  logout: async (email?: string): Promise<{ message: string }> => {
-    const res = await apiClient.post<{ message: string }>('/api/auth/logout', { email });
+  logout: async (payload?: { refreshToken?: string; email?: string } | string): Promise<{ message: string }> => {
+    const body = typeof payload === 'string'
+      ? { email: payload }
+      : payload;
+    const res = await apiClient.post<{ message: string }>('/api/auth/logout', body ?? {});
     return res.data;
   },
 

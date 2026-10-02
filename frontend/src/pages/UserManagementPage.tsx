@@ -20,7 +20,7 @@ import { useAuth } from '../hooks/useAuth';
 import RoleAssignmentModal from '../components/admin/RoleAssignmentModal';
 import LockAccountModal from '../components/admin/LockAccountModal';
 import RbacMatrixModal from '../components/admin/RbacMatrixModal';
-import { ATS_ROLES_INFO } from '../constants/rbac';
+import { ATS_ROLES_INFO, getRoleLabel } from '../constants/rbac';
 
 export const UserManagementPage: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -135,8 +135,16 @@ export const UserManagementPage: React.FC = () => {
       setNewStatus('ACTIVE');
       fetchUsers();
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Tạo tài khoản thất bại. Vui lòng thử lại.';
-      showToast(msg, 'error');
+      const apiErrors = err.response?.data?.validationErrors;
+      let msg = err.response?.data?.message;
+      if (apiErrors && typeof apiErrors === 'object') {
+        const firstErr = Object.values(apiErrors)[0];
+        if (firstErr) msg = String(firstErr);
+      }
+      if (!err.response) {
+        msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.';
+      }
+      showToast(msg || 'Tạo tài khoản thất bại. Vui lòng thử lại.', 'error');
     } finally {
       setIsSubmittingAdd(false);
     }
@@ -178,7 +186,7 @@ export const UserManagementPage: React.FC = () => {
         <div className="header-actions">
           <button
             type="button"
-            className="btn btn-outline"
+            className="btn btn-secondary"
             onClick={() => setShowRbacMatrixModal(true)}
             aria-label="Xem ma trận phân quyền RBAC"
           >
@@ -258,7 +266,7 @@ export const UserManagementPage: React.FC = () => {
               <option value="ALL">Tất cả vai trò</option>
               {ATS_ROLES_INFO.map((r) => (
                 <option key={r.code} value={r.code}>
-                  {r.code} - {r.name}
+                  {r.name}
                 </option>
               ))}
             </select>
@@ -276,9 +284,9 @@ export const UserManagementPage: React.FC = () => {
               }}
             >
               <option value="ALL">Tất cả trạng thái</option>
-              <option value="ACTIVE">Hoạt động (ACTIVE)</option>
-              <option value="LOCKED">Bị khóa (LOCKED)</option>
-              <option value="INACTIVE">Vô hiệu hóa (INACTIVE)</option>
+              <option value="ACTIVE">Hoạt động</option>
+              <option value="LOCKED">Bị khóa</option>
+              <option value="INACTIVE">Vô hiệu hóa</option>
             </select>
           </div>
 
@@ -337,7 +345,7 @@ export const UserManagementPage: React.FC = () => {
                     <div className="empty-state-icon">
                       <Search size={32} />
                     </div>
-                    <h4>Không tìm thấy người dùng nào</h4>
+                    <h4>Không tìm thấy tài khoản nào</h4>
                     <p>
                       {search || statusFilter !== 'ALL' || roleFilter !== 'ALL'
                         ? 'Không có tài khoản nào phù hợp với bộ lọc hiện tại.'
@@ -365,8 +373,15 @@ export const UserManagementPage: React.FC = () => {
                   <tr key={u.id} className={isLocked ? 'row-locked' : ''}>
                     <td>
                       <div className="user-name-cell">
-                        <strong>{u.fullName || u.email.split('@')[0]}</strong>
-                        {isSelf && <span className="tag-self">Bạn</span>}
+                        <div className="user-avatar-initial" aria-hidden="true">
+                          {(u.fullName || u.email).charAt(0).toUpperCase()}
+                        </div>
+                        <div className="user-info-group">
+                          <div className="user-name-row">
+                            <strong>{u.fullName || u.email.split('@')[0]}</strong>
+                            {isSelf && <span className="tag-self">Bạn</span>}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -379,7 +394,7 @@ export const UserManagementPage: React.FC = () => {
                       <div className="role-tags">
                         {userRoles.map((r) => (
                           <span key={r} className={`tag ${getRoleBadgeClass(r)}`}>
-                            {r}
+                            {getRoleLabel(r)}
                           </span>
                         ))}
                       </div>
@@ -447,19 +462,22 @@ export const UserManagementPage: React.FC = () => {
             const userRoles = u.roles && u.roles.length > 0 ? u.roles : [u.role || 'CANDIDATE'];
             const isLocked = u.status === 'LOCKED';
             const isSelf = currentUser && u.email.toLowerCase() === currentUser.email.toLowerCase();
+            const initials = (u.fullName || u.email).charAt(0).toUpperCase();
 
             return (
               <div key={u.id} className={`mobile-user-card ${isLocked ? 'locked' : ''}`}>
                 <div className="mobile-card-header">
-                  <div>
-                    <strong>{u.fullName || u.email.split('@')[0]}</strong>
-                    {isSelf && <span className="tag-self">Bạn</span>}
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{u.email}</div>
-                    {u.department && (
-                      <div style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px' }}>
-                        Phòng ban: <strong>{u.department}</strong>
+                  <div className="mobile-card-user-info">
+                    <div className="user-avatar-initial" aria-hidden="true">
+                      {initials}
+                    </div>
+                    <div>
+                      <div className="user-name-row">
+                        <strong>{u.fullName || u.email.split('@')[0]}</strong>
+                        {isSelf && <span className="tag-self">Bạn</span>}
                       </div>
-                    )}
+                      <div className="mobile-card-email">{u.email}</div>
+                    </div>
                   </div>
                   <span className={`status-pill ${u.status ? u.status.toLowerCase() : 'active'}`}>
                     {u.status === 'ACTIVE' ? 'Hoạt động' : u.status === 'LOCKED' ? 'Bị khóa' : 'Vô hiệu hóa'}
@@ -467,11 +485,10 @@ export const UserManagementPage: React.FC = () => {
                 </div>
 
                 <div className="mobile-card-roles">
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Vai trò:</span>
                   <div className="role-tags">
                     {userRoles.map((r) => (
                       <span key={r} className={`tag ${getRoleBadgeClass(r)}`}>
-                        {r}
+                        {getRoleLabel(r)}
                       </span>
                     ))}
                   </div>
@@ -531,7 +548,7 @@ export const UserManagementPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="pagination-actions">
+        <div className="pagination-actions pagination-nav">
           <button
             type="button"
             className="btn btn-outline btn-sm"
@@ -542,8 +559,8 @@ export const UserManagementPage: React.FC = () => {
             <ChevronLeft size={16} />
             <span>Trang trước</span>
           </button>
-          <span className="pagination-page-indicator">
-            Trang <strong>{currentPage + 1}</strong> / {totalPages || 1}
+          <span className="pagination-page-indicator pagination-current-page">
+            Trang <strong>{currentPage + 1}</strong> / <strong>{totalPages || 1}</strong>
           </span>
           <button
             type="button"
@@ -567,7 +584,7 @@ export const UserManagementPage: React.FC = () => {
                 <div className="modal-title-icon">
                   <UserPlus size={20} />
                 </div>
-                <h3 id="add-user-modal-title">Thêm tài khoản người dùng nội bộ</h3>
+                <h3 id="add-user-modal-title">Thêm tài khoản nhân viên nội bộ</h3>
               </div>
               <button
                 type="button"
@@ -634,7 +651,10 @@ export const UserManagementPage: React.FC = () => {
                 </label>
                 <div className="checkbox-grid">
                   {ATS_ROLES_INFO.map((role) => (
-                    <label key={role.code} className="checkbox-item">
+                    <label
+                      key={role.code}
+                      className={`checkbox-item ${newRoles.includes(role.code) ? 'selected' : ''}`}
+                    >
                       <input
                         type="checkbox"
                         checked={newRoles.includes(role.code)}
@@ -649,7 +669,7 @@ export const UserManagementPage: React.FC = () => {
                         }}
                         disabled={isSubmittingAdd}
                       />
-                      <span>{role.code}</span>
+                      <span>{role.name}</span>
                     </label>
                   ))}
                 </div>
@@ -663,9 +683,9 @@ export const UserManagementPage: React.FC = () => {
                   onChange={(e) => setNewStatus(e.target.value)}
                   disabled={isSubmittingAdd}
                 >
-                  <option value="ACTIVE">Hoạt động (ACTIVE)</option>
-                  <option value="LOCKED">Bị khóa (LOCKED)</option>
-                  <option value="INACTIVE">Vô hiệu hóa (INACTIVE)</option>
+                  <option value="ACTIVE">Hoạt động</option>
+                  <option value="LOCKED">Bị khóa</option>
+                  <option value="INACTIVE">Vô hiệu hóa</option>
                 </select>
               </div>
 
@@ -689,7 +709,7 @@ export const UserManagementPage: React.FC = () => {
                       <span>Đang tạo...</span>
                     </>
                   ) : (
-                    <span>Tạo người dùng</span>
+                    <span>Thêm tài khoản</span>
                   )}
                 </button>
               </div>

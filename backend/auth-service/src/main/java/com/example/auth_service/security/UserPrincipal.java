@@ -16,17 +16,24 @@ public class UserPrincipal implements UserDetails {
     private final String fullName;
     private final String password;
     private final String status;
+    private final int tokenVersion;
     private boolean accountNonLocked = true;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(Long id, String email, String fullName, String password, String status,
-                         Collection<? extends GrantedAuthority> authorities) {
+                         int tokenVersion, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.email = email;
         this.fullName = fullName;
         this.password = password;
         this.status = status;
+        this.tokenVersion = tokenVersion;
         this.authorities = authorities;
+    }
+
+    public UserPrincipal(Long id, String email, String fullName, String password, String status,
+                         Collection<? extends GrantedAuthority> authorities) {
+        this(id, email, fullName, password, status, 1, authorities);
     }
 
     public static UserPrincipal create(User user) {
@@ -51,6 +58,7 @@ public class UserPrincipal implements UserDetails {
                 user.getFullName(),
                 user.getPassword(),
                 user.getStatus(),
+                user.getTokenVersion(),
                 authorities
         );
         principal.accountNonLocked = user.isAccountNonLocked();
@@ -61,6 +69,7 @@ public class UserPrincipal implements UserDetails {
     public String getEmail() { return email; }
     public String getFullName() { return fullName; }
     public String getStatus() { return status; }
+    public int getTokenVersion() { return tokenVersion; }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -51,6 +51,7 @@ export const triggerSessionExpired = () => {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   if (typeof window !== 'undefined') {
+    sessionStorage.setItem('ats:session_expired', '1');
     window.dispatchEvent(new CustomEvent('ats:session-expired'));
   }
   setTimeout(() => {
@@ -66,12 +67,13 @@ apiClient.interceptors.response.use(
     const status = error.response?.status;
     const url = originalRequest?.url || '';
 
-    // Ignore public auth routes from refresh or session-expired logic
+    // Ignore public auth routes and logout from refresh or session-expired logic
     const isPublicAuthRoute =
       url.includes('/api/auth/login') ||
       url.includes('/api/auth/register') ||
       url.includes('/api/auth/forgot-password') ||
-      url.includes('/api/auth/reset-password');
+      url.includes('/api/auth/reset-password') ||
+      url.includes('/api/auth/logout');
 
     if (isPublicAuthRoute) {
       return Promise.reject(error);

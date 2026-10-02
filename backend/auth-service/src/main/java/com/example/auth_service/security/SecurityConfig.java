@@ -49,10 +49,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login",
-                        "/api/auth/refresh-token", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                        "/api/auth/refresh-token", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/auth/permissions").hasAuthority("PROFILE_READ")
                 .requestMatchers(HttpMethod.POST, "/api/auth/change-password").hasAuthority("PROFILE_UPDATE")
-                .requestMatchers(HttpMethod.POST, "/api/auth/logout").authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/admin/roles").hasAuthority("ROLE_READ")
                 .requestMatchers(HttpMethod.GET, "/api/admin/users", "/api/admin/users/{id}").hasAuthority("USER_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}/roles").hasAuthority("ROLE_MANAGE")

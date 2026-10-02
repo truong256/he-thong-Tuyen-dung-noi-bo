@@ -119,7 +119,8 @@ public class AuthService {
             }
 
             userRepository.saveAndFlush(user);
-            throw new InvalidCredentialsException(GENERIC_ERROR_MESSAGE);
+            int remainingAttempts = MAX_FAILED_ATTEMPTS - attempts;
+            throw new InvalidCredentialsException(GENERIC_ERROR_MESSAGE, remainingAttempts);
         }
 
         if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
@@ -136,7 +137,7 @@ public class AuthService {
         }
 
         Set<String> roleNames = extractRoleNames(user);
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
         RefreshToken refreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
@@ -224,7 +225,7 @@ public class AuthService {
         userRepository.save(user);
 
         Set<String> roleNames = extractRoleNames(user);
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
         RefreshToken refreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
@@ -268,7 +269,7 @@ public class AuthService {
 
         // Issue new token pair
         Set<String> roleNames = extractRoleNames(user);
-        String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+        String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
         RefreshToken newRefreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
@@ -284,19 +285,29 @@ public class AuthService {
 
     @Transactional
     public void logout(String refreshToken, String authenticatedEmail) {
-        if (refreshToken != null && !refreshToken.isBlank()) {
-            refreshTokenRepository.findByToken(refreshToken).ifPresent(token -> {
-                token.setRevoked(true);
-                refreshTokenRepository.save(token);
-            });
+        User user = null;
+        if (authenticatedEmail != null && !authenticatedEmail.isBlank()) {
+            user = userRepository.findByEmail(authenticatedEmail)
+                    .or(() -> userRepository.findByUsername(authenticatedEmail))
+                    .orElse(null);
         }
 
-        if (authenticatedEmail != null && !authenticatedEmail.isBlank()) {
-            userRepository.findByEmail(authenticatedEmail)
-                    .or(() -> userRepository.findByUsername(authenticatedEmail))
-                    .ifPresent(user -> {
-                        refreshTokenRepository.revokeAllByUser(user);
-                    });
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            Optional<RefreshToken> tokenOpt = refreshTokenRepository.findByToken(refreshToken);
+            if (tokenOpt.isPresent()) {
+                RefreshToken token = tokenOpt.get();
+                token.setRevoked(true);
+                refreshTokenRepository.save(token);
+                if (user == null) {
+                    user = token.getUser();
+                }
+            }
+        }
+
+        if (user != null) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+            userRepository.save(user);
+            refreshTokenRepository.revokeAllByUser(user);
         }
     }
 
@@ -401,6 +412,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
 
         resetToken.setUsed(true);
@@ -440,6 +452,7 @@ public class AuthService {
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
 
         // Revoke all existing refresh sessions for this user on password change

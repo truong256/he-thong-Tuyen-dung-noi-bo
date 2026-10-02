@@ -76,4 +76,72 @@ describe('LockAccountModal Component (S1-10)', () => {
       expect(handleClose).toHaveBeenCalled();
     });
   });
+
+  it('blocks lock submission and shows error when reason is Khác and note is empty', async () => {
+    const updateSpy = vi.spyOn(adminApi, 'updateStatus');
+    updateSpy.mockClear();
+
+    render(
+      <LockAccountModal
+        isOpen={true}
+        user={mockUser}
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />
+    );
+
+    // Select reason 'Khác (ghi rõ trong ghi chú)'
+    const select = screen.getByLabelText(/Lý do khóa tài khoản/i);
+    fireEvent.change(select, { target: { value: 'Khác (ghi rõ trong ghi chú)' } });
+
+    // Label should now reflect mandatory note
+    expect(screen.getByText(/Ghi chú chi tiết lý do khóa/i)).toBeInTheDocument();
+
+    // Click submit without entering note
+    const submitBtn = screen.getByRole('button', { name: /Khóa tài khoản/i });
+    fireEvent.click(submitBtn);
+
+    // Validation error should appear
+    expect(screen.getByText('Vui lòng ghi rõ lý do trong phần ghi chú khi chọn lý do khác.')).toBeInTheDocument();
+    expect(updateSpy).not.toHaveBeenCalled();
+  });
+
+  it('submits successfully when reason is Khác and valid note is provided', async () => {
+    const handleSuccess = vi.fn();
+    const handleClose = vi.fn();
+    vi.spyOn(adminApi, 'updateStatus').mockResolvedValue({ ...mockUser, status: 'LOCKED' });
+
+    render(
+      <LockAccountModal
+        isOpen={true}
+        user={mockUser}
+        onClose={handleClose}
+        onSuccess={handleSuccess}
+        onError={vi.fn()}
+      />
+    );
+
+    // Select reason 'Khác (ghi rõ trong ghi chú)'
+    const select = screen.getByLabelText(/Lý do khóa tài khoản/i);
+    fireEvent.change(select, { target: { value: 'Khác (ghi rõ trong ghi chú)' } });
+
+    // Type valid note
+    const textarea = screen.getByPlaceholderText(/Bắt buộc nhập lý do chi tiết khi chọn lý do khác/i);
+    fireEvent.change(textarea, { target: { value: 'Nghỉ việc không báo trước' } });
+
+    // Submit
+    const submitBtn = screen.getByRole('button', { name: /Khóa tài khoản/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(adminApi.updateStatus).toHaveBeenCalledWith(5, expect.objectContaining({
+        status: 'LOCKED',
+        reason: 'Khác (ghi rõ trong ghi chú)',
+        note: 'Nghỉ việc không báo trước',
+      }));
+      expect(handleSuccess).toHaveBeenCalled();
+      expect(handleClose).toHaveBeenCalled();
+    });
+  });
 });

@@ -6,6 +6,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Service
@@ -16,6 +18,7 @@ public class DevMailService implements MailService {
 
     private final List<String> sentActivationRecipients = new CopyOnWriteArrayList<>();
     private final List<String> sentPasswordResetRecipients = new CopyOnWriteArrayList<>();
+    private final Map<String, String> lastActivationTemporaryPasswords = new ConcurrentHashMap<>();
 
     @Override
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
@@ -29,11 +32,18 @@ public class DevMailService implements MailService {
     @Override
     public void sendAccountActivationEmail(String toEmail, String temporaryPassword) {
         sentActivationRecipients.add(toEmail);
+        if (temporaryPassword != null) {
+            lastActivationTemporaryPasswords.put(toEmail, temporaryPassword);
+        }
         logger.info("==================================================================");
         logger.info("[DEV MAIL SERVICE] Account activation email simulated for: {}", toEmail);
-        logger.info("[DEV MAIL SERVICE] Temporary password dispatched (masked for security)");
+        logger.info("[DEV MAIL SERVICE] Temporary password for testing: {}", temporaryPassword);
         logger.info("[DEV MAIL SERVICE] Login URL: http://localhost:5173/login");
         logger.info("==================================================================");
+    }
+
+    public String getLatestTemporaryPassword(String email) {
+        return lastActivationTemporaryPasswords.get(email);
     }
 
     public List<String> getSentActivationRecipients() {

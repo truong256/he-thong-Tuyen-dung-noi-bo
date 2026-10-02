@@ -22,7 +22,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const isExpired = typeof window !== 'undefined' && sessionStorage.getItem('ats:session_expired') === '1';
+    return <Navigate to="/login" state={{ from: location, sessionExpired: isExpired }} replace />;
   }
 
   return <>{children}</>;

@@ -41,7 +41,7 @@ export const RbacMatrixModal: React.FC<RbacMatrixModalProps> = ({ isOpen, onClos
             {ATS_ROLES_INFO.map((role) => (
               <div key={role.code} className="rbac-role-card">
                 <div className="rbac-role-card-header">
-                  <span className={`tag ${role.badgeClass}`}>{role.code}</span>
+                  <span className={`tag ${role.badgeClass}`}>{role.name}</span>
                   <strong className="rbac-role-name">{role.name}</strong>
                 </div>
                 <p className="rbac-role-desc">{role.description}</p>
@@ -61,7 +61,7 @@ export const RbacMatrixModal: React.FC<RbacMatrixModalProps> = ({ isOpen, onClos
                   {ATS_ROLES_INFO.map((r) => (
                     <th key={r.code} style={{ textAlign: 'center', minWidth: '95px' }}>
                       <span className={`tag ${r.badgeClass}`} style={{ fontSize: '0.68rem' }}>
-                        {r.code}
+                        {r.name}
                       </span>
                     </th>
                   ))}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User, Mail } from 'lucide-react';
 import PasswordField from './PasswordField';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,6 +11,7 @@ interface LoginCardProps {
 export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dashboard' }) => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -18,8 +19,36 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(() => {
+    const isStateExpired = (location.state as any)?.sessionExpired;
+    const isStorageExpired =
+      typeof window !== 'undefined' && sessionStorage.getItem('ats:session_expired') === '1';
+
+    if (isStateExpired || isStorageExpired) {
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('ats:session_expired');
+      }
+      return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+    }
+    return null;
+  });
+  const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
   const [lockCountdown, setLockCountdown] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Check for session expired notification
+  useEffect(() => {
+    const isSessionExpiredFromState = (location.state as any)?.sessionExpired;
+    const isSessionExpiredFromStorage =
+      typeof window !== 'undefined' && sessionStorage.getItem('ats:session_expired') === '1';
+
+    if (isSessionExpiredFromState || isSessionExpiredFromStorage) {
+      setSessionExpiredMessage('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('ats:session_expired');
+      }
+    }
+  }, [location]);
 
   // Restore saved email from localStorage
   useEffect(() => {
@@ -87,6 +116,8 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
 
     setIsSubmitting(true);
     setErrorMessage(null);
+    setSessionExpiredMessage(null);
+    setRemainingAttempts(null);
 
     try {
       await login(email.trim(), password);
@@ -101,6 +132,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
       const data = err.response?.data;
 
       if (status === 423) {
+        setRemainingAttempts(0);
         const lockedUntilStr = data?.lockedUntil;
         if (lockedUntilStr) {
           const lockedUntilMs = new Date(lockedUntilStr).getTime();
@@ -111,8 +143,15 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
           setErrorMessage(data?.message || 'Tài khoản tạm thời bị khóa trong 15 phút.');
         }
       } else if (status === 401) {
+        const remaining = data?.remainingAttempts;
+        if (typeof remaining === 'number') {
+          setRemainingAttempts(remaining);
+        } else {
+          setRemainingAttempts(null);
+        }
         setErrorMessage(data?.message || 'Email hoặc mật khẩu không chính xác.');
       } else {
+        setRemainingAttempts(null);
         setErrorMessage(data?.message || 'Đăng nhập không thành công. Vui lòng thử lại sau.');
       }
     } finally {
@@ -127,7 +166,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
       {/* User Avatar Circle */}
       <div className="auth-avatar-container">
         <div className="auth-avatar-circle" aria-hidden="true">
-          <User size={19} className="auth-avatar-icon" strokeWidth={1.6} />
+          <User size={22} className="auth-avatar-icon" strokeWidth={1.75} />
         </div>
       </div>
 
@@ -135,7 +174,9 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
       <div className="auth-header-block">
         <h1 className="auth-form-title">Chào mừng trở lại</h1>
         <p className="auth-form-subtitle">
-          <span>Đăng nhập để tiếp tục</span> vào hệ thống tuyển dụng nội bộ.
+          <span>Đăng nhập để tiếp tục</span>
+          <br />
+          vào hệ thống tuyển dụng nội bộ.
         </p>
       </div>
 
@@ -144,7 +185,7 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
         {/* Email Field - No external label */}
         <div className="auth-field-group">
           <div className="auth-input-wrapper">
-            <Mail size={16} className="auth-input-leading-icon" aria-hidden="true" />
+            <Mail size={18} className="auth-input-leading-icon" aria-hidden="true" />
             <input
               id="login-email"
               type="email"
@@ -153,6 +194,10 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (emailError) setEmailError(null);
+                if (errorMessage) {
+                  setErrorMessage(null);
+                  setRemainingAttempts(null);
+                }
               }}
               placeholder="Email hoặc tài khoản"
               disabled={isLocked || isSubmitting}
@@ -171,6 +216,10 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
           onChange={(e) => {
             setPassword(e.target.value);
             if (passwordError) setPasswordError(null);
+            if (errorMessage) {
+              setErrorMessage(null);
+              setRemainingAttempts(null);
+            }
           }}
           disabled={isLocked || isSubmitting}
           required
@@ -219,9 +268,15 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
         </button>
 
         {/* Error Banner */}
-        {errorMessage && (
+        {(errorMessage || sessionExpiredMessage) && (
           <div className="auth-error-banner" role="alert">
-            <span className="auth-error-text">{errorMessage}</span>
+            <span className="auth-error-text">{errorMessage || sessionExpiredMessage}</span>
+            {remainingAttempts !== null && remainingAttempts > 0 && !isLocked && (
+              <div className="auth-remaining-badge">
+                <span className="auth-remaining-dot" aria-hidden="true" />
+                <span>Số lượt thử còn lại: <strong>{remainingAttempts} / 5</strong></span>
+              </div>
+            )}
             {isLocked && (
               <span className="auth-lock-timer">
                 Thời gian mở khóa: {formatCountdown(lockCountdown)}

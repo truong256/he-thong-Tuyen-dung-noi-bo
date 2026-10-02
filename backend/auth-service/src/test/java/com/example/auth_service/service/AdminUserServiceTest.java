@@ -279,6 +279,45 @@ class AdminUserServiceTest {
     }
 
     @Test
+    @DisplayName("S1-10: Khóa tài khoản chọn lý do 'Khác' nhưng không ghi chú -> Bị từ chối")
+    void testUpdateStatus_LockWithReasonOther_WithoutNote_Rejected() {
+        User user = new User("staff2@company.com", "pass");
+        user.setId(72L);
+        when(userRepository.findById(72L)).thenReturn(Optional.of(user));
+
+        // Note is null
+        UpdateStatusRequest reqNullNote = new UpdateStatusRequest("LOCKED", "Khác (ghi rõ trong ghi chú)", null);
+        assertThatThrownBy(() -> adminUserService.updateStatus(72L, reqNullNote))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Vui lòng ghi rõ lý do chi tiết trong phần ghi chú khi chọn lý do khác");
+
+        // Note is blank/whitespace
+        UpdateStatusRequest reqBlankNote = new UpdateStatusRequest("LOCKED", "Khác (ghi rõ trong ghi chú)", "   ");
+        assertThatThrownBy(() -> adminUserService.updateStatus(72L, reqBlankNote))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Vui lòng ghi rõ lý do chi tiết trong phần ghi chú khi chọn lý do khác");
+
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("S1-10: Khóa tài khoản chọn lý do 'Khác' và có ghi chú chi tiết -> Thành công")
+    void testUpdateStatus_LockWithReasonOther_WithNote_Success() {
+        User user = new User("staff3@company.com", "pass");
+        user.setId(73L);
+        when(userRepository.findById(73L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateStatusRequest req = new UpdateStatusRequest("LOCKED", "Khác (ghi rõ trong ghi chú)", "Nhân sự nghỉ việc đột xuất theo đơn thỏa thuận.");
+        UserSummaryDto res = adminUserService.updateStatus(73L, req);
+
+        assertThat(res.getStatus()).isEqualTo("LOCKED");
+        assertThat(res.getLockReason()).isEqualTo("Khác (ghi rõ trong ghi chú)");
+        assertThat(res.getLockNote()).isEqualTo("Nhân sự nghỉ việc đột xuất theo đơn thỏa thuận.");
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
     @DisplayName("S1-10: Khóa tài khoản hợp lệ -> Lưu reason, note, thu hồi refresh token, gắn cảnh báo bàn giao")
     void testUpdateStatus_LockWithReason_RevokesSessionsAndFlagsHandover() {
         User user = new User("recruiter@company.com", "pass");

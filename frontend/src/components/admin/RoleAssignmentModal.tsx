@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shield, ShieldAlert, X, Check } from 'lucide-react';
 import { UserSummary } from '../../types/user';
 import adminApi from '../../api/admin';
-import { ATS_ROLES_INFO } from '../../constants/rbac';
+import { ATS_ROLES_INFO, getRoleLabel } from '../../constants/rbac';
 
 interface RoleAssignmentModalProps {
   isOpen: boolean;
@@ -111,7 +111,7 @@ export const RoleAssignmentModal: React.FC<RoleAssignmentModalProps> = ({
             <div className="role-tags" style={{ display: 'inline-flex', marginLeft: '8px' }}>
               {initialRoles.map((r) => (
                 <span key={r} className="tag tag-sm">
-                  {r}
+                  {getRoleLabel(r)}
                 </span>
               ))}
             </div>
@@ -122,7 +122,7 @@ export const RoleAssignmentModal: React.FC<RoleAssignmentModalProps> = ({
             <div className="alert-box info" style={{ margin: '12px 0 16px' }}>
               <ShieldAlert size={16} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.82rem' }}>
-                Bạn đang phân quyền cho chính tài khoản của mình. Quyền <strong>ADMIN</strong> được giữ cố định để bảo vệ phiên quản trị.
+                Bạn đang phân quyền cho chính tài khoản của mình. Quyền <strong>Quản trị viên</strong> được giữ cố định để bảo vệ phiên quản trị.
               </span>
             </div>
           )}
@@ -132,7 +132,7 @@ export const RoleAssignmentModal: React.FC<RoleAssignmentModalProps> = ({
             <div className="alert-box error" style={{ margin: '12px 0 16px' }}>
               <ShieldAlert size={18} style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '0.84rem' }}>
-                <strong>Lưu ý quan trọng:</strong> Bạn đang thay đổi quyền <strong>ADMIN (Quản trị viên)</strong> cho tài khoản này. Nhấn <strong>Xác nhận lưu</strong> để tiếp tục.
+                <strong>Lưu ý quan trọng:</strong> Bạn đang thay đổi quyền <strong>Quản trị viên</strong> cho tài khoản này. Nhấn <strong>Xác nhận lưu</strong> để tiếp tục.
               </span>
             </div>
           )}
@@ -168,9 +168,8 @@ export const RoleAssignmentModal: React.FC<RoleAssignmentModalProps> = ({
 
                   <div className="role-select-info">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: '0.88rem', color: '#1e293b' }}>{role.name}</strong>
-                      <span className={`tag ${role.badgeClass}`} style={{ fontSize: '0.7rem' }}>
-                        {role.code}
+                      <span className={`tag ${role.badgeClass}`} style={{ fontSize: '0.8rem', padding: '3px 10px' }}>
+                        {role.name}
                       </span>
                       {isSelfAdmin && (
                         <span style={{ fontSize: '0.72rem', color: '#64748b', fontStyle: 'italic' }}>

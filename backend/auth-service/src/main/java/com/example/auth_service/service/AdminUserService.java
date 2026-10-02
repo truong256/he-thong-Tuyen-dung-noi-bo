@@ -13,6 +13,8 @@ import com.example.auth_service.security.UserPrincipal;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -33,6 +35,8 @@ import java.util.stream.Collectors;
 @Service
 @PreAuthorize("hasAuthority('USER_MANAGE')")
 public class AdminUserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AdminUserService.class);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -141,8 +145,9 @@ public class AdminUserService {
         try {
             mailService.sendAccountActivationEmail(saved.getEmail(), rawPassword);
         } catch (Exception e) {
-            // Log warning, ensure transaction consistency
-            throw new RuntimeException("Gửi email kích hoạt tài khoản thất bại: " + e.getMessage(), e);
+            logger.error("Gửi email kích hoạt tài khoản cho {} thất bại: {}", saved.getEmail(), e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Không thể kết nối đến máy chủ email để gửi thông tin kích hoạt.", e);
         }
 
         return mapToSummary(saved);
@@ -192,9 +197,16 @@ public class AdminUserService {
                 throw new BadRequestException("Bắt buộc ghi lý do khóa tài khoản.");
             }
 
+            String reason = request.getReason().trim();
+            String note = request.getNote() != null ? request.getNote().trim() : null;
+
+            if (reason.toLowerCase().contains("khác") && (note == null || note.isBlank())) {
+                throw new BadRequestException("Vui lòng ghi rõ lý do chi tiết trong phần ghi chú khi chọn lý do khác.");
+            }
+
             user.setStatus("LOCKED");
-            user.setLockReason(request.getReason().trim());
-            user.setLockNote(request.getNote() != null ? request.getNote().trim() : null);
+            user.setLockReason(reason);
+            user.setLockNote(note);
             user.setLockedAt(Instant.now());
 
             String actor = getAuthenticatedUsername();
@@ -202,6 +214,7 @@ public class AdminUserService {
             user.setLockedUntil(Instant.now().plusSeconds(86400 * 365));
 
             // Revoke all refresh tokens / active sessions
+            user.setTokenVersion(user.getTokenVersion() + 1);
             refreshTokenRepository.revokeAllByUser(user);
 
             // Requisition assignments handover warning
@@ -222,6 +235,7 @@ public class AdminUserService {
             // S1-10 Rule: Unlock does not clear handover warnings
         } else if ("INACTIVE".equals(newStatus)) {
             user.setStatus("INACTIVE");
+            user.setTokenVersion(user.getTokenVersion() + 1);
             refreshTokenRepository.revokeAllByUser(user);
         }
 

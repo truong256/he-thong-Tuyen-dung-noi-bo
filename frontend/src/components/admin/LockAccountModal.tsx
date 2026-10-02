@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, Unlock, AlertTriangle, X } from 'lucide-react';
 import { UserSummary } from '../../types/user';
 import adminApi from '../../api/admin';
@@ -28,16 +28,34 @@ export const LockAccountModal: React.FC<LockAccountModalProps> = ({
 }) => {
   const [reason, setReason] = useState(LOCK_REASONS[0]);
   const [note, setNote] = useState('');
+  const [noteError, setNoteError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setReason(LOCK_REASONS[0]);
+      setNote('');
+      setNoteError(null);
+      setIsSubmitting(false);
+    }
+  }, [isOpen, user]);
 
   if (!isOpen || !user) return null;
 
   const isLocking = user.status !== 'LOCKED';
   const nextStatus = isLocking ? 'LOCKED' : 'ACTIVE';
+  const isOtherReason = isLocking && reason.toLowerCase().includes('khác');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isOtherReason && !note.trim()) {
+      setNoteError('Vui lòng ghi rõ lý do trong phần ghi chú khi chọn lý do khác.');
+      return;
+    }
+
     setIsSubmitting(true);
+    setNoteError(null);
 
     try {
       const payload = {
@@ -96,7 +114,12 @@ export const LockAccountModal: React.FC<LockAccountModalProps> = ({
                 <select
                   id="lock-reason"
                   value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  onChange={(e) => {
+                    setReason(e.target.value);
+                    if (!e.target.value.toLowerCase().includes('khác')) {
+                      setNoteError(null);
+                    }
+                  }}
                   disabled={isSubmitting}
                 >
                   {LOCK_REASONS.map((r) => (
@@ -108,15 +131,40 @@ export const LockAccountModal: React.FC<LockAccountModalProps> = ({
               </div>
 
               <div className="form-group">
-                <label htmlFor="lock-note">Ghi chú bổ sung (tùy chọn)</label>
+                <label htmlFor="lock-note">
+                  {isOtherReason ? (
+                    <>
+                      Ghi chú chi tiết lý do khóa <span className="text-danger">*</span>
+                    </>
+                  ) : (
+                    'Ghi chú bổ sung (tùy chọn)'
+                  )}
+                </label>
                 <textarea
                   id="lock-note"
                   rows={3}
                   value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Nhập thông tin chi tiết hoặc số quyết định..."
+                  onChange={(e) => {
+                    setNote(e.target.value);
+                    if (noteError && e.target.value.trim()) {
+                      setNoteError(null);
+                    }
+                  }}
+                  placeholder={
+                    isOtherReason
+                      ? 'Bắt buộc nhập lý do chi tiết khi chọn lý do khác...'
+                      : 'Nhập thông tin chi tiết hoặc số quyết định...'
+                  }
+                  className={noteError ? 'has-error' : ''}
+                  aria-invalid={!!noteError}
+                  aria-describedby={noteError ? 'lock-note-error' : undefined}
                   disabled={isSubmitting}
                 />
+                {noteError && (
+                  <span id="lock-note-error" className="form-field-error" role="alert">
+                    {noteError}
+                  </span>
+                )}
               </div>
             </>
           ) : (
