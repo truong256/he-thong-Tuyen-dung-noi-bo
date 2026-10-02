@@ -521,6 +521,13 @@
   box-shadow: 0 2px 6px rgba(239, 68, 68, 0.08);
 }
 
+.auth-error-banner.is-success {
+  background-color: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.08);
+}
+
 @keyframes authFadeIn {
   from {
     opacity: 0;

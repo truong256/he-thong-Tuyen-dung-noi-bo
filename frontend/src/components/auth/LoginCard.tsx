@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { User, Mail } from 'lucide-react';
 import PasswordField from './PasswordField';
@@ -19,36 +19,53 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(() => {
-    const isStateExpired = (location.state as any)?.sessionExpired;
+
+  const resolveNoticeMessage = useCallback((): string | null => {
+    const stateObj = location.state as any;
+    const stateMessage = stateObj?.message;
+    const stateReason = stateObj?.reason;
+    const isStateExpired = stateObj?.sessionExpired;
+
+    const storageNotice =
+      typeof window !== 'undefined' ? sessionStorage.getItem('ats:auth_notice') : null;
+    const storageReason =
+      typeof window !== 'undefined' ? sessionStorage.getItem('ats:session_expired_reason') : null;
     const isStorageExpired =
       typeof window !== 'undefined' && sessionStorage.getItem('ats:session_expired') === '1';
 
+    if (stateMessage) return stateMessage;
+    if (storageNotice) return storageNotice;
+
+    if (stateReason === 'idle' || storageReason === 'idle') {
+      return 'Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.';
+    }
+
     if (isStateExpired || isStorageExpired) {
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('ats:session_expired');
-      }
       return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
     }
+
     return null;
-  });
+  }, [location]);
+
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(() =>
+    resolveNoticeMessage()
+  );
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
   const [lockCountdown, setLockCountdown] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Check for session expired notification
+  // Check for session expired notification or auth notice
   useEffect(() => {
-    const isSessionExpiredFromState = (location.state as any)?.sessionExpired;
-    const isSessionExpiredFromStorage =
-      typeof window !== 'undefined' && sessionStorage.getItem('ats:session_expired') === '1';
-
-    if (isSessionExpiredFromState || isSessionExpiredFromStorage) {
-      setSessionExpiredMessage('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('ats:session_expired');
-      }
+    const notice = resolveNoticeMessage();
+    if (notice) {
+      setSessionExpiredMessage(notice);
     }
-  }, [location]);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('ats:session_expired');
+      sessionStorage.removeItem('ats:auth_notice');
+      sessionStorage.removeItem('ats:session_expired_reason');
+    }
+  }, [resolveNoticeMessage]);
 
   // Restore saved email from localStorage
   useEffect(() => {
@@ -267,9 +284,16 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
           )}
         </button>
 
-        {/* Error Banner */}
+        {/* Notice / Error Banner */}
         {(errorMessage || sessionExpiredMessage) && (
-          <div className="auth-error-banner" role="alert">
+          <div
+            className={`auth-error-banner ${
+              !errorMessage && sessionExpiredMessage?.includes('Đổi mật khẩu thành công')
+                ? 'is-success'
+                : ''
+            }`}
+            role={!errorMessage && sessionExpiredMessage?.includes('Đổi mật khẩu thành công') ? 'status' : 'alert'}
+          >
             <span className="auth-error-text">{errorMessage || sessionExpiredMessage}</span>
             {remainingAttempts !== null && remainingAttempts > 0 && !isLocked && (
               <div className="auth-remaining-badge">

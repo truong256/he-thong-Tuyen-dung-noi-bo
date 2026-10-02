@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, KeyRound, Check, X, ShieldCheck } from 'lucide-react';
 import authApi from '../../api/auth';
+import { useAuth } from '../../hooks/useAuth';
 import { validatePasswordPolicy } from '../../utils/passwordPolicy';
 
 interface ChangePasswordModalProps {
@@ -14,6 +16,9 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -77,12 +82,24 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         newPassword,
         confirmPassword,
       });
-      setSuccessMsg(res.message || 'Đổi mật khẩu thành công!');
+
+      const successNotice = 'Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.';
+      setSuccessMsg(res.message || successNotice);
+
+      sessionStorage.setItem('ats:auth_notice', successNotice);
+      await logout(true);
+
       handleReset();
-      setTimeout(() => {
-        onSuccess?.();
-        onClose();
-      }, 1500);
+      onSuccess?.();
+      onClose();
+
+      navigate('/login', {
+        replace: true,
+        state: {
+          passwordChanged: true,
+          message: successNotice,
+        },
+      });
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Đổi mật khẩu không thành công. Vui lòng kiểm tra lại mật khẩu hiện tại.';
       setErrorMsg(msg);

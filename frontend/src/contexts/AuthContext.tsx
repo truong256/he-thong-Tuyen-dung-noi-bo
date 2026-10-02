@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useState, useCallback } from 'react';
 import { UserSummary } from '../types/auth';
 import authApi from '../api/auth';
 
@@ -8,13 +8,16 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (skipServerRevoke?: boolean) => Promise<void>;
   refreshUser: () => Promise<void>;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+import { isIdleExpired, recordActivity, clearActivity } from '../utils/idleTracker';
+import { triggerIdleSessionExpired } from '../api/client';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserSummary | null>(() => {
@@ -38,6 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       const storedToken = localStorage.getItem('accessToken');
       if (storedToken) {
+        if (isIdleExpired()) {
+          triggerIdleSessionExpired();
+          setUser(null);
+          setToken(null);
+          setIsLoading(false);
+          return;
+        }
+
         try {
           const me = await authApi.getMe();
           setUser(me);
@@ -47,6 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
+          clearActivity();
           setUser(null);
           setToken(null);
         }
@@ -57,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     const handleSessionExpired = () => {
+      clearActivity();
       setUser(null);
       setToken(null);
     };
@@ -67,32 +80,69 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const logout = useCallback(async (skipServerRevoke: boolean = false) => {
+    if (!skipServerRevoke) {
+      try {
+        const currentRefreshToken = localStorage.getItem('refreshToken');
+        await authApi.logout({
+          refreshToken: currentRefreshToken || undefined,
+          email: user?.email || undefined,
+        });
+      } catch {
+        // Ignore network error on logout
+      }
+    }
+    clearActivity();
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('ats:session_expired');
+    setUser(null);
+    setToken(null);
+  }, [user]);
+
+  // Global user activity monitor and idle action blocker
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const handleUserInteractionCapture = (event: Event) => {
+      if (!localStorage.getItem('accessToken')) return;
+
+      if (isIdleExpired()) {
+        // Block action completely to prevent any protected data access or navigation
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+
+        triggerIdleSessionExpired();
+        logout();
+        return;
+      }
+
+      // Valid activity resets the idle timer
+      recordActivity();
+    };
+
+    // Attach in capture phase so it runs before any React onClick or router Link navigation
+    document.addEventListener('click', handleUserInteractionCapture, true);
+    document.addEventListener('keydown', handleUserInteractionCapture, true);
+    document.addEventListener('touchstart', handleUserInteractionCapture, true);
+
+    return () => {
+      document.removeEventListener('click', handleUserInteractionCapture, true);
+      document.removeEventListener('keydown', handleUserInteractionCapture, true);
+      document.removeEventListener('touchstart', handleUserInteractionCapture, true);
+    };
+  }, [token, user, logout]);
+
   const login = async (email: string, pass: string) => {
     const res = await authApi.login(email, pass);
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
     localStorage.setItem('user', JSON.stringify(res.user));
+    recordActivity();
     setToken(res.accessToken);
     setUser(res.user);
-  };
-
-  const logout = async () => {
-    try {
-      const currentRefreshToken = localStorage.getItem('refreshToken');
-      await authApi.logout({
-        refreshToken: currentRefreshToken || undefined,
-        email: user?.email || undefined,
-      });
-    } catch {
-      // Ignore network error on logout
-    } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('ats:session_expired');
-      setUser(null);
-      setToken(null);
-    }
   };
 
   const hasRole = (role: string): boolean => {

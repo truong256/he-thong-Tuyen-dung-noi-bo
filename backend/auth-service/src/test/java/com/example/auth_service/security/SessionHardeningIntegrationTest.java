@@ -141,4 +141,70 @@ public class SessionHardeningIntegrationTest {
                 .header("Authorization", "Bearer " + tokenV2))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("TEST D, E, F: Đổi mật khẩu thành công -> thu hồi session cũ, token/refresh token cũ bị từ chối, pass cũ FAIL, pass mới PASS")
+    void testChangePassword_revokesCurrentSession_and_oldTokensRejected_and_newPasswordWorks() throws Exception {
+        // 1. Authenticate with current rawPassword
+        LoginResponse loginResponse = authService.login(new LoginRequest(testUser.getEmail(), rawPassword));
+        String oldAccessToken = loginResponse.getAccessToken();
+        String oldRefreshToken = loginResponse.getRefreshToken();
+
+        assertNotNull(oldAccessToken);
+        assertNotNull(oldRefreshToken);
+
+        // Verify old token works initially on protected endpoint
+        mvc.perform(get("/api/auth/me")
+                .header("Authorization", "Bearer " + oldAccessToken))
+                .andExpect(status().isOk());
+
+        // 2. TEST D: Perform Change Password via API
+        String brandNewPassword = "BrandNewSecurePassword123@";
+        Map<String, String> changePwdBody = Map.of(
+                "currentPassword", rawPassword,
+                "newPassword", brandNewPassword,
+                "confirmPassword", brandNewPassword
+        );
+
+        mvc.perform(post("/api/auth/change-password")
+                .header("Authorization", "Bearer " + oldAccessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(changePwdBody)))
+                .andExpect(status().isOk());
+
+        // 3. TEST E: Re-using the old Access Token on protected API MUST return 401 Unauthorized
+        mvc.perform(get("/api/auth/me")
+                .header("Authorization", "Bearer " + oldAccessToken))
+                .andExpect(status().isUnauthorized());
+
+        // Refresh token cũ không tạo được access token mới (revoked / 400 Bad Request)
+        mvc.perform(post("/api/auth/refresh-token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(Map.of("refreshToken", oldRefreshToken))))
+                .andExpect(status().isBadRequest());
+
+        // 4. TEST F: Đăng nhập bằng mật khẩu cũ -> Expected FAIL (401)
+        mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest(testUser.getEmail(), rawPassword))))
+                .andExpect(status().isUnauthorized());
+
+        // Đăng nhập bằng mật khẩu mới -> Expected PASS (200)
+        String newLoginContent = mvc.perform(post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginRequest(testUser.getEmail(), brandNewPassword))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        LoginResponse newLoginResponse = objectMapper.readValue(newLoginContent, LoginResponse.class);
+        assertNotNull(newLoginResponse.getAccessToken());
+        assertNotNull(newLoginResponse.getRefreshToken());
+
+        // New access token works on protected API
+        mvc.perform(get("/api/auth/me")
+                .header("Authorization", "Bearer " + newLoginResponse.getAccessToken()))
+                .andExpect(status().isOk());
+    }
 }

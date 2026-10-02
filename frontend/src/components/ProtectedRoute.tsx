@@ -6,9 +6,19 @@ interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
+import { isIdleExpired } from '../utils/idleTracker';
+import { triggerIdleSessionExpired } from '../api/client';
+
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, logout } = useAuth();
   const location = useLocation();
+
+  React.useEffect(() => {
+    if (isAuthenticated && isIdleExpired()) {
+      triggerIdleSessionExpired();
+      logout();
+    }
+  }, [isAuthenticated, logout]);
 
   if (isLoading) {
     return (
@@ -21,9 +31,39 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
+  if (isAuthenticated && isIdleExpired()) {
+    triggerIdleSessionExpired();
+    return (
+      <Navigate
+        to="/login"
+        state={{
+          from: location,
+          sessionExpired: true,
+          reason: 'idle',
+          message: 'Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.',
+        }}
+        replace
+      />
+    );
+  }
+
   if (!isAuthenticated) {
     const isExpired = typeof window !== 'undefined' && sessionStorage.getItem('ats:session_expired') === '1';
-    return <Navigate to="/login" state={{ from: location, sessionExpired: isExpired }} replace />;
+    const reason = typeof window !== 'undefined' ? sessionStorage.getItem('ats:session_expired_reason') : null;
+    const notice = typeof window !== 'undefined' ? sessionStorage.getItem('ats:auth_notice') : null;
+
+    return (
+      <Navigate
+        to="/login"
+        state={{
+          from: location,
+          sessionExpired: isExpired,
+          reason,
+          message: notice,
+        }}
+        replace
+      />
+    );
   }
 
   return <>{children}</>;
