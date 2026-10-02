@@ -23,13 +23,15 @@ public class Department {
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
-    @Column(length = 20)
+    @Column(unique = true, length = 20)
     private String code;
 
     @Column(length = 255)
     private String description;
 
     private Long parentDepartmentId;
+
+    private Long managerUserId;
 
     private boolean active = true;
 
