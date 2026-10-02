@@ -16,11 +16,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 /**
- * Production and default implementation of MailService using real SMTP protocol.
- * Active for all profiles except 'dev' and 'test'.
+ * Production implementation of MailService using real SMTP protocol.
+ * Active for all profiles except 'dev', 'test', and 'default'.
  */
 @Service
-@Profile("!dev & !test")
+@Profile("!dev & !test & !default")
 public class SmtpMailService implements MailService {
 
     private static final Logger logger = LoggerFactory.getLogger(SmtpMailService.class);

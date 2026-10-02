@@ -27,7 +27,7 @@ describe('Sidebar Role Navigation & Mobile Drawer (S1-06)', () => {
     );
 
     expect(screen.getByText('Tổng quan')).toBeInTheDocument();
-    expect(screen.getByText('Quản lý Tài khoản (Admin)')).toBeInTheDocument();
+    expect(screen.getByText('Quản lý Tài khoản')).toBeInTheDocument();
     expect(screen.getByText('Tin tuyển dụng')).toBeInTheDocument();
     expect(screen.queryByText('Hồ sơ & CV của tôi')).not.toBeInTheDocument();
   });
@@ -54,7 +54,7 @@ describe('Sidebar Role Navigation & Mobile Drawer (S1-06)', () => {
     expect(screen.getByText('Tổng quan')).toBeInTheDocument();
     expect(screen.getByText('Việc làm đang mở')).toBeInTheDocument();
     expect(screen.getByText('Hồ sơ & CV của tôi')).toBeInTheDocument();
-    expect(screen.queryByText('Quản lý Tài khoản (Admin)')).not.toBeInTheDocument();
+    expect(screen.queryByText('Quản lý Tài khoản')).not.toBeInTheDocument();
   });
 
   it('triggers onClose when clicking close button in mobile drawer', () => {

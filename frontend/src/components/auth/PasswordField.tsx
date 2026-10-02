@@ -31,7 +31,7 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
   return (
     <div className="auth-field-group">
       <div className="auth-input-wrapper">
-        <Lock size={16} className="auth-input-leading-icon" aria-hidden="true" />
+        <Lock size={18} className="auth-input-leading-icon" aria-hidden="true" />
         <input
           id={id}
           type={showPassword ? 'text' : 'password'}
@@ -54,9 +54,9 @@ export const PasswordField: React.FC<PasswordFieldProps> = ({
           tabIndex={0}
         >
           {showPassword ? (
-            <EyeOff size={16} aria-hidden="true" />
+            <EyeOff size={18} aria-hidden="true" />
           ) : (
-            <Eye size={16} aria-hidden="true" />
+            <Eye size={18} aria-hidden="true" />
           )}
         </button>
       </div>

@@ -24,11 +24,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
+        String message = ex.getMessage();
+        if (ex.getRemainingAttempts() != null && ex.getRemainingAttempts() > 0) {
+            message = ex.getMessage() + " Bạn còn " + ex.getRemainingAttempts() + " lần thử trước khi tài khoản bị khóa.";
+        }
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
                 "INVALID_CREDENTIALS",
-                ex.getMessage(),
-                request.getRequestURI()
+                message,
+                request.getRequestURI(),
+                ex.getRemainingAttempts()
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
@@ -74,10 +79,11 @@ public class GlobalExceptionHandler {
             errors.put(error.getField(), error.getDefaultMessage());
         }
 
+        String primaryMessage = errors.values().stream().findFirst().orElse("Dữ liệu gửi lên không hợp lệ");
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "VALIDATION_ERROR",
-                "Dữ liệu gửi lên không hợp lệ",
+                primaryMessage,
                 request.getRequestURI()
         );
         response.setValidationErrors(errors);

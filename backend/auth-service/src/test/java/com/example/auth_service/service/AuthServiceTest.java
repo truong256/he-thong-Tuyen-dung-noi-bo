@@ -82,7 +82,7 @@ class AuthServiceTest {
         user.setFailedLoginAttempts(3);
 
         when(userRepository.findByEmail("recruiter@company.com")).thenReturn(Optional.of(user));
-        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class))).thenReturn("mock-access-token");
+        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class), anyInt())).thenReturn("mock-access-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.login(new LoginRequest("recruiter@company.com", rawPassword));
@@ -109,6 +109,7 @@ class AuthServiceTest {
                 authService.login(new LoginRequest("recruiter@company.com", "WrongPassword!")));
 
         assertEquals(AuthService.GENERIC_ERROR_MESSAGE, ex.getMessage());
+        assertEquals(4, ex.getRemainingAttempts());
         assertEquals(1, user.getFailedLoginAttempts());
         assertNull(user.getLockedUntil());
         verify(userRepository).saveAndFlush(user);
@@ -156,7 +157,7 @@ class AuthServiceTest {
                 authService.login(new LoginRequest("recruiter@company.com", rawPassword)));
 
         assertNotNull(ex.getLockedUntil());
-        verify(jwtUtils, never()).generateAccessToken(any(), any(Set.class));
+        verify(jwtUtils, never()).generateAccessToken(any(), any(Set.class), anyInt());
     }
 
     @Test
@@ -183,7 +184,7 @@ class AuthServiceTest {
         user.setLockedUntil(Instant.now().minus(Duration.ofMinutes(1))); // Đã qua 15 phút
 
         when(userRepository.findByEmail("recruiter@company.com")).thenReturn(Optional.of(user));
-        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class))).thenReturn("new-access-token");
+        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class), anyInt())).thenReturn("new-access-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.login(new LoginRequest("recruiter@company.com", rawPassword));
@@ -200,7 +201,7 @@ class AuthServiceTest {
         user.setFailedLoginAttempts(2);
 
         when(userRepository.findByEmail("recruiter@company.com")).thenReturn(Optional.of(user));
-        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class))).thenReturn("valid-token");
+        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class), anyInt())).thenReturn("valid-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.login(new LoginRequest("recruiter@company.com", rawPassword));
@@ -322,7 +323,7 @@ class AuthServiceTest {
         oldToken.setRevoked(false);
 
         when(refreshTokenRepository.findByToken("old-refresh-token")).thenReturn(Optional.of(oldToken));
-        when(jwtUtils.generateAccessToken(eq("refresh@company.com"), any(Set.class))).thenReturn("brand-new-access-token");
+        when(jwtUtils.generateAccessToken(eq("refresh@company.com"), any(Set.class), anyInt())).thenReturn("brand-new-access-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.refreshToken(new RefreshTokenRequest("old-refresh-token"));
@@ -386,10 +387,13 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Test 20: Logout bằng refreshToken thu hồi đúng session đó")
+    @DisplayName("Test 20: Logout bằng refreshToken thu hồi đúng session đó và tăng token version")
     void test20_logout_byRefreshToken_revokesSession() {
+        User user = new User("logout@company.com", encodedPassword, "RECRUITER");
+        user.setTokenVersion(1);
         RefreshToken token = new RefreshToken();
         token.setToken("logout-session-token");
+        token.setUser(user);
         token.setRevoked(false);
 
         when(refreshTokenRepository.findByToken("logout-session-token")).thenReturn(Optional.of(token));
@@ -398,16 +402,22 @@ class AuthServiceTest {
 
         assertTrue(token.isRevoked());
         verify(refreshTokenRepository).save(token);
+        assertEquals(2, user.getTokenVersion());
+        verify(userRepository).save(user);
+        verify(refreshTokenRepository).revokeAllByUser(user);
     }
 
     @Test
-    @DisplayName("Test 21: Logout tài khoản đã xác thực thu hồi tất cả phiên của tài khoản đó")
+    @DisplayName("Test 21: Logout tài khoản đã xác thực thu hồi tất cả phiên của tài khoản đó và tăng token version")
     void test21_logout_authenticatedUser_revokesAllSessions() {
         User user = new User("auth@company.com", encodedPassword, "RECRUITER");
+        user.setTokenVersion(1);
         when(userRepository.findByEmail("auth@company.com")).thenReturn(Optional.of(user));
 
         authService.logout(null, "auth@company.com");
 
+        assertEquals(2, user.getTokenVersion());
+        verify(userRepository).save(user);
         verify(refreshTokenRepository).revokeAllByUser(user);
     }
 

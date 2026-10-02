@@ -20,6 +20,7 @@ public class ApiErrorResponse {
     private String path;
     private Map<String, String> validationErrors;
     private Instant lockedUntil;
+    private Integer remainingAttempts;
 
     public ApiErrorResponse(int status, String code, String message, String path) {
         this.status = status;
@@ -32,5 +33,10 @@ public class ApiErrorResponse {
     public ApiErrorResponse(int status, String code, String message, String path, Instant lockedUntil) {
         this(status, code, message, path);
         this.lockedUntil = lockedUntil;
+    }
+
+    public ApiErrorResponse(int status, String code, String message, String path, Integer remainingAttempts) {
+        this(status, code, message, path);
+        this.remainingAttempts = remainingAttempts;
     }
 }

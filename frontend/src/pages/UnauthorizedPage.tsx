@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShieldAlert, ArrowLeft, Home, LogIn } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { getRoleLabel } from '../constants/rbac';
 
 interface UnauthorizedPageProps {
   statusCode?: 401 | 403;
@@ -54,7 +55,7 @@ export const UnauthorizedPage: React.FC<UnauthorizedPageProps> = ({
         {isAuthenticated && user && (
           <div className="unauthorized-user-pill">
             <span>Tài khoản: <strong>{user.email}</strong></span>
-            <span className="unauthorized-role-tag">Vai trò: {primaryRole}</span>
+            <span className="unauthorized-role-tag">Vai trò: {getRoleLabel(primaryRole)}</span>
           </div>
         )}
 

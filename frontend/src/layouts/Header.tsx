@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Menu, ChevronDown, ChevronUp, Key, LogOut, Briefcase } from 'lucide-react';
 import LogoutConfirmModal from '../components/common/LogoutConfirmModal';
+import { getRoleLabel } from '../constants/rbac';
 
 interface HeaderProps {
   onChangePasswordClick: () => void;
@@ -51,19 +52,6 @@ export const Header: React.FC<HeaderProps> = ({
       navigate('/login', { replace: true });
     } finally {
       setIsLoggingOut(false);
-    }
-  };
-
-  const getRoleDisplayName = (role: string) => {
-    switch (role) {
-      case 'ADMIN': return 'Quản trị viên';
-      case 'HR_MANAGER': return 'Trưởng phòng NS';
-      case 'RECRUITER': return 'Chuyên viên Tuyển dụng';
-      case 'HIRING_MANAGER': return 'Quản lý Bộ phận';
-      case 'INTERVIEWER': return 'Người Phỏng vấn';
-      case 'APPROVER': return 'Người Phê duyệt';
-      case 'CANDIDATE': return 'Ứng viên';
-      default: return role;
     }
   };
 
@@ -122,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="user-details">
               <span className="user-name">{user?.fullName || user?.email?.split('@')[0]}</span>
-              <span className="user-role-badge">{getRoleDisplayName(primaryRole)}</span>
+              <span className="user-role-badge">{getRoleLabel(primaryRole)}</span>
             </div>
             {dropdownOpen ? (
               <ChevronUp size={16} className="user-dropdown-arrow" />
@@ -137,7 +125,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="dropdown-user-email">{user?.email}</div>
                   <div className="role-tags">
                     {(user?.roles || [primaryRole]).map((r) => (
-                      <span key={r} className="tag">{r}</span>
+                      <span key={r} className="tag">{getRoleLabel(r)}</span>
                     ))}
                   </div>
                 </div>

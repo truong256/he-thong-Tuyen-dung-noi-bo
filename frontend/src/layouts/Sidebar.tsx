@@ -45,7 +45,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         {/* Mobile Header with close button */}
         <div className="sidebar-mobile-header">
           <div className="sidebar-mobile-brand">
-            <Briefcase size={20} className="text-cyan" />
+            <Briefcase size={20} style={{ color: '#2563eb' }} />
             <span>Menu Hệ thống</span>
           </div>
           <button
@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                     onClick={handleLinkClick}
                   >
                     <Users size={18} />
-                    <span>Quản lý Tài khoản (Admin)</span>
+                    <span>Quản lý Tài khoản</span>
                   </NavLink>
                 </li>
               )}

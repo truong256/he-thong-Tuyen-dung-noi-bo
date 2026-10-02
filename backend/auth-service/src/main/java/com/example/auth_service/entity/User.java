@@ -55,6 +55,9 @@ public class User {
     @Column(name = "role", length = 50)
     private String role = "RECRUITER";
 
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 1;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "user_roles",
@@ -203,4 +206,7 @@ public class User {
         if (lockedUntil == null) return true;
         return Instant.now().isAfter(lockedUntil);
     }
+
+    public int getTokenVersion() { return tokenVersion; }
+    public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
 }

@@ -28,8 +28,8 @@ describe('RoleAssignmentModal Component (S1-09)', () => {
 
     expect(screen.getByText('Phân vai trò RBAC')).toBeInTheDocument();
     expect(screen.getByText('admin_test@ats.com')).toBeInTheDocument();
-    expect(screen.getByText('Quản trị viên')).toBeInTheDocument();
-    expect(screen.getByText('Chuyên viên Tuyển dụng')).toBeInTheDocument();
+    expect(screen.getAllByText('Quản trị viên').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Chuyên viên tuyển dụng')).toBeInTheDocument();
   });
 
   it('protects self admin from having ADMIN role unchecked', () => {
@@ -76,7 +76,7 @@ describe('RoleAssignmentModal Component (S1-09)', () => {
     );
 
     // Click on INTERVIEWER option to add role
-    const interviewerCard = screen.getByText('Người Phỏng vấn');
+    const interviewerCard = screen.getByText('Người phỏng vấn');
     fireEvent.click(interviewerCard);
 
     // Save

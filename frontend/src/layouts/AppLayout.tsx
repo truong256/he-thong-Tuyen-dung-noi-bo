@@ -17,14 +17,15 @@ export const AppLayout: React.FC = () => {
   // Listen for session expiration events from api client interceptor
   useEffect(() => {
     const handleSessionExpired = () => {
-      setShowSessionExpired(true);
+      setShowSessionExpired(false);
+      navigate('/login', { replace: true, state: { sessionExpired: true } });
     };
 
     window.addEventListener('ats:session-expired', handleSessionExpired);
     return () => {
       window.removeEventListener('ats:session-expired', handleSessionExpired);
     };
-  }, []);
+  }, [navigate]);
 
   const handleSessionExpiredLoginAgain = useCallback(async () => {
     setShowSessionExpired(false);
