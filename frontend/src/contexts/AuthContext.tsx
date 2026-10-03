@@ -55,6 +55,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initAuth();
+
+    const handleSessionExpired = () => {
+      setUser(null);
+      setToken(null);
+    };
+
+    window.addEventListener('ats:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('ats:session-expired', handleSessionExpired);
+    };
   }, []);
 
   const login = async (email: string, pass: string) => {
@@ -68,15 +78,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      if (user?.email) {
-        await authApi.logout(user.email);
-      }
+      const currentRefreshToken = localStorage.getItem('refreshToken');
+      await authApi.logout({
+        refreshToken: currentRefreshToken || undefined,
+        email: user?.email || undefined,
+      });
     } catch {
       // Ignore network error on logout
     } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('user');
+      sessionStorage.removeItem('ats:session_expired');
       setUser(null);
       setToken(null);
     }

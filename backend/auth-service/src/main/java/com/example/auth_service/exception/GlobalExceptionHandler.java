@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -23,11 +24,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiErrorResponse> handleInvalidCredentials(InvalidCredentialsException ex, HttpServletRequest request) {
+        String message = ex.getMessage();
+        if (ex.getRemainingAttempts() != null && ex.getRemainingAttempts() > 0) {
+            message = ex.getMessage() + " Bạn còn " + ex.getRemainingAttempts() + " lần thử trước khi tài khoản bị khóa.";
+        }
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.UNAUTHORIZED.value(),
                 "INVALID_CREDENTIALS",
-                ex.getMessage(),
-                request.getRequestURI()
+                message,
+                request.getRequestURI(),
+                ex.getRemainingAttempts()
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
@@ -73,10 +79,11 @@ public class GlobalExceptionHandler {
             errors.put(error.getField(), error.getDefaultMessage());
         }
 
+        String primaryMessage = errors.values().stream().findFirst().orElse("Dữ liệu gửi lên không hợp lệ");
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "VALIDATION_ERROR",
-                "Dữ liệu gửi lên không hợp lệ",
+                primaryMessage,
                 request.getRequestURI()
         );
         response.setValidationErrors(errors);
@@ -104,6 +111,21 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiErrorResponse> handleResponseStatusException(ResponseStatusException ex, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        if (status == null) {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+        }
+        ApiErrorResponse response = new ApiErrorResponse(
+                status.value(),
+                status.name(),
+                ex.getReason() != null ? ex.getReason() : ex.getMessage(),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(status).body(response);
     }
 
     @ExceptionHandler(Exception.class)

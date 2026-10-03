@@ -25,8 +25,14 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Transient
+    @Column(name = "department", length = 100)
     private String department;
+
+    @Column(name = "phone", length = 20)
+    private String phone;
+
+    @Column(name = "display_name", length = 150)
+    private String displayName;
 
     @Transient
     private boolean mustChangePassword = false;
@@ -40,8 +46,23 @@ public class User {
     @Column(name = "locked_until")
     private Instant lockedUntil;
 
+    @Column(name = "lock_reason", length = 255)
+    private String lockReason;
+
+    @Column(name = "lock_note", columnDefinition = "TEXT")
+    private String lockNote;
+
+    @Column(name = "locked_at")
+    private Instant lockedAt;
+
+    @Column(name = "locked_by", length = 100)
+    private String lockedBy;
+
     @Column(name = "role", length = 50)
     private String role = "RECRUITER";
+
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 1;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -115,6 +136,12 @@ public class User {
     public String getDepartment() { return department; }
     public void setDepartment(String department) { this.department = department; }
 
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
+
     public boolean isMustChangePassword() { return mustChangePassword; }
     public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }
 
@@ -127,11 +154,25 @@ public class User {
     public Instant getLockedUntil() { return lockedUntil; }
     public void setLockedUntil(Instant lockedUntil) { this.lockedUntil = lockedUntil; }
 
+    public String getLockReason() { return lockReason; }
+    public void setLockReason(String lockReason) { this.lockReason = lockReason; }
+
+    public String getLockNote() { return lockNote; }
+    public void setLockNote(String lockNote) { this.lockNote = lockNote; }
+
+    public Instant getLockedAt() { return lockedAt; }
+    public void setLockedAt(Instant lockedAt) { this.lockedAt = lockedAt; }
+
+    public String getLockedBy() { return lockedBy; }
+    public void setLockedBy(String lockedBy) { this.lockedBy = lockedBy; }
+
     public Set<Role> getRoles() { return roles; }
     public void setRoles(Set<Role> roles) {
-        this.roles = roles != null ? roles : new HashSet<>();
+        this.roles = roles != null ? new HashSet<>(roles) : new HashSet<>();
         if (!this.roles.isEmpty()) {
             this.role = this.roles.iterator().next().getName().name();
+        } else {
+            this.role = null;
         }
     }
 
@@ -177,4 +218,7 @@ public class User {
         if (lockedUntil == null) return true;
         return Instant.now().isAfter(lockedUntil);
     }
+
+    public int getTokenVersion() { return tokenVersion; }
+    public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
 }

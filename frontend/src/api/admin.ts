@@ -12,12 +12,14 @@ export const adminApi = {
   listUsers: async (
     search?: string,
     status?: string,
+    role?: string,
     page = 0,
-    size = 10
+    size = 20
   ): Promise<PageResponse<UserSummary>> => {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     if (status && status !== 'ALL') params.append('status', status);
+    if (role && role !== 'ALL') params.append('role', role);
     params.append('page', String(page));
     params.append('size', String(size));
 

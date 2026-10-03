@@ -19,13 +19,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class AuthService {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     public static final int MAX_FAILED_ATTEMPTS = 5;
     public static final long LOCK_DURATION_MINUTES = 15;
@@ -112,7 +119,8 @@ public class AuthService {
             }
 
             userRepository.saveAndFlush(user);
-            throw new InvalidCredentialsException(GENERIC_ERROR_MESSAGE);
+            int remainingAttempts = MAX_FAILED_ATTEMPTS - attempts;
+            throw new InvalidCredentialsException(GENERIC_ERROR_MESSAGE, remainingAttempts);
         }
 
         if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
@@ -121,14 +129,23 @@ public class AuthService {
             userRepository.saveAndFlush(user);
         }
 
+        if ("LOCKED".equalsIgnoreCase(user.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.LOCKED, "Tài khoản đã bị khóa bởi quản trị viên.");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản chưa được kích hoạt hoặc đã ngừng hoạt động.");
+        }
+
         Set<String> roleNames = extractRoleNames(user);
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
         RefreshToken refreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 roleNames,
                 user.getStatus()
         );
@@ -152,14 +169,6 @@ public class AuthService {
         String storedPassword = user.getPassword();
         boolean passwordMatches = storedPassword != null && passwordEncoder.matches(password, storedPassword);
 
-        if (!passwordMatches && storedPassword != null && !storedPassword.startsWith("$2")) {
-            passwordMatches = storedPassword.equals(password);
-            if (passwordMatches) {
-                user.setPassword(passwordEncoder.encode(password));
-                userRepository.save(user);
-            }
-        }
-
         if (!passwordMatches) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
@@ -167,7 +176,14 @@ public class AuthService {
             );
         }
 
-        if (!"ACTIVE".equals(user.getStatus())) {
+        if ("LOCKED".equalsIgnoreCase(user.getStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.LOCKED,
+                    "Tài khoản đã bị khóa"
+            );
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "Tài khoản chưa được kích hoạt hoặc đã bị khóa"
@@ -196,10 +212,8 @@ public class AuthService {
         user.setStatus("ACTIVE");
 
         RoleName assignedRole = RoleName.CANDIDATE;
-        if (request.getRole() != null) {
-            try {
-                assignedRole = RoleName.valueOf(request.getRole().trim().toUpperCase());
-            } catch (Exception ignored) {}
+        if (request.getRole() != null && !"CANDIDATE".equalsIgnoreCase(request.getRole().trim())) {
+            throw new BadRequestException("Đăng ký công khai chỉ được tạo tài khoản ứng viên.");
         }
 
         if (roleRepository != null) {
@@ -213,13 +227,15 @@ public class AuthService {
         userRepository.save(user);
 
         Set<String> roleNames = extractRoleNames(user);
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
         RefreshToken refreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 roleNames,
                 user.getStatus()
         );
@@ -241,37 +257,69 @@ public class AuthService {
         }
 
         User user = refreshToken.getUser();
+        if (user == null || !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            refreshToken.setRevoked(true);
+            refreshTokenRepository.save(refreshToken);
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản chưa được kích hoạt hoặc đã bị khóa.");
+        }
+
+        if (user.getLockedUntil() != null && Instant.now().isBefore(user.getLockedUntil())) {
+            throw new AccountLockedException(user.getLockedUntil());
+        }
+
+        // Token rotation: revoke used refresh token to prevent replay
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+
+        // Issue new token pair
         Set<String> roleNames = extractRoleNames(user);
-        String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames);
+        String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
+        RefreshToken newRefreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 roleNames,
                 user.getStatus()
         );
 
-        return new LoginResponse("Làm mới token thành công!", newAccessToken, refreshToken.getToken(), userSummary);
+        return new LoginResponse("Làm mới token thành công!", newAccessToken, newRefreshToken.getToken(), userSummary);
+    }
+
+    @Transactional
+    public void logout(String refreshToken, String authenticatedEmail) {
+        User user = null;
+        if (authenticatedEmail != null && !authenticatedEmail.isBlank()) {
+            user = userRepository.findByEmail(authenticatedEmail)
+                    .or(() -> userRepository.findByUsername(authenticatedEmail))
+                    .orElse(null);
+        }
+
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            Optional<RefreshToken> tokenOpt = refreshTokenRepository.findByToken(refreshToken);
+            if (tokenOpt.isPresent()) {
+                RefreshToken token = tokenOpt.get();
+                token.setRevoked(true);
+                refreshTokenRepository.save(token);
+                if (user == null) {
+                    user = token.getUser();
+                }
+            }
+        }
+
+        if (user != null) {
+            user.setTokenVersion(user.getTokenVersion() + 1);
+            userRepository.save(user);
+            refreshTokenRepository.revokeAllByUser(user);
+        }
     }
 
     @Transactional
     public void logout(String userEmail) {
-        if (userEmail != null) {
-            userRepository.findByEmail(userEmail)
-                    .or(() -> userRepository.findByUsername(userEmail))
-                    .ifPresent(user -> {
-                        refreshTokenRepository.findByUser(user).ifPresent(token -> {
-                            token.setRevoked(true);
-                            refreshTokenRepository.save(token);
-                        });
-                    });
-
-            refreshTokenRepository.findByToken(userEmail).ifPresent(refreshToken -> {
-                refreshToken.setRevoked(true);
-                refreshTokenRepository.save(refreshToken);
-            });
-        }
+        logout(null, userEmail);
     }
 
     public RefreshToken verifyExpiration(RefreshToken token) {
@@ -291,7 +339,7 @@ public class AuthService {
         }
 
         User user = token.getUser();
-        if (user == null || !"ACTIVE".equals(user.getStatus())) {
+        if (user == null || !"ACTIVE".equalsIgnoreCase(user.getStatus())) {
             refreshTokenRepository.delete(token);
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
@@ -314,20 +362,25 @@ public class AuthService {
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
-            String token = UUID.randomUUID().toString();
+            String rawToken = UUID.randomUUID().toString();
+            String tokenHash = hashToken(rawToken);
 
             if (passwordResetTokenRepository != null) {
                 PasswordResetToken resetToken = passwordResetTokenRepository.findByUser(user)
                         .orElseGet(PasswordResetToken::new);
                 resetToken.setUser(user);
-                resetToken.setToken(token);
+                resetToken.setToken(tokenHash);
                 resetToken.setExpiryDate(Instant.now().plusMillis(passwordResetDurationMs));
                 resetToken.setUsed(false);
                 passwordResetTokenRepository.save(resetToken);
             }
 
             if (mailService != null) {
-                mailService.sendPasswordResetEmail(user.getEmail(), token);
+                try {
+                    mailService.sendPasswordResetEmail(user.getEmail(), rawToken);
+                } catch (Exception ex) {
+                    logger.warn("Could not deliver password reset email ({})", ex.getClass().getSimpleName());
+                }
             }
         }
 
@@ -339,8 +392,8 @@ public class AuthService {
         if (request == null || request.getToken() == null || request.getToken().isBlank()) {
             throw new BadRequestException("Mã token đặt lại mật khẩu không hợp lệ.");
         }
-        if (request.getNewPassword() == null || request.getNewPassword().length() < 6) {
-            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự.");
+        if (!isValidPassword(request.getNewPassword())) {
+            throw new BadRequestException("Mật khẩu mới phải có tối thiểu 8 ký tự, bao gồm ít nhất 1 chữ cái và 1 chữ số.");
         }
         if (request.getConfirmPassword() != null && !request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Mật khẩu xác nhận không khớp.");
@@ -350,8 +403,12 @@ public class AuthService {
             throw new BadRequestException("Dịch vụ đặt lại mật khẩu chưa khả dụng.");
         }
 
-        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
-                .orElseThrow(() -> new BadRequestException("Mã token không hợp lệ hoặc không tồn tại."));
+        String rawToken = request.getToken().trim();
+        String tokenHash = hashToken(rawToken);
+
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(tokenHash)
+                .or(() -> passwordResetTokenRepository.findByToken(rawToken))
+                .orElseThrow(() -> new BadRequestException("Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng."));
 
         if (resetToken.isUsed() || resetToken.isExpired()) {
             throw new BadRequestException("Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng.");
@@ -361,10 +418,14 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
 
         resetToken.setUsed(true);
         passwordResetTokenRepository.save(resetToken);
+
+        // Revoke all existing refresh sessions for this user on password reset
+        refreshTokenRepository.revokeAllByUser(user);
 
         return Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới.");
     }
@@ -374,8 +435,8 @@ public class AuthService {
         if (request == null || request.getCurrentPassword() == null || request.getNewPassword() == null) {
             throw new BadRequestException("Thông tin đổi mật khẩu không hợp lệ.");
         }
-        if (request.getNewPassword().length() < 6) {
-            throw new BadRequestException("Mật khẩu mới phải có ít nhất 6 ký tự.");
+        if (!isValidPassword(request.getNewPassword())) {
+            throw new BadRequestException("Mật khẩu mới phải có tối thiểu 8 ký tự, bao gồm ít nhất 1 chữ cái và 1 chữ số.");
         }
         if (request.getConfirmPassword() != null && !request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new BadRequestException("Mật khẩu xác nhận không khớp.");
@@ -385,14 +446,51 @@ public class AuthService {
                 .or(() -> userRepository.findByUsername(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại."));
 
+        if ("LOCKED".equalsIgnoreCase(user.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.LOCKED, "Tài khoản đã bị khóa.");
+        }
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản chưa được kích hoạt hoặc đã bị khóa.");
+        }
+
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new BadRequestException("Mật khẩu hiện tại không chính xác.");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
 
+        // Revoke all existing refresh sessions for this user on password change
+        refreshTokenRepository.revokeAllByUser(user);
+
         return Map.of("message", "Đổi mật khẩu thành công.");
+    }
+
+    public static boolean isValidPassword(String password) {
+        if (password == null || password.length() < 8) {
+            return false;
+        }
+        boolean hasLetter = password.chars().anyMatch(Character::isLetter);
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        return hasLetter && hasDigit;
+    }
+
+    public static String hashToken(String rawToken) {
+        if (rawToken == null) return null;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 algorithm not available", e);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -405,16 +503,45 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
+                user.getDepartment(),
                 extractRoleNames(user),
                 user.getStatus()
         );
     }
 
     @Transactional
-    public RefreshToken createRefreshToken(User user) {
-        RefreshToken refreshToken = refreshTokenRepository.findByUser(user)
-                .orElseGet(RefreshToken::new);
+    public UserSummaryDto updateProfile(String email, UpdateProfileRequest request) {
+        User user = userRepository.findByEmail(email)
+                .or(() -> userRepository.findByUsername(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại."));
 
+        user.setFullName(request.getFullName().trim());
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone().trim());
+        }
+        if (request.getDisplayName() != null) {
+            user.setDisplayName(request.getDisplayName().trim());
+        }
+        user.setUpdatedAt(Instant.now());
+        User saved = userRepository.saveAndFlush(user);
+
+        return new UserSummaryDto(
+                saved.getId(),
+                saved.getEmail(),
+                saved.getFullName(),
+                saved.getPhone(),
+                saved.getDisplayName(),
+                saved.getDepartment(),
+                extractRoleNames(saved),
+                saved.getStatus()
+        );
+    }
+
+    @Transactional
+    public RefreshToken createRefreshToken(User user) {
+        RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(user);
         refreshToken.setToken(UUID.randomUUID().toString());
         refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDurationMs));
@@ -437,6 +564,6 @@ public class AuthService {
                     .map(role -> role.getName().name())
                     .collect(Collectors.toSet());
         }
-        return Set.of(user.getRole() != null ? user.getRole() : "RECRUITER");
+        return Set.of();
     }
 }

@@ -51,11 +51,11 @@ class AdminUserControllerTest {
     @Test
     @DisplayName("Admin API: GET /api/admin/users trả về danh sách phân trang")
     void testListUsers() throws Exception {
-        UserSummaryDto user1 = new UserSummaryDto(1L, "admin@company.com", "Admin User", Set.of("ADMIN"), "ACTIVE");
-        UserSummaryDto user2 = new UserSummaryDto(2L, "recruiter@company.com", "Recruiter User", Set.of("RECRUITER"), "ACTIVE");
+        UserSummaryDto user1 = new UserSummaryDto(1L, "admin@company.com", "Admin User", null, null, Set.of("ADMIN"), "ACTIVE");
+        UserSummaryDto user2 = new UserSummaryDto(2L, "recruiter@company.com", "Recruiter User", null, null, Set.of("RECRUITER"), "ACTIVE");
 
-        when(adminUserService.listUsers(any(), any(), any()))
-                .thenReturn(new PageImpl<>(List.of(user1, user2), PageRequest.of(0, 10), 2));
+        when(adminUserService.listUsers(any(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(user1, user2), PageRequest.of(0, 20), 2));
 
         mockMvc.perform(get("/api/admin/users"))
                 .andExpect(status().isOk())
@@ -67,10 +67,13 @@ class AdminUserControllerTest {
     @Test
     @DisplayName("Admin API: POST /api/admin/users tạo người dùng mới thành công")
     void testCreateUser() throws Exception {
-        CreateUserRequest request = new CreateUserRequest(
-                "new_hr@company.com", "Password123@", "Nguyễn Thị HR", Set.of("HR_MANAGER"), "ACTIVE"
-        );
-        UserSummaryDto response = new UserSummaryDto(3L, "new_hr@company.com", "Nguyễn Thị HR", Set.of("HR_MANAGER"), "ACTIVE");
+        CreateUserRequest request = new CreateUserRequest();
+        request.setEmail("new_hr@company.com");
+        request.setFullName("Nguyễn Thị HR");
+        request.setRoles(Set.of("HR_MANAGER"));
+        request.setStatus("ACTIVE");
+        // Note: password is NOT set - server generates it server-side (S1-08 hardening)
+        UserSummaryDto response = new UserSummaryDto(3L, "new_hr@company.com", "Nguyễn Thị HR", null, null, Set.of("HR_MANAGER"), "ACTIVE");
 
         when(adminUserService.createUser(any(CreateUserRequest.class))).thenReturn(response);
 

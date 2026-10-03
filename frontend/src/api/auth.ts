@@ -17,8 +17,11 @@ export const authApi = {
     return res.data;
   },
 
-  logout: async (email?: string): Promise<{ message: string }> => {
-    const res = await apiClient.post<{ message: string }>('/api/auth/logout', { email });
+  logout: async (payload?: { refreshToken?: string; email?: string } | string): Promise<{ message: string }> => {
+    const body = typeof payload === 'string'
+      ? { email: payload }
+      : payload;
+    const res = await apiClient.post<{ message: string }>('/api/auth/logout', body ?? {});
     return res.data;
   },
 
@@ -39,6 +42,11 @@ export const authApi = {
 
   getMe: async (): Promise<UserSummary> => {
     const res = await apiClient.get<UserSummary>('/api/auth/me');
+    return res.data;
+  },
+
+  updateProfile: async (payload: { fullName: string; department?: string }): Promise<UserSummary> => {
+    const res = await apiClient.put<UserSummary>('/api/auth/profile', payload);
     return res.data;
   },
 };

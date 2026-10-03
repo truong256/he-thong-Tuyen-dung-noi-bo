@@ -98,4 +98,37 @@ describe('LoginCard Reference UI Component', () => {
 
     expect(mockLogin).toHaveBeenCalledWith('hr_lead@company.com', 'SecretSecure999@');
   });
+
+  it('displays remaining login attempts badge and message when login fails with 401', async () => {
+    mockLogin.mockRejectedValueOnce({
+      response: {
+        status: 401,
+        data: {
+          message: 'Email hoặc mật khẩu không chính xác. Bạn còn 3 lần thử trước khi tài khoản bị khóa.',
+          remainingAttempts: 3,
+        },
+      },
+    });
+
+    renderWithContext();
+
+    const emailInput = screen.getByPlaceholderText('Email hoặc tài khoản');
+    const passwordInput = screen.getByPlaceholderText('Mật khẩu');
+    const submitBtn = screen.getByRole('button', { name: 'Đăng nhập' });
+
+    fireEvent.change(emailInput, { target: { value: 'user@company.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'WrongPass!' } });
+    fireEvent.click(submitBtn);
+
+    expect(await screen.findByText(/Bạn còn 3 lần thử trước khi tài khoản bị khóa/i)).toBeInTheDocument();
+    expect(screen.getByText(/Số lượt thử còn lại:/i)).toBeInTheDocument();
+    expect(screen.getByText(/3 \/ 5/i)).toBeInTheDocument();
+  });
+
+  it('displays session expired message when session expired flag is present', () => {
+    sessionStorage.setItem('ats:session_expired', '1');
+    renderWithContext();
+    expect(screen.getByText('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.')).toBeInTheDocument();
+    expect(sessionStorage.getItem('ats:session_expired')).toBeNull();
+  });
 });

@@ -14,7 +14,11 @@ public class ChangePasswordRequest {
     private String currentPassword;
 
     @NotBlank(message = "Mật khẩu mới không được để trống")
-    @Size(min = 6, message = "Mật khẩu mới phải có ít nhất 6 ký tự")
+    @Size(min = 8, message = "Mật khẩu mới phải có ít nhất 8 ký tự")
+    @jakarta.validation.constraints.Pattern(
+            regexp = "^(?=.*[a-zA-Z])(?=.*\\d).+$",
+            message = "Mật khẩu phải chứa ít nhất 1 chữ cái và 1 chữ số"
+    )
     private String newPassword;
 
     private String confirmPassword;

@@ -11,9 +11,15 @@ export interface UserSummary {
   id: number;
   email: string;
   fullName: string;
+  department?: string;
   role: string;
   roles: string[];
   status: string;
+  lockReason?: string;
+  lockNote?: string;
+  lockedAt?: string;
+  lockedBy?: string;
+  handoverWarnings?: string[];
 }
 
 export interface LoginResponse {

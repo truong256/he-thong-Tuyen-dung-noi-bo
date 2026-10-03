@@ -71,12 +71,6 @@ public class DataInitializer {
             user.setRoles(roles);
             user.setStatus("ACTIVE");
             userRepository.save(user);
-        } else {
-            User u = existing.get();
-            if (u.getRoles() == null || u.getRoles().isEmpty()) {
-                u.setRoles(roles);
-                userRepository.save(u);
-            }
         }
     }
 }

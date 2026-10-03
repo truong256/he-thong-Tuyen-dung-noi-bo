@@ -37,19 +37,38 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
                 String username = jwtUtils.getUsernameFromJwtToken(jwt);
+                Integer tokenVersion = jwtUtils.getTokenVersionFromJwtToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (userDetails instanceof UserPrincipal principal) {
+                    if (tokenVersion == null || tokenVersion != principal.getTokenVersion()) {
+                        SecurityContextHolder.clearContext();
+                        logger.warn("JWT authentication rejected: stale token version for user {}. Token v={}, DB v={}",
+                                username, tokenVersion, principal.getTokenVersion());
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+                }
+
+                if (userDetails == null || !userDetails.isEnabled() || !userDetails.isAccountNonLocked()
+                        || !userDetails.isAccountNonExpired() || !userDetails.isCredentialsNonExpired()) {
+                    SecurityContextHolder.clearContext();
+                    logger.warn("JWT authentication rejected for inactive, expired or locked user: {}", username);
+                } else {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
         } catch (Exception e) {
+            SecurityContextHolder.clearContext();
             logger.error("Cannot set user authentication: {}", e.getMessage());
         }
 

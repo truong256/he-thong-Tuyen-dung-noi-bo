@@ -27,28 +27,50 @@ public class JwtUtils {
     }
 
     public String generateAccessToken(String username) {
-        return generateAccessToken(username, "RECRUITER");
+        return generateAccessToken(username, Set.of(), 1);
     }
 
     public String generateAccessToken(String email, String role) {
         Set<String> roles = new HashSet<>();
         if (role != null) roles.add(role);
-        return generateAccessToken(email, roles);
+        return generateAccessToken(email, roles, 1);
     }
 
     public String generateAccessToken(String email, Set<String> roles) {
+        return generateAccessToken(email, roles, 1);
+    }
+
+    public String generateAccessToken(String email, Set<String> roles, int tokenVersion) {
         List<String> roleList = roles != null ? new ArrayList<>(roles) : new ArrayList<>();
-        String primaryRole = !roleList.isEmpty() ? roleList.get(0) : "RECRUITER";
+        String primaryRole = !roleList.isEmpty() ? roleList.get(0) : null;
 
         return Jwts.builder()
                 .setSubject(email)
                 .claim("email", email)
                 .claim("roles", roleList)
                 .claim("role", primaryRole)
+                .claim("tokenVersion", tokenVersion)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public Integer getTokenVersionFromJwtToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            Object tv = claims.get("tokenVersion");
+            if (tv instanceof Number) {
+                return ((Number) tv).intValue();
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public String getUsernameFromJwtToken(String token) {

@@ -41,16 +41,12 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<?> logoutUser(@RequestBody(required = false) Map<String, String> request,
                                        Authentication authentication) {
-        String email = authentication != null ? authentication.getName() : null;
-        if (email == null && request != null) {
-            email = request.get("email");
-            if (email == null) {
-                email = request.get("refreshToken");
-            }
-        }
-        if (email != null) {
-            authService.logout(email);
-        }
+        String refreshToken = request != null ? request.get("refreshToken") : null;
+        String authenticatedEmail = (authentication != null && authentication.isAuthenticated())
+                ? authentication.getName()
+                : null;
+
+        authService.logout(refreshToken, authenticatedEmail);
         return ResponseEntity.ok(Map.of("message", "Đăng xuất thành công!"));
     }
 
@@ -83,5 +79,15 @@ public class AuthController {
         }
         UserSummaryDto user = authService.getCurrentUser(authentication.getName());
         return ResponseEntity.ok(user);
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<UserSummaryDto> updateProfile(@Valid @RequestBody UpdateProfileRequest request,
+                                                        Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        UserSummaryDto updated = authService.updateProfile(authentication.getName(), request);
+        return ResponseEntity.ok(updated);
     }
 }

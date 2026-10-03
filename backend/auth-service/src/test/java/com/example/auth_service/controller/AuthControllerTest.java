@@ -24,7 +24,6 @@ import java.util.Map;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -87,6 +86,22 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Email hoặc mật khẩu không chính xác."));
+    }
+
+    @Test
+    @DisplayName("API: POST /api/auth/login sai thông tin trả về 401 kèm số lần thử còn lại")
+    void testApiLoginInvalidCredentialsWithRemainingAttempts() throws Exception {
+        when(authService.login(any(LoginRequest.class)))
+                .thenThrow(new InvalidCredentialsException(AuthService.GENERIC_ERROR_MESSAGE, 3));
+
+        LoginRequest request = new LoginRequest("recruiter@company.com", "WrongPassword");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Email hoặc mật khẩu không chính xác. Bạn còn 3 lần thử trước khi tài khoản bị khóa."))
+                .andExpect(jsonPath("$.remainingAttempts").value(3));
     }
 
     @Test
