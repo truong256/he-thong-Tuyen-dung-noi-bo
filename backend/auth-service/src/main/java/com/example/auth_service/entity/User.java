@@ -28,6 +28,12 @@ public class User {
     @Column(name = "department", length = 100)
     private String department;
 
+    @Column(name = "phone", length = 20)
+    private String phone;
+
+    @Column(name = "display_name", length = 150)
+    private String displayName;
+
     @Transient
     private boolean mustChangePassword = false;
 
@@ -129,6 +135,12 @@ public class User {
 
     public String getDepartment() { return department; }
     public void setDepartment(String department) { this.department = department; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
 
     public boolean isMustChangePassword() { return mustChangePassword; }
     public void setMustChangePassword(boolean mustChangePassword) { this.mustChangePassword = mustChangePassword; }

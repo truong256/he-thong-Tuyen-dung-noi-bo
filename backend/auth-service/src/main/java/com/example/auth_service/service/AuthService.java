@@ -144,6 +144,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 roleNames,
                 user.getStatus()
         );
@@ -232,6 +234,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 roleNames,
                 user.getStatus()
         );
@@ -276,6 +280,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 roleNames,
                 user.getStatus()
         );
@@ -497,6 +503,8 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 user.getDepartment(),
                 extractRoleNames(user),
                 user.getStatus()
@@ -510,8 +518,11 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại."));
 
         user.setFullName(request.getFullName().trim());
-        if (request.getDepartment() != null) {
-            user.setDepartment(request.getDepartment().trim());
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone().trim());
+        }
+        if (request.getDisplayName() != null) {
+            user.setDisplayName(request.getDisplayName().trim());
         }
         user.setUpdatedAt(Instant.now());
         User saved = userRepository.saveAndFlush(user);
@@ -520,6 +531,8 @@ public class AuthService {
                 saved.getId(),
                 saved.getEmail(),
                 saved.getFullName(),
+                saved.getPhone(),
+                saved.getDisplayName(),
                 saved.getDepartment(),
                 extractRoleNames(saved),
                 saved.getStatus()
