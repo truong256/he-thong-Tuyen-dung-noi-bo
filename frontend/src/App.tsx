@@ -12,13 +12,14 @@ import ProfilePage from './pages/ProfilePage';
 import UserManagementPage from './pages/UserManagementPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ExcelImportPage from './pages/ExcelImportPage';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public authentication routes */}
+          {/* Các trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -26,7 +27,15 @@ export const App: React.FC = () => {
           <Route path="/403" element={<UnauthorizedPage statusCode={403} />} />
           <Route path="/401" element={<UnauthorizedPage statusCode={401} />} />
 
-          {/* Authenticated application layout */}
+          {/* Xem thử frontend Excel khi chạy môi trường phát triển */}
+          {import.meta.env.DEV && (
+            <Route
+              path="/preview/import-excel"
+              element={<ExcelImportPage />}
+            />
+          )}
+
+          {/* Các trang yêu cầu đăng nhập */}
           <Route
             path="/"
             element={
@@ -35,11 +44,22 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route
+              index
+              element={<Navigate to="/dashboard" replace />}
+            />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
 
-            {/* Admin only route */}
+            <Route
+              path="admin/import-excel"
+              element={
+                <RoleGuard allowedRoles={['ADMIN']}>
+                  <ExcelImportPage />
+                </RoleGuard>
+              }
+            />
+
             <Route
               path="admin/users"
               element={
@@ -50,7 +70,7 @@ export const App: React.FC = () => {
             />
           </Route>
 
-          {/* Fallback */}
+          {/* Trang không tìm thấy */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
