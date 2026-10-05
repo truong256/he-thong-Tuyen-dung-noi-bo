@@ -54,7 +54,6 @@ export const App: React.FC = () => {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="organization" element={<OrganizationManagementPage />} />
             <Route path="job-titles" element={<JobTitleManagementPage />} />
-
             <Route
               path="admin/import-excel"
               element={
