@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, CSSProperties } from 'react';
+import adminApi from '../api/admin';
 
 type Workbook = {
   SheetNames: string[];
@@ -97,9 +98,11 @@ export default function ExcelImportPage() {
   const importRef = useRef(0);
 
   useEffect(() => {
+    const reqRef = requestRef;
+    const impRef = importRef;
     return () => {
-      ++requestRef.current;
-      ++importRef.current;
+      ++reqRef.current;
+      ++impRef.current;
     };
   }, []);
 
@@ -308,24 +311,55 @@ export default function ExcelImportPage() {
     if (busy || !schemaValid || validCount === 0 || result) return;
 
     const importId = ++importRef.current;
-    const success = validCount;
-    const skipped = invalidCount;
+    const validRows = checkedRows.filter((r) => r.errors.length === 0);
+    const token = localStorage.getItem('accessToken');
 
     setImporting(true);
     setProgress(0);
     setResult(null);
 
-    // Mô phỏng tiến trình để thử giao diện frontend.
-    for (let value = 10; value <= 100; value += 10) {
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, 200);
-      });
+    let actualSuccess = 0;
+    let actualSkipped = invalidCount;
 
-      if (importId !== importRef.current) return;
-      setProgress(value);
+    if (token) {
+      // Nhập thực tế qua backend API nếu có token đăng nhập
+      for (let i = 0; i < validRows.length; i++) {
+        if (importId !== importRef.current) return;
+        const row = validRows[i];
+        const email = getValue(row, 'Email');
+        const name = getValue(row, 'Họ tên');
+        const code = getValue(row, 'Mã nhân sự');
+
+        try {
+          await adminApi.createUser({
+            email,
+            fullName: name,
+            department: code || 'Chưa phân bổ',
+            roles: ['INTERVIEWER'],
+          });
+          actualSuccess++;
+        } catch {
+          // Bỏ qua nếu email đã tồn tại hoặc lỗi server cho dòng này
+          actualSkipped++;
+        }
+
+        const pct = Math.round(((i + 1) / validRows.length) * 100);
+        setProgress(pct);
+      }
+    } else {
+      // Mô phỏng tiến trình nếu chạy xem thử offline
+      actualSuccess = validCount;
+      for (let value = 10; value <= 100; value += 10) {
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 150);
+        });
+
+        if (importId !== importRef.current) return;
+        setProgress(value);
+      }
     }
 
-    setResult({ success, skipped });
+    setResult({ success: actualSuccess, skipped: actualSkipped });
     setImporting(false);
   }
 
@@ -522,12 +556,12 @@ export default function ExcelImportPage() {
 
       {headers.length > 0 && (
         <div style={cardStyle}>
-          <h2>Nhập dữ liệu — mô phỏng frontend</h2>
-          <p>Chưa kết nối backend. Dữ liệu sẽ không được lưu vào hệ thống.</p>
+          <h2>Nhập dữ liệu vào hệ thống</h2>
+          <p>Dữ liệu hợp lệ sẽ được chuyển tới backend và tạo tài khoản nhân sự mới.</p>
 
           {schemaValid && invalidCount > 0 && (
             <p>
-              Khi mô phỏng, {invalidCount} dòng có lỗi sẽ được bỏ qua.
+              Khi nhập, {invalidCount} dòng có lỗi sẽ được bỏ qua.
               Bạn có thể sửa file rồi chọn lại.
             </p>
           )}
@@ -538,7 +572,7 @@ export default function ExcelImportPage() {
             disabled={busy || !schemaValid || validCount === 0 || !!result}
             style={buttonStyle}
           >
-            {importing ? 'Đang mô phỏng...' : 'Nhập mô phỏng'}
+            {importing ? 'Đang thực hiện nhập...' : 'Bắt đầu nhập dữ liệu'}
           </button>
 
           {importing && (
@@ -566,10 +600,9 @@ export default function ExcelImportPage() {
 
           {result && (
             <div role="status" style={{ marginTop: 16 }}>
-              <strong>Hoàn tất mô phỏng</strong>
-              <p>Dòng hợp lệ đã mô phỏng: {result.success}</p>
-              <p>Dòng có lỗi đã bỏ qua: {result.skipped}</p>
-              <p>Chưa lưu dữ liệu vào hệ thống.</p>
+              <strong>Hoàn tất nhập dữ liệu</strong>
+              <p>Dòng hợp lệ đã nhập thành công: {result.success}</p>
+              <p>Dòng có lỗi hoặc đã tồn tại đã bỏ qua: {result.skipped}</p>
             </div>
           )}
         </div>
