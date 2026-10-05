@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { Menu, ChevronDown, ChevronUp, Key, LogOut, Briefcase } from 'lucide-react';
+import { Menu, ChevronDown, ChevronUp, Key, LogOut, Briefcase, User } from 'lucide-react';
 import LogoutConfirmModal from '../components/common/LogoutConfirmModal';
 import { getRoleLabel } from '../constants/rbac';
 
@@ -130,6 +130,20 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
                 <div className="dropdown-divider"></div>
+
+                <button
+                  type="button"
+                  className="dropdown-item"
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDropdownOpen(false);
+                    navigate('/profile');
+                  }}
+                >
+                  <User size={15} />
+                  <span>Hồ sơ cá nhân</span>
+                </button>
 
                 <button
                   type="button"

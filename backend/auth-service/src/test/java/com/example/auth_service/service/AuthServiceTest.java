@@ -3,8 +3,6 @@ package com.example.auth_service.service;
 import com.example.auth_service.dto.*;
 import com.example.auth_service.entity.PasswordResetToken;
 import com.example.auth_service.entity.RefreshToken;
-import com.example.auth_service.entity.Role;
-import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.AccountLockedException;
 import com.example.auth_service.exception.BadRequestException;
@@ -35,6 +33,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -83,7 +82,7 @@ class AuthServiceTest {
         user.setFailedLoginAttempts(3);
 
         when(userRepository.findByEmail("recruiter@company.com")).thenReturn(Optional.of(user));
-        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class), anyInt())).thenReturn("mock-access-token");
+        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), anySet(), anyInt())).thenReturn("mock-access-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.login(new LoginRequest("recruiter@company.com", rawPassword));
@@ -99,7 +98,7 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Test 2: Email tồn tại + password sai -> 401 generic message, failedAttempts = 1")
+    @DisplayName("Test 2: Email tồn tại + password sai -> 401 message chứa số lần sai, failedAttempts = 1")
     void test2_invalidPassword_firstAttempt() {
         User user = new User("recruiter@company.com", encodedPassword, "RECRUITER");
         user.setFailedLoginAttempts(0);
@@ -136,7 +135,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("recruiter@company.com")).thenReturn(Optional.of(user));
 
-        AccountLockedException ex = assertThrows(AccountLockedException.class, () ->
+        assertThrows(AccountLockedException.class, () ->
                 authService.login(new LoginRequest("recruiter@company.com", "WrongFifthTime")));
 
         assertEquals(5, user.getFailedLoginAttempts());
@@ -158,7 +157,7 @@ class AuthServiceTest {
                 authService.login(new LoginRequest("recruiter@company.com", rawPassword)));
 
         assertNotNull(ex.getLockedUntil());
-        verify(jwtUtils, never()).generateAccessToken(any(), any(Set.class), anyInt());
+        verify(jwtUtils, never()).generateAccessToken(any(), anySet(), anyInt());
     }
 
     @Test
@@ -185,7 +184,7 @@ class AuthServiceTest {
         user.setLockedUntil(Instant.now().minus(Duration.ofMinutes(1))); // Đã qua 15 phút
 
         when(userRepository.findByEmail("recruiter@company.com")).thenReturn(Optional.of(user));
-        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class), anyInt())).thenReturn("new-access-token");
+        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), anySet(), anyInt())).thenReturn("new-access-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.login(new LoginRequest("recruiter@company.com", rawPassword));
@@ -202,7 +201,7 @@ class AuthServiceTest {
         user.setFailedLoginAttempts(2);
 
         when(userRepository.findByEmail("recruiter@company.com")).thenReturn(Optional.of(user));
-        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), any(Set.class), anyInt())).thenReturn("valid-token");
+        when(jwtUtils.generateAccessToken(eq("recruiter@company.com"), anySet(), anyInt())).thenReturn("valid-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.login(new LoginRequest("recruiter@company.com", rawPassword));
@@ -390,7 +389,7 @@ class AuthServiceTest {
         oldToken.setRevoked(false);
 
         when(refreshTokenRepository.findByToken("old-refresh-token")).thenReturn(Optional.of(oldToken));
-        when(jwtUtils.generateAccessToken(eq("refresh@company.com"), any(Set.class), anyInt())).thenReturn("brand-new-access-token");
+        when(jwtUtils.generateAccessToken(eq("refresh@company.com"), anySet(), anyInt())).thenReturn("brand-new-access-token");
         when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         LoginResponse response = authService.refreshToken(new RefreshTokenRequest("old-refresh-token"));

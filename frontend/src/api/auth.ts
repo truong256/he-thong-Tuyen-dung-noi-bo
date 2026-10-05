@@ -44,6 +44,11 @@ export const authApi = {
     const res = await apiClient.get<UserSummary>('/api/auth/me');
     return res.data;
   },
+
+  updateProfile: async (payload: { fullName: string; department?: string }): Promise<UserSummary> => {
+    const res = await apiClient.put<UserSummary>('/api/auth/profile', payload);
+    return res.data;
+  },
 };
 
 export default authApi;

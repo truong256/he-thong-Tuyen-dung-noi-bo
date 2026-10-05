@@ -12,6 +12,9 @@ import {
   Star,
   Briefcase,
   FileText,
+  User,
+  Building2,
+  Award,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -74,6 +77,41 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                   <span>Tổng quan</span>
                 </NavLink>
               </li>
+
+              <li>
+                <NavLink
+                  to="/profile"
+                  className={({ isActive }) => (isActive ? 'active' : '')}
+                  onClick={handleLinkClick}
+                >
+                  <User size={18} />
+                  <span>Hồ sơ cá nhân</span>
+                </NavLink>
+              </li>
+
+              <li>
+                <NavLink
+                  to="/organization"
+                  className={({ isActive }) => (isActive ? 'active' : '')}
+                  onClick={handleLinkClick}
+                >
+                  <Building2 size={18} />
+                  <span>Hồ sơ tổ chức</span>
+                </NavLink>
+              </li>
+
+              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER']) && (
+                <li>
+                  <NavLink
+                    to="/job-titles"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <Award size={18} />
+                    <span>Quản lý Chức danh</span>
+                  </NavLink>
+                </li>
+              )}
 
               {hasRole('ADMIN') && (
                 <li>

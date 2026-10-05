@@ -7,7 +7,6 @@ import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
-import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.*;
 import com.example.auth_service.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,6 +119,7 @@ class AdminUserServiceTest {
     }
 
     @Test
+    @SuppressWarnings("deprecation")
     @DisplayName("S1-08 Hardening: Client gửi password vẫn bị bỏ qua, luôn sinh temporary password 12 ký tự và gửi qua email")
     void testCreateUser_ClientSuppliedPasswordIsIgnored_AlwaysGenerates12CharTempPassword() {
         CreateUserRequest req = new CreateUserRequest();
@@ -179,7 +179,7 @@ class AdminUserServiceTest {
         u1.setRoles(Set.of(new Role(RoleName.RECRUITER, "RECRUITER")));
 
         Page<User> mockPage = new PageImpl<>(List.of(u1), pageable, 1);
-        when(userRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(mockPage);
+        when(userRepository.findAll(org.mockito.ArgumentMatchers.<Specification<User>>any(), eq(pageable))).thenReturn(mockPage);
 
         Page<UserSummaryDto> page = adminUserService.listUsers("Công nghệ", "ACTIVE", "RECRUITER", pageable);
 

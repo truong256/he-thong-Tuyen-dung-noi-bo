@@ -41,10 +41,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)
+            .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .formLogin(AbstractHttpConfigurer::disable)
-            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(form -> form.disable())
+            .httpBasic(basic -> basic.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ERROR).permitAll()
@@ -52,6 +52,7 @@ public class SecurityConfig {
                         "/api/auth/refresh-token", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/logout").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/auth/me", "/api/auth/permissions").hasAuthority("PROFILE_READ")
                 .requestMatchers(HttpMethod.POST, "/api/auth/change-password").hasAuthority("PROFILE_UPDATE")
+                .requestMatchers(HttpMethod.PUT, "/api/auth/profile").hasAuthority("PROFILE_UPDATE")
                 .requestMatchers(HttpMethod.GET, "/api/admin/roles").hasAuthority("ROLE_READ")
                 .requestMatchers(HttpMethod.GET, "/api/admin/users", "/api/admin/users/{id}").hasAuthority("USER_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}/roles").hasAuthority("ROLE_MANAGE")
@@ -79,7 +80,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         List<String> origins = Arrays.stream(allowedOrigins.split(","))
-                .map(String::trim)
+                .map(origin -> origin.trim())
                 .toList();
         configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

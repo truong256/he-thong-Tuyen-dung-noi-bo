@@ -497,8 +497,32 @@ public class AuthService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getDepartment(),
                 extractRoleNames(user),
                 user.getStatus()
+        );
+    }
+
+    @Transactional
+    public UserSummaryDto updateProfile(String email, UpdateProfileRequest request) {
+        User user = userRepository.findByEmail(email)
+                .or(() -> userRepository.findByUsername(email))
+                .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại."));
+
+        user.setFullName(request.getFullName().trim());
+        if (request.getDepartment() != null) {
+            user.setDepartment(request.getDepartment().trim());
+        }
+        user.setUpdatedAt(Instant.now());
+        User saved = userRepository.saveAndFlush(user);
+
+        return new UserSummaryDto(
+                saved.getId(),
+                saved.getEmail(),
+                saved.getFullName(),
+                saved.getDepartment(),
+                extractRoleNames(saved),
+                saved.getStatus()
         );
     }
 

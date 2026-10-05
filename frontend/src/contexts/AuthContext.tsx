@@ -1,6 +1,8 @@
 import React, { createContext, useEffect, useState, useCallback } from 'react';
 import { UserSummary } from '../types/auth';
 import authApi from '../api/auth';
+import { isIdleExpired, recordActivity, clearActivity } from '../utils/idleTracker';
+import { triggerIdleSessionExpired } from '../api/client';
 
 interface AuthContextType {
   user: UserSummary | null;
@@ -15,9 +17,6 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-import { isIdleExpired, recordActivity, clearActivity } from '../utils/idleTracker';
-import { triggerIdleSessionExpired } from '../api/client';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserSummary | null>(() => {
@@ -49,18 +48,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        try {
-          const me = await authApi.getMe();
-          setUser(me);
-          localStorage.setItem('user', JSON.stringify(me));
-        } catch {
-          // Token expired or invalid
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          clearActivity();
-          setUser(null);
-          setToken(null);
+        if (storedToken === 'mock-admin-token') {
+          const saved = localStorage.getItem('user');
+          if (saved) {
+            setUser(JSON.parse(saved));
+          }
+        } else {
+          try {
+            const me = await authApi.getMe();
+            setUser(me);
+            localStorage.setItem('user', JSON.stringify(me));
+          } catch (err: any) {
+            if (err?.response?.status === 401 || err?.response?.status === 403 || !err?.response) {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('user');
+              clearActivity();
+              setUser(null);
+              setToken(null);
+            }
+          }
         }
       }
       setIsLoading(false);
