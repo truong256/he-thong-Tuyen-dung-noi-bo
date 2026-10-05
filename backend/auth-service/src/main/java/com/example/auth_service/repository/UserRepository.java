@@ -19,6 +19,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     Boolean existsByUsername(String username);
     boolean existsByEmailAndIdNot(String email, Long id);
     boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
+    boolean existsByDepartmentIgnoreCase(String department);
 
     @Query("""
         SELECT u FROM User u
