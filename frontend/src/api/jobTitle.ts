@@ -1,5 +1,6 @@
 import { JobTitle, JobTitleStatistics, JobTitleFilterState, LEVEL_METADATA } from '../types/jobTitle';
 import { INITIAL_DEPARTMENTS } from './organization';
+import apiClient from './client';
 
 const STORAGE_KEYS = {
   JOB_TITLES: 'ats_job_titles',
@@ -422,6 +423,50 @@ const setStoredData = <T>(key: string, value: T): void => {
 export const jobTitleApi = {
   // Fetch all with filtering and department enrichment
   getJobTitles: async (filters?: Partial<JobTitleFilterState>): Promise<JobTitle[]> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const params = new URLSearchParams();
+        if (filters?.search) params.append('search', filters.search);
+        if (filters?.status && filters.status !== 'ALL') {
+          params.append('active', String(filters.status === 'ACTIVE'));
+        }
+        if (filters?.departmentId && filters.departmentId !== 'ALL') {
+          params.append('departmentId', String(filters.departmentId));
+        }
+
+        const res = await apiClient.get<any[]>(`/api/job-titles?${params.toString()}`);
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped: JobTitle[] = res.data.map((j: any) => ({
+            id: j.id,
+            title: j.title,
+            code: j.code,
+            departmentId: j.departmentId || 0,
+            departmentName: j.departmentName || 'Chưa phân bổ',
+            level: j.level || 'MIDDLE',
+            jobFamily: j.jobFamily || 'TECH',
+            minSalary: j.minSalary,
+            maxSalary: j.maxSalary,
+            salaryRangeDisplay: j.salaryRangeDisplay || 'Thỏa thuận',
+            jobDescription: j.jobDescription || '',
+            keyResponsibilities: j.keyResponsibilities || [],
+            requirements: j.requirements || [],
+            competencies: j.competencies || [],
+            standardHeadcount: j.standardHeadcount || 1,
+            currentHeadcount: j.currentHeadcount || 0,
+            openRequisitions: j.openRequisitions || 0,
+            active: j.active !== false,
+            createdAt: j.createdAt ? String(j.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+            updatedAt: j.updatedAt ? String(j.updatedAt).slice(0, 10) : undefined,
+          }));
+          setStoredData(STORAGE_KEYS.JOB_TITLES, mapped);
+          return mapped;
+        }
+      } catch {
+        // Fallback to local storage if API call fails or unauthenticated
+      }
+    }
+
     const rawList = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
 
     // Enrich department names if missing
@@ -495,6 +540,42 @@ export const jobTitleApi = {
   },
 
   createJobTitle: async (payload: Omit<JobTitle, 'id' | 'createdAt'>): Promise<JobTitle> => {
+    try {
+      const res = await apiClient.post<any>('/api/job-titles', {
+        title: payload.title,
+        code: payload.code,
+        departmentId: payload.departmentId || null,
+        level: payload.level,
+        jobFamily: payload.jobFamily,
+        minSalary: payload.minSalary,
+        maxSalary: payload.maxSalary,
+        jobDescription: payload.jobDescription,
+        keyResponsibilities: payload.keyResponsibilities,
+        requirements: payload.requirements,
+        competencies: payload.competencies,
+        standardHeadcount: payload.standardHeadcount,
+        currentHeadcount: payload.currentHeadcount,
+        active: payload.active,
+      });
+
+      if (res.data && res.data.id) {
+        const created: JobTitle = {
+          ...payload,
+          id: res.data.id,
+          createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          updatedAt: res.data.updatedAt ? String(res.data.updatedAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+        };
+        const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
+        list.unshift(created);
+        setStoredData(STORAGE_KEYS.JOB_TITLES, list);
+        return created;
+      }
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+
     const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
 
     // Check duplicate code
@@ -517,6 +598,29 @@ export const jobTitleApi = {
   },
 
   updateJobTitle: async (id: number, payload: Partial<JobTitle>): Promise<JobTitle> => {
+    try {
+      await apiClient.put(`/api/job-titles/${id}`, {
+        title: payload.title,
+        code: payload.code,
+        departmentId: payload.departmentId || null,
+        level: payload.level,
+        jobFamily: payload.jobFamily,
+        minSalary: payload.minSalary,
+        maxSalary: payload.maxSalary,
+        jobDescription: payload.jobDescription,
+        keyResponsibilities: payload.keyResponsibilities,
+        requirements: payload.requirements,
+        competencies: payload.competencies,
+        standardHeadcount: payload.standardHeadcount,
+        currentHeadcount: payload.currentHeadcount,
+        active: payload.active,
+      });
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+
     const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
     const index = list.findIndex((jt) => jt.id === id);
     if (index === -1) {
@@ -545,6 +649,14 @@ export const jobTitleApi = {
   },
 
   deleteJobTitle: async (id: number): Promise<{ success: boolean; message: string }> => {
+    try {
+      await apiClient.delete(`/api/job-titles/${id}`);
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+
     const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
     const item = list.find((jt) => jt.id === id);
     if (!item) {
@@ -575,7 +687,16 @@ export const jobTitleApi = {
       throw new Error(`Không tìm thấy chức danh với ID: ${id}`);
     }
 
-    list[index].active = !list[index].active;
+    const nextActive = !list[index].active;
+    try {
+      await apiClient.patch(`/api/job-titles/${id}/status`, { active: nextActive });
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+
+    list[index].active = nextActive;
     list[index].updatedAt = new Date().toISOString().slice(0, 10);
     setStoredData(STORAGE_KEYS.JOB_TITLES, list);
     return list[index];
