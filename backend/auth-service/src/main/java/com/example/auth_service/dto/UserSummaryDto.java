@@ -28,6 +28,8 @@ public class UserSummaryDto {
     private Instant lockedAt;
     private String lockedBy;
     private List<String> handoverWarnings = new ArrayList<>();
+    private boolean mustChangePassword;
+    private String temporaryPassword;
 
     public UserSummaryDto(Long id, String email, String role) {
         this.id = id;

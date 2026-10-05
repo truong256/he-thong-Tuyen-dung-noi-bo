@@ -34,7 +34,7 @@ public class User {
     @Column(name = "display_name", length = 150)
     private String displayName;
 
-    @Transient
+    @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword = false;
 
     @Column(nullable = false, length = 30)

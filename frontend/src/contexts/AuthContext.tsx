@@ -9,7 +9,7 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
+  login: (email: string, pass: string) => Promise<UserSummary>;
   logout: (skipServerRevoke?: boolean) => Promise<void>;
   refreshUser: () => Promise<void>;
   hasRole: (role: string) => boolean;
@@ -142,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [token, user, logout]);
 
-  const login = async (email: string, pass: string) => {
+  const login = async (email: string, pass: string): Promise<UserSummary> => {
     const res = await authApi.login(email, pass);
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
@@ -150,6 +150,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     recordActivity();
     setToken(res.accessToken);
     setUser(res.user);
+    return res.user;
   };
 
   const hasRole = (role: string): boolean => {

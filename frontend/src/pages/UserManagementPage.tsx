@@ -407,6 +407,23 @@ export const UserManagementPage: React.FC = () => {
                           ? 'Bị khóa'
                           : 'Vô hiệu hóa'}
                       </span>
+                      {u.mustChangePassword && (
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            fontSize: '11px',
+                            color: '#b45309',
+                            background: '#fef3c7',
+                            border: '1px solid #fde68a',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            marginTop: '4px',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Chưa đổi MK tạm
+                        </span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div className="row-actions">
@@ -479,9 +496,25 @@ export const UserManagementPage: React.FC = () => {
                       <div className="mobile-card-email">{u.email}</div>
                     </div>
                   </div>
-                  <span className={`status-pill ${u.status ? u.status.toLowerCase() : 'active'}`}>
-                    {u.status === 'ACTIVE' ? 'Hoạt động' : u.status === 'LOCKED' ? 'Bị khóa' : 'Vô hiệu hóa'}
-                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                    <span className={`status-pill ${u.status ? u.status.toLowerCase() : 'active'}`}>
+                      {u.status === 'ACTIVE' ? 'Hoạt động' : u.status === 'LOCKED' ? 'Bị khóa' : 'Vô hiệu hóa'}
+                    </span>
+                    {u.mustChangePassword && (
+                      <span
+                        style={{
+                          fontSize: '10.5px',
+                          color: '#b45309',
+                          background: '#fef3c7',
+                          border: '1px solid #fde68a',
+                          padding: '1px 5px',
+                          borderRadius: '4px',
+                        }}
+                      >
+                        Chưa đổi MK tạm
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mobile-card-roles">

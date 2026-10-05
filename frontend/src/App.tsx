@@ -15,6 +15,7 @@ import JobTitleManagementPage from './pages/JobTitleManagementPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ExcelImportPage from './pages/ExcelImportPage';
+import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 
 export const App: React.FC = () => {
   return (
@@ -28,6 +29,16 @@ export const App: React.FC = () => {
           <Route path="/unauthorized" element={<UnauthorizedPage />} />
           <Route path="/403" element={<UnauthorizedPage statusCode={403} />} />
           <Route path="/401" element={<UnauthorizedPage statusCode={401} />} />
+
+          {/* Trang bắt buộc đổi mật khẩu lần đầu */}
+          <Route
+            path="/first-login/change-password"
+            element={
+              <ProtectedRoute>
+                <FirstLoginChangePasswordPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Xem thử frontend Excel khi chạy môi trường phát triển */}
           {import.meta.env.DEV && (

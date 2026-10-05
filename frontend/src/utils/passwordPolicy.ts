@@ -2,6 +2,9 @@ export interface PasswordValidationResult {
   hasMinLength: boolean;
   hasLetter: boolean;
   hasNumber: boolean;
+  hasUpper: boolean;
+  hasLower: boolean;
+  hasSpecial: boolean;
   isValid: boolean;
   strength: {
     text: 'Yếu' | 'Trung bình' | 'Mạnh' | '';
@@ -22,6 +25,8 @@ export function validatePasswordPolicy(password: string): PasswordValidationResu
   const hasMinLength = password.length >= MIN_PASSWORD_LENGTH;
   const hasLetter = /[a-zA-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
   const hasSpecial = /[^a-zA-Z0-9]/.test(password);
   const isValid = hasMinLength && hasLetter && hasNumber;
 
@@ -30,6 +35,9 @@ export function validatePasswordPolicy(password: string): PasswordValidationResu
       hasMinLength: false,
       hasLetter: false,
       hasNumber: false,
+      hasUpper: false,
+      hasLower: false,
+      hasSpecial: false,
       isValid: false,
       strength: { text: '', color: '', percent: 0 },
     };
@@ -55,6 +63,9 @@ export function validatePasswordPolicy(password: string): PasswordValidationResu
     hasMinLength,
     hasLetter,
     hasNumber,
+    hasUpper,
+    hasLower,
+    hasSpecial,
     isValid,
     strength,
   };

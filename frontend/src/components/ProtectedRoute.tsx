@@ -10,7 +10,7 @@ import { isIdleExpired } from '../utils/idleTracker';
 import { triggerIdleSessionExpired } from '../api/client';
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading, logout, user } = useAuth();
   const location = useLocation();
 
   React.useEffect(() => {
@@ -64,6 +64,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         replace
       />
     );
+  }
+
+  // First Login Password Change Guard:
+  // If user is required to change their temporary password, strictly block access to all other pages.
+  if (user?.mustChangePassword) {
+    if (location.pathname !== '/first-login/change-password') {
+      return <Navigate to="/first-login/change-password" replace />;
+    }
+  } else if (location.pathname === '/first-login/change-password') {
+    // If password change is not required, prevent staying on the first-login change page.
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <>{children}</>;

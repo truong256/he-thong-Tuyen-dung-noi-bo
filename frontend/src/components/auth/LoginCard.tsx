@@ -137,13 +137,17 @@ export const LoginCard: React.FC<LoginCardProps> = ({ onSuccessRedirect = '/dash
     setRemainingAttempts(null);
 
     try {
-      await login(email.trim(), password);
+      const loggedUser = await login(email.trim(), password);
       if (remember) {
         localStorage.setItem('rememberEmail', email.trim());
       } else {
         localStorage.removeItem('rememberEmail');
       }
-      navigate(onSuccessRedirect, { replace: true });
+      if (loggedUser?.mustChangePassword) {
+        navigate('/first-login/change-password', { replace: true });
+      } else {
+        navigate(onSuccessRedirect, { replace: true });
+      }
     } catch (err: any) {
       const status = err.response?.status;
       const data = err.response?.data;

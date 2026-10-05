@@ -73,4 +73,10 @@ public class AdminUserController {
         adminUserService.deleteUser(id);
         return ResponseEntity.ok(Map.of("message", "Đã xóa người dùng thành công"));
     }
+
+    @PostMapping("/{id}/reset-password")
+    public ResponseEntity<UserSummaryDto> resetUserPassword(@PathVariable Long id) {
+        UserSummaryDto user = adminUserService.resetUserPasswordByAdmin(id);
+        return ResponseEntity.ok(user);
+    }
 }

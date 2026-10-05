@@ -199,6 +199,23 @@ apiClient.interceptors.response.use(
       }
     }
 
+    if (status === 403 && (error.response?.data as any)?.mustChangePassword) {
+      const currentUser = localStorage.getItem('user');
+      if (currentUser) {
+        try {
+          const u = JSON.parse(currentUser);
+          u.mustChangePassword = true;
+          localStorage.setItem('user', JSON.stringify(u));
+        } catch {
+          // Ignore invalid user storage JSON
+        }
+      }
+      if (typeof window !== 'undefined' && window.location.pathname !== '/first-login/change-password') {
+        window.location.href = '/first-login/change-password';
+      }
+      return Promise.reject(error);
+    }
+
     return Promise.reject(error);
   }
 );
