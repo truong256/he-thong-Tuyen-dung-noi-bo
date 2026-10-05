@@ -16,6 +16,7 @@ import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ExcelImportPage from './pages/ExcelImportPage';
 import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
+import QuestionBankPage from './pages/QuestionBankPage';
 
 export const App: React.FC = () => {
   return (
@@ -65,6 +66,26 @@ export const App: React.FC = () => {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="organization" element={<OrganizationManagementPage />} />
             <Route path="job-titles" element={<JobTitleManagementPage />} />
+            <Route
+              path="questions"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                  <QuestionBankPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="admin/questions"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                  <QuestionBankPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="excel-import"
+              element={<Navigate to="/admin/import-excel" replace />}
+            />
             <Route
               path="admin/import-excel"
               element={

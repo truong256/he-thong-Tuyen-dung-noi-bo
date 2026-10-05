@@ -28,6 +28,8 @@ describe('Sidebar Role Navigation & Mobile Drawer (S1-06)', () => {
 
     expect(screen.getByText('Tổng quan')).toBeInTheDocument();
     expect(screen.getByText('Quản lý Tài khoản')).toBeInTheDocument();
+    expect(screen.getByText('Nhập nhân sự Excel')).toBeInTheDocument();
+    expect(screen.getByText('Ngân hàng Câu hỏi')).toBeInTheDocument();
     expect(screen.getByText('Tin tuyển dụng')).toBeInTheDocument();
     expect(screen.queryByText('Hồ sơ & CV của tôi')).not.toBeInTheDocument();
   });
