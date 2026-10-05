@@ -57,6 +57,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/admin/users", "/api/admin/users/{id}").hasAuthority("USER_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}/roles").hasAuthority("ROLE_MANAGE")
                 .requestMatchers(HttpMethod.POST, "/api/admin/users").hasAuthority("USER_MANAGE")
+                .requestMatchers("/api/admin/users/import", "/api/admin/users/import/**").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.PATCH, "/api/admin/users/{id}/status").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.DELETE, "/api/admin/users/{id}").hasAuthority("USER_MANAGE")
