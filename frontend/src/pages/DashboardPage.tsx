@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { getRoleLabel } from '../constants/rbac';
@@ -20,11 +20,16 @@ import {
   ClipboardList,
   Sparkles,
   ArrowRight,
+  X,
+  Clock,
+  KeyRound,
+  ShieldAlert,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
+  const [showSecurityConfig, setShowSecurityConfig] = useState(false);
 
   const primaryRole = user?.roles && user.roles.length > 0 ? user.roles[0] : (user?.role || 'RECRUITER');
 
@@ -117,7 +122,7 @@ export const DashboardPage: React.FC = () => {
                 <span>Cấu hình Hệ thống</span>
               </h3>
               <p>Thiết lập thời gian hết hạn Access Token (60m), Refresh Token (7d), và ngưỡng khóa (5 lần / 15m).</p>
-              <button className="btn btn-outline" onClick={() => alert('Cấu hình đang được áp dụng qua backend properties.')}>
+              <button className="btn btn-outline" onClick={() => setShowSecurityConfig(true)}>
                 <span>Xem thiết lập bảo mật</span>
                 <ArrowRight size={15} />
               </button>
@@ -279,6 +284,89 @@ export const DashboardPage: React.FC = () => {
           </h2>
           <div className="card">
             <p>Khám phá các vị trí tuyển dụng đang mở và theo dõi tiến trình hồ sơ của bạn.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Security Config Inspection Modal */}
+      {showSecurityConfig && (
+        <div className="org-modal-overlay" onClick={() => setShowSecurityConfig(false)} role="dialog">
+          <div className="org-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 580 }}>
+            <div className="org-modal-header">
+              <div className="org-modal-title-group">
+                <div className="org-modal-icon-badge" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <h3>Thiết lập An toàn & Bảo mật Hệ thống</h3>
+                  <p className="org-modal-subtitle">Các thông số bảo mật runtime được áp dụng qua backend configuration</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="org-modal-close-btn"
+                onClick={() => setShowSecurityConfig(false)}
+                aria-label="Đóng"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="org-modal-body" style={{ padding: '20px 0', display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Clock size={18} style={{ color: '#2563eb' }} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Access Token Expiration</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Thời gian hiệu lực của JWT Access Token</div>
+                  </div>
+                </div>
+                <span className="badge" style={{ background: '#dbeafe', color: '#1e40af', fontWeight: 600 }}>60 phút (3600s)</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <KeyRound size={18} style={{ color: '#059669' }} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Refresh Token Expiration</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Thời gian duy trì phiên với Token Rotation</div>
+                  </div>
+                </div>
+                <span className="badge" style={{ background: '#d1fae5', color: '#065f46', fontWeight: 600 }}>7 ngày</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <ShieldAlert size={18} style={{ color: '#d97706' }} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Giới hạn đăng nhập sai</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Tự động khóa tạm thời khi sai liên tiếp</div>
+                  </div>
+                </div>
+                <span className="badge" style={{ background: '#fef3c7', color: '#92400e', fontWeight: 600 }}>5 lần / Khóa 15m</span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Lock size={18} style={{ color: '#7c3aed' }} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>Password Hashing & Reset Token</div>
+                    <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>Chuẩn mã hóa mật khẩu & token khôi phục</div>
+                  </div>
+                </div>
+                <span className="badge" style={{ background: '#ede9fe', color: '#5b21b6', fontWeight: 600 }}>BCrypt / SHA-256 (30m)</span>
+              </div>
+            </div>
+
+            <div className="org-modal-footer">
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowSecurityConfig(false)}
+              >
+                Đã hiểu
+              </button>
+            </div>
           </div>
         </div>
       )}

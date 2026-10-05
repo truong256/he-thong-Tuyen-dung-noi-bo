@@ -15,6 +15,8 @@ import {
   User,
   Building2,
   Award,
+  HelpCircle,
+  FileSpreadsheet,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -113,17 +115,42 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 </li>
               )}
 
-              {hasRole('ADMIN') && (
+              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
                 <li>
                   <NavLink
-                    to="/admin/users"
+                    to="/questions"
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <Users size={18} />
-                    <span>Quản lý Tài khoản</span>
+                    <HelpCircle size={18} />
+                    <span>Ngân hàng Câu hỏi</span>
                   </NavLink>
                 </li>
+              )}
+
+              {hasRole('ADMIN') && (
+                <>
+                  <li>
+                    <NavLink
+                      to="/admin/users"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <Users size={18} />
+                      <span>Quản lý Tài khoản</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/admin/import-excel"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <FileSpreadsheet size={18} />
+                      <span>Nhập nhân sự Excel</span>
+                    </NavLink>
+                  </li>
+                </>
               )}
             </ul>
           </div>

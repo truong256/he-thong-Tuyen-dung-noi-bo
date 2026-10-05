@@ -299,7 +299,7 @@ export const organizationApi = {
     if (token && !token.startsWith('mock-')) {
       try {
         const res = await apiClient.get<any[]>('/api/departments');
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        if (res.data && Array.isArray(res.data)) {
           const mapped: Department[] = res.data.map((d: any) => ({
             id: d.id,
             name: d.name,
@@ -319,8 +319,9 @@ export const organizationApi = {
           setStoredData(STORAGE_KEYS.DEPARTMENTS, enriched);
           return enriched;
         }
-      } catch {
-        // Fallback to local storage if API call fails
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Không thể tải danh sách phòng ban từ máy chủ.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -333,28 +334,30 @@ export const organizationApi = {
   },
 
   createDepartment: async (payload: Omit<Department, 'id' | 'createdAt'>): Promise<Department> => {
-    try {
-      const res = await apiClient.post<any>('/api/departments', {
-        name: payload.name,
-        code: payload.code,
-        description: payload.description || '',
-        parentDepartmentId: payload.parentDepartmentId || null,
-        managerUserId: 1,
-      });
-      if (res.data && res.data.id) {
-        const newDept: Department = {
-          ...payload,
-          id: res.data.id,
-          createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
-        };
-        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-        list.push(newDept);
-        setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
-        return newDept;
-      }
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.post<any>('/api/departments', {
+          name: payload.name,
+          code: payload.code,
+          description: payload.description || '',
+          parentDepartmentId: payload.parentDepartmentId || null,
+          managerUserId: 1,
+        });
+        if (res.data && res.data.id) {
+          const newDept: Department = {
+            ...payload,
+            id: res.data.id,
+            createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          };
+          const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+          list.push(newDept);
+          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
+          return newDept;
+        }
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi tạo phòng ban mới trên hệ thống.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -371,17 +374,35 @@ export const organizationApi = {
   },
 
   updateDepartment: async (id: number, payload: Partial<Department>): Promise<Department> => {
-    try {
-      await apiClient.put(`/api/departments/${id}`, {
-        name: payload.name,
-        code: payload.code,
-        description: payload.description || '',
-        parentDepartmentId: payload.parentDepartmentId || null,
-        managerUserId: 1,
-      });
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        await apiClient.put(`/api/departments/${id}`, {
+          name: payload.name,
+          code: payload.code,
+          description: payload.description || '',
+          parentDepartmentId: payload.parentDepartmentId || null,
+          managerUserId: 1,
+        });
+        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+        const index = list.findIndex((d) => d.id === id);
+        if (index !== -1) {
+          const updatedDept: Department = { ...list[index], ...payload };
+          list[index] = updatedDept;
+          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
+          return updatedDept;
+        }
+        return {
+          id,
+          name: payload.name || '',
+          code: payload.code || '',
+          active: payload.active !== false,
+          createdAt: new Date().toISOString().slice(0, 10),
+          ...payload,
+        } as Department;
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi cập nhật thông tin phòng ban.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -400,11 +421,17 @@ export const organizationApi = {
   },
 
   deleteDepartment: async (id: number): Promise<{ success: boolean; message: string }> => {
-    try {
-      await apiClient.delete(`/api/departments/${id}`);
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        await apiClient.delete(`/api/departments/${id}`);
+        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+        const filtered = list.filter((d) => d.id !== id);
+        setStoredData(STORAGE_KEYS.DEPARTMENTS, filtered);
+        return { success: true, message: 'Đã xóa phòng ban thành công.' };
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi xóa phòng ban.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -421,16 +448,27 @@ export const organizationApi = {
   toggleDepartmentStatus: async (id: number): Promise<Department> => {
     const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     const index = list.findIndex((d) => d.id === id);
+    const currentActive = index !== -1 ? list[index].active : true;
+    const nextActive = !currentActive;
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        await apiClient.patch(`/api/departments/${id}/status`, { active: nextActive });
+        if (index !== -1) {
+          list[index].active = nextActive;
+          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
+          return list[index];
+        }
+        return { id, active: nextActive } as Department;
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi thay đổi trạng thái phòng ban.';
+        throw new Error(errorMsg);
+      }
+    }
+
     if (index === -1) {
       throw new Error(`Không tìm thấy phòng ban với ID: ${id}`);
-    }
-    const nextActive = !list[index].active;
-    try {
-      await apiClient.patch(`/api/departments/${id}/status`, { active: nextActive });
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
     }
     list[index].active = nextActive;
     setStoredData(STORAGE_KEYS.DEPARTMENTS, list);

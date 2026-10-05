@@ -1,5 +1,6 @@
 package com.example.auth_service.controller;
 
+import com.example.auth_service.dto.CompetencyCriterionResponse;
 import com.example.auth_service.dto.CreateInterviewQuestionRequest;
 import com.example.auth_service.dto.InterviewQuestionResponse;
 import com.example.auth_service.dto.UpdateInterviewQuestionRequest;
@@ -14,8 +15,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("/api/interview-questions")
+@RequestMapping({"/api/interview-questions", "/api/questions"})
 public class InterviewQuestionController {
 
     private final InterviewQuestionService interviewQuestionService;
@@ -51,6 +54,12 @@ public class InterviewQuestionController {
                         pageable
                 )
         );
+    }
+
+    @GetMapping("/criteria")
+    @PreAuthorize("hasAuthority('CATALOG_READ')")
+    public ResponseEntity<List<CompetencyCriterionResponse>> getCriteria() {
+        return ResponseEntity.ok(interviewQuestionService.getCriteria());
     }
 
     @GetMapping("/{id}")

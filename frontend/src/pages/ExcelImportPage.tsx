@@ -256,12 +256,17 @@ export default function ExcelImportPage() {
   }
 
   const codeCounts = new Map<string, number>();
+  const emailCounts = new Map<string, number>();
 
   rows.forEach((row) => {
     const code = getValue(row, 'Mã nhân sự').toLowerCase();
+    const email = getValue(row, 'Email').toLowerCase();
 
     if (code) {
       codeCounts.set(code, (codeCounts.get(code) ?? 0) + 1);
+    }
+    if (email) {
+      emailCounts.set(email, (emailCounts.get(email) ?? 0) + 1);
     }
   });
 
@@ -286,6 +291,8 @@ export default function ExcelImportPage() {
         errors.push('Thiếu email');
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         errors.push('Email không hợp lệ');
+      } else if ((emailCounts.get(email.toLowerCase()) ?? 0) > 1) {
+        errors.push('Email trùng trong file');
       }
 
       if (!phone) {
@@ -310,9 +317,14 @@ export default function ExcelImportPage() {
   async function handleImportDemo() {
     if (busy || !schemaValid || validCount === 0 || result) return;
 
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setError('Vui lòng đăng nhập với tài khoản Quản trị viên (ADMIN) để thực hiện lưu dữ liệu vào hệ thống.');
+      return;
+    }
+
     const importId = ++importRef.current;
     const validRows = checkedRows.filter((r) => r.errors.length === 0);
-    const token = localStorage.getItem('accessToken');
 
     setImporting(true);
     setProgress(0);
@@ -321,42 +333,29 @@ export default function ExcelImportPage() {
     let actualSuccess = 0;
     let actualSkipped = invalidCount;
 
-    if (token) {
-      // Nhập thực tế qua backend API nếu có token đăng nhập
-      for (let i = 0; i < validRows.length; i++) {
-        if (importId !== importRef.current) return;
-        const row = validRows[i];
-        const email = getValue(row, 'Email');
-        const name = getValue(row, 'Họ tên');
-        const code = getValue(row, 'Mã nhân sự');
+    // Nhập thực tế qua backend API với token đăng nhập
+    for (let i = 0; i < validRows.length; i++) {
+      if (importId !== importRef.current) return;
+      const row = validRows[i];
+      const email = getValue(row, 'Email');
+      const name = getValue(row, 'Họ tên');
+      const code = getValue(row, 'Mã nhân sự');
 
-        try {
-          await adminApi.createUser({
-            email,
-            fullName: name,
-            department: code || 'Chưa phân bổ',
-            roles: ['INTERVIEWER'],
-          });
-          actualSuccess++;
-        } catch {
-          // Bỏ qua nếu email đã tồn tại hoặc lỗi server cho dòng này
-          actualSkipped++;
-        }
-
-        const pct = Math.round(((i + 1) / validRows.length) * 100);
-        setProgress(pct);
-      }
-    } else {
-      // Mô phỏng tiến trình nếu chạy xem thử offline
-      actualSuccess = validCount;
-      for (let value = 10; value <= 100; value += 10) {
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, 150);
+      try {
+        await adminApi.createUser({
+          email,
+          fullName: name,
+          department: code || 'Chưa phân bổ',
+          roles: ['INTERVIEWER'],
         });
-
-        if (importId !== importRef.current) return;
-        setProgress(value);
+        actualSuccess++;
+      } catch {
+        // Bỏ qua nếu email đã tồn tại hoặc lỗi server cho dòng này
+        actualSkipped++;
       }
+
+      const pct = Math.round(((i + 1) / validRows.length) * 100);
+      setProgress(pct);
     }
 
     setResult({ success: actualSuccess, skipped: actualSkipped });
