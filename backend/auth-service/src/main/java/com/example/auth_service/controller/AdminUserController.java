@@ -2,7 +2,9 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.*;
 import com.example.auth_service.service.AdminUserService;
+import com.example.auth_service.service.ExcelImportService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,9 +22,38 @@ import java.util.Map;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final ExcelImportService excelImportService;
 
-    public AdminUserController(AdminUserService adminUserService) {
+    public AdminUserController(AdminUserService adminUserService, ExcelImportService excelImportService) {
         this.adminUserService = adminUserService;
+        this.excelImportService = excelImportService;
+    }
+
+    @GetMapping({"/import-template", "/template"})
+    public ResponseEntity<byte[]> downloadTemplate() {
+        byte[] excelBytes = excelImportService.generateTemplate();
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Mau_nhap_nhan_su.xlsx\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelBytes);
+    }
+
+    @PostMapping(value = "/import-preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ExcelImportPreviewResponse> previewImport(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        ExcelImportPreviewResponse preview = excelImportService.previewExcel(file);
+        return ResponseEntity.ok(preview);
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ExcelImportSummaryResponse> importExcel(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        ExcelImportSummaryResponse response = excelImportService.importExcel(file);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping(value = {"/import-rows", "/import"}, consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ExcelImportSummaryResponse> importRows(@RequestBody java.util.List<ExcelImportRowDto> rows) {
+        ExcelImportSummaryResponse response = excelImportService.importRows(rows);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
