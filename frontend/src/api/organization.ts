@@ -4,6 +4,7 @@ import {
   BranchLocation,
   OrgStatistics,
 } from '../types/organization';
+import apiClient from './client';
 
 const STORAGE_KEYS = {
   PROFILE: 'ats_company_profile',
@@ -294,8 +295,36 @@ export const organizationApi = {
 
   // --- Department Methods ---
   getDepartments: async (): Promise<Department[]> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.get<any[]>('/api/departments');
+        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped: Department[] = res.data.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            code: d.code,
+            description: d.description || '',
+            parentDepartmentId: d.parentDepartmentId || null,
+            managerName: d.managerUserId ? `Quản lý #${d.managerUserId}` : undefined,
+            employeeCount: d.employeeCount || 0,
+            active: d.active !== false,
+            createdAt: d.createdAt ? String(d.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          }));
+          const deptMap = new Map<number, string>(mapped.map((d) => [d.id, d.name]));
+          const enriched = mapped.map((d) => ({
+            ...d,
+            parentDepartmentName: d.parentDepartmentId ? deptMap.get(d.parentDepartmentId) : undefined,
+          }));
+          setStoredData(STORAGE_KEYS.DEPARTMENTS, enriched);
+          return enriched;
+        }
+      } catch {
+        // Fallback to local storage if API call fails
+      }
+    }
+
     const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-    // Enrich parent names
     const deptMap = new Map<number, string>(list.map((d) => [d.id, d.name]));
     return list.map((d) => ({
       ...d,
@@ -304,6 +333,31 @@ export const organizationApi = {
   },
 
   createDepartment: async (payload: Omit<Department, 'id' | 'createdAt'>): Promise<Department> => {
+    try {
+      const res = await apiClient.post<any>('/api/departments', {
+        name: payload.name,
+        code: payload.code,
+        description: payload.description || '',
+        parentDepartmentId: payload.parentDepartmentId || null,
+        managerUserId: 1,
+      });
+      if (res.data && res.data.id) {
+        const newDept: Department = {
+          ...payload,
+          id: res.data.id,
+          createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+        };
+        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+        list.push(newDept);
+        setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
+        return newDept;
+      }
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+
     const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     const maxId = list.reduce((max, d) => Math.max(max, d.id), 0);
     const newDept: Department = {
@@ -317,6 +371,20 @@ export const organizationApi = {
   },
 
   updateDepartment: async (id: number, payload: Partial<Department>): Promise<Department> => {
+    try {
+      await apiClient.put(`/api/departments/${id}`, {
+        name: payload.name,
+        code: payload.code,
+        description: payload.description || '',
+        parentDepartmentId: payload.parentDepartmentId || null,
+        managerUserId: 1,
+      });
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+
     const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     const index = list.findIndex((d) => d.id === id);
     if (index === -1) {
@@ -332,8 +400,15 @@ export const organizationApi = {
   },
 
   deleteDepartment: async (id: number): Promise<{ success: boolean; message: string }> => {
+    try {
+      await apiClient.delete(`/api/departments/${id}`);
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+
     const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-    // Check if any child departments depend on this one
     const hasChildren = list.some((d) => d.parentDepartmentId === id);
     if (hasChildren) {
       throw new Error('Không thể xóa phòng ban này vì đang có các đơn vị trực thuộc. Vui lòng chuyển hoặc xóa các đơn vị con trước.');
@@ -349,7 +424,15 @@ export const organizationApi = {
     if (index === -1) {
       throw new Error(`Không tìm thấy phòng ban với ID: ${id}`);
     }
-    list[index].active = !list[index].active;
+    const nextActive = !list[index].active;
+    try {
+      await apiClient.patch(`/api/departments/${id}/status`, { active: nextActive });
+    } catch (err: any) {
+      if (err?.response?.data?.message) {
+        throw new Error(err.response.data.message);
+      }
+    }
+    list[index].active = nextActive;
     setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
     return list[index];
   },
