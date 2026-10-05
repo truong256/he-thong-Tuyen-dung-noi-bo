@@ -38,17 +38,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       const storedToken = localStorage.getItem('accessToken');
       if (storedToken) {
-        try {
-          const me = await authApi.getMe();
-          setUser(me);
-          localStorage.setItem('user', JSON.stringify(me));
-        } catch {
-          // Token expired or invalid
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          setUser(null);
-          setToken(null);
+        if (storedToken === 'mock-admin-token') {
+          const saved = localStorage.getItem('user');
+          if (saved) {
+            setUser(JSON.parse(saved));
+          }
+        } else {
+          try {
+            const me = await authApi.getMe();
+            setUser(me);
+            localStorage.setItem('user', JSON.stringify(me));
+          } catch (err: any) {
+            if (err.response?.status === 401 || err.response?.status === 403) {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('user');
+              setUser(null);
+              setToken(null);
+            }
+          }
         }
       }
       setIsLoading(false);

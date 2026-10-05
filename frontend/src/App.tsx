@@ -10,6 +10,8 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import UserManagementPage from './pages/UserManagementPage';
+import OrganizationManagementPage from './pages/OrganizationManagementPage';
+import JobTitleManagementPage from './pages/JobTitleManagementPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
 
@@ -38,6 +40,8 @@ export const App: React.FC = () => {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="organization" element={<OrganizationManagementPage />} />
+            <Route path="job-titles" element={<JobTitleManagementPage />} />
 
             {/* Admin only route */}
             <Route
@@ -45,6 +49,22 @@ export const App: React.FC = () => {
               element={
                 <RoleGuard allowedRoles={['ADMIN']}>
                   <UserManagementPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="admin/organization"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                  <OrganizationManagementPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="admin/job-titles"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                  <JobTitleManagementPage />
                 </RoleGuard>
               }
             />
