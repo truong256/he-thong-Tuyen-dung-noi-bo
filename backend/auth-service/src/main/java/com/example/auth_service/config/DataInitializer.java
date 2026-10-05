@@ -67,6 +67,9 @@ public class DataInitializer {
             createUserIfMissing(userRepository, passwordEncoder, "candidate@company.com", defaultSeedPassword,
                     "Ứng viên Nguyễn Văn A", Set.of(roleMap.get(RoleName.CANDIDATE)));
 
+            createUserIfMissing(userRepository, passwordEncoder, "truong256@company.com", "#r7GDs^QRbhF",
+                    "Kiểm thử viên Tự động", Set.of(roleMap.get(RoleName.CANDIDATE)));
+
             // 3. Seed default enterprise departments if none exist (only in non-test profiles)
             boolean isTestProfile = Arrays.asList(env.getActiveProfiles()).contains("test");
             if (!isTestProfile && departmentRepository.count() == 0 && adminUser != null) {

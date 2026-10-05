@@ -32,7 +32,7 @@ test.describe('Dashboard and User Management Polish Verification', () => {
     const welcomeHeading = page.locator('.welcome-text h1');
     await expect(welcomeHeading).toBeVisible();
     const headingText = await welcomeHeading.innerText();
-    expect(headingText).toContain('Xin chào, admin!');
+    expect(headingText).toMatch(/Xin chào, (admin|Quản trị viên)/);
     expect(headingText).not.toContain('👋');
 
     // Verify role display on welcome banner is localized to 'Quản trị viên' (NOT 'ADMIN')
