@@ -355,6 +355,8 @@ public class AdminUserService {
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
+                user.getPhone(),
+                user.getDisplayName(),
                 user.getDepartment(),
                 roleNames,
                 user.getStatus()

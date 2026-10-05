@@ -585,4 +585,31 @@ class AuthServiceTest {
         assertFalse(AuthService.isValidPassword("abcdefgh")); // FAIL
         assertTrue(AuthService.isValidPassword("abc12345"));  // PASS
     }
+
+    @Test
+    @DisplayName("Test 28: updateProfile cập nhật thành công fullName, phone, displayName")
+    void test28_updateProfile_success() {
+        User user = new User("user@company.com", encodedPassword, "RECRUITER");
+        user.setFullName("Old Name");
+        user.setDepartment("Old Dept");
+        
+        when(userRepository.findByEmail("user@company.com")).thenReturn(Optional.of(user));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UpdateProfileRequest request = new UpdateProfileRequest();
+        request.setFullName("New Name");
+        request.setPhone("0912345678");
+        request.setDisplayName("New Display");
+        
+        UserSummaryDto response = authService.updateProfile("user@company.com", request);
+
+        assertEquals("New Name", response.getFullName());
+        assertEquals("0912345678", response.getPhone());
+        assertEquals("New Display", response.getDisplayName());
+        
+        // Department must be preserved
+        assertEquals("Old Dept", response.getDepartment());
+        
+        verify(userRepository).saveAndFlush(user);
+    }
 }

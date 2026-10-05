@@ -51,8 +51,8 @@ class AdminUserControllerTest {
     @Test
     @DisplayName("Admin API: GET /api/admin/users trả về danh sách phân trang")
     void testListUsers() throws Exception {
-        UserSummaryDto user1 = new UserSummaryDto(1L, "admin@company.com", "Admin User", Set.of("ADMIN"), "ACTIVE");
-        UserSummaryDto user2 = new UserSummaryDto(2L, "recruiter@company.com", "Recruiter User", Set.of("RECRUITER"), "ACTIVE");
+        UserSummaryDto user1 = new UserSummaryDto(1L, "admin@company.com", "Admin User", null, null, Set.of("ADMIN"), "ACTIVE");
+        UserSummaryDto user2 = new UserSummaryDto(2L, "recruiter@company.com", "Recruiter User", null, null, Set.of("RECRUITER"), "ACTIVE");
 
         when(adminUserService.listUsers(any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(user1, user2), PageRequest.of(0, 20), 2));
@@ -73,7 +73,7 @@ class AdminUserControllerTest {
         request.setRoles(Set.of("HR_MANAGER"));
         request.setStatus("ACTIVE");
         // Note: password is NOT set - server generates it server-side (S1-08 hardening)
-        UserSummaryDto response = new UserSummaryDto(3L, "new_hr@company.com", "Nguyễn Thị HR", Set.of("HR_MANAGER"), "ACTIVE");
+        UserSummaryDto response = new UserSummaryDto(3L, "new_hr@company.com", "Nguyễn Thị HR", null, null, Set.of("HR_MANAGER"), "ACTIVE");
 
         when(adminUserService.createUser(any(CreateUserRequest.class))).thenReturn(response);
 
