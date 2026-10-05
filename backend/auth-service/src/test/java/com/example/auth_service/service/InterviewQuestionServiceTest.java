@@ -4,6 +4,7 @@ import com.example.auth_service.domain.sprint2.CompetencyCriterion;
 import com.example.auth_service.domain.sprint2.CompetencyFramework;
 import com.example.auth_service.domain.sprint2.InterviewQuestion;
 import com.example.auth_service.domain.sprint2.JobTitle;
+import com.example.auth_service.dto.CompetencyCriterionResponse;
 import com.example.auth_service.dto.CreateInterviewQuestionRequest;
 import com.example.auth_service.dto.InterviewQuestionResponse;
 import com.example.auth_service.dto.UpdateInterviewQuestionRequest;
@@ -415,6 +416,27 @@ class InterviewQuestionServiceTest {
 
         assertThat(response.getJobTitleId()).isNull();
         assertThat(response.getJobTitle()).isNull();
+    }
+
+    @Test
+    @DisplayName("S2-07: Lấy danh sách tiêu chí năng lực hoạt động thành công")
+    void getCriteria_Success() {
+        CompetencyCriterion criterion = createCriterion();
+        when(competencyCriterionRepository.findAllActiveWithDetails())
+                .thenReturn(List.of(criterion));
+
+        List<CompetencyCriterionResponse> criteria = interviewQuestionService.getCriteria();
+
+        assertThat(criteria).hasSize(1);
+        CompetencyCriterionResponse item = criteria.get(0);
+        assertThat(item.getId()).isEqualTo(10L);
+        assertThat(item.getCriterionCode()).isEqualTo("JAVA-01");
+        assertThat(item.getCriterionName()).isEqualTo("Năng lực Java");
+        assertThat(item.getCompetencyFrameworkId()).isEqualTo(20L);
+        assertThat(item.getCompetencyName()).isEqualTo("Kỹ năng phát triển phần mềm");
+        assertThat(item.getJobTitleId()).isEqualTo(30L);
+        assertThat(item.getJobTitle()).isEqualTo("Java Developer");
+        verify(competencyCriterionRepository).findAllActiveWithDetails();
     }
 
     private CompetencyCriterion createCriterion() {
