@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   UserPlus,
@@ -13,6 +14,7 @@ import {
   X,
   UserCheck,
   Mail,
+  Upload,
 } from 'lucide-react';
 import adminApi from '../api/admin';
 import { UserSummary } from '../types/user';
@@ -23,6 +25,7 @@ import RbacMatrixModal from '../components/admin/RbacMatrixModal';
 import { ATS_ROLES_INFO, getRoleLabel } from '../constants/rbac';
 
 export const UserManagementPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
 
   // Data states (S1-08: Default pageSize = 20)
@@ -201,6 +204,16 @@ export const UserManagementPage: React.FC = () => {
           >
             <FileSpreadsheet size={16} />
             <span>Xuất CSV</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={() => navigate('/admin/import-excel')}
+            aria-label="Nhập danh sách người dùng từ file Excel"
+            data-testid="btn-import-excel"
+          >
+            <Upload size={16} />
+            <span>Nhập từ Excel</span>
           </button>
           <button
             type="button"

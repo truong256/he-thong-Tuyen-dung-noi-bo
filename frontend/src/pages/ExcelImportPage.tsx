@@ -1,611 +1,938 @@
-import { useEffect, useRef, useState } from 'react';
-import type { ChangeEvent, CSSProperties } from 'react';
+import React, { useState, useRef, ChangeEvent, DragEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  FileSpreadsheet,
+  Download,
+  UploadCloud,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  ArrowLeft,
+  RefreshCw,
+  FileCheck,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 import adminApi from '../api/admin';
+import {
+  ExcelImportPreviewResponse,
+  ExcelImportResultResponse,
+  ExcelImportRowPreview,
+} from '../types/excel';
 
-type Workbook = {
-  SheetNames: string[];
-  Sheets: Record<string, unknown>;
-};
+export const ExcelImportPage: React.FC = () => {
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-type ExcelLibrary = {
-  read: (data: ArrayBuffer) => Workbook;
-  writeFile: (workbook: Workbook, filename: string) => void;
-  utils: {
-    sheet_to_json: (
-      sheet: unknown,
-      options: {
-        header: number;
-        raw: boolean;
-        defval: string;
-        blankrows: boolean;
-        range: number;
-      }
-    ) => string[][];
-    aoa_to_sheet: (data: string[][]) => unknown;
-    book_new: () => Workbook;
-    book_append_sheet: (
-      workbook: Workbook,
-      sheet: unknown,
-      name: string
-    ) => void;
-  };
-};
-
-type PreviewRow = {
-  line: number;
-  values: string[];
-};
-
-const requiredHeaders = [
-  'Mã nhân sự',
-  'Họ tên',
-  'Email',
-  'Số điện thoại',
-];
-
-const cardStyle: CSSProperties = {
-  background: '#fff',
-  border: '1px solid #dbe2ea',
-  borderRadius: 12,
-  padding: 24,
-  marginTop: 20,
-};
-
-const cellStyle: CSSProperties = {
-  border: '1px solid #dbe2ea',
-  padding: '10px 12px',
-  textAlign: 'left',
-  whiteSpace: 'pre-wrap',
-  minWidth: 140,
-};
-
-const buttonStyle: CSSProperties = {
-  padding: '8px 16px',
-  cursor: 'pointer',
-};
-
-function getExcelLibrary() {
-  const excel = (
-    window as Window & { XLSX?: ExcelLibrary }
-  ).XLSX;
-
-  if (!excel) {
-    throw new Error(
-      'Chưa tải được thư viện Excel. Vui lòng tải lại trang.'
-    );
-  }
-
-  return excel;
-}
-
-export default function ExcelImportPage() {
+  // File state
   const [file, setFile] = useState<File | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [headers, setHeaders] = useState<string[]>([]);
-  const [rows, setRows] = useState<PreviewRow[]>([]);
-  const [sheetName, setSheetName] = useState('');
-  const [page, setPage] = useState(1);
-  const [importing, setImporting] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [result, setResult] = useState<{
-    success: number;
-    skipped: number;
-  } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const requestRef = useRef(0);
-  const importRef = useRef(0);
+  // Process states
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
 
-  useEffect(() => {
-    const reqRef = requestRef;
-    const impRef = importRef;
-    return () => {
-      ++reqRef.current;
-      ++impRef.current;
-    };
-  }, []);
+  // Data states
+  const [previewData, setPreviewData] = useState<ExcelImportPreviewResponse | null>(null);
+  const [importResult, setImportResult] = useState<ExcelImportResultResponse | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
-  function resetData() {
-    ++requestRef.current;
-    ++importRef.current;
-    setFile(null);
-    setError('');
-    setHeaders([]);
-    setRows([]);
-    setSheetName('');
-    setLoading(false);
-    setImporting(false);
-    setProgress(0);
-    setResult(null);
-    setPage(1);
-  }
+  // Table filter & pagination
+  const [filterMode, setFilterMode] = useState<'ALL' | 'VALID' | 'INVALID'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
-  function handleClear() {
-    resetData();
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
-    if (inputRef.current) {
-      inputRef.current.value = '';
-    }
-  }
-
-  function handleDownloadTemplate() {
+  // Step 1: Download Template
+  const handleDownloadTemplate = async () => {
+    setIsDownloadingTemplate(true);
+    setErrorMessage(null);
     try {
-      const excel = getExcelLibrary();
-      const workbook = excel.utils.book_new();
-      const sheet = excel.utils.aoa_to_sheet([
-        requiredHeaders,
-        ['NS001', 'Nguyễn Văn An', 'an@example.com', '0901234567'],
-      ]);
-
-      excel.utils.book_append_sheet(workbook, sheet, 'Nhân sự');
-      excel.writeFile(workbook, 'Mau_nhap_nhan_su.xlsx');
-      setError('');
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Không tạo được file mẫu.'
-      );
+      const blob = await adminApi.downloadImportTemplate();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'Mau_nhap_nhan_su.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      showToast('Đã tải tệp Excel mẫu thành công!');
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Không thể tải file mẫu từ máy chủ. Vui lòng thử lại sau.';
+      setErrorMessage(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsDownloadingTemplate(false);
     }
-  }
+  };
 
-  async function handleSelectFile(
-    event: ChangeEvent<HTMLInputElement>
-  ) {
-    const selectedFile = event.target.files?.[0];
-    resetData();
-    const requestId = requestRef.current;
+  // Reset file selection
+  const handleReset = () => {
+    setFile(null);
+    setPreviewData(null);
+    setImportResult(null);
+    setErrorMessage(null);
+    setCurrentPage(1);
+    setFilterMode('ALL');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
-    if (!selectedFile) return;
+  // Validate and select file
+  const processSelectedFile = async (selectedFile: File) => {
+    setErrorMessage(null);
+    setImportResult(null);
 
-    if (!/\.(xlsx|xls)$/i.test(selectedFile.name)) {
-      setError('Vui lòng chọn file .xlsx hoặc .xls.');
-      event.target.value = '';
+    const validExtensions = ['.xlsx', '.xls'];
+    const fileNameLower = selectedFile.name.toLowerCase();
+    const hasValidExt = validExtensions.some((ext) => fileNameLower.endsWith(ext));
+
+    if (!hasValidExt) {
+      setErrorMessage('Định dạng tệp không được hỗ trợ. Vui lòng chỉ chọn tệp Excel (.xlsx hoặc .xls).');
       return;
     }
 
     if (selectedFile.size > 10 * 1024 * 1024) {
-      setError('Dung lượng file không được vượt quá 10 MB.');
-      event.target.value = '';
+      setErrorMessage('Dung lượng tệp vượt quá giới hạn cho phép (tối đa 10 MB).');
       return;
     }
 
     setFile(selectedFile);
-    setLoading(true);
+    setIsPreviewing(true);
+    setCurrentPage(1);
 
     try {
-      const excel = getExcelLibrary();
-      const buffer = await selectedFile.arrayBuffer();
-
-      if (requestId !== requestRef.current) return;
-
-      const workbook = excel.read(buffer);
-      const firstSheet = workbook.SheetNames[0];
-
-      if (!firstSheet) {
-        throw new Error('File Excel không có sheet dữ liệu.');
-      }
-
-      // Giữ dòng trống để số dòng báo lỗi khớp với Excel.
-      const data = excel.utils.sheet_to_json(
-        workbook.Sheets[firstSheet],
-        {
-          header: 1,
-          raw: false,
-          defval: '',
-          blankrows: true,
-          range: 0,
-        }
-      );
-
-      const headerIndex = data.findIndex((row) =>
-        row.some((value) => String(value ?? '').trim() !== '')
-      );
-
-      if (headerIndex < 0) {
-        throw new Error('Sheet đầu tiên không có dữ liệu.');
-      }
-
-      const columnCount = data.reduce(
-        (max, row) => Math.max(max, row.length),
-        0
-      );
-
-      const nextHeaders = Array.from(
-        { length: columnCount },
-        (_, index) =>
-          String(data[headerIndex][index] ?? '').trim()
-      );
-
-      const nextRows = data
-        .slice(headerIndex + 1)
-        .map((values, index) => ({
-          line: headerIndex + index + 2,
-          values: values.map((value) => String(value ?? '').trim()),
-        }))
-        .filter((row) => row.values.some((value) => value !== ''));
-
-      setHeaders(nextHeaders);
-      setRows(nextRows);
-      setSheetName(firstSheet);
-    } catch (err) {
-      if (requestId !== requestRef.current) return;
-
-      setError(
-        err instanceof Error ? err.message : 'Không đọc được file Excel.'
-      );
+      const preview = await adminApi.previewImportExcel(selectedFile);
+      setPreviewData(preview);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Không thể đọc tệp Excel. Vui lòng kiểm tra lại định dạng tệp.';
+      setErrorMessage(msg);
+      setPreviewData(null);
+      showToast(msg, 'error');
     } finally {
-      if (requestId === requestRef.current) {
-        setLoading(false);
-      }
+      setIsPreviewing(false);
     }
-  }
+  };
 
-  const missingHeaders = requiredHeaders.filter(
-    (name) => !headers.includes(name)
-  );
-
-  const duplicateHeaders = requiredHeaders.filter(
-    (name) => headers.filter((header) => header === name).length > 1
-  );
-
-  const schemaValid =
-    missingHeaders.length === 0 && duplicateHeaders.length === 0;
-
-  function getValue(row: PreviewRow, name: string) {
-    return row.values[headers.indexOf(name)] ?? '';
-  }
-
-  const codeCounts = new Map<string, number>();
-  const emailCounts = new Map<string, number>();
-
-  rows.forEach((row) => {
-    const code = getValue(row, 'Mã nhân sự').toLowerCase();
-    const email = getValue(row, 'Email').toLowerCase();
-
-    if (code) {
-      codeCounts.set(code, (codeCounts.get(code) ?? 0) + 1);
+  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files?.[0];
+    if (selected) {
+      processSelectedFile(selected);
     }
-    if (email) {
-      emailCounts.set(email, (emailCounts.get(email) ?? 0) + 1);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      processSelectedFile(droppedFile);
     }
-  });
+  };
 
-  const checkedRows = rows.map((row) => {
-    const errors: string[] = [];
-
-    if (schemaValid) {
-      const code = getValue(row, 'Mã nhân sự');
-      const name = getValue(row, 'Họ tên');
-      const email = getValue(row, 'Email');
-      const phone = getValue(row, 'Số điện thoại');
-
-      if (!code) {
-        errors.push('Thiếu mã nhân sự');
-      } else if ((codeCounts.get(code.toLowerCase()) ?? 0) > 1) {
-        errors.push('Mã nhân sự trùng trong file');
-      }
-
-      if (!name) errors.push('Thiếu họ tên');
-
-      if (!email) {
-        errors.push('Thiếu email');
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        errors.push('Email không hợp lệ');
-      } else if ((emailCounts.get(email.toLowerCase()) ?? 0) > 1) {
-        errors.push('Email trùng trong file');
-      }
-
-      if (!phone) {
-        errors.push('Thiếu số điện thoại');
-      } else if (!/^\+?\d{9,15}$/.test(phone)) {
-        errors.push('Số điện thoại không hợp lệ');
-      }
-    }
-
-    return { ...row, errors };
-  });
-
-  const validCount = schemaValid
-    ? checkedRows.filter((row) => row.errors.length === 0).length
-    : 0;
-
-  const invalidCount = schemaValid ? rows.length - validCount : 0;
-  const pageCount = Math.max(1, Math.ceil(rows.length / 20));
-  const visibleRows = checkedRows.slice((page - 1) * 20, page * 20);
-  const busy = loading || importing;
-
-  async function handleImportDemo() {
-    if (busy || !schemaValid || validCount === 0 || result) return;
-
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setError('Vui lòng đăng nhập với tài khoản Quản trị viên (ADMIN) để thực hiện lưu dữ liệu vào hệ thống.');
+  // Step 5: Execute Import
+  const handleExecuteImport = async () => {
+    if (!file || !previewData || previewData.validCount === 0 || isImporting) {
       return;
     }
 
-    const importId = ++importRef.current;
-    const validRows = checkedRows.filter((r) => r.errors.length === 0);
+    setIsImporting(true);
+    setErrorMessage(null);
 
-    setImporting(true);
-    setProgress(0);
-    setResult(null);
-
-    let actualSuccess = 0;
-    let actualSkipped = invalidCount;
-
-    // Nhập thực tế qua backend API với token đăng nhập
-    for (let i = 0; i < validRows.length; i++) {
-      if (importId !== importRef.current) return;
-      const row = validRows[i];
-      const email = getValue(row, 'Email');
-      const name = getValue(row, 'Họ tên');
-      const code = getValue(row, 'Mã nhân sự');
-
-      try {
-        await adminApi.createUser({
-          email,
-          fullName: name,
-          department: code || 'Chưa phân bổ',
-          roles: ['INTERVIEWER'],
-        });
-        actualSuccess++;
-      } catch {
-        // Bỏ qua nếu email đã tồn tại hoặc lỗi server cho dòng này
-        actualSkipped++;
+    try {
+      const result = await adminApi.executeImportExcel(file);
+      setImportResult(result);
+      if (result.successCount > 0) {
+        showToast(`Đã nhập thành công ${result.successCount} nhân sự vào hệ thống!`);
       }
-
-      const pct = Math.round(((i + 1) / validRows.length) * 100);
-      setProgress(pct);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Quá trình nhập dữ liệu thất bại. Vui lòng thử lại sau.';
+      setErrorMessage(msg);
+      showToast(msg, 'error');
+    } finally {
+      setIsImporting(false);
     }
+  };
 
-    setResult({ success: actualSuccess, skipped: actualSkipped });
-    setImporting(false);
-  }
+  // Filtered rows for table
+  const displayedRows: ExcelImportRowPreview[] = (previewData?.rows || []).filter((r) => {
+    if (filterMode === 'VALID') return r.valid;
+    if (filterMode === 'INVALID') return !r.valid;
+    return true;
+  });
 
-  function handleCancelImport() {
-    ++importRef.current;
-    setImporting(false);
-    setProgress(0);
-    setResult(null);
-  }
+  const totalPages = Math.max(1, Math.ceil(displayedRows.length / pageSize));
+  const paginatedRows = displayedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Determine current active step
+  const currentStep = importResult ? 6 : previewData ? 5 : file ? 3 : 2;
 
   return (
-    <section style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
-      <h1>Nhập nhân sự từ Excel</h1>
-      <p>Tải mẫu, chọn file và kiểm tra dữ liệu trước khi nhập.</p>
+    <div className="admin-page" data-testid="excel-import-page" style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
+      {/* Toast */}
+      {toastMessage && (
+        <div
+          className={`toast-notification ${toastMessage.type}`}
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 24,
+            right: 24,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '12px 18px',
+            borderRadius: 'var(--radius-md, 8px)',
+            background: toastMessage.type === 'success' ? 'var(--success-bg, #ecfdf5)' : 'var(--danger-bg, #fef2f2)',
+            color: toastMessage.type === 'success' ? 'var(--success, #059669)' : 'var(--danger, #dc2626)',
+            border: `1px solid ${toastMessage.type === 'success' ? 'var(--success-border, #a7f3d0)' : 'var(--danger-border, #fecaca)'}`,
+            boxShadow: 'var(--shadow-md, 0 4px 16px rgba(0,0,0,0.1))',
+            fontWeight: 500,
+          }}
+        >
+          {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
 
-      <div style={cardStyle}>
-        <label htmlFor="excel-file">
-          <strong>Chọn file Excel</strong>
-        </label>
-
-        <p>Định dạng .xlsx, .xls. Dung lượng tối đa 10 MB.</p>
-
+      {/* Header & Back link */}
+      <div style={{ marginBottom: 24 }}>
         <button
           type="button"
-          onClick={handleDownloadTemplate}
-          disabled={busy}
-          style={buttonStyle}
+          className="btn btn-outline"
+          onClick={() => navigate('/admin/users')}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '6px 12px', fontSize: '0.875rem' }}
+          aria-label="Quay lại danh sách người dùng"
         >
-          Tải file mẫu
+          <ArrowLeft size={16} />
+          <span>Quay lại Quản lý tài khoản</span>
         </button>
 
-        <input
-          ref={inputRef}
-          id="excel-file"
-          type="file"
-          accept=".xlsx,.xls"
-          onChange={handleSelectFile}
-          disabled={busy}
-          style={{ display: 'block', marginTop: 16, maxWidth: '100%' }}
-        />
-
-        {file ? (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
           <div>
-            <p><strong>File đã chọn:</strong> {file.name}</p>
-            <p>
-              <strong>Dung lượng:</strong>{' '}
-              {(file.size / 1024).toFixed(1)} KB
+            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
+              Nhập danh sách nhân sự từ Excel
+            </h1>
+            <p style={{ color: 'var(--text-muted, #64748b)', margin: '4px 0 0', fontSize: '0.95rem' }}>
+              Tạo hàng loạt tài khoản người dùng nội bộ từ tệp Excel chuẩn với kiểm tra dữ liệu theo từng dòng và hỗ trợ partial success.
             </p>
-
-            <button
-              type="button"
-              onClick={handleClear}
-              disabled={importing}
-              style={buttonStyle}
-            >
-              Bỏ chọn file
-            </button>
           </div>
-        ) : (
-          <p>Chưa chọn file Excel.</p>
-        )}
 
-        {loading && <p role="status">Đang đọc dữ liệu Excel...</p>}
-        {error && (
-          <p role="alert" style={{ color: '#b91c1c' }}>{error}</p>
-        )}
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={handleDownloadTemplate}
+            disabled={isDownloadingTemplate || isImporting}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            data-testid="btn-download-template"
+            aria-label="Tải tệp Excel mẫu"
+          >
+            {isDownloadingTemplate ? <RefreshCw size={16} className="spin-animation" /> : <Download size={16} />}
+            <span>{isDownloadingTemplate ? 'Đang tải file mẫu...' : 'Tải tệp Excel mẫu'}</span>
+          </button>
+        </div>
       </div>
 
-      {headers.length > 0 && (
-        <div style={cardStyle}>
-          <h2>Xem trước dữ liệu</h2>
-          <p>
-            <strong>Sheet:</strong> {sheetName}
-            {' — '}
-            <strong>Số dòng:</strong> {rows.length}
-          </p>
+      {/* 6-Step Stepper Bar */}
+      <div
+        role="region"
+        aria-label="Quy trình nhập dữ liệu"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: 8,
+          marginBottom: 24,
+          padding: '12px 16px',
+          background: 'var(--bg-card, #ffffff)',
+          borderRadius: 'var(--radius-md, 12px)',
+          border: '1px solid var(--border-color, #e2e8f0)',
+        }}
+      >
+        {[
+          { step: 1, title: 'Tải mẫu' },
+          { step: 2, title: 'Chọn tệp' },
+          { step: 3, title: 'Xem trước' },
+          { step: 4, title: 'Kiểm tra lỗi' },
+          { step: 5, title: 'Xác nhận nhập' },
+          { step: 6, title: 'Kết quả' },
+        ].map((item) => {
+          const isPassed = currentStep > item.step;
+          const isCurrent = currentStep === item.step;
+          return (
+            <div
+              key={item.step}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '6px 8px',
+                borderRadius: 'var(--radius-sm, 6px)',
+                background: isCurrent ? 'var(--primary-50, #eff6ff)' : 'transparent',
+                color: isCurrent
+                  ? 'var(--primary, #2563eb)'
+                  : isPassed
+                  ? 'var(--success, #059669)'
+                  : 'var(--text-muted, #64748b)',
+                fontWeight: isCurrent ? 600 : 500,
+                fontSize: '0.85rem',
+              }}
+            >
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  background: isCurrent
+                    ? 'var(--primary, #2563eb)'
+                    : isPassed
+                    ? 'var(--success, #059669)'
+                    : 'var(--border-color, #e2e8f0)',
+                  color: isCurrent || isPassed ? '#ffffff' : 'var(--text-muted, #64748b)',
+                }}
+              >
+                {isPassed ? '✓' : item.step}
+              </div>
+              <span style={{ whiteSpace: 'nowrap' }}>{item.title}</span>
+            </div>
+          );
+        })}
+      </div>
 
-          <p>
-            Dòng có dữ liệu đầu tiên được dùng làm tiêu đề.
-            Quy tắc kiểm tra hiện dùng theo file mẫu tạm.
-          </p>
+      {/* Error alert banner */}
+      {errorMessage && (
+        <div
+          role="alert"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+            padding: '14px 16px',
+            marginBottom: 20,
+            borderRadius: 'var(--radius-md, 12px)',
+            background: 'var(--danger-bg, #fef2f2)',
+            border: '1px solid var(--danger-border, #fecaca)',
+            color: 'var(--danger, #dc2626)',
+            fontSize: '0.9rem',
+          }}
+        >
+          <AlertCircle size={20} style={{ flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <strong>Đã xảy ra lỗi:</strong>
+            <div style={{ marginTop: 2 }}>{errorMessage}</div>
+          </div>
+        </div>
+      )}
 
-          {missingHeaders.length > 0 && (
-            <p role="alert" style={{ color: '#b91c1c' }}>
-              Thiếu cột: {missingHeaders.join(', ')}. Vui lòng dùng file mẫu.
-            </p>
-          )}
-
-          {duplicateHeaders.length > 0 && (
-            <p role="alert" style={{ color: '#b91c1c' }}>
-              Tiêu đề cột bị trùng: {duplicateHeaders.join(', ')}.
-            </p>
-          )}
-
-          {schemaValid && (
-            <p>
-              <strong>Hợp lệ:</strong> {validCount}
-              {' — '}
-              <strong>Có lỗi:</strong> {invalidCount}
-            </p>
-          )}
+      {/* Section 1: File Picker & Upload Card */}
+      {!importResult && (
+        <div
+          style={{
+            background: 'var(--bg-card, #ffffff)',
+            borderRadius: 'var(--radius-md, 12px)',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            padding: 24,
+            marginBottom: 24,
+            boxShadow: 'var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.04))',
+          }}
+        >
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, margin: '0 0 16px', color: 'var(--text-main, #0f172a)' }}>
+            1. Chọn tệp dữ liệu Excel
+          </h2>
 
           <div
-            role="region"
-            aria-label="Bảng xem trước Excel"
-            tabIndex={0}
-            style={{ overflow: 'auto', maxHeight: 500 }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+            style={{
+              border: `2px dashed ${isDragging ? 'var(--primary, #2563eb)' : 'var(--border-color, #cbd5e1)'}`,
+              borderRadius: 'var(--radius-md, 12px)',
+              background: isDragging ? 'var(--primary-50, #eff6ff)' : 'var(--bg-subtle, #f8fafc)',
+              padding: '36px 20px',
+              textAlign: 'center',
+              cursor: isImporting || isPreviewing ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+            }}
           >
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <input
+              ref={fileInputRef}
+              id="excel-file-input"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileInputChange}
+              disabled={isImporting || isPreviewing}
+              style={{ display: 'none' }}
+              data-testid="excel-file-input"
+              aria-label="Chọn file Excel"
+            />
+
+            <UploadCloud
+              size={48}
+              style={{
+                color: isDragging ? 'var(--primary, #2563eb)' : 'var(--text-light, #94a3b8)',
+                margin: '0 auto 12px',
+              }}
+            />
+
+            <p style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main, #0f172a)', margin: '0 0 6px' }}>
+              Kéo và thả tệp Excel vào đây hoặc <span style={{ color: 'var(--primary, #2563eb)' }}>duyệt tệp</span>
+            </p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)', margin: 0 }}>
+              Hỗ trợ định dạng .xlsx, .xls • Dung lượng tối đa: 10 MB
+            </p>
+          </div>
+
+          {/* Selected File Details */}
+          {file && (
+            <div
+              style={{
+                marginTop: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 'var(--radius-sm, 8px)',
+                background: 'var(--bg-subtle, #f8fafc)',
+                border: '1px solid var(--border-color, #e2e8f0)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <FileSpreadsheet size={24} style={{ color: 'var(--success, #059669)' }} />
+                <div>
+                  <div style={{ fontWeight: 600, color: 'var(--text-main, #0f172a)', fontSize: '0.95rem' }}>
+                    {file.name}
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>
+                    {(file.size / 1024).toFixed(1)} KB • Tệp sẵn sàng phân tích
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleReset}
+                disabled={isImporting || isPreviewing}
+                style={{ fontSize: '0.85rem', padding: '6px 14px' }}
+                aria-label="Bỏ chọn tệp hiện tại"
+              >
+                Bỏ chọn tệp
+              </button>
+            </div>
+          )}
+
+          {isPreviewing && (
+            <div
+              role="status"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginTop: 16,
+                color: 'var(--primary, #2563eb)',
+                fontWeight: 500,
+                fontSize: '0.9rem',
+              }}
+            >
+              <RefreshCw size={18} className="spin-animation" />
+              <span>Đang phân tích cấu trúc và kiểm tra dữ liệu từng dòng...</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Section 2: Preview & Validation Table */}
+      {previewData && !importResult && (
+        <div
+          style={{
+            background: 'var(--bg-card, #ffffff)',
+            borderRadius: 'var(--radius-md, 12px)',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            padding: 24,
+            marginBottom: 24,
+            boxShadow: 'var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.04))',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 16 }}>
+            <h2 style={{ fontSize: '1.15rem', fontWeight: 600, margin: 0, color: 'var(--text-main, #0f172a)' }}>
+              2. Xem trước & Kiểm tra dữ liệu từng dòng
+            </h2>
+
+            {/* Filter Toggle */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className={`btn ${filterMode === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => { setFilterMode('ALL'); setCurrentPage(1); }}
+                style={{ fontSize: '0.8rem', padding: '4px 10px' }}
+                aria-label="Hiển thị tất cả các dòng"
+              >
+                Tất cả ({previewData.totalRows})
+              </button>
+              <button
+                type="button"
+                className={`btn ${filterMode === 'VALID' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => { setFilterMode('VALID'); setCurrentPage(1); }}
+                style={{ fontSize: '0.8rem', padding: '4px 10px', color: filterMode === 'VALID' ? '#fff' : 'var(--success, #059669)' }}
+                aria-label="Chỉ hiển thị dòng hợp lệ"
+              >
+                Hợp lệ ({previewData.validCount})
+              </button>
+              <button
+                type="button"
+                className={`btn ${filterMode === 'INVALID' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => { setFilterMode('INVALID'); setCurrentPage(1); }}
+                style={{ fontSize: '0.8rem', padding: '4px 10px', color: filterMode === 'INVALID' ? '#fff' : 'var(--danger, #dc2626)' }}
+                aria-label="Chỉ hiển thị dòng có lỗi"
+              >
+                Có lỗi ({previewData.invalidCount})
+              </button>
+            </div>
+          </div>
+
+          {/* Validation Summary Statistics Chips */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: 12,
+              marginBottom: 20,
+            }}
+          >
+            <div style={{ padding: '12px 16px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: 'var(--radius-sm, 8px)', border: '1px solid var(--border-color, #e2e8f0)' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted, #64748b)' }}>Tổng số dòng phát hiện</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{previewData.totalRows}</div>
+            </div>
+
+            <div style={{ padding: '12px 16px', background: 'var(--success-bg, #ecfdf5)', borderRadius: 'var(--radius-sm, 8px)', border: '1px solid var(--success-border, #a7f3d0)' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--success, #059669)' }}>Dòng hợp lệ sẵn sàng nhập</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--success, #059669)' }}>{previewData.validCount}</div>
+            </div>
+
+            <div style={{ padding: '12px 16px', background: 'var(--danger-bg, #fef2f2)', borderRadius: 'var(--radius-sm, 8px)', border: '1px solid var(--danger-border, #fecaca)' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--danger, #dc2626)' }}>Dòng dữ liệu có lỗi</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--danger, #dc2626)' }}>{previewData.invalidCount}</div>
+            </div>
+          </div>
+
+          {/* Business rule info notice */}
+          {previewData.invalidCount > 0 && previewData.validCount > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 14px',
+                marginBottom: 16,
+                borderRadius: 'var(--radius-sm, 8px)',
+                background: 'var(--warning-bg, #fffbeb)',
+                border: '1px solid var(--warning-border, #fde68a)',
+                color: 'var(--warning, #d97706)',
+                fontSize: '0.85rem',
+              }}
+            >
+              <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+              <span>
+                Cơ chế Partial Success: <strong>{previewData.validCount} dòng hợp lệ</strong> vẫn sẽ được nhập vào hệ thống an toàn. <strong>{previewData.invalidCount} dòng có lỗi</strong> sẽ bị bỏ qua và ghi nhận trong báo cáo.
+              </span>
+            </div>
+          )}
+
+          {previewData.validCount === 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '10px 14px',
+                marginBottom: 16,
+                borderRadius: 'var(--radius-sm, 8px)',
+                background: 'var(--danger-bg, #fef2f2)',
+                border: '1px solid var(--danger-border, #fecaca)',
+                color: 'var(--danger, #dc2626)',
+                fontSize: '0.85rem',
+              }}
+            >
+              <XCircle size={18} style={{ flexShrink: 0 }} />
+              <span>
+                Tất cả các dòng dữ liệu trong tệp đều có lỗi. Vui lòng sửa lại các lỗi được đánh dấu đỏ trước khi nhập vào hệ thống.
+              </span>
+            </div>
+          )}
+
+          {/* Table Wrapper (Responsive for small screens down to 360px) */}
+          <div
+            role="region"
+            aria-label="Bảng xem trước dữ liệu Excel"
+            tabIndex={0}
+            style={{
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              borderRadius: 'var(--radius-sm, 8px)',
+              border: '1px solid var(--border-color, #e2e8f0)',
+              marginBottom: 16,
+            }}
+          >
+            <table
+              data-testid="preview-table"
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '0.875rem',
+                minWidth: 680,
+              }}
+            >
               <thead>
-                <tr style={{ background: '#f1f5f9' }}>
-                  <th scope="col" style={cellStyle}>Dòng Excel</th>
-
-                  {headers.map((header, index) => (
-                    <th scope="col" key={index} style={cellStyle}>
-                      {header || `Cột ${index + 1}`}
-                    </th>
-                  ))}
-
-                  <th scope="col" style={cellStyle}>Lỗi dữ liệu</th>
+                <tr style={{ background: 'var(--bg-subtle, #f8fafc)', borderBottom: '1px solid var(--border-color, #e2e8f0)' }}>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'center', width: 60 }}>Dòng</th>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'left' }}>Họ và tên</th>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'left' }}>Email</th>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'left' }}>Phòng ban</th>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'left' }}>Vai trò</th>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'center', width: 110 }}>Trạng thái</th>
+                  <th scope="col" style={{ padding: '10px 12px', textAlign: 'left' }}>Chi tiết lỗi</th>
                 </tr>
               </thead>
-
               <tbody>
-                {visibleRows.map((row) => (
-                  <tr
-                    key={row.line}
-                    style={{
-                      background: row.errors.length > 0 ? '#fff1f2' : '#fff',
-                    }}
-                  >
-                    <td style={cellStyle}>{row.line}</td>
-
-                    {headers.map((_, index) => (
-                      <td key={index} style={cellStyle}>
-                        {row.values[index] ?? ''}
-                      </td>
-                    ))}
-
-                    <td
-                      style={{
-                        ...cellStyle,
-                        color:
-                          !schemaValid || row.errors.length > 0
-                            ? '#b91c1c'
-                            : '#15803d',
-                      }}
-                    >
-                      {!schemaValid
-                        ? 'Chưa kiểm tra: sai cấu trúc cột'
-                        : row.errors.join('; ') || 'Hợp lệ'}
+                {paginatedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--text-muted, #64748b)' }}>
+                      Không có dòng dữ liệu nào khớp với bộ lọc hiện tại.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  paginatedRows.map((row) => (
+                    <tr
+                      key={row.rowNumber}
+                      data-testid={`row-${row.rowNumber}`}
+                      style={{
+                        borderBottom: '1px solid var(--border-color, #e2e8f0)',
+                        background: row.valid ? 'transparent' : '#fff5f5',
+                      }}
+                    >
+                      <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 600, color: 'var(--text-muted, #64748b)' }}>
+                        {row.rowNumber}
+                      </td>
+                      <td style={{ padding: '10px 12px', fontWeight: 500, color: 'var(--text-main, #0f172a)' }}>
+                        {row.data.fullName || <span style={{ color: 'var(--danger, #dc2626)', fontStyle: 'italic' }}>Trống</span>}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-body, #334155)' }}>
+                        {row.data.email || <span style={{ color: 'var(--danger, #dc2626)', fontStyle: 'italic' }}>Trống</span>}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-body, #334155)' }}>
+                        {row.data.department || '—'}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--text-body, #334155)' }}>
+                        {row.data.role || 'Người phỏng vấn'}
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        {row.valid ? (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full, 9999px)',
+                              background: 'var(--success-bg, #ecfdf5)',
+                              color: 'var(--success, #059669)',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Hợp lệ
+                          </span>
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full, 9999px)',
+                              background: 'var(--danger-bg, #fef2f2)',
+                              color: 'var(--danger, #dc2626)',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            Có lỗi
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding: '10px 12px', color: 'var(--danger, #dc2626)', fontSize: '0.8rem' }}>
+                        {row.errors.length > 0 ? (
+                          <ul style={{ margin: 0, paddingLeft: 16 }}>
+                            {row.errors.map((err, i) => (
+                              <li key={i}>{err}</li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span style={{ color: 'var(--success, #059669)' }}>Không có lỗi</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
-          {rows.length === 0 ? (
-            <p>File chỉ có tiêu đề, chưa có dòng dữ liệu.</p>
-          ) : (
+          {/* Table Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)' }}>
+                Hiển thị dòng {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, displayedRows.length)} trong tổng số {displayedRows.length} dòng
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                  aria-label="Trang trước"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <span style={{ fontSize: '0.85rem', padding: '0 8px' }}>
+                  {currentPage} / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
+                  aria-label="Trang sau"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Section 3: Action Buttons / Confirmation */}
+          <div
+            style={{
+              marginTop: 24,
+              paddingTop: 20,
+              borderTop: '1px solid var(--border-color, #e2e8f0)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 16,
+            }}
+          >
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleReset}
+              disabled={isImporting}
+              aria-label="Hủy bỏ và chọn tệp khác"
+            >
+              Hủy bỏ & Chọn lại tệp
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleExecuteImport}
+              disabled={previewData.validCount === 0 || isImporting}
+              data-testid="btn-confirm-import"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 20px',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+              }}
+              aria-label={`Xác nhận nhập ${previewData.validCount} nhân sự hợp lệ`}
+            >
+              {isImporting ? (
+                <>
+                  <RefreshCw size={18} className="spin-animation" />
+                  <span>Đang xử lý nhập dữ liệu...</span>
+                </>
+              ) : (
+                <>
+                  <FileCheck size={18} />
+                  <span>
+                    {previewData.validCount > 0
+                      ? `Nhập ${previewData.validCount} nhân sự hợp lệ`
+                      : 'Không có dòng hợp lệ'}
+                  </span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Section 4: Import Result Report (Step 6) */}
+      {importResult && (
+        <div
+          data-testid="import-result-card"
+          style={{
+            background: 'var(--bg-card, #ffffff)',
+            borderRadius: 'var(--radius-md, 12px)',
+            border: '1px solid var(--border-color, #e2e8f0)',
+            padding: 28,
+            boxShadow: 'var(--shadow-card, 0 4px 20px rgba(15, 23, 42, 0.04))',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div
               style={{
+                width: 44,
+                height: 44,
+                borderRadius: '50%',
                 display: 'flex',
-                gap: 12,
                 alignItems: 'center',
-                flexWrap: 'wrap',
-                marginTop: 16,
+                justifyContent: 'center',
+                background: importResult.failedCount === 0 ? 'var(--success-bg, #ecfdf5)' : 'var(--warning-bg, #fffbeb)',
+                color: importResult.failedCount === 0 ? 'var(--success, #059669)' : 'var(--warning, #d97706)',
               }}
             >
-              <button
-                type="button"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-                style={buttonStyle}
-              >
-                Trang trước
-              </button>
-
-              <span>Trang {page}/{pageCount} — tối đa 20 dòng/trang</span>
-
-              <button
-                type="button"
-                disabled={page === pageCount}
-                onClick={() => setPage(page + 1)}
-                style={buttonStyle}
-              >
-                Trang sau
-              </button>
+              {importResult.failedCount === 0 ? <CheckCircle2 size={26} /> : <AlertTriangle size={26} />}
             </div>
-          )}
-        </div>
-      )}
 
-      {headers.length > 0 && (
-        <div style={cardStyle}>
-          <h2>Nhập dữ liệu vào hệ thống</h2>
-          <p>Dữ liệu hợp lệ sẽ được chuyển tới backend và tạo tài khoản nhân sự mới.</p>
+            <div>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0, color: 'var(--text-main, #0f172a)' }}>
+                Báo cáo kết quả nhập dữ liệu hoàn tất
+              </h2>
+              <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: 'var(--text-muted, #64748b)' }}>
+                {importResult.failedCount === 0
+                  ? 'Toàn bộ dữ liệu nhân sự đã được khởi tạo thành công vào hệ thống.'
+                  : `Đã hoàn tất xử lý với cơ chế partial success: ${importResult.successCount} dòng thành công, ${importResult.failedCount} dòng lỗi bị bỏ qua.`}
+              </p>
+            </div>
+          </div>
 
-          {schemaValid && invalidCount > 0 && (
-            <p>
-              Khi nhập, {invalidCount} dòng có lỗi sẽ được bỏ qua.
-              Bạn có thể sửa file rồi chọn lại.
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={handleImportDemo}
-            disabled={busy || !schemaValid || validCount === 0 || !!result}
-            style={buttonStyle}
+          {/* Metric cards */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+              gap: 16,
+              marginBottom: 24,
+            }}
           >
-            {importing ? 'Đang thực hiện nhập...' : 'Bắt đầu nhập dữ liệu'}
-          </button>
+            <div style={{ padding: '16px', background: 'var(--bg-subtle, #f8fafc)', borderRadius: 'var(--radius-sm, 8px)', border: '1px solid var(--border-color, #e2e8f0)' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-muted, #64748b)' }}>Tổng số dòng xử lý</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-main, #0f172a)' }}>{importResult.totalRows}</div>
+            </div>
 
-          {importing && (
-            <div style={{ marginTop: 16 }}>
-              <label htmlFor="import-progress">
-                Tiến trình mô phỏng: {progress}%
-              </label>
+            <div style={{ padding: '16px', background: 'var(--success-bg, #ecfdf5)', borderRadius: 'var(--radius-sm, 8px)', border: '1px solid var(--success-border, #a7f3d0)' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--success, #059669)' }}>Nhập thành công</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--success, #059669)' }}>{importResult.successCount}</div>
+            </div>
 
-              <progress
-                id="import-progress"
-                value={progress}
-                max={100}
-                style={{ display: 'block', width: '100%', margin: '12px 0' }}
-              />
+            <div style={{ padding: '16px', background: 'var(--danger-bg, #fef2f2)', borderRadius: 'var(--radius-sm, 8px)', border: '1px solid var(--danger-border, #fecaca)' }}>
+              <div style={{ fontSize: '0.85rem', color: 'var(--danger, #dc2626)' }}>Thất bại / Bỏ qua</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, color: 'var(--danger, #dc2626)' }}>{importResult.failedCount}</div>
+            </div>
+          </div>
 
-              <button
-                type="button"
-                onClick={handleCancelImport}
-                style={buttonStyle}
+          {/* Detail of failed rows if any */}
+          {importResult.failedRows && importResult.failedRows.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 12px', color: 'var(--danger, #dc2626)' }}>
+                Danh sách các dòng không thể nhập ({importResult.failedRows.length} dòng):
+              </h3>
+
+              <div
+                style={{
+                  overflowX: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  borderRadius: 'var(--radius-sm, 8px)',
+                  border: '1px solid var(--danger-border, #fecaca)',
+                }}
               >
-                Hủy mô phỏng
-              </button>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--danger-bg, #fef2f2)', borderBottom: '1px solid var(--danger-border, #fecaca)' }}>
+                      <th scope="col" style={{ padding: '8px 12px', textAlign: 'center', width: 60 }}>Dòng</th>
+                      <th scope="col" style={{ padding: '8px 12px', textAlign: 'left' }}>Họ và tên</th>
+                      <th scope="col" style={{ padding: '8px 12px', textAlign: 'left' }}>Email</th>
+                      <th scope="col" style={{ padding: '8px 12px', textAlign: 'left' }}>Lý do lỗi chi tiết</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importResult.failedRows.map((fail) => (
+                      <tr key={fail.rowNumber} style={{ borderBottom: '1px solid var(--border-color, #e2e8f0)' }}>
+                        <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 600 }}>{fail.rowNumber}</td>
+                        <td style={{ padding: '8px 12px' }}>{fail.data?.fullName || '—'}</td>
+                        <td style={{ padding: '8px 12px' }}>{fail.data?.email || '—'}</td>
+                        <td style={{ padding: '8px 12px', color: 'var(--danger, #dc2626)' }}>
+                          {fail.errors.join('; ')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
-          {result && (
-            <div role="status" style={{ marginTop: 16 }}>
-              <strong>Hoàn tất nhập dữ liệu</strong>
-              <p>Dòng hợp lệ đã nhập thành công: {result.success}</p>
-              <p>Dòng có lỗi hoặc đã tồn tại đã bỏ qua: {result.skipped}</p>
-            </div>
-          )}
+          {/* Action buttons at finish */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end', paddingTop: 16, borderTop: '1px solid var(--border-color, #e2e8f0)' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleReset}
+              data-testid="btn-import-another"
+              aria-label="Nhập thêm tệp Excel khác"
+            >
+              Nhập thêm tệp khác
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => navigate('/admin/users')}
+              data-testid="btn-back-users"
+              aria-label="Quay lại danh sách người dùng"
+            >
+              Quay lại danh sách người dùng
+            </button>
+          </div>
         </div>
       )}
-    </section>
+    </div>
   );
-}
+};
+
+export default ExcelImportPage;

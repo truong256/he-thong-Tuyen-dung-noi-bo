@@ -26,6 +26,8 @@ dist/
 **/.vite/
 data/
 **/data/
+test-downloads/
+**/test-downloads/
 
 # User-specific files
 *.rsuser
