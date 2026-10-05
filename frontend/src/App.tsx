@@ -10,15 +10,19 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import UserManagementPage from './pages/UserManagementPage';
+import OrganizationManagementPage from './pages/OrganizationManagementPage';
+import JobTitleManagementPage from './pages/JobTitleManagementPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ExcelImportPage from './pages/ExcelImportPage';
+import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public authentication routes */}
+          {/* Các trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -26,7 +30,25 @@ export const App: React.FC = () => {
           <Route path="/403" element={<UnauthorizedPage statusCode={403} />} />
           <Route path="/401" element={<UnauthorizedPage statusCode={401} />} />
 
-          {/* Authenticated application layout */}
+          {/* Trang bắt buộc đổi mật khẩu lần đầu */}
+          <Route
+            path="/first-login/change-password"
+            element={
+              <ProtectedRoute>
+                <FirstLoginChangePasswordPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Xem thử frontend Excel khi chạy môi trường phát triển */}
+          {import.meta.env.DEV && (
+            <Route
+              path="/preview/import-excel"
+              element={<ExcelImportPage />}
+            />
+          )}
+
+          {/* Các trang yêu cầu đăng nhập */}
           <Route
             path="/"
             element={
@@ -35,11 +57,23 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route
+              index
+              element={<Navigate to="/dashboard" replace />}
+            />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="organization" element={<OrganizationManagementPage />} />
+            <Route path="job-titles" element={<JobTitleManagementPage />} />
+            <Route
+              path="admin/import-excel"
+              element={
+                <RoleGuard allowedRoles={['ADMIN']}>
+                  <ExcelImportPage />
+                </RoleGuard>
+              }
+            />
 
-            {/* Admin only route */}
             <Route
               path="admin/users"
               element={
@@ -48,9 +82,25 @@ export const App: React.FC = () => {
                 </RoleGuard>
               }
             />
+            <Route
+              path="admin/organization"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                  <OrganizationManagementPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="admin/job-titles"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                  <JobTitleManagementPage />
+                </RoleGuard>
+              }
+            />
           </Route>
 
-          {/* Fallback */}
+          {/* Trang không tìm thấy */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>

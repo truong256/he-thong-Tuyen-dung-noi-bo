@@ -9,13 +9,18 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const isSessionExpired =
+    Boolean((location.state as any)?.sessionExpired) ||
+    Boolean((location.state as any)?.passwordChanged) ||
+    (typeof window !== 'undefined' && sessionStorage.getItem('ats:session_expired') === '1');
+
   const redirectPath = (location.state as any)?.from?.pathname || '/dashboard';
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isSessionExpired) {
       navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, navigate, redirectPath]);
+  }, [isAuthenticated, isSessionExpired, navigate, redirectPath]);
 
   return (
     <main className="auth-split-viewport">

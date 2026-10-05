@@ -49,6 +49,22 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         filterChain.doFilter(request, response);
                         return;
                     }
+
+                    if (principal.isMustChangePassword()) {
+                        String uri = request.getRequestURI();
+                        boolean isAllowedFirstLoginPath = uri.equals("/api/auth/change-password")
+                                || uri.equals("/api/auth/logout")
+                                || uri.equals("/api/auth/me")
+                                || uri.equals("/api/auth/refresh-token");
+
+                        if (!isAllowedFirstLoginPath) {
+                            SecurityContextHolder.clearContext();
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":403,\"message\":\"Tài khoản bắt buộc phải đổi mật khẩu lần đầu trước khi tiếp tục.\",\"mustChangePassword\":true}");
+                            return;
+                        }
+                    }
                 }
 
                 if (userDetails == null || !userDetails.isEnabled() || !userDetails.isAccountNonLocked()

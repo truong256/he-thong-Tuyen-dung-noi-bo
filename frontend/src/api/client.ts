@@ -9,9 +9,24 @@ export const apiClient = axios.create({
   },
 });
 
+import { isIdleExpired, clearActivity } from '../utils/idleTracker';
+
 // Request interceptor to attach JWT access token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const url = config.url || '';
+    const isPublicAuthRoute =
+      url.includes('/api/auth/login') ||
+      url.includes('/api/auth/register') ||
+      url.includes('/api/auth/forgot-password') ||
+      url.includes('/api/auth/reset-password') ||
+      url.includes('/api/auth/logout');
+
+    if (!isPublicAuthRoute && isIdleExpired()) {
+      triggerIdleSessionExpired();
+      return Promise.reject(new axios.Cancel('Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.'));
+    }
+
     const token = localStorage.getItem('accessToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -44,19 +59,40 @@ let isSessionExpiredDispatched = false;
 export const resetSessionExpiredThrottle = () => {
   isSessionExpiredDispatched = false;
 };
-export const triggerSessionExpired = () => {
+
+export const triggerSessionExpired = (message?: string, reason?: string) => {
   if (isSessionExpiredDispatched) return;
   isSessionExpiredDispatched = true;
+
+  const noticeMessage = message || 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+
+  clearActivity();
   localStorage.removeItem('accessToken');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
+
   if (typeof window !== 'undefined') {
     sessionStorage.setItem('ats:session_expired', '1');
-    window.dispatchEvent(new CustomEvent('ats:session-expired'));
+    sessionStorage.setItem('ats:auth_notice', noticeMessage);
+    if (reason) {
+      sessionStorage.setItem('ats:session_expired_reason', reason);
+    }
+    window.dispatchEvent(
+      new CustomEvent('ats:session-expired', {
+        detail: { reason, message: noticeMessage },
+      })
+    );
   }
   setTimeout(() => {
     isSessionExpiredDispatched = false;
   }, 3000);
+};
+
+export const triggerIdleSessionExpired = () => {
+  triggerSessionExpired(
+    'Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.',
+    'idle'
+  );
 };
 
 // Response interceptor to handle token refresh and session expiration
@@ -81,6 +117,14 @@ apiClient.interceptors.response.use(
 
     // Only process 401 Unauthorized errors on protected requests
     if (status === 401 && originalRequest) {
+      // If idle expired, do not attempt to refresh - expire session immediately
+      if (isIdleExpired()) {
+        processQueue(error, null);
+        isRefreshing = false;
+        triggerIdleSessionExpired();
+        return Promise.reject(error);
+      }
+
       // If the failing request was the refresh-token endpoint itself, expire session immediately
       if (url.includes('/api/auth/refresh-token')) {
         processQueue(error, null);
@@ -153,6 +197,23 @@ apiClient.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    if (status === 403 && (error.response?.data as any)?.mustChangePassword) {
+      const currentUser = localStorage.getItem('user');
+      if (currentUser) {
+        try {
+          const u = JSON.parse(currentUser);
+          u.mustChangePassword = true;
+          localStorage.setItem('user', JSON.stringify(u));
+        } catch {
+          // Ignore invalid user storage JSON
+        }
+      }
+      if (typeof window !== 'undefined' && window.location.pathname !== '/first-login/change-password') {
+        window.location.href = '/first-login/change-password';
+      }
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);

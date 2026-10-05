@@ -10,9 +10,10 @@ const { PGlite } = require('@electric-sql/pglite');
 const migrations = new URL('../src/main/resources/db/migration/', import.meta.url);
 const db = new PGlite();
 try {
-  const files = (await readdir(migrations)).filter(file => file.endsWith('.sql')).sort();
+  const files = (await readdir(migrations)).filter(file => file.endsWith('.sql'))
+    .sort((a, b) => Number(a.match(/^V(\d+)/)[1]) - Number(b.match(/^V(\d+)/)[1]));
   for (const file of files) await db.exec(await readFile(new URL(file, migrations), 'utf8'));
-  console.log('PASS: V1-V8 migrations execute on PostgreSQL (PGlite)');
+  console.log(`PASS: ${files.length} migrations execute on PostgreSQL (PGlite)`);
 
   await db.exec(`
     INSERT INTO users (email, password) VALUES ('migration@example.test', 'test-only');

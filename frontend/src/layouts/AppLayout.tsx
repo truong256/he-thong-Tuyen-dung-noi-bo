@@ -16,9 +16,24 @@ export const AppLayout: React.FC = () => {
 
   // Listen for session expiration events from api client interceptor
   useEffect(() => {
-    const handleSessionExpired = () => {
+    const handleSessionExpired = (e?: any) => {
       setShowSessionExpired(false);
-      navigate('/login', { replace: true, state: { sessionExpired: true } });
+      const detailMessage = e?.detail?.message;
+      const detailReason = e?.detail?.reason;
+      const noticeMessage =
+        detailMessage ||
+        (detailReason === 'idle'
+          ? 'Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.'
+          : 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+
+      navigate('/login', {
+        replace: true,
+        state: {
+          sessionExpired: true,
+          reason: detailReason,
+          message: noticeMessage,
+        },
+      });
     };
 
     window.addEventListener('ats:session-expired', handleSessionExpired);

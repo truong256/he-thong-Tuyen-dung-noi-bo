@@ -41,6 +41,10 @@ public class JwtUtils {
     }
 
     public String generateAccessToken(String email, Set<String> roles, int tokenVersion) {
+        return generateAccessToken(email, roles, tokenVersion, false);
+    }
+
+    public String generateAccessToken(String email, Set<String> roles, int tokenVersion, boolean mustChangePassword) {
         List<String> roleList = roles != null ? new ArrayList<>(roles) : new ArrayList<>();
         String primaryRole = !roleList.isEmpty() ? roleList.get(0) : null;
 
@@ -50,10 +54,28 @@ public class JwtUtils {
                 .claim("roles", roleList)
                 .claim("role", primaryRole)
                 .claim("tokenVersion", tokenVersion)
+                .claim("mustChangePassword", mustChangePassword)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public Boolean getMustChangePasswordFromJwtToken(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            Object mcp = claims.get("mustChangePassword");
+            if (mcp instanceof Boolean) {
+                return (Boolean) mcp;
+            }
+            return false;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public Integer getTokenVersionFromJwtToken(String token) {

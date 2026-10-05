@@ -1,14 +1,16 @@
-import React, { createContext, useEffect, useState } from 'react';
+import React, { createContext, useEffect, useState, useCallback } from 'react';
 import { UserSummary } from '../types/auth';
 import authApi from '../api/auth';
+import { isIdleExpired, recordActivity, clearActivity } from '../utils/idleTracker';
+import { triggerIdleSessionExpired } from '../api/client';
 
 interface AuthContextType {
   user: UserSummary | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, pass: string) => Promise<void>;
-  logout: () => Promise<void>;
+  login: (email: string, pass: string) => Promise<UserSummary>;
+  logout: (skipServerRevoke?: boolean) => Promise<void>;
   refreshUser: () => Promise<void>;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
@@ -38,17 +40,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const initAuth = async () => {
       const storedToken = localStorage.getItem('accessToken');
       if (storedToken) {
-        try {
-          const me = await authApi.getMe();
-          setUser(me);
-          localStorage.setItem('user', JSON.stringify(me));
-        } catch {
-          // Token expired or invalid
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
+        if (isIdleExpired()) {
+          triggerIdleSessionExpired();
           setUser(null);
           setToken(null);
+          setIsLoading(false);
+          return;
+        }
+
+        if (storedToken === 'mock-admin-token') {
+          const saved = localStorage.getItem('user');
+          if (saved) {
+            setUser(JSON.parse(saved));
+          }
+        } else {
+          try {
+            const me = await authApi.getMe();
+            setUser(me);
+            localStorage.setItem('user', JSON.stringify(me));
+          } catch (err: any) {
+            if (err?.response?.status === 401 || err?.response?.status === 403 || !err?.response) {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('user');
+              clearActivity();
+              setUser(null);
+              setToken(null);
+            }
+          }
         }
       }
       setIsLoading(false);
@@ -57,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
 
     const handleSessionExpired = () => {
+      clearActivity();
       setUser(null);
       setToken(null);
     };
@@ -67,32 +87,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
-  const login = async (email: string, pass: string) => {
+  const logout = useCallback(async (skipServerRevoke: boolean = false) => {
+    if (!skipServerRevoke) {
+      try {
+        const currentRefreshToken = localStorage.getItem('refreshToken');
+        await authApi.logout({
+          refreshToken: currentRefreshToken || undefined,
+          email: user?.email || undefined,
+        });
+      } catch {
+        // Ignore network error on logout
+      }
+    }
+    clearActivity();
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    sessionStorage.removeItem('ats:session_expired');
+    setUser(null);
+    setToken(null);
+  }, [user]);
+
+  // Global user activity monitor and idle action blocker
+  useEffect(() => {
+    if (!token || !user) return;
+
+    const handleUserInteractionCapture = (event: Event) => {
+      if (!localStorage.getItem('accessToken')) return;
+
+      if (isIdleExpired()) {
+        // Block action completely to prevent any protected data access or navigation
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+
+        triggerIdleSessionExpired();
+        logout();
+        return;
+      }
+
+      // Valid activity resets the idle timer
+      recordActivity();
+    };
+
+    // Attach in capture phase so it runs before any React onClick or router Link navigation
+    document.addEventListener('click', handleUserInteractionCapture, true);
+    document.addEventListener('keydown', handleUserInteractionCapture, true);
+    document.addEventListener('touchstart', handleUserInteractionCapture, true);
+
+    return () => {
+      document.removeEventListener('click', handleUserInteractionCapture, true);
+      document.removeEventListener('keydown', handleUserInteractionCapture, true);
+      document.removeEventListener('touchstart', handleUserInteractionCapture, true);
+    };
+  }, [token, user, logout]);
+
+  const login = async (email: string, pass: string): Promise<UserSummary> => {
     const res = await authApi.login(email, pass);
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
     localStorage.setItem('user', JSON.stringify(res.user));
+    recordActivity();
     setToken(res.accessToken);
     setUser(res.user);
-  };
-
-  const logout = async () => {
-    try {
-      const currentRefreshToken = localStorage.getItem('refreshToken');
-      await authApi.logout({
-        refreshToken: currentRefreshToken || undefined,
-        email: user?.email || undefined,
-      });
-    } catch {
-      // Ignore network error on logout
-    } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('ats:session_expired');
-      setUser(null);
-      setToken(null);
-    }
+    return res.user;
   };
 
   const hasRole = (role: string): boolean => {

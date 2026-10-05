@@ -20,6 +20,9 @@ export interface UserSummary {
   lockedAt?: string;
   lockedBy?: string;
   handoverWarnings?: string[];
+  mustChangePassword?: boolean;
+  avatarUrl?: string;
+  avatarThumbnailUrl?: string;
 }
 
 export interface LoginResponse {
@@ -27,6 +30,7 @@ export interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   user: UserSummary;
+  mustChangePassword?: boolean;
 }
 
 export interface ApiError {

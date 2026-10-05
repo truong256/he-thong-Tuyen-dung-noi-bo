@@ -137,7 +137,9 @@ public class AuthService {
         }
 
         Set<String> roleNames = extractRoleNames(user);
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
+        String accessToken = user.isMustChangePassword()
+                ? jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion(), true)
+                : jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
         RefreshToken refreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
@@ -149,13 +151,18 @@ public class AuthService {
                 roleNames,
                 user.getStatus()
         );
+        userSummary.setMustChangePassword(user.isMustChangePassword());
+        userSummary.setAvatarUrl(user.getAvatarUrl());
+        userSummary.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
 
-        return new LoginResponse(
+        LoginResponse loginResponse = new LoginResponse(
                 "Đăng nhập thành công!",
                 accessToken,
                 refreshToken.getToken(),
                 userSummary
         );
+        loginResponse.setMustChangePassword(user.isMustChangePassword());
+        return loginResponse;
     }
 
     public User authenticate(String username, String password) {
@@ -240,6 +247,10 @@ public class AuthService {
                 user.getStatus()
         );
 
+        userSummary.setMustChangePassword(user.isMustChangePassword());
+        userSummary.setAvatarUrl(user.getAvatarUrl());
+        userSummary.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
+
         return new LoginResponse("Đăng ký thành công!", accessToken, refreshToken.getToken(), userSummary);
     }
 
@@ -273,7 +284,9 @@ public class AuthService {
 
         // Issue new token pair
         Set<String> roleNames = extractRoleNames(user);
-        String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
+        String newAccessToken = user.isMustChangePassword()
+                ? jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion(), true)
+                : jwtUtils.generateAccessToken(user.getEmail(), roleNames, user.getTokenVersion());
         RefreshToken newRefreshToken = createRefreshToken(user);
 
         UserSummaryDto userSummary = new UserSummaryDto(
@@ -285,8 +298,13 @@ public class AuthService {
                 roleNames,
                 user.getStatus()
         );
+        userSummary.setMustChangePassword(user.isMustChangePassword());
+        userSummary.setAvatarUrl(user.getAvatarUrl());
+        userSummary.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
 
-        return new LoginResponse("Làm mới token thành công!", newAccessToken, newRefreshToken.getToken(), userSummary);
+        LoginResponse loginResponse = new LoginResponse("Làm mới token thành công!", newAccessToken, newRefreshToken.getToken(), userSummary);
+        loginResponse.setMustChangePassword(user.isMustChangePassword());
+        return loginResponse;
     }
 
     @Transactional
@@ -453,11 +471,16 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Tài khoản chưa được kích hoạt hoặc đã bị khóa.");
         }
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new BadRequestException("Mật khẩu hiện tại không chính xác.");
+        if (request.getCurrentPassword() != null && !request.getCurrentPassword().isBlank()) {
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+                throw new BadRequestException("Mật khẩu hiện tại không chính xác.");
+            }
+        } else if (!user.isMustChangePassword()) {
+            throw new BadRequestException("Mật khẩu hiện tại không được để trống.");
         }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        user.setMustChangePassword(false);
         user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
 
@@ -499,7 +522,7 @@ public class AuthService {
                 .or(() -> userRepository.findByUsername(email))
                 .orElseThrow(() -> new ResourceNotFoundException("Người dùng không tồn tại."));
 
-        return new UserSummaryDto(
+        UserSummaryDto dto = new UserSummaryDto(
                 user.getId(),
                 user.getEmail(),
                 user.getFullName(),
@@ -509,6 +532,10 @@ public class AuthService {
                 extractRoleNames(user),
                 user.getStatus()
         );
+        dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setAvatarUrl(user.getAvatarUrl());
+        dto.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
+        return dto;
     }
 
     @Transactional
@@ -527,7 +554,7 @@ public class AuthService {
         user.setUpdatedAt(Instant.now());
         User saved = userRepository.saveAndFlush(user);
 
-        return new UserSummaryDto(
+        UserSummaryDto dto = new UserSummaryDto(
                 saved.getId(),
                 saved.getEmail(),
                 saved.getFullName(),
@@ -537,6 +564,10 @@ public class AuthService {
                 extractRoleNames(saved),
                 saved.getStatus()
         );
+        dto.setMustChangePassword(saved.isMustChangePassword());
+        dto.setAvatarUrl(saved.getAvatarUrl());
+        dto.setAvatarThumbnailUrl(saved.getAvatarThumbnailUrl());
+        return dto;
     }
 
     @Transactional

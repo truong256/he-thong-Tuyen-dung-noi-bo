@@ -135,6 +135,7 @@ public class AdminUserService {
         user.setFullName(request.getFullName() != null ? request.getFullName().trim() : "");
         user.setDepartment(request.getDepartment() != null ? request.getDepartment().trim() : null);
         user.setStatus(request.getStatus() != null ? request.getStatus().toUpperCase() : "ACTIVE");
+        user.setMustChangePassword(true);
 
         Set<Role> roles = resolveRoles(request.getRoles());
         user.setRoles(roles);
@@ -150,7 +151,9 @@ public class AdminUserService {
                     "Không thể kết nối đến máy chủ email để gửi thông tin kích hoạt.", e);
         }
 
-        return mapToSummary(saved);
+        UserSummaryDto dto = mapToSummary(saved);
+        dto.setTemporaryPassword(rawPassword);
+        return dto;
     }
 
     @Transactional
@@ -365,6 +368,34 @@ public class AdminUserService {
         dto.setLockNote(user.getLockNote());
         dto.setLockedAt(user.getLockedAt());
         dto.setLockedBy(user.getLockedBy());
+        dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setAvatarUrl(user.getAvatarUrl());
+        dto.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
+        return dto;
+    }
+
+    @Transactional
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
+    public UserSummaryDto resetUserPasswordByAdmin(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+
+        String rawPassword = generateTemporaryPassword();
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setMustChangePassword(true);
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        User saved = userRepository.save(user);
+
+        refreshTokenRepository.revokeAllByUser(user);
+
+        try {
+            mailService.sendAccountActivationEmail(user.getEmail(), rawPassword);
+        } catch (Exception e) {
+            logger.error("Gửi email cấp lại mật khẩu cho {} thất bại: {}", user.getEmail(), e.getMessage());
+        }
+
+        UserSummaryDto dto = mapToSummary(saved);
+        dto.setTemporaryPassword(rawPassword);
         return dto;
     }
 }

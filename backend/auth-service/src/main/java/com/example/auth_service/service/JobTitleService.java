@@ -1,0 +1,200 @@
+package com.example.auth_service.service;
+
+import com.example.auth_service.domain.sprint2.Department;
+import com.example.auth_service.domain.sprint2.JobTitle;
+import com.example.auth_service.dto.JobTitleRequest;
+import com.example.auth_service.dto.JobTitleResponse;
+import com.example.auth_service.exception.ConflictException;
+import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.auth_service.repository.DepartmentRepository;
+import com.example.auth_service.repository.JobTitleRepository;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
+import java.util.*;
+
+@Service
+@Transactional
+public class JobTitleService {
+
+    private final JobTitleRepository repository;
+    private final DepartmentRepository departmentRepository;
+
+    public JobTitleService(JobTitleRepository repository, DepartmentRepository departmentRepository) {
+        this.repository = repository;
+        this.departmentRepository = departmentRepository;
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('CATALOG_READ')")
+    public List<JobTitleResponse> list(String search, Boolean active, Long departmentId) {
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        List<JobTitle> list = repository.searchJobTitles(cleanSearch, active, departmentId);
+        return list.stream().map(this::toResponse).toList();
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('CATALOG_READ')")
+    public JobTitleResponse get(Long id) {
+        JobTitle jobTitle = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
+        return toResponse(jobTitle);
+    }
+
+    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    public JobTitleResponse create(JobTitleRequest request) {
+        String cleanCode = request.code().trim().toUpperCase();
+        String cleanTitle = request.title().trim();
+
+        if (repository.existsByCodeIgnoreCase(cleanCode)) {
+            throw new ConflictException("Mã chức danh đã tồn tại: " + cleanCode);
+        }
+        if (repository.existsByTitleIgnoreCase(cleanTitle)) {
+            throw new ConflictException("Tên chức danh đã tồn tại: " + cleanTitle);
+        }
+
+        Department department = null;
+        if (request.departmentId() != null) {
+            department = departmentRepository.findById(request.departmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ban với ID: " + request.departmentId()));
+        }
+
+        JobTitle jobTitle = new JobTitle();
+        jobTitle.setTitle(cleanTitle);
+        jobTitle.setCode(cleanCode);
+        jobTitle.setDepartment(department);
+        jobTitle.setLevel(request.level() != null ? request.level().trim() : "MIDDLE");
+        jobTitle.setJobFamily(request.jobFamily() != null ? request.jobFamily().trim() : "TECH");
+        jobTitle.setMinSalary(request.minSalary());
+        jobTitle.setMaxSalary(request.maxSalary());
+        jobTitle.setJobDescription(request.jobDescription());
+        jobTitle.setKeyResponsibilities(joinList(request.keyResponsibilities()));
+        jobTitle.setRequirements(joinList(request.requirements()));
+        jobTitle.setCompetencies(joinList(request.competencies()));
+        jobTitle.setStandardHeadcount(request.standardHeadcount() != null ? request.standardHeadcount() : 1);
+        jobTitle.setCurrentHeadcount(request.currentHeadcount() != null ? request.currentHeadcount() : 0);
+        jobTitle.setActive(request.active() != null ? request.active() : true);
+        jobTitle.setCreatedAt(Instant.now());
+        jobTitle.setUpdatedAt(Instant.now());
+
+        JobTitle saved = repository.save(jobTitle);
+        return toResponse(saved);
+    }
+
+    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    public JobTitleResponse update(Long id, JobTitleRequest request) {
+        JobTitle jobTitle = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
+
+        String cleanCode = request.code().trim().toUpperCase();
+        String cleanTitle = request.title().trim();
+
+        if (repository.existsByCodeIgnoreCaseAndIdNot(cleanCode, id)) {
+            throw new ConflictException("Mã chức danh đã tồn tại: " + cleanCode);
+        }
+        if (repository.existsByTitleIgnoreCaseAndIdNot(cleanTitle, id)) {
+            throw new ConflictException("Tên chức danh đã tồn tại: " + cleanTitle);
+        }
+
+        Department department = null;
+        if (request.departmentId() != null) {
+            department = departmentRepository.findById(request.departmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ban với ID: " + request.departmentId()));
+        }
+
+        jobTitle.setTitle(cleanTitle);
+        jobTitle.setCode(cleanCode);
+        jobTitle.setDepartment(department);
+        if (request.level() != null) jobTitle.setLevel(request.level().trim());
+        if (request.jobFamily() != null) jobTitle.setJobFamily(request.jobFamily().trim());
+        jobTitle.setMinSalary(request.minSalary());
+        jobTitle.setMaxSalary(request.maxSalary());
+        jobTitle.setJobDescription(request.jobDescription());
+        if (request.keyResponsibilities() != null) jobTitle.setKeyResponsibilities(joinList(request.keyResponsibilities()));
+        if (request.requirements() != null) jobTitle.setRequirements(joinList(request.requirements()));
+        if (request.competencies() != null) jobTitle.setCompetencies(joinList(request.competencies()));
+        if (request.standardHeadcount() != null) jobTitle.setStandardHeadcount(request.standardHeadcount());
+        if (request.currentHeadcount() != null) jobTitle.setCurrentHeadcount(request.currentHeadcount());
+        if (request.active() != null) jobTitle.setActive(request.active());
+        jobTitle.setUpdatedAt(Instant.now());
+
+        JobTitle saved = repository.save(jobTitle);
+        return toResponse(saved);
+    }
+
+    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    public JobTitleResponse setActive(Long id, boolean active) {
+        JobTitle jobTitle = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
+        jobTitle.setActive(active);
+        jobTitle.setUpdatedAt(Instant.now());
+        return toResponse(repository.save(jobTitle));
+    }
+
+    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    public void delete(Long id) {
+        JobTitle jobTitle = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
+        repository.delete(jobTitle);
+    }
+
+    private JobTitleResponse toResponse(JobTitle j) {
+        String salaryRangeDisplay = formatSalary(j.getMinSalary(), j.getMaxSalary());
+        Long deptId = j.getDepartment() != null ? j.getDepartment().getId() : null;
+        String deptName = j.getDepartment() != null ? j.getDepartment().getName() : null;
+
+        return new JobTitleResponse(
+                j.getId(),
+                j.getTitle(),
+                j.getCode(),
+                deptId,
+                deptName,
+                j.getLevel(),
+                j.getJobFamily(),
+                j.getMinSalary(),
+                j.getMaxSalary(),
+                salaryRangeDisplay,
+                j.getJobDescription(),
+                splitList(j.getKeyResponsibilities()),
+                splitList(j.getRequirements()),
+                splitList(j.getCompetencies()),
+                j.getStandardHeadcount(),
+                j.getCurrentHeadcount(),
+                0,
+                j.getActive(),
+                j.getCreatedAt(),
+                j.getUpdatedAt()
+        );
+    }
+
+    private String formatSalary(Long min, Long max) {
+        if (min == null && max == null) return "Thỏa thuận";
+        if (min != null && max != null) {
+            long minMillion = min / 1_000_000;
+            long maxMillion = max / 1_000_000;
+            return minMillion + " - " + maxMillion + " triệu VNĐ";
+        }
+        if (min != null) return "Từ " + (min / 1_000_000) + " triệu VNĐ";
+        return "Lên đến " + (max / 1_000_000) + " triệu VNĐ";
+    }
+
+    private String joinList(List<String> list) {
+        if (list == null || list.isEmpty()) return null;
+        return String.join(";\n", list);
+    }
+
+    private List<String> splitList(String text) {
+        if (text == null || text.trim().isEmpty()) return Collections.emptyList();
+        String[] parts = text.split(";\\s*\\n|;\\s*");
+        List<String> result = new ArrayList<>();
+        for (String p : parts) {
+            String trimmed = p.trim();
+            if (!trimmed.isEmpty()) {
+                result.add(trimmed);
+            }
+        }
+        return result;
+    }
+}

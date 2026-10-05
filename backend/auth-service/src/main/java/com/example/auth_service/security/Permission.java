@@ -2,6 +2,7 @@ package com.example.auth_service.security;
 
 /** Explicit permissions; adding a permission never grants it to a role automatically. */
 public enum Permission {
+    DEPARTMENT_MANAGE,
     PROFILE_READ, PROFILE_UPDATE,
     USER_READ, USER_MANAGE, ROLE_READ, ROLE_MANAGE, AUDIT_READ,
     CATALOG_READ, CATALOG_MANAGE, SALARY_READ, SALARY_MANAGE,
