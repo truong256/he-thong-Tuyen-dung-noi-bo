@@ -139,7 +139,7 @@ test.describe('Dashboard and User Management Polish Verification', () => {
     if (width >= 1024) {
       const tableRoleTags = await page.locator('.custom-table .role-tags .tag').allInnerTexts();
       expect(tableRoleTags.length).toBeGreaterThan(0);
-      expect(tableRoleTags).toContain('Quản trị viên');
+      expect(tableRoleTags).toContain('Chuyên viên tuyển dụng');
       // No raw role codes
       expect(tableRoleTags).not.toContain('ADMIN');
       expect(tableRoleTags).not.toContain('RECRUITER');
@@ -147,7 +147,7 @@ test.describe('Dashboard and User Management Polish Verification', () => {
     } else {
       const mobileRoleTags = await page.locator('.mobile-card-roles .role-tags .tag').allInnerTexts();
       expect(mobileRoleTags.length).toBeGreaterThan(0);
-      expect(mobileRoleTags).toContain('Quản trị viên');
+      expect(mobileRoleTags).toContain('Chuyên viên tuyển dụng');
       expect(mobileRoleTags).not.toContain('ADMIN');
     }
 

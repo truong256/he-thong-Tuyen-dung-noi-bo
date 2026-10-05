@@ -18,22 +18,29 @@ public class UserPrincipal implements UserDetails {
     private final String status;
     private final int tokenVersion;
     private boolean accountNonLocked = true;
+    private final boolean mustChangePassword;
     private final Collection<? extends GrantedAuthority> authorities;
 
     public UserPrincipal(Long id, String email, String fullName, String password, String status,
-                         int tokenVersion, Collection<? extends GrantedAuthority> authorities) {
+                         int tokenVersion, boolean mustChangePassword, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.email = email;
         this.fullName = fullName;
         this.password = password;
         this.status = status;
         this.tokenVersion = tokenVersion;
+        this.mustChangePassword = mustChangePassword;
         this.authorities = authorities;
     }
 
     public UserPrincipal(Long id, String email, String fullName, String password, String status,
+                         int tokenVersion, Collection<? extends GrantedAuthority> authorities) {
+        this(id, email, fullName, password, status, tokenVersion, false, authorities);
+    }
+
+    public UserPrincipal(Long id, String email, String fullName, String password, String status,
                          Collection<? extends GrantedAuthority> authorities) {
-        this(id, email, fullName, password, status, 1, authorities);
+        this(id, email, fullName, password, status, 1, false, authorities);
     }
 
     public static UserPrincipal create(User user) {
@@ -59,6 +66,7 @@ public class UserPrincipal implements UserDetails {
                 user.getPassword(),
                 user.getStatus(),
                 user.getTokenVersion(),
+                user.isMustChangePassword(),
                 authorities
         );
         principal.accountNonLocked = user.isAccountNonLocked();
@@ -70,6 +78,7 @@ public class UserPrincipal implements UserDetails {
     public String getFullName() { return fullName; }
     public String getStatus() { return status; }
     public int getTokenVersion() { return tokenVersion; }
+    public boolean isMustChangePassword() { return mustChangePassword; }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
