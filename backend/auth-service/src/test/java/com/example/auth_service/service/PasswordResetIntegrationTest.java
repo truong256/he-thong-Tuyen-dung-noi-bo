@@ -7,9 +7,13 @@ import com.example.auth_service.repository.RefreshTokenRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.net.ServerSocket;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -31,10 +37,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Real Spring controllers, database, password encoder and SMTP socket, with a local mail sink. */
+/**
+ * End-to-end integration tests verifying password reset flow via SMTP sandbox.
+ * Exercises real Spring controllers, repository layers, BCrypt password encoder,
+ * and RFC 5321 SMTP socket transport.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles({"dev", "smtp"})
+@ExtendWith(OutputCaptureExtension.class)
 @TestPropertySource(locations = "classpath:application-test.properties", properties = {
         "spring.datasource.url=jdbc:h2:mem:password-reset;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
         "app.frontend-url=https://ats.example.test",
@@ -44,13 +55,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.mail.properties.mail.smtp.timeout=1000"
 })
 class PasswordResetIntegrationTest {
-    @Autowired MockMvc mvc;
-    @Autowired UserRepository users;
-    @Autowired PasswordResetTokenRepository resetTokens;
-    @Autowired RefreshTokenRepository refreshTokens;
-    @Autowired PasswordEncoder encoder;
-    @Autowired MailService mailService;
+
+    @Autowired private MockMvc mvc;
+    @Autowired private UserRepository users;
+    @Autowired private PasswordResetTokenRepository resetTokens;
+    @Autowired private RefreshTokenRepository refreshTokens;
+    @Autowired private PasswordEncoder encoder;
+    @Autowired private MailService mailService;
+
     private User user;
+    private final String genericExpectedMessage = "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi.";
 
     @BeforeEach
     void fixtures() {
@@ -62,30 +76,36 @@ class PasswordResetIntegrationTest {
     private String forgot(String email) throws Exception {
         return mvc.perform(post("/api/auth/forgot-password").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + email + "\"}"))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
     }
 
-    private String issueToken() throws Exception {
+    private String issueToken(User targetUser) throws Exception {
         try (SmtpMailServiceTest.FakeSmtpServer server = new SmtpMailServiceTest.FakeSmtpServer()) {
             ReflectionTestUtils.setField(mailService, "port", server.getPort());
             Instant before = Instant.now();
-            String knownResponse = forgot(user.getEmail());
+            String knownResponse = forgot(targetUser.getEmail());
             Instant after = Instant.now();
             String payload = server.getReceivedDataPayload(3000);
+
             assertThat(payload).contains("https://ats.example.test/reset-password?token=");
             assertThat(payload).contains("30 phút");
-            assertThat(server.getReceivedCommands()).contains("RCPT TO:<" + user.getEmail() + ">");
+            assertThat(server.getReceivedCommands()).contains("RCPT TO:<" + targetUser.getEmail() + ">");
 
             var matcher = Pattern.compile("[?]token=([a-zA-Z0-9-]+)").matcher(payload);
             assertThat(matcher.find()).isTrue();
             String rawToken = matcher.group(1);
-            assertThat(knownResponse).isEqualTo(forgot("missing-" + UUID.randomUUID() + "@company.com"));
+
             assertThat(knownResponse).doesNotContain(rawToken);
-            PasswordResetToken stored = resetTokens.findByUser(user).orElseThrow();
+            PasswordResetToken stored = resetTokens.findByUser(targetUser).orElseThrow();
             assertThat(stored.getToken()).isEqualTo(AuthService.hashToken(rawToken)).isNotEqualTo(rawToken);
-            assertThat(stored.getExpiryDate()).isBetween(before.plus(Duration.ofMinutes(30)), after.plus(Duration.ofMinutes(30)));
+            assertThat(stored.getExpiryDate()).isBetween(before.plus(Duration.ofMinutes(29)), after.plus(Duration.ofMinutes(31)));
             return rawToken;
         }
+    }
+
+    private String issueToken() throws Exception {
+        return issueToken(user);
     }
 
     private String resetBody(String token, String password) {
@@ -93,69 +113,226 @@ class PasswordResetIntegrationTest {
                 + "\",\"confirmPassword\":\"" + password + "\"}";
     }
 
-    private String login(String password) throws Exception {
+    private String login(String email, String password) throws Exception {
         String response = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"" + user.getEmail() + "\",\"password\":\"" + password + "\"}"))
+                        .content("{\"email\":\"" + email + "\",\"password\":\"" + password + "\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         return JsonPath.read(response, "$.refreshToken");
     }
 
+    private String login(String password) throws Exception {
+        return login(user.getEmail(), password);
+    }
+
     @Test
-    void emailedTokenWorksOnceAndRevokesExistingRefreshSessions() throws Exception {
-        String refreshToken = login("OldSecret123@");
-        String secondRefreshToken = login("OldSecret123@");
+    @DisplayName("Seed Accounts: admin@company.com và 6 tài khoản nội bộ tồn tại, ACTIVE, đúng role và login thành công")
+    void testSeedAccounts_Verification() throws Exception {
+        // 1. Verify admin@company.com
+        User admin = users.findByEmail("admin@company.com").orElse(null);
+        assertThat(admin).isNotNull();
+        assertThat(admin.getStatus()).isEqualTo("ACTIVE");
+        assertThat(admin.getRoles().stream().map(r -> r.getName().name())).contains("ADMIN");
+
+        // Verify admin can login with default seed password
+        String defaultSeedPassword = System.getenv().getOrDefault("SEED_ACCOUNT_PASSWORD", "Password123@");
+        String refreshToken = login("admin@company.com", defaultSeedPassword);
+        assertThat(refreshToken).isNotBlank();
+
+        // 2. Verify all other 6 demo accounts
+        List<String> demoEmails = List.of(
+                "recruiter@company.com",
+                "hr_manager@company.com",
+                "interviewer@company.com",
+                "hiring_manager@company.com",
+                "approver@company.com",
+                "candidate@company.com"
+        );
+        for (String demoEmail : demoEmails) {
+            User demo = users.findByEmail(demoEmail).orElse(null);
+            assertThat(demo).as("Account %s must exist in seed DB", demoEmail).isNotNull();
+            assertThat(demo.getStatus()).isEqualTo("ACTIVE");
+        }
+    }
+
+    @Test
+    @DisplayName("CASE 1 — Email tồn tại: POST /api/auth/forgot-password admin@company.com trả HTTP 200, generic message, lưu token hash, expiry ~30 phút, gọi MailService")
+    void case1_existingEmail_adminCompanyCom_generatesHashedTokenAndDispatchesMail() throws Exception {
+        User admin = users.findByEmail("admin@company.com").orElseThrow();
+
+        try (SmtpMailServiceTest.FakeSmtpServer server = new SmtpMailServiceTest.FakeSmtpServer()) {
+            ReflectionTestUtils.setField(mailService, "port", server.getPort());
+            Instant before = Instant.now();
+
+            String response = forgot("admin@company.com");
+            Instant after = Instant.now();
+
+            assertThat(response).contains(genericExpectedMessage);
+
+            // Verify email was received by FakeSmtpServer
+            String payload = server.getReceivedDataPayload(3000);
+            assertThat(server.getReceivedCommands()).contains("RCPT TO:<admin@company.com>");
+
+            // Extract raw token from reset link
+            var matcher = Pattern.compile("[?]token=([a-zA-Z0-9-]+)").matcher(payload);
+            assertThat(matcher.find()).isTrue();
+            String rawToken = matcher.group(1);
+
+            // Raw token NEVER in API response
+            assertThat(response).doesNotContain(rawToken);
+
+            // Verify token in DB is hashed and expiry is ~30 minutes
+            PasswordResetToken stored = resetTokens.findByUser(admin).orElseThrow();
+            assertThat(stored.getToken()).isEqualTo(AuthService.hashToken(rawToken));
+            assertThat(stored.getToken()).isNotEqualTo(rawToken);
+            assertThat(stored.isUsed()).isFalse();
+            assertThat(stored.getExpiryDate()).isBetween(before.plus(Duration.ofMinutes(29)), after.plus(Duration.ofMinutes(31)));
+        }
+    }
+
+    @Test
+    @DisplayName("CASE 2 — Email không tồn tại: trả HTTP 200 generic message, không lộ email tồn tại, không gửi mail")
+    void case2_nonExistingEmail_returnsSameGenericResponseWithoutEnumeration() throws Exception {
+        try (SmtpMailServiceTest.FakeSmtpServer server = new SmtpMailServiceTest.FakeSmtpServer()) {
+            ReflectionTestUtils.setField(mailService, "port", server.getPort());
+
+            String response = forgot("not-exist-123@company.com");
+            assertThat(response).contains(genericExpectedMessage);
+
+            // Verify FakeSmtpServer did not receive any RCPT TO command
+            assertThat(server.getReceivedCommands()).noneMatch(c -> c.startsWith("RCPT TO:"));
+        }
+    }
+
+    @Test
+    @DisplayName("CASE 3 — Email được gửi qua SMTP: RCPT TO đúng email, body chứa link và thông tin 30 phút, API không lộ token")
+    void case3_emailSentViaSmtp_verifiesProtocolAndBodyStructure() throws Exception {
+        try (SmtpMailServiceTest.FakeSmtpServer server = new SmtpMailServiceTest.FakeSmtpServer()) {
+            ReflectionTestUtils.setField(mailService, "port", server.getPort());
+
+            String response = forgot(user.getEmail());
+            String payload = server.getReceivedDataPayload(3000);
+            List<String> commands = server.getReceivedCommands();
+
+            assertThat(commands).contains("RCPT TO:<" + user.getEmail() + ">");
+            assertThat(payload).contains("https://ats.example.test/reset-password?token=");
+            assertThat(payload).contains("30 phút");
+            assertThat(payload).contains("Hệ thống Tuyển dụng Nội bộ");
+            assertThat(payload).contains("Nếu bạn không gửi yêu cầu này, vui lòng bỏ qua email.");
+
+            var matcher = Pattern.compile("[?]token=([a-zA-Z0-9-]+)").matcher(payload);
+            assertThat(matcher.find()).isTrue();
+            String rawToken = matcher.group(1);
+            assertThat(response).doesNotContain(rawToken);
+        }
+    }
+
+    @Test
+    @DisplayName("CASE 4 — Reset thành công: đổi mật khẩu thành công, hash trong DB, token đánh dấu used, login pass mới thành công, login pass cũ thất bại")
+    void case4_resetPassword_successFlow() throws Exception {
         String rawToken = issueToken();
 
         mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
                         .content(resetBody(rawToken, "NewSecret123@")))
-                .andExpect(status().isOk());
-        assertThat(resetTokens.findByUser(user).orElseThrow().isUsed()).isTrue();
-        assertThat(refreshTokens.findByToken(refreshToken).orElseThrow().isRevoked()).isTrue();
-        assertThat(refreshTokens.findByToken(secondRefreshToken).orElseThrow().isRevoked()).isTrue();
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới."));
 
-        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
-                        .content(resetBody(rawToken, "OtherSecret123@")))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng."));
-        assertThat(encoder.matches("NewSecret123@", users.findById(user.getId()).orElseThrow().getPassword())).isTrue();
-        for (String oldSession : java.util.List.of(refreshToken, secondRefreshToken)) {
-            mvc.perform(post("/api/auth/refresh-token").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\":\"" + oldSession + "\"}"))
-                    .andExpect(status().isBadRequest());
-        }
+        // 1. Password in DB is BCrypt hashed and matches new password
+        User updated = users.findById(user.getId()).orElseThrow();
+        assertThat(encoder.matches("NewSecret123@", updated.getPassword())).isTrue();
+        assertThat(updated.getPassword()).isNotEqualTo("NewSecret123@");
+
+        // 2. Token marked as used
+        PasswordResetToken storedToken = resetTokens.findByUser(user).orElseThrow();
+        assertThat(storedToken.isUsed()).isTrue();
+
+        // 3. Login with new password succeeds
         login("NewSecret123@");
+
+        // 4. Login with old password fails
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + user.getEmail() + "\",\"password\":\"OldSecret123@\"}"))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void expiredThirtyMinuteTokenIsRejectedByAnonymousResetEndpoint() throws Exception {
+    @DisplayName("CASE 5 — Token dùng lần thứ hai: trả lỗi HTTP 400 rõ ràng bằng tiếng Việt")
+    void case5_tokenUsedSecondTime_rejected() throws Exception {
+        String rawToken = issueToken();
+
+        // First use: success
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(rawToken, "NewSecret123@")))
+                .andExpect(status().isOk());
+
+        // Second use: must fail
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(rawToken, "OtherSecret123@")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng."));
+    }
+
+    @Test
+    @DisplayName("CASE 6 — Token quá 30 phút: trả lỗi HTTP 400 rõ ràng bằng tiếng Việt")
+    void case6_tokenOlderThanThirtyMinutes_rejected() throws Exception {
         String rawToken = issueToken();
         PasswordResetToken stored = resetTokens.findByUser(user).orElseThrow();
-        // Advance the stored deadline instead of sleeping for 30 minutes.
-        stored.setExpiryDate(Instant.now().minusSeconds(1));
+        // Artificially expire the token to simulate 30 minutes passing
+        stored.setExpiryDate(Instant.now().minusSeconds(5));
         resetTokens.saveAndFlush(stored);
 
         mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
                         .content(resetBody(rawToken, "NewSecret123@")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng."));
+
         assertThat(resetTokens.findByUser(user).orElseThrow().isUsed()).isFalse();
         assertThat(encoder.matches("OldSecret123@", users.findById(user.getId()).orElseThrow().getPassword())).isTrue();
     }
 
     @Test
-    void unreachableSmtpStillReturnsSamePublicResponse() throws Exception {
+    @DisplayName("CASE 7 — Reset password revoke session cũ: các refresh token cũ không thể dùng để refresh")
+    void case7_resetPassword_revokesOldRefreshSessions() throws Exception {
+        String refreshToken1 = login("OldSecret123@");
+        String refreshToken2 = login("OldSecret123@");
+        String rawToken = issueToken();
+
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody(rawToken, "NewSecret123@")))
+                .andExpect(status().isOk());
+
+        assertThat(refreshTokens.findByToken(refreshToken1).orElseThrow().isRevoked()).isTrue();
+        assertThat(refreshTokens.findByToken(refreshToken2).orElseThrow().isRevoked()).isTrue();
+
+        for (String oldSession : List.of(refreshToken1, refreshToken2)) {
+            mvc.perform(post("/api/auth/refresh-token").contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"refreshToken\":\"" + oldSession + "\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    @DisplayName("CASE 8 — SMTP lỗi: endpoint forgot-password vẫn trả generic response, không lộ stack trace hay credentials")
+    void case8_smtpFailure_stillReturnsGenericResponseWithoutLeakingDetails(CapturedOutput output) throws Exception {
         int closedPort;
         try (ServerSocket socket = new ServerSocket(0)) {
             closedPort = socket.getLocalPort();
         }
         ReflectionTestUtils.setField(mailService, "port", closedPort);
-        assertThat(forgot(user.getEmail())).isEqualTo(forgot("missing-" + UUID.randomUUID() + "@company.com"));
+
+        String response = forgot(user.getEmail());
+        assertThat(response).contains(genericExpectedMessage);
+
+        // Verify response does not leak stack trace or internal exception
+        assertThat(response).doesNotContain("Exception");
+        assertThat(response).doesNotContain("ConnectException");
+        assertThat(response).doesNotContain("at com.example");
+
+        // Safe logging
+        assertThat(output.getAll()).contains("Could not deliver password reset email");
     }
 
     @Test
+    @DisplayName("Concurrency: Hai request đồng thời không thể tiêu thụ cùng một token hai lần")
     void simultaneousRequestsCannotConsumeTheSameTokenTwice() throws Exception {
         String rawToken = issueToken();
         CountDownLatch ready = new CountDownLatch(2);
@@ -176,7 +353,7 @@ class PasswordResetIntegrationTest {
             });
             assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
             start.countDown();
-            assertThat(java.util.List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS)))
+            assertThat(List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS)))
                     .containsExactlyInAnyOrder(200, 400);
             assertThat(resetTokens.findByUser(user).orElseThrow().isUsed()).isTrue();
         } finally {

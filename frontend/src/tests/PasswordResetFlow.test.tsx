@@ -31,7 +31,7 @@ describe('S1-03 password reset API flows', () => {
     vi.restoreAllMocks();
   });
 
-  it.each(['existing@company.com', 'missing@company.com'])('shows the same response for %s', async (email) => {
+  it.each(['admin@company.com', 'existing@company.com', 'missing@company.com'])('shows the same response for %s', async (email) => {
     const post = vi.spyOn(apiClient, 'post').mockResolvedValue({ data: { message: genericMessage } });
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
 
@@ -41,7 +41,9 @@ describe('S1-03 password reset API flows', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(genericMessage);
     expect(post).toHaveBeenCalledExactlyOnceWith('/api/auth/forgot-password', { email });
     expect(screen.queryByText(/test-only-token/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/smtp/i)).not.toBeInTheDocument();
   });
+
 
   it('rejects invalid email before calling the API', () => {
     const post = vi.spyOn(apiClient, 'post');
