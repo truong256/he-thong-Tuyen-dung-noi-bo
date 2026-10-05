@@ -16,7 +16,7 @@ for (const legacy of [false, true]) {
   const db = new PGlite();
   try {
     for (const file of files) {
-      if (legacy && file.startsWith('V10__')) {
+      if (legacy && file.includes('department_hierarchy')) {
         await db.exec(`CREATE TABLE departments (
           id BIGSERIAL PRIMARY KEY, name VARCHAR(100) NOT NULL UNIQUE, code VARCHAR(20),
           description VARCHAR(255), parent_department_id BIGINT, active BOOLEAN NOT NULL DEFAULT TRUE,
