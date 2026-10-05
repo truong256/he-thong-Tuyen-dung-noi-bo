@@ -30,6 +30,16 @@ public class UserSummaryDto {
     private List<String> handoverWarnings = new ArrayList<>();
     private boolean mustChangePassword;
     private String temporaryPassword;
+    private String avatarUrl;
+    private String avatarThumbnailUrl;
+
+    public String getThumbnailUrl() {
+        return avatarThumbnailUrl;
+    }
+
+    public void setThumbnailUrl(String thumbnailUrl) {
+        this.avatarThumbnailUrl = thumbnailUrl;
+    }
 
     public UserSummaryDto(Long id, String email, String role) {
         this.id = id;

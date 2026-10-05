@@ -21,6 +21,8 @@ export interface UserSummary {
   lockedBy?: string;
   handoverWarnings?: string[];
   mustChangePassword?: boolean;
+  avatarUrl?: string;
+  avatarThumbnailUrl?: string;
 }
 
 export interface LoginResponse {

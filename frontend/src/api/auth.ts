@@ -45,8 +45,24 @@ export const authApi = {
     return res.data;
   },
 
-  updateProfile: async (payload: { fullName: string; department?: string }): Promise<UserSummary> => {
+  updateProfile: async (payload: { fullName: string; department?: string; phone?: string; displayName?: string }): Promise<UserSummary> => {
     const res = await apiClient.put<UserSummary>('/api/auth/profile', payload);
+    return res.data;
+  },
+
+  uploadAvatar: async (file: File): Promise<{ message: string; avatarUrl: string; thumbnailUrl: string; user?: UserSummary }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post<{ message: string; avatarUrl: string; thumbnailUrl: string; user?: UserSummary }>(
+      '/api/auth/avatar',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
+    return res.data;
+  },
+
+  deleteAvatar: async (): Promise<{ message: string }> => {
+    const res = await apiClient.delete<{ message: string }>('/api/auth/avatar');
     return res.data;
   },
 };

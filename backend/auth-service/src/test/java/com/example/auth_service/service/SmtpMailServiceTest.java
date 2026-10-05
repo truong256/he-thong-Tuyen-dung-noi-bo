@@ -211,6 +211,12 @@ class SmtpMailServiceTest {
         }
 
         public List<String> getReceivedCommands() {
+            long start = System.currentTimeMillis();
+            while (System.currentTimeMillis() - start < 1000 && !receivedCommands.contains("QUIT")) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException ignored) {}
+            }
             return new ArrayList<>(receivedCommands);
         }
 
