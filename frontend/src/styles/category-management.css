@@ -474,9 +474,10 @@
   background: #f8fafc;
   padding: 0.875rem 1.125rem;
   font-weight: 600;
-  font-size: 0.7813rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: #475569;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
@@ -486,6 +487,8 @@
   padding: 0.9375rem 1.125rem;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
+  font-size: 0.875rem;
+  line-height: 1.5;
   vertical-align: middle;
 }
 

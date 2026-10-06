@@ -596,14 +596,16 @@
 .profile-clean-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .profile-clean-table th {
   padding: 10px 18px;
   background: #ffffff;
   color: var(--text-muted, #64748b);
-  font-weight: 550;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.4;
   text-align: left;
   border-bottom: 1px solid var(--border-color, #e2e8f0);
 }
@@ -612,6 +614,8 @@
   padding: 11px 18px;
   border-bottom: 1px solid var(--border-subtle, #f1f5f9);
   color: var(--text-body, #334155);
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .profile-clean-table tr:last-child td {
@@ -619,7 +623,7 @@
 }
 
 .profile-clean-table .font-medium {
-  font-weight: 550;
+  font-weight: 500;
   color: var(--text-main, #0f172a);
 }
 
