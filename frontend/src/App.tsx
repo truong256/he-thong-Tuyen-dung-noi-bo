@@ -1,9 +1,16 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+} from 'react-router-dom';
+
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleGuard from './components/RoleGuard';
 import AppLayout from './layouts/AppLayout';
+
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -17,6 +24,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import ExcelImportPage from './pages/ExcelImportPage';
 import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 import QuestionBankPage from './pages/QuestionBankPage';
+import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 
 export const App: React.FC = () => {
   return (
@@ -25,11 +33,26 @@ export const App: React.FC = () => {
         <Routes>
           {/* Các trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/unauthorized" element={<UnauthorizedPage />} />
-          <Route path="/403" element={<UnauthorizedPage statusCode={403} />} />
-          <Route path="/401" element={<UnauthorizedPage statusCode={401} />} />
+          <Route
+            path="/forgot-password"
+            element={<ForgotPasswordPage />}
+          />
+          <Route
+            path="/reset-password"
+            element={<ResetPasswordPage />}
+          />
+          <Route
+            path="/unauthorized"
+            element={<UnauthorizedPage />}
+          />
+          <Route
+            path="/403"
+            element={<UnauthorizedPage statusCode={403} />}
+          />
+          <Route
+            path="/401"
+            element={<UnauthorizedPage statusCode={401} />}
+          />
 
           {/* Trang bắt buộc đổi mật khẩu lần đầu */}
           <Route
@@ -41,12 +64,18 @@ export const App: React.FC = () => {
             }
           />
 
-          {/* Xem thử frontend Excel khi chạy môi trường phát triển */}
+          {/* Xem thử frontend trong môi trường phát triển */}
           {import.meta.env.DEV && (
-            <Route
-              path="/preview/import-excel"
-              element={<ExcelImportPage />}
-            />
+            <>
+              <Route
+                path="/preview/import-excel"
+                element={<ExcelImportPage />}
+              />
+              <Route
+                path="/preview/recruitment-request"
+                element={<RecruitmentRequestPage />}
+              />
+            </>
           )}
 
           {/* Các trang yêu cầu đăng nhập */}
@@ -62,14 +91,45 @@ export const App: React.FC = () => {
               index
               element={<Navigate to="/dashboard" replace />}
             />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="profile" element={<ProfilePage />} />
-            <Route path="organization" element={<OrganizationManagementPage />} />
-            <Route path="job-titles" element={<JobTitleManagementPage />} />
+            <Route
+              path="dashboard"
+              element={<DashboardPage />}
+            />
+            <Route
+              path="profile"
+              element={<ProfilePage />}
+            />
+            <Route
+              path="organization"
+              element={<OrganizationManagementPage />}
+            />
+            <Route
+              path="job-titles"
+              element={<JobTitleManagementPage />}
+            />
+
+            {/* SCRUM-95 và SCRUM-96 */}
+            <Route
+              path="recruitment-requests/new"
+              element={
+                <RoleGuard allowedRoles={['HIRING_MANAGER']}>
+                  <RecruitmentRequestPage />
+                </RoleGuard>
+              }
+            />
+
             <Route
               path="questions"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <RoleGuard
+                  allowedRoles={[
+                    'ADMIN',
+                    'HR_MANAGER',
+                    'RECRUITER',
+                    'HIRING_MANAGER',
+                    'INTERVIEWER',
+                  ]}
+                >
                   <QuestionBankPage />
                 </RoleGuard>
               }
@@ -77,14 +137,25 @@ export const App: React.FC = () => {
             <Route
               path="admin/questions"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <RoleGuard
+                  allowedRoles={[
+                    'ADMIN',
+                    'HR_MANAGER',
+                    'RECRUITER',
+                    'HIRING_MANAGER',
+                    'INTERVIEWER',
+                  ]}
+                >
                   <QuestionBankPage />
                 </RoleGuard>
               }
             />
+
             <Route
               path="excel-import"
-              element={<Navigate to="/admin/import-excel" replace />}
+              element={
+                <Navigate to="/admin/import-excel" replace />
+              }
             />
             <Route
               path="admin/import-excel"
@@ -94,7 +165,6 @@ export const App: React.FC = () => {
                 </RoleGuard>
               }
             />
-
             <Route
               path="admin/users"
               element={
@@ -106,7 +176,9 @@ export const App: React.FC = () => {
             <Route
               path="admin/organization"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                <RoleGuard
+                  allowedRoles={['ADMIN', 'HR_MANAGER']}
+                >
                   <OrganizationManagementPage />
                 </RoleGuard>
               }
@@ -114,7 +186,9 @@ export const App: React.FC = () => {
             <Route
               path="admin/job-titles"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                <RoleGuard
+                  allowedRoles={['ADMIN', 'HR_MANAGER']}
+                >
                   <JobTitleManagementPage />
                 </RoleGuard>
               }
