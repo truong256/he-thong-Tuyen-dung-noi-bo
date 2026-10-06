@@ -275,14 +275,96 @@ const setStoredData = <T>(key: string, value: T): void => {
   }
 };
 
+const normalizeProfileFromApi = (data: any): CompanyProfile => {
+  let coreValues = data.coreValues;
+  if (typeof coreValues === 'string') {
+    try {
+      coreValues = JSON.parse(coreValues);
+    } catch {
+      coreValues = INITIAL_COMPANY_PROFILE.coreValues;
+    }
+  }
+  let legalRepresentative = data.legalRepresentative;
+  if (typeof legalRepresentative === 'string') {
+    try {
+      legalRepresentative = JSON.parse(legalRepresentative);
+    } catch {
+      legalRepresentative = INITIAL_COMPANY_PROFILE.legalRepresentative;
+    }
+  }
+  let workPolicy = data.workPolicy;
+  if (typeof workPolicy === 'string') {
+    try {
+      workPolicy = JSON.parse(workPolicy);
+    } catch {
+      workPolicy = INITIAL_COMPANY_PROFILE.workPolicy;
+    }
+  }
+
+  return {
+    ...INITIAL_COMPANY_PROFILE,
+    ...data,
+    coreValues: Array.isArray(coreValues) ? coreValues : INITIAL_COMPANY_PROFILE.coreValues,
+    legalRepresentative: legalRepresentative || INITIAL_COMPANY_PROFILE.legalRepresentative,
+    workPolicy: workPolicy || INITIAL_COMPANY_PROFILE.workPolicy,
+    updatedAt: data.updatedAt ? String(data.updatedAt) : new Date().toISOString(),
+  };
+};
+
+const serializeProfileForApi = (payload: Partial<CompanyProfile>): any => {
+  const res: any = { ...payload };
+  if (payload.coreValues && typeof payload.coreValues !== 'string') {
+    res.coreValues = JSON.stringify(payload.coreValues);
+  }
+  if (payload.legalRepresentative && typeof payload.legalRepresentative !== 'string') {
+    res.legalRepresentative = JSON.stringify(payload.legalRepresentative);
+  }
+  if (payload.workPolicy && typeof payload.workPolicy !== 'string') {
+    res.workPolicy = JSON.stringify(payload.workPolicy);
+  }
+  return res;
+};
+
 export const organizationApi = {
   // --- Profile Methods ---
   getCompanyProfile: async (): Promise<CompanyProfile> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.get<any>('/api/organization/profile');
+        if (res.data) {
+          const normalized = normalizeProfileFromApi(res.data);
+          setStoredData(STORAGE_KEYS.PROFILE, normalized);
+          return normalized;
+        }
+      } catch (err) {
+        console.warn('[OrganizationApi] Failed to load company profile from API, falling back to storage:', err);
+      }
+    }
     return getStoredData<CompanyProfile>(STORAGE_KEYS.PROFILE, INITIAL_COMPANY_PROFILE);
   },
 
   updateCompanyProfile: async (payload: Partial<CompanyProfile>): Promise<CompanyProfile> => {
     const current = getStoredData<CompanyProfile>(STORAGE_KEYS.PROFILE, INITIAL_COMPANY_PROFILE);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const payloadToSend = serializeProfileForApi({
+          ...current,
+          ...payload,
+        });
+        const res = await apiClient.put<any>('/api/organization/profile', payloadToSend);
+        if (res.data) {
+          const normalized = normalizeProfileFromApi(res.data);
+          setStoredData(STORAGE_KEYS.PROFILE, normalized);
+          return normalized;
+        }
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || 'Lỗi khi cập nhật hồ sơ doanh nghiệp lên máy chủ.';
+        throw new Error(msg);
+      }
+    }
+
     const updated: CompanyProfile = {
       ...current,
       ...payload,
@@ -525,6 +607,26 @@ export const organizationApi = {
 
   // --- Statistics ---
   getOrgStatistics: async (): Promise<OrgStatistics> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.get<any>('/api/organization/statistics');
+        if (res.data) {
+          const locs = getStoredData<BranchLocation[]>(STORAGE_KEYS.LOCATIONS, INITIAL_LOCATIONS);
+          return {
+            totalDepartments: Number(res.data.totalDepartments || 0),
+            activeDepartments: Number(res.data.activeDepartments || 0),
+            totalEmployees: Number(res.data.totalEmployees || 0),
+            totalLocations: locs.length,
+            headcountFulfillmentRate: Number(res.data.headcountFulfillmentRate || 94.2),
+            openRequisitionsCount: Number(res.data.openRequisitionsCount || 0),
+          };
+        }
+      } catch (err) {
+        console.warn('[OrganizationApi] Failed to load statistics from API, falling back to local computation:', err);
+      }
+    }
+
     const depts = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     const locs = getStoredData<BranchLocation[]>(STORAGE_KEYS.LOCATIONS, INITIAL_LOCATIONS);
     const totalEmployees = depts.reduce((sum, d) => sum + (d.employeeCount || 0), 0);

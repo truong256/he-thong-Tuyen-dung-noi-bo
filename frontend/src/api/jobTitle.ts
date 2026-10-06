@@ -775,8 +775,22 @@ export const jobTitleApi = {
     return list[index];
   },
 
-  getJobTitleStatistics: async (): Promise<JobTitleStatistics> => {
-    const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
+  getJobTitleStatistics: async (providedList?: JobTitle[]): Promise<JobTitleStatistics> => {
+    let list = providedList;
+    if (!list) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (token && !token.startsWith('mock-')) {
+        try {
+          list = await jobTitleApi.getJobTitles();
+        } catch {
+          // fallback
+        }
+      }
+    }
+    if (!list) {
+      list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
+    }
+
     const activeCount = list.filter((jt) => jt.active).length;
     const totalHeadcount = list.reduce((sum, jt) => sum + (jt.currentHeadcount || 0), 0);
     const openRequisitions = list.reduce((sum, jt) => sum + (jt.openRequisitions || 0), 0);
@@ -801,8 +815,21 @@ export const jobTitleApi = {
     return INITIAL_JOB_TITLES;
   },
 
-  exportToCSV: async (): Promise<string> => {
-    const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
+  exportToCSV: async (providedList?: JobTitle[]): Promise<string> => {
+    let list = providedList;
+    if (!list) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (token && !token.startsWith('mock-')) {
+        try {
+          list = await jobTitleApi.getJobTitles();
+        } catch {
+          // fallback
+        }
+      }
+    }
+    if (!list) {
+      list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
+    }
     const headers = [
       'ID',
       'Mã chức danh',

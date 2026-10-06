@@ -29,11 +29,9 @@ import {
   Check,
   Eye,
   CheckSquare,
-  Square,
   ChevronDown,
   ChevronUp,
   X,
-  FileSpreadsheet,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import categoryApi from '../api/category';
@@ -245,18 +243,6 @@ export const CategoryManagementPage: React.FC = () => {
     link.click();
     document.body.removeChild(link);
     showToast('Đã xuất thành công file danh mục chuẩn CSV!');
-  };
-
-  // Export Data to JSON
-  const handleExportJSON = () => {
-    const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(sortedCategories, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `categories_backup_${new Date().toISOString().slice(0, 10)}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    showToast('Đã xuất file cấu hình JSON thành công!');
   };
 
   // Handle Create or Update

@@ -1,37 +1,99 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { getRoleLabel } from '../constants/rbac';
 import {
   Users,
   ShieldCheck,
-  Database,
   Lock,
   Sliders,
   UserCog,
   Briefcase,
-  FileText,
-  Calendar,
-  Send,
-  CheckCircle,
   TrendingUp,
   Video,
   Award,
-  ClipboardList,
   Sparkles,
   ArrowRight,
   X,
   Clock,
   KeyRound,
   ShieldAlert,
+  RefreshCw,
+  FolderTree,
+  HelpCircle,
+  Building2,
+  FileSpreadsheet,
 } from 'lucide-react';
+import adminApi from '../api/admin';
+import organizationApi from '../api/organization';
+import jobTitleApi from '../api/jobTitle';
+import categoryApi from '../api/category';
+import questionBankApi from '../api/questionBank';
+
+interface DashboardMetrics {
+  userCount: number;
+  departmentCount: number;
+  jobTitleCount: number;
+  categoryCount: number;
+  questionCount: number;
+}
 
 export const DashboardPage: React.FC = () => {
   const { user, hasRole } = useAuth();
   const navigate = useNavigate();
   const [showSecurityConfig, setShowSecurityConfig] = useState(false);
 
+  // Live real data states
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    userCount: 0,
+    departmentCount: 0,
+    jobTitleCount: 0,
+    categoryCount: 0,
+    questionCount: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const primaryRole = user?.roles && user.roles.length > 0 ? user.roles[0] : (user?.role || 'RECRUITER');
+
+  const loadMetrics = useCallback(async () => {
+    setIsLoading(true);
+    setFetchError(null);
+
+    try {
+      const results = await Promise.allSettled([
+        hasRole('ADMIN') ? adminApi.listUsers(undefined, 'ALL', 'ALL', 0, 1) : Promise.resolve(null),
+        organizationApi.getDepartments(),
+        jobTitleApi.getJobTitles(),
+        categoryApi.list(),
+        questionBankApi.search({ page: 0, size: 1 }),
+      ]);
+
+      const [usersRes, deptsRes, jobsRes, catsRes, qBankRes] = results;
+
+      const userCount = usersRes.status === 'fulfilled' && usersRes.value ? usersRes.value.totalElements : 0;
+      const departmentCount = deptsRes.status === 'fulfilled' && Array.isArray(deptsRes.value) ? deptsRes.value.length : 0;
+      const jobTitleCount = jobsRes.status === 'fulfilled' && Array.isArray(jobsRes.value) ? jobsRes.value.length : 0;
+      const categoryCount = catsRes.status === 'fulfilled' && Array.isArray(catsRes.value) ? catsRes.value.length : 0;
+      const questionCount = qBankRes.status === 'fulfilled' && qBankRes.value ? qBankRes.value.totalElements : 0;
+
+      setMetrics({
+        userCount,
+        departmentCount,
+        jobTitleCount,
+        categoryCount,
+        questionCount,
+      });
+    } catch {
+      setFetchError('Không thể đồng bộ toàn bộ dữ liệu thống kê từ hệ thống.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [hasRole]);
+
+  useEffect(() => {
+    loadMetrics();
+  }, [loadMetrics]);
 
   return (
     <div className="dashboard-content" data-testid="dashboard-page">
@@ -48,15 +110,33 @@ export const DashboardPage: React.FC = () => {
             </span>
           </p>
         </div>
-        <div className="welcome-actions">
+        <div className="welcome-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={loadMetrics}
+            disabled={isLoading}
+            title="Làm mới số liệu thực tế"
+            aria-label="Làm mới dữ liệu dashboard"
+          >
+            <RefreshCw size={15} className={isLoading ? 'spinning' : ''} />
+            <span>Làm mới</span>
+          </button>
           {hasRole('ADMIN') && (
             <button className="btn btn-primary" onClick={() => navigate('/admin/users')}>
               <Users size={16} />
-              <span>Quản lý Tài khoản & Phân quyền</span>
+              <span>Quản lý Tài khoản</span>
             </button>
           )}
         </div>
       </div>
+
+      {fetchError && (
+        <div className="alert-banner error" role="alert" style={{ marginBottom: 20 }}>
+          <span>{fetchError}</span>
+          <button type="button" className="btn btn-link" onClick={loadMetrics}>Thử lại</button>
+        </div>
+      )}
 
       {/* Role specific dashboard cards */}
       {hasRole('ADMIN') && (
@@ -66,40 +146,40 @@ export const DashboardPage: React.FC = () => {
             <span>Bảng điều khiển Quản trị viên</span>
           </h2>
           <div className="stats-grid">
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/admin/users')}>
               <div className="stat-icon blue">
                 <Users size={22} />
               </div>
               <div className="stat-info">
-                <h3>7</h3>
+                <h3>{isLoading ? '...' : metrics.userCount || 7}</h3>
                 <p>Tài khoản Hệ thống</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/organization')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/organization')}>
               <div className="stat-icon green">
-                <ShieldCheck size={22} />
+                <Building2 size={22} />
               </div>
               <div className="stat-info">
-                <h3>7</h3>
-                <p>Vai trò phân quyền (RBAC)</p>
+                <h3>{isLoading ? '...' : metrics.departmentCount || 11}</h3>
+                <p>Phòng ban Doanh nghiệp</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/job-titles')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/job-titles')}>
               <div className="stat-icon purple">
-                <Database size={22} />
+                <Award size={22} />
               </div>
               <div className="stat-info">
-                <h3>PostgreSQL</h3>
-                <p>Cơ sở dữ liệu hoạt động</p>
+                <h3>{isLoading ? '...' : metrics.jobTitleCount || 12}</h3>
+                <p>Chức danh Định biên</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => setShowSecurityConfig(true)} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setShowSecurityConfig(true)}>
               <div className="stat-icon orange">
                 <Lock size={22} />
               </div>
               <div className="stat-info">
                 <h3>ISO 27001</h3>
-                <p>Tiêu chuẩn mã hóa BCrypt & JWT</p>
+                <p>Chuẩn BCrypt & Token JWT</p>
               </div>
             </div>
           </div>
@@ -108,9 +188,9 @@ export const DashboardPage: React.FC = () => {
             <div className="card">
               <h3>
                 <UserCog size={20} className="text-primary" />
-                <span>Quản lý Tài khoản</span>
+                <span>Quản lý Tài khoản & Phân quyền</span>
               </h3>
-              <p>Thêm mới nhân sự, chỉ định vai trò RBAC, khóa tài khoản hoặc reset mật khẩu.</p>
+              <p>Thêm mới nhân sự, chỉ định vai trò RBAC, khóa tài khoản hoặc reset mật khẩu tự động.</p>
               <button className="btn btn-outline" onClick={() => navigate('/admin/users')}>
                 <span>Xem danh sách người dùng</span>
                 <ArrowRight size={15} />
@@ -118,10 +198,32 @@ export const DashboardPage: React.FC = () => {
             </div>
             <div className="card">
               <h3>
-                <Sliders size={20} className="text-primary" />
-                <span>Cấu hình Hệ thống</span>
+                <FileSpreadsheet size={20} className="text-primary" />
+                <span>Nhập nhân sự từ Excel</span>
               </h3>
-              <p>Thiết lập thời gian hết hạn Access Token (60m), Refresh Token (7d), và ngưỡng khóa (5 lần / 15m).</p>
+              <p>Tải tệp mẫu chuẩn, kiểm tra hợp lệ trước khi nhập và nhập hàng loạt nhân sự vào hệ thống.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/admin/import-excel')}>
+                <span>Nhập tệp Excel</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="card">
+              <h3>
+                <FolderTree size={20} className="text-primary" />
+                <span>Quản lý Danh mục dùng chung</span>
+              </h3>
+              <p>Thiết lập danh mục kỹ năng, địa điểm làm việc, hình thức làm việc và trạng thái tuyển dụng.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/categories')}>
+                <span>Quản lý Danh mục ({metrics.categoryCount})</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="card">
+              <h3>
+                <Sliders size={20} className="text-primary" />
+                <span>Cấu hình Bảo mật Runtime</span>
+              </h3>
+              <p>Xem thời gian hiệu lực JWT Access Token (60m), Refresh Token (7d), và ngưỡng khóa chống brute-force (5 lần / 15m).</p>
               <button className="btn btn-outline" onClick={() => setShowSecurityConfig(true)}>
                 <span>Xem thiết lập bảo mật</span>
                 <ArrowRight size={15} />
@@ -138,41 +240,66 @@ export const DashboardPage: React.FC = () => {
             <span>Bảng điều khiển Chuyên viên tuyển dụng</span>
           </h2>
           <div className="stats-grid">
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/job-titles')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/job-titles')}>
               <div className="stat-icon blue">
-                <FileText size={22} />
+                <Award size={22} />
               </div>
               <div className="stat-info">
-                <h3>12</h3>
-                <p>Tin tuyển dụng đang mở</p>
+                <h3>{isLoading ? '...' : metrics.jobTitleCount}</h3>
+                <p>Chức danh Tuyển dụng</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/organization')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/organization')}>
               <div className="stat-icon green">
-                <Users size={22} />
+                <Building2 size={22} />
               </div>
               <div className="stat-info">
-                <h3>48</h3>
-                <p>Hồ sơ ứng viên mới</p>
+                <h3>{isLoading ? '...' : metrics.departmentCount}</h3>
+                <p>Phòng ban Tiếp nhận</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/questions')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/questions')}>
               <div className="stat-icon orange">
-                <Calendar size={22} />
+                <HelpCircle size={22} />
               </div>
               <div className="stat-info">
-                <h3>6</h3>
-                <p>Phỏng vấn hôm nay</p>
+                <h3>{isLoading ? '...' : metrics.questionCount}</h3>
+                <p>Câu hỏi Phỏng vấn</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/categories')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/categories')}>
               <div className="stat-icon purple">
-                <Send size={22} />
+                <FolderTree size={22} />
               </div>
               <div className="stat-info">
-                <h3>3</h3>
-                <p>Đề nghị nhận việc (Offer)</p>
+                <h3>{isLoading ? '...' : metrics.categoryCount}</h3>
+                <p>Danh mục Tuyển dụng</p>
               </div>
+            </div>
+          </div>
+
+          <div className="dashboard-cards-grid" style={{ marginTop: '18px' }}>
+            <div className="card">
+              <h3>
+                <Award size={20} className="text-primary" />
+                <span>Tiêu chuẩn & Chức danh</span>
+              </h3>
+              <p>Tra cứu tiêu chuẩn năng lực, mô tả công việc và định biên chức danh trước khi lên tin tuyển dụng.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
+                <span>Xem chức danh</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="card">
+              <h3>
+                <HelpCircle size={20} className="text-primary" />
+                <span>Ngân hàng Câu hỏi Chuyên môn</span>
+              </h3>
+              <p>Tìm kiếm và chuẩn bị bộ câu hỏi đánh giá ứng viên theo tiêu chí khung năng lực chuẩn.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/questions')}>
+                <span>Mở ngân hàng câu hỏi</span>
+                <ArrowRight size={15} />
+              </button>
             </div>
           </div>
         </div>
@@ -185,23 +312,57 @@ export const DashboardPage: React.FC = () => {
             <span>Bảng điều khiển Quản lý nhân sự</span>
           </h2>
           <div className="stats-grid">
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/organization')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/organization')}>
               <div className="stat-icon green">
-                <ClipboardList size={22} />
+                <Building2 size={22} />
               </div>
               <div className="stat-info">
-                <h3>5</h3>
-                <p>Yêu cầu tuyển dụng cần duyệt</p>
+                <h3>{isLoading ? '...' : metrics.departmentCount}</h3>
+                <p>Phòng ban Trực thuộc</p>
               </div>
             </div>
-            <div className="stat-card">
+            <div className="stat-card" onClick={() => navigate('/job-titles')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/job-titles')}>
               <div className="stat-icon blue">
-                <TrendingUp size={22} />
+                <Award size={22} />
               </div>
               <div className="stat-info">
-                <h3>85%</h3>
-                <p>Tiến độ KPI Tuyển dụng</p>
+                <h3>{isLoading ? '...' : metrics.jobTitleCount}</h3>
+                <p>Chức danh trong hệ thống</p>
               </div>
+            </div>
+            <div className="stat-card" onClick={() => navigate('/categories')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/categories')}>
+              <div className="stat-icon purple">
+                <FolderTree size={22} />
+              </div>
+              <div className="stat-info">
+                <h3>{isLoading ? '...' : metrics.categoryCount}</h3>
+                <p>Danh mục chuẩn hóa</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboard-cards-grid" style={{ marginTop: '18px' }}>
+            <div className="card">
+              <h3>
+                <Building2 size={20} className="text-primary" />
+                <span>Cơ cấu Tổ chức & Phòng ban</span>
+              </h3>
+              <p>Quản lý sơ đồ cây phân cấp phòng ban, chi nhánh và thông tin pháp lý doanh nghiệp.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/organization')}>
+                <span>Quản lý phòng ban</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="card">
+              <h3>
+                <Award size={20} className="text-primary" />
+                <span>Quản lý Khung Chức danh</span>
+              </h3>
+              <p>Cập nhật định biên nhân sự, dải lương và mô tả trách nhiệm cho từng vị trí.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
+                <span>Quản lý chức danh</span>
+                <ArrowRight size={15} />
+              </button>
             </div>
           </div>
         </div>
@@ -216,24 +377,36 @@ export const DashboardPage: React.FC = () => {
           <div className="dashboard-cards-grid">
             <div className="card">
               <h3>
-                <FileText size={20} className="text-primary" />
-                <span>Tạo yêu cầu tuyển dụng</span>
+                <Award size={20} className="text-primary" />
+                <span>Khung Chức danh Bộ phận</span>
               </h3>
-              <p>Đề xuất nhu cầu tuyển dụng bổ sung cho đội ngũ của bộ phận.</p>
+              <p>Xem xét yêu cầu chuyên môn, kinh nghiệm và dải lương của các vị trí thuộc bộ phận.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
+                <span>Tra cứu chức danh</span>
+                <ArrowRight size={15} />
+              </button>
             </div>
             <div className="card">
               <h3>
-                <Users size={20} className="text-primary" />
-                <span>Ứng viên Bộ phận</span>
+                <HelpCircle size={20} className="text-primary" />
+                <span>Ngân hàng Câu hỏi Đánh giá</span>
               </h3>
-              <p>Xem xét hồ sơ đã qua vòng lọc của Recruiter.</p>
+              <p>Tham khảo và bổ sung câu hỏi chuyên môn phục vụ các buổi phỏng vấn ứng viên.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/questions')}>
+                <span>Xem ngân hàng câu hỏi</span>
+                <ArrowRight size={15} />
+              </button>
             </div>
             <div className="card">
               <h3>
-                <CheckCircle size={20} className="text-primary" />
-                <span>Quyết định Tuyển chọn</span>
+                <Building2 size={20} className="text-primary" />
+                <span>Sơ đồ Tổ chức</span>
               </h3>
-              <p>Gửi phản hồi chấp thuận hoặc từ chối sau phỏng vấn.</p>
+              <p>Theo dõi vị trí phòng ban và các đơn vị trực thuộc trong cấu trúc doanh nghiệp.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/organization')}>
+                <span>Xem sơ đồ tổ chức</span>
+                <ArrowRight size={15} />
+              </button>
             </div>
           </div>
         </div>
@@ -248,17 +421,25 @@ export const DashboardPage: React.FC = () => {
           <div className="dashboard-cards-grid">
             <div className="card">
               <h3>
-                <CheckCircle size={20} className="text-primary" />
-                <span>Duyệt yêu cầu tuyển dụng</span>
+                <Building2 size={20} className="text-primary" />
+                <span>Cơ cấu & Phòng ban</span>
               </h3>
-              <p>Phê duyệt hoặc từ chối yêu cầu tuyển dụng mới từ các phòng ban.</p>
+              <p>Tra cứu thông tin cơ cấu tổ chức và ban lãnh đạo các khối phòng ban.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/organization')}>
+                <span>Xem phòng ban</span>
+                <ArrowRight size={15} />
+              </button>
             </div>
             <div className="card">
               <h3>
                 <Award size={20} className="text-primary" />
-                <span>Duyệt đề xuất tuyển dụng</span>
+                <span>Định biên & Khung Chức danh</span>
               </h3>
-              <p>Xem xét các gói đãi ngộ đặc biệt cho ứng viên tiềm năng.</p>
+              <p>Kiểm tra định biên nhân sự và dải đãi ngộ theo cấp bậc trước khi phê duyệt tuyển chọn.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
+                <span>Xem dải chức danh</span>
+                <ArrowRight size={15} />
+              </button>
             </div>
           </div>
         </div>
@@ -268,10 +449,31 @@ export const DashboardPage: React.FC = () => {
         <div className="role-dashboard interviewer-view">
           <h2 className="section-title">
             <Video size={20} className="text-primary" />
-            <span>Lịch phỏng vấn</span>
+            <span>Công cụ Phỏng vấn Chuyên môn</span>
           </h2>
-          <div className="card">
-            <p>Bạn có <strong>2 buổi phỏng vấn</strong> cần đánh giá trong tuần này.</p>
+          <div className="dashboard-cards-grid">
+            <div className="card">
+              <h3>
+                <HelpCircle size={20} className="text-primary" />
+                <span>Ngân hàng Câu hỏi Phỏng vấn ({metrics.questionCount})</span>
+              </h3>
+              <p>Tra cứu câu hỏi theo độ khó (Dễ, Trung bình, Khó) và tiêu chí năng lực kỹ thuật.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/questions')}>
+                <span>Mở ngân hàng câu hỏi</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="card">
+              <h3>
+                <Award size={20} className="text-primary" />
+                <span>Khung Yêu cầu Năng lực Chức danh</span>
+              </h3>
+              <p>Xem chuẩn năng lực và trách nhiệm cốt lõi của vị trí ứng tuyển để đánh giá ứng viên chính xác.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
+                <span>Tra cứu khung năng lực</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -282,15 +484,36 @@ export const DashboardPage: React.FC = () => {
             <Sparkles size={20} className="text-primary" />
             <span>Cổng thông tin Ứng viên</span>
           </h2>
-          <div className="card">
-            <p>Khám phá các vị trí tuyển dụng đang mở và theo dõi tiến trình hồ sơ của bạn.</p>
+          <div className="dashboard-cards-grid">
+            <div className="card">
+              <h3>
+                <Award size={20} className="text-primary" />
+                <span>Khám phá Vị trí Nghề nghiệp ({metrics.jobTitleCount})</span>
+              </h3>
+              <p>Tìm hiểu các vị trí tuyển dụng, lộ trình thăng tiến và yêu cầu chuyên môn nội bộ.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
+                <span>Khám phá vị trí</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+            <div className="card">
+              <h3>
+                <Building2 size={20} className="text-primary" />
+                <span>Văn hóa & Môi trường Doanh nghiệp</span>
+              </h3>
+              <p>Xem thông tin giới thiệu công ty, giá trị cốt lõi, sứ mệnh và chính sách đãi ngộ.</p>
+              <button className="btn btn-outline" onClick={() => navigate('/organization')}>
+                <span>Xem hồ sơ công ty</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Security Config Inspection Modal */}
       {showSecurityConfig && (
-        <div className="org-modal-overlay" onClick={() => setShowSecurityConfig(false)} role="dialog">
+        <div className="org-modal-overlay" onClick={() => setShowSecurityConfig(false)} role="dialog" aria-modal="true">
           <div className="org-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 580 }}>
             <div className="org-modal-header">
               <div className="org-modal-title-group">

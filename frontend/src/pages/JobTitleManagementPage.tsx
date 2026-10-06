@@ -90,7 +90,7 @@ export const JobTitleManagementPage: React.FC = () => {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [titlesData, deptsData, statsData] = await Promise.all([
+      const [titlesData, deptsData] = await Promise.all([
         jobTitleApi.getJobTitles({
           search: debouncedSearch,
           departmentId: departmentFilter,
@@ -101,8 +101,8 @@ export const JobTitleManagementPage: React.FC = () => {
           sortOrder,
         }),
         organizationApi.getDepartments(),
-        jobTitleApi.getJobTitleStatistics(),
       ]);
+      const statsData = await jobTitleApi.getJobTitleStatistics(titlesData);
       setJobTitles(titlesData);
       setDepartments(deptsData);
       setStatistics(statsData);
@@ -170,7 +170,7 @@ export const JobTitleManagementPage: React.FC = () => {
 
   const handleExportCSV = async () => {
     try {
-      const csv = await jobTitleApi.exportToCSV();
+      const csv = await jobTitleApi.exportToCSV(jobTitles);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');

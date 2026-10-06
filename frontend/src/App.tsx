@@ -104,6 +104,14 @@ export const App: React.FC = () => {
               element={<Navigate to="/admin/import-excel" replace />}
             />
             <Route
+              path="users"
+              element={<Navigate to="/admin/users" replace />}
+            />
+            <Route
+              path="users/import-excel"
+              element={<Navigate to="/admin/import-excel" replace />}
+            />
+            <Route
               path="admin/import-excel"
               element={
                 <RoleGuard allowedRoles={['ADMIN']}>

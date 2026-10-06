@@ -102,6 +102,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/departments/{id}").hasAuthority("DEPARTMENT_MANAGE")
                 .requestMatchers(HttpMethod.PATCH, "/api/departments/{id}/status").hasAuthority("DEPARTMENT_MANAGE")
                 .requestMatchers(HttpMethod.DELETE, "/api/departments/{id}").hasAuthority("DEPARTMENT_MANAGE")
+                .requestMatchers(HttpMethod.GET, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_READ")
+                .requestMatchers(HttpMethod.PUT, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_MANAGE")
                 .anyRequest().denyAll()
             )
             .exceptionHandling(errors -> errors.authenticationEntryPoint(securityErrorHandler)
