@@ -4,6 +4,7 @@ import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.JobTitle;
 import com.example.auth_service.dto.JobTitleRequest;
 import com.example.auth_service.dto.JobTitleResponse;
+import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.DepartmentRepository;
@@ -29,22 +30,23 @@ public class JobTitleService {
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('CATALOG_READ')")
-    public List<JobTitleResponse> list(String search, Boolean active, Long departmentId) {
+    public List<JobTitleResponse> list(String search, Boolean active, Long departmentId, boolean includeSalary) {
         String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
         List<JobTitle> list = repository.searchJobTitles(cleanSearch, active, departmentId);
-        return list.stream().map(this::toResponse).toList();
+        return list.stream().map(jobTitle -> toResponse(jobTitle, includeSalary)).toList();
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('CATALOG_READ')")
-    public JobTitleResponse get(Long id) {
+    public JobTitleResponse get(Long id, boolean includeSalary) {
         JobTitle jobTitle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
-        return toResponse(jobTitle);
+        return toResponse(jobTitle, includeSalary);
     }
 
-    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    @PreAuthorize("hasRole('HR_MANAGER')")
     public JobTitleResponse create(JobTitleRequest request) {
+        validateSalaryRange(request);
         String cleanCode = request.code().trim().toUpperCase();
         String cleanTitle = request.title().trim();
 
@@ -80,11 +82,12 @@ public class JobTitleService {
         jobTitle.setUpdatedAt(Instant.now());
 
         JobTitle saved = repository.save(jobTitle);
-        return toResponse(saved);
+        return toResponse(saved, true);
     }
 
-    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    @PreAuthorize("hasRole('HR_MANAGER')")
     public JobTitleResponse update(Long id, JobTitleRequest request) {
+        validateSalaryRange(request);
         JobTitle jobTitle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
 
@@ -121,27 +124,29 @@ public class JobTitleService {
         jobTitle.setUpdatedAt(Instant.now());
 
         JobTitle saved = repository.save(jobTitle);
-        return toResponse(saved);
+        return toResponse(saved, true);
     }
 
-    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    @PreAuthorize("hasRole('HR_MANAGER')")
     public JobTitleResponse setActive(Long id, boolean active) {
         JobTitle jobTitle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
         jobTitle.setActive(active);
         jobTitle.setUpdatedAt(Instant.now());
-        return toResponse(repository.save(jobTitle));
+        return toResponse(repository.save(jobTitle), true);
     }
 
-    @PreAuthorize("hasAnyAuthority('CATALOG_MANAGE', 'DEPARTMENT_MANAGE', 'USER_MANAGE')")
+    @PreAuthorize("hasRole('HR_MANAGER')")
     public void delete(Long id) {
         JobTitle jobTitle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
         repository.delete(jobTitle);
     }
 
-    private JobTitleResponse toResponse(JobTitle j) {
-        String salaryRangeDisplay = formatSalary(j.getMinSalary(), j.getMaxSalary());
+    private JobTitleResponse toResponse(JobTitle j, boolean includeSalary) {
+        Long minSalary = includeSalary ? j.getMinSalary() : null;
+        Long maxSalary = includeSalary ? j.getMaxSalary() : null;
+        String salaryRangeDisplay = includeSalary ? formatSalary(minSalary, maxSalary) : null;
         Long deptId = j.getDepartment() != null ? j.getDepartment().getId() : null;
         String deptName = j.getDepartment() != null ? j.getDepartment().getName() : null;
 
@@ -153,8 +158,8 @@ public class JobTitleService {
                 deptName,
                 j.getLevel(),
                 j.getJobFamily(),
-                j.getMinSalary(),
-                j.getMaxSalary(),
+                minSalary,
+                maxSalary,
                 salaryRangeDisplay,
                 j.getJobDescription(),
                 splitList(j.getKeyResponsibilities()),
@@ -167,6 +172,20 @@ public class JobTitleService {
                 j.getCreatedAt(),
                 j.getUpdatedAt()
         );
+    }
+
+    private void validateSalaryRange(JobTitleRequest request) {
+        Long minSalary = request.minSalary();
+        Long maxSalary = request.maxSalary();
+        if (minSalary != null && minSalary < 0) {
+            throw new BadRequestException("Lương tối thiểu không được âm.");
+        }
+        if (maxSalary != null && maxSalary < 0) {
+            throw new BadRequestException("Lương tối đa không được âm.");
+        }
+        if (minSalary != null && maxSalary != null && minSalary > maxSalary) {
+            throw new BadRequestException("Lương tối thiểu không được lớn hơn lương tối đa.");
+        }
     }
 
     private String formatSalary(Long min, Long max) {
