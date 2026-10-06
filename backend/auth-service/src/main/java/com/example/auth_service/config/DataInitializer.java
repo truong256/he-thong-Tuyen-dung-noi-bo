@@ -105,66 +105,77 @@ public class DataInitializer {
                         "Tìm kiếm, tuyển chọn và điều phối phỏng vấn ứng viên", bod.getId(),
                         hrManagerUser != null ? hrManagerUser.getId() : adminUser.getId(), true, Instant.now());
                 hrDept = departmentRepository.save(hrDept);
+            }
 
-                // 4. Seed default job titles linked to departments if none exist
-                if (jobTitleRepository.count() == 0) {
-                    JobTitle beSenior = new JobTitle();
-                    beSenior.setTitle("Kỹ sư Phần mềm Backend Cao cấp (Senior Backend Engineer)");
-                    beSenior.setCode("BE-SR-01");
-                    beSenior.setDepartment(devBe);
-                    beSenior.setLevel("SENIOR");
-                    beSenior.setJobFamily("TECH");
-                    beSenior.setMinSalary(35000000L);
-                    beSenior.setMaxSalary(55000000L);
-                    beSenior.setJobDescription("Chịu trách nhiệm thiết kế, tối ưu hóa các dịch vụ backend vi mô (Microservices).");
-                    beSenior.setKeyResponsibilities("Thiết kế RESTful APIs; Tối ưu truy vấn PostgreSQL; Bảo mật hệ thống");
-                    beSenior.setRequirements("Tối thiểu 4+ năm kinh nghiệm Java/Spring Boot; Hiểu sâu transaction, concurrency");
-                    beSenior.setCompetencies("Kiến trúc phần mềm; Tối ưu hiệu năng CSDL; Bảo mật hệ thống");
-                    beSenior.setStandardHeadcount(15);
-                    beSenior.setCurrentHeadcount(12);
-                    beSenior.setActive(true);
-                    jobTitleRepository.save(beSenior);
+            // 4. Seed default job titles linked to departments if none exist
+            if (!isTestProfile && jobTitleRepository.count() == 0) {
+                Department devBe = departmentRepository.findAll().stream()
+                        .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()))
+                        .findFirst().orElse(null);
+                Department devFe = departmentRepository.findAll().stream()
+                        .filter(d -> "DEV-FE".equalsIgnoreCase(d.getCode()))
+                        .findFirst().orElse(null);
+                Department hrDept = departmentRepository.findAll().stream()
+                        .filter(d -> "TA-REC".equalsIgnoreCase(d.getCode()))
+                        .findFirst().orElse(null);
 
-                    JobTitle feMid = new JobTitle();
-                    feMid.setTitle("Kỹ sư Phát triển Giao diện (Middle Frontend Developer)");
-                    feMid.setCode("FE-MID-02");
-                    feMid.setDepartment(devFe);
-                    feMid.setLevel("MIDDLE");
-                    feMid.setJobFamily("TECH");
-                    feMid.setMinSalary(22000000L);
-                    feMid.setMaxSalary(35000000L);
-                    feMid.setJobDescription("Xây dựng giao diện người dùng trực quan, responsive cho hệ thống ATS.");
-                    feMid.setKeyResponsibilities("Phát triển component React 18 & TypeScript; Tối ưu Core Web Vitals");
-                    feMid.setRequirements("2-4 năm kinh nghiệm React, TypeScript, CSS hiện đại");
-                    feMid.setCompetencies("React & TypeScript; Tối ưu UI/UX; Kiểm thử Frontend");
-                    feMid.setStandardHeadcount(16);
-                    feMid.setCurrentHeadcount(14);
-                    feMid.setActive(true);
-                    jobTitleRepository.save(feMid);
+                JobTitle beSenior = new JobTitle();
+                beSenior.setTitle("Kỹ sư Phần mềm Backend Cao cấp (Senior Backend Engineer)");
+                beSenior.setCode("BE-SR-01");
+                beSenior.setDepartment(devBe);
+                beSenior.setLevel("SENIOR");
+                beSenior.setJobFamily("TECH");
+                beSenior.setMinSalary(35000000L);
+                beSenior.setMaxSalary(55000000L);
+                beSenior.setJobDescription("Chịu trách nhiệm thiết kế, tối ưu hóa các dịch vụ backend vi mô (Microservices).");
+                beSenior.setKeyResponsibilities("Thiết kế RESTful APIs; Tối ưu truy vấn PostgreSQL; Bảo mật hệ thống");
+                beSenior.setRequirements("Tối thiểu 4+ năm kinh nghiệm Java/Spring Boot; Hiểu sâu transaction, concurrency");
+                beSenior.setCompetencies("Kiến trúc phần mềm; Tối ưu hiệu năng CSDL; Bảo mật hệ thống");
+                beSenior.setStandardHeadcount(15);
+                beSenior.setCurrentHeadcount(12);
+                beSenior.setActive(true);
+                jobTitleRepository.save(beSenior);
 
-                    JobTitle recSpecialist = new JobTitle();
-                    recSpecialist.setTitle("Chuyên viên Tuyển dụng Nhân tài (Recruitment Specialist)");
-                    recSpecialist.setCode("REC-SPEC-03");
-                    recSpecialist.setDepartment(hrDept);
-                    recSpecialist.setLevel("MIDDLE");
-                    recSpecialist.setJobFamily("HR");
-                    recSpecialist.setMinSalary(18000000L);
-                    recSpecialist.setMaxSalary(28000000L);
-                    recSpecialist.setJobDescription("Tìm kiếm, tiếp cận nguồn ứng viên tiềm năng và điều phối phỏng vấn.");
-                    recSpecialist.setKeyResponsibilities("Sàng lọc CV; Lên lịch phỏng vấn; Chăm sóc ứng viên");
-                    recSpecialist.setRequirements("2+ năm kinh nghiệm tuyển dụng ngành CNTT; Kỹ năng giao tiếp xuất sắc");
-                    recSpecialist.setCompetencies("Tìm kiếm ứng viên; Phỏng vấn đánh giá; Đàm phán đãi ngộ");
-                    recSpecialist.setStandardHeadcount(6);
-                    recSpecialist.setCurrentHeadcount(5);
-                    recSpecialist.setActive(true);
-                    jobTitleRepository.save(recSpecialist);
-                }
+                JobTitle feMid = new JobTitle();
+                feMid.setTitle("Kỹ sư Phát triển Giao diện (Middle Frontend Developer)");
+                feMid.setCode("FE-MID-02");
+                feMid.setDepartment(devFe);
+                feMid.setLevel("MIDDLE");
+                feMid.setJobFamily("TECH");
+                feMid.setMinSalary(22000000L);
+                feMid.setMaxSalary(35000000L);
+                feMid.setJobDescription("Xây dựng giao diện người dùng trực quan, responsive cho hệ thống ATS.");
+                feMid.setKeyResponsibilities("Phát triển component React 18 & TypeScript; Tối ưu Core Web Vitals");
+                feMid.setRequirements("2-4 năm kinh nghiệm React, TypeScript, CSS hiện đại");
+                feMid.setCompetencies("React & TypeScript; Tối ưu UI/UX; Kiểm thử Frontend");
+                feMid.setStandardHeadcount(16);
+                feMid.setCurrentHeadcount(14);
+                feMid.setActive(true);
+                jobTitleRepository.save(feMid);
 
-                // 5. Seed default competency frameworks, criteria, and interview questions if none exist
-                if (competencyFrameworkRepository.count() == 0) {
-                    JobTitle beSenior = jobTitleRepository.findByCodeIgnoreCase("BE-SR-01").orElse(null);
-                    JobTitle feMid = jobTitleRepository.findByCodeIgnoreCase("FE-MID-02").orElse(null);
-                    JobTitle recSpecialist = jobTitleRepository.findByCodeIgnoreCase("REC-SPEC-03").orElse(null);
+                JobTitle recSpecialist = new JobTitle();
+                recSpecialist.setTitle("Chuyên viên Tuyển dụng Nhân tài (Recruitment Specialist)");
+                recSpecialist.setCode("REC-SPEC-03");
+                recSpecialist.setDepartment(hrDept);
+                recSpecialist.setLevel("MIDDLE");
+                recSpecialist.setJobFamily("HR");
+                recSpecialist.setMinSalary(18000000L);
+                recSpecialist.setMaxSalary(28000000L);
+                recSpecialist.setJobDescription("Tìm kiếm, tiếp cận nguồn ứng viên tiềm năng và điều phối phỏng vấn.");
+                recSpecialist.setKeyResponsibilities("Sàng lọc CV; Lên lịch phỏng vấn; Chăm sóc ứng viên");
+                recSpecialist.setRequirements("2+ năm kinh nghiệm tuyển dụng ngành CNTT; Kỹ năng giao tiếp xuất sắc");
+                recSpecialist.setCompetencies("Tìm kiếm ứng viên; Phỏng vấn đánh giá; Đàm phán đãi ngộ");
+                recSpecialist.setStandardHeadcount(6);
+                recSpecialist.setCurrentHeadcount(5);
+                recSpecialist.setActive(true);
+                jobTitleRepository.save(recSpecialist);
+            }
+
+            // 5. Seed default competency frameworks, criteria, and interview questions if none exist
+            if (!isTestProfile && competencyFrameworkRepository.count() == 0) {
+                JobTitle beSenior = jobTitleRepository.findByCodeIgnoreCase("BE-SR-01").orElse(null);
+                JobTitle feMid = jobTitleRepository.findByCodeIgnoreCase("FE-MID-02").orElse(null);
+                JobTitle recSpecialist = jobTitleRepository.findByCodeIgnoreCase("REC-SPEC-03").orElse(null);
 
                     // Framework 1: Backend Architecture & Development
                     CompetencyFramework fwBe = new CompetencyFramework();
@@ -313,7 +324,6 @@ public class DataInitializer {
                         interviewQuestionRepository.save(q6);
                     }
                 }
-            }
 
             // 6. Seed Common Categories if empty
             if (commonCategoryRepository.count() == 0) {

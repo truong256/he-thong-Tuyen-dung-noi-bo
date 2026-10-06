@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Lightbulb,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import questionBankApi from '../api/questionBank';
@@ -332,16 +333,21 @@ export const QuestionBankPage: React.FC = () => {
         /* Empty state */
         <div className="qb-empty-state">
           <div className="qb-empty-icon">
-            <HelpCircle size={32} />
+            <HelpCircle size={30} />
           </div>
-          <h3>Không tìm thấy câu hỏi nào</h3>
-          <p>
+          <h3 className="qb-empty-title">Không tìm thấy câu hỏi nào</h3>
+          <p className="qb-empty-desc">
             {searchTerm || difficultyFilter !== 'ALL' || criterionFilter !== 'ALL' || statusFilter !== 'ALL'
               ? 'Không có câu hỏi phỏng vấn nào phù hợp với bộ lọc hiện tại. Thử xóa bớt điều kiện lọc.'
-              : 'Hiện chưa có câu hỏi nào trong ngân hàng. Hãy thêm mới câu hỏi để chuẩn hóa quy trình phỏng vấn!'}
+              : 'Hiện chưa có câu hỏi nào trong ngân hàng. Hãy thêm mới câu hỏi để chuẩn hóa quy trình phỏng vấn.'}
           </p>
           {canManage && (
-            <button type="button" className="btn btn-primary" onClick={handleOpenCreate}>
+            <button
+              type="button"
+              className="btn btn-primary qb-empty-cta"
+              onClick={handleOpenCreate}
+              id="btn-add-question-empty"
+            >
               <Plus size={16} />
               <span>Thêm câu hỏi ngay</span>
             </button>
@@ -496,22 +502,38 @@ export const QuestionBankPage: React.FC = () => {
 
       {/* Delete / Deactivate Confirmation Dialog */}
       {deletingQuestion && (
-        <div className="org-modal-overlay" onClick={() => setDeletingQuestion(null)} role="dialog">
-          <div className="org-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 480 }}>
-            <div className="org-modal-header">
-              <div className="org-modal-title-group">
-                <div className="org-modal-icon-badge" style={{ background: '#fef2f2', color: '#dc2626' }}>
-                  <Trash2 size={22} />
-                </div>
-                <div>
-                  <h3>Xác nhận vô hiệu hóa câu hỏi</h3>
-                  <p className="org-modal-subtitle">Hành động này sẽ tạm dừng sử dụng câu hỏi trong các buổi phỏng vấn</p>
-                </div>
+        <div
+          className="qb-modal-backdrop"
+          onClick={() => setDeletingQuestion(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          <div
+            className="qb-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 480 }}
+          >
+            <div className="qb-modal-header">
+              <div className="qb-modal-title-group">
+                <h2 className="qb-modal-title" style={{ color: '#dc2626' }}>
+                  Xác nhận vô hiệu hóa câu hỏi
+                </h2>
+                <p className="qb-modal-subtitle">
+                  Hành động này sẽ tạm dừng sử dụng câu hỏi trong các buổi phỏng vấn
+                </p>
               </div>
+              <button
+                type="button"
+                className="qb-modal-close-btn"
+                onClick={() => setDeletingQuestion(null)}
+                aria-label="Đóng dialog"
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            <div className="org-modal-body" style={{ padding: '16px 0' }}>
-              <p style={{ fontSize: '0.9375rem', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+            <div className="qb-modal-body">
+              <p style={{ fontSize: '0.9375rem', color: '#1e293b', lineHeight: 1.5, margin: 0 }}>
                 Bạn có chắc chắn muốn vô hiệu hóa câu hỏi:
               </p>
               <div
@@ -520,16 +542,16 @@ export const QuestionBankPage: React.FC = () => {
                   border: '1px solid #e2e8f0',
                   borderRadius: 8,
                   padding: 12,
-                  marginTop: 8,
                   fontStyle: 'italic',
                   fontSize: '0.875rem',
+                  color: '#334155',
                 }}
               >
                 "{deletingQuestion.questionText}"
               </div>
             </div>
 
-            <div className="org-modal-footer">
+            <div className="qb-modal-footer">
               <button
                 type="button"
                 className="btn btn-outline"

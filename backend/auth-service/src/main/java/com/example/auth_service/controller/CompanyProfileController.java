@@ -1,6 +1,7 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.CompanyProfile;
+import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.repository.*;
 import com.example.auth_service.service.CompanyProfileService;
 import org.springframework.http.ResponseEntity;
