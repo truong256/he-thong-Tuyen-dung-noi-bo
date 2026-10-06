@@ -44,7 +44,7 @@ public class AdminUserController {
         return ResponseEntity.ok(preview);
     }
 
-    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/import-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ExcelImportSummaryResponse> importExcel(@RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
         ExcelImportSummaryResponse response = excelImportService.importExcel(file);
         return ResponseEntity.ok(response);

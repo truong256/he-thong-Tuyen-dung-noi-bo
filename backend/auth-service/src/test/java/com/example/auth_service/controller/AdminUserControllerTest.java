@@ -140,7 +140,7 @@ class AdminUserControllerTest {
     }
 
     @Test
-    @DisplayName("Admin API: POST /api/admin/users/import thực hiện import và trả báo cáo tổng kết")
+    @DisplayName("Admin API: POST /api/admin/users/import-file thực hiện import và trả báo cáo tổng kết")
     void testImportExcel() throws Exception {
         org.springframework.mock.web.MockMultipartFile file = new org.springframework.mock.web.MockMultipartFile(
                 "file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[]{1, 2}
@@ -157,7 +157,7 @@ class AdminUserControllerTest {
 
         when(excelImportService.importExcel(any())).thenReturn(summaryResponse);
 
-        mockMvc.perform(multipart("/api/admin/users/import").file(file))
+        mockMvc.perform(multipart("/api/admin/users/import-file").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalRows").value(3))
                 .andExpect(jsonPath("$.successCount").value(2))

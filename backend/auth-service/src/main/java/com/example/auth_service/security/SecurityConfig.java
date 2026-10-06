@@ -59,7 +59,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/auth/avatar/**", "/api/auth/avatars/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/admin/roles").hasAuthority("ROLE_READ")
                 .requestMatchers(HttpMethod.GET, "/api/admin/users/import-template", "/api/admin/users/template").hasAnyAuthority("USER_READ", "USER_MANAGE")
-                .requestMatchers(HttpMethod.POST, "/api/admin/users/import-preview", "/api/admin/users/import", "/api/admin/users/import-rows").hasAuthority("USER_MANAGE")
+                .requestMatchers(HttpMethod.POST, "/api/admin/users/import-preview", "/api/admin/users/import", "/api/admin/users/import-rows", "/api/admin/users/import-file").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/admin/users", "/api/admin/users/{id}").hasAuthority("USER_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}/roles").hasAuthority("ROLE_MANAGE")
                 .requestMatchers(HttpMethod.POST, "/api/admin/users").hasAuthority("USER_MANAGE")
