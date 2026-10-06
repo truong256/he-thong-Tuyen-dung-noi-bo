@@ -48,12 +48,14 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     expect(screen.getByText('Đang hoạt động')).toBeInTheDocument();
   });
 
-  it('allows editing full name and department, then submits updateProfile', async () => {
+  it('updates name, Vietnamese phone and display title without submitting protected fields', async () => {
     vi.spyOn(authApi, 'updateProfile').mockResolvedValueOnce({
       id: 10,
       email: 'recruiter@company.com',
       fullName: 'Nguyễn Văn Đã Cập Nhật',
-      department: 'Kỹ thuật & Công nghệ',
+      department: 'Tuyển dụng & Nhân sự',
+      phone: '0912345678',
+      displayName: 'Chuyên viên tuyển dụng',
       role: 'RECRUITER',
       roles: ['RECRUITER'],
       status: 'ACTIVE',
@@ -66,7 +68,8 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     );
 
     const nameInput = screen.getByLabelText(/Họ và tên/i);
-    const deptInput = screen.getByLabelText(/Phòng ban/i);
+    const phoneInput = screen.getByLabelText(/Số điện thoại/i);
+    const titleInput = screen.getByLabelText(/Chức danh hiển thị/i);
     const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
 
     // Initially save button is disabled since clean
@@ -76,10 +79,9 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     fireEvent.change(nameInput, { target: { value: 'Nguyễn Văn Đã Cập Nhật' } });
     expect(saveBtn).not.toBeDisabled();
 
-    // Select preset chip
-    const techChip = screen.getByRole('button', { name: 'Kỹ thuật & Công nghệ' });
-    fireEvent.click(techChip);
-    expect(deptInput).toHaveValue('Kỹ thuật & Công nghệ');
+    fireEvent.change(phoneInput, { target: { value: '0912345678' } });
+    fireEvent.change(titleInput, { target: { value: 'Chuyên viên tuyển dụng' } });
+    expect(screen.getByLabelText(/^Phòng ban$/i)).toBeDisabled();
 
     // Submit form
     fireEvent.click(saveBtn);
@@ -87,7 +89,8 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     await waitFor(() => {
       expect(authApi.updateProfile).toHaveBeenCalledWith({
         fullName: 'Nguyễn Văn Đã Cập Nhật',
-        department: 'Kỹ thuật & Công nghệ',
+        phone: '0912345678',
+        displayName: 'Chuyên viên tuyển dụng',
       });
       expect(mockRefreshUser).toHaveBeenCalled();
     });
@@ -95,6 +98,14 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     expect(
       await screen.findByText('Thông tin hồ sơ cá nhân đã được cập nhật thành công!')
     ).toBeInTheDocument();
+  });
+
+  it('rejects invalid Vietnamese phone before sending the profile update', async () => {
+    render(<MemoryRouter><ProfilePage /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(/Số điện thoại/i), { target: { value: '12345' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
+    expect(await screen.findByText('Số điện thoại không đúng định dạng Việt Nam.')).toBeInTheDocument();
+    expect(authApi.updateProfile).not.toHaveBeenCalled();
   });
 
   it('shows client-side validation error if full name is too short', async () => {

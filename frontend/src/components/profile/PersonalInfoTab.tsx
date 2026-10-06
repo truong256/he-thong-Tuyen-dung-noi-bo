@@ -1,28 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Save, RotateCcw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { UserSummary } from '../../types/auth';
 import { getRoleLabel } from '../../constants/rbac';
-import organizationApi from '../../api/organization';
-
-const DEFAULT_DEPARTMENT_PRESETS = [
-  'Kỹ thuật & Công nghệ',
-  'Tuyển dụng & Nhân sự',
-  'Kinh doanh & Tiếp thị',
-  'Tài chính - Kế toán',
-  'Vận hành & Hỗ trợ',
-  'Ban Giám đốc & Quản trị',
-];
 
 interface PersonalInfoTabProps {
   user: UserSummary | null;
   fullName: string;
   department: string;
+  phone: string;
+  displayName: string;
   isSaving: boolean;
   validationError: string | null;
   errorMsg: string | null;
   successMsg: string | null;
   onFullNameChange: (val: string) => void;
-  onDepartmentChange: (val: string) => void;
+  onPhoneChange: (val: string) => void;
+  onDisplayNameChange: (val: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
 }
@@ -31,46 +24,22 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   user,
   fullName,
   department,
+  phone,
+  displayName,
   isSaving,
   validationError,
   errorMsg,
   successMsg,
   onFullNameChange,
-  onDepartmentChange,
+  onPhoneChange,
+  onDisplayNameChange,
   onSubmit,
   onReset,
 }) => {
-  const [departmentsList, setDepartmentsList] = useState<string[]>(DEFAULT_DEPARTMENT_PRESETS);
-  const [loadingDepts, setLoadingDepts] = useState(false);
-
-  // Fetch real departments from backend if available
-  useEffect(() => {
-    let isMounted = true;
-    const loadDepartments = async () => {
-      setLoadingDepts(true);
-      try {
-        const depts = await organizationApi.getDepartments();
-        if (isMounted && Array.isArray(depts) && depts.length > 0) {
-          const names = depts.map((d) => d.name).filter(Boolean);
-          // Merge unique with presets
-          const merged = Array.from(new Set([...names, ...DEFAULT_DEPARTMENT_PRESETS]));
-          setDepartmentsList(merged);
-        }
-      } catch {
-        // Silently keep default presets if API call is unauthenticated or fails
-      } finally {
-        if (isMounted) setLoadingDepts(false);
-      }
-    };
-    loadDepartments();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const isDirty =
     fullName.trim() !== (user?.fullName || '').trim() ||
-    department.trim() !== (user?.department || '').trim();
+    phone.trim() !== (user?.phone || '').trim() ||
+    displayName.trim() !== (user?.displayName || '').trim();
 
   const primaryRole =
     user?.roles && user.roles.length > 0
@@ -84,7 +53,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         <div className="profile-card-title-group">
           <h2 className="profile-section-title">Thông tin cá nhân</h2>
           <p className="profile-section-desc">
-            Cập nhật họ tên hiển thị và phòng ban công tác trong hệ thống tuyển dụng nội bộ.
+            Cập nhật họ tên, số điện thoại và chức danh hiển thị.
           </p>
         </div>
         {user?.id && (
@@ -137,62 +106,31 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
           </div>
         </div>
 
-        {/* Department Selection */}
+        {/* Contact and display title */}
         <div className="profile-form-group">
-          <label htmlFor="profile-department" className="profile-form-label">
-            Phòng ban
+          <label htmlFor="profile-phone" className="profile-form-label">
+            Số điện thoại
           </label>
-          <div className="profile-dept-select-container">
-            <select
-              id="profile-department-select"
-              aria-label="Danh mục cơ cấu tổ chức"
-              className="profile-form-select"
-              value={departmentsList.includes(department) ? department : ''}
-              onChange={(e) => {
-                if (e.target.value) {
-                  onDepartmentChange(e.target.value);
-                }
-              }}
-              disabled={isSaving || loadingDepts}
-            >
-              <option value="">-- Chọn từ danh mục phòng ban --</option>
-              {departmentsList.map((deptName) => (
-                <option key={deptName} value={deptName}>
-                  {deptName}
-                </option>
-              ))}
-            </select>
-
-            {/* Freeform input if custom */}
-            <div className="profile-input-wrapper" style={{ marginTop: '8px' }}>
-              <input
-                id="profile-department"
-                type="text"
-                className="profile-form-input"
-                value={department}
-                onChange={(e) => onDepartmentChange(e.target.value)}
-                placeholder="Hoặc nhập tên phòng ban cụ thể nếu không có trong danh sách..."
-                disabled={isSaving}
-              />
-            </div>
+          <div className="profile-input-wrapper">
+            <input id="profile-phone" type="tel" className="profile-form-input" value={phone}
+              onChange={(e) => onPhoneChange(e.target.value)} placeholder="0912345678" disabled={isSaving}
+              autoComplete="tel" inputMode="tel" />
           </div>
+        </div>
+        <div className="profile-form-group">
+          <label htmlFor="profile-displayName" className="profile-form-label">Chức danh hiển thị</label>
+          <div className="profile-input-wrapper">
+            <input id="profile-displayName" type="text" className="profile-form-input" value={displayName}
+              onChange={(e) => onDisplayNameChange(e.target.value)} disabled={isSaving} maxLength={150} />
+          </div>
+        </div>
 
-          {/* Quick preset chips for rapid selection and test compatibility */}
-          <div className="profile-dept-quick-chips">
-            <span className="profile-dept-chips-label">Gợi ý phòng ban:</span>
-            <div className="profile-dept-chips-group">
-              {DEFAULT_DEPARTMENT_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  className={`profile-dept-chip ${department === preset ? 'selected' : ''}`}
-                  onClick={() => onDepartmentChange(preset)}
-                  disabled={isSaving}
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
+        {/* Protected fields are displayed for reference only. */}
+        <div className="profile-form-group">
+          <label htmlFor="profile-department" className="profile-form-label">Phòng ban</label>
+          <div className="profile-input-wrapper is-readonly">
+            <input id="profile-department" type="text" className="profile-form-input is-readonly"
+              value={department} readOnly disabled />
           </div>
         </div>
 

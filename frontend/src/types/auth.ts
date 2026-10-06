@@ -11,6 +11,8 @@ export interface UserSummary {
   id: number;
   email: string;
   fullName: string;
+  phone?: string;
+  displayName?: string;
   department?: string;
   role: string;
   roles: string[];
