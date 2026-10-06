@@ -275,14 +275,96 @@ const setStoredData = <T>(key: string, value: T): void => {
   }
 };
 
+const normalizeProfileFromApi = (data: any): CompanyProfile => {
+  let coreValues = data.coreValues;
+  if (typeof coreValues === 'string') {
+    try {
+      coreValues = JSON.parse(coreValues);
+    } catch {
+      coreValues = INITIAL_COMPANY_PROFILE.coreValues;
+    }
+  }
+  let legalRepresentative = data.legalRepresentative;
+  if (typeof legalRepresentative === 'string') {
+    try {
+      legalRepresentative = JSON.parse(legalRepresentative);
+    } catch {
+      legalRepresentative = INITIAL_COMPANY_PROFILE.legalRepresentative;
+    }
+  }
+  let workPolicy = data.workPolicy;
+  if (typeof workPolicy === 'string') {
+    try {
+      workPolicy = JSON.parse(workPolicy);
+    } catch {
+      workPolicy = INITIAL_COMPANY_PROFILE.workPolicy;
+    }
+  }
+
+  return {
+    ...INITIAL_COMPANY_PROFILE,
+    ...data,
+    coreValues: Array.isArray(coreValues) ? coreValues : INITIAL_COMPANY_PROFILE.coreValues,
+    legalRepresentative: legalRepresentative || INITIAL_COMPANY_PROFILE.legalRepresentative,
+    workPolicy: workPolicy || INITIAL_COMPANY_PROFILE.workPolicy,
+    updatedAt: data.updatedAt ? String(data.updatedAt) : new Date().toISOString(),
+  };
+};
+
+const serializeProfileForApi = (payload: Partial<CompanyProfile>): any => {
+  const res: any = { ...payload };
+  if (payload.coreValues && typeof payload.coreValues !== 'string') {
+    res.coreValues = JSON.stringify(payload.coreValues);
+  }
+  if (payload.legalRepresentative && typeof payload.legalRepresentative !== 'string') {
+    res.legalRepresentative = JSON.stringify(payload.legalRepresentative);
+  }
+  if (payload.workPolicy && typeof payload.workPolicy !== 'string') {
+    res.workPolicy = JSON.stringify(payload.workPolicy);
+  }
+  return res;
+};
+
 export const organizationApi = {
   // --- Profile Methods ---
   getCompanyProfile: async (): Promise<CompanyProfile> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.get<any>('/api/organization/profile');
+        if (res.data) {
+          const normalized = normalizeProfileFromApi(res.data);
+          setStoredData(STORAGE_KEYS.PROFILE, normalized);
+          return normalized;
+        }
+      } catch (err) {
+        console.warn('[OrganizationApi] Failed to load company profile from API, falling back to storage:', err);
+      }
+    }
     return getStoredData<CompanyProfile>(STORAGE_KEYS.PROFILE, INITIAL_COMPANY_PROFILE);
   },
 
   updateCompanyProfile: async (payload: Partial<CompanyProfile>): Promise<CompanyProfile> => {
     const current = getStoredData<CompanyProfile>(STORAGE_KEYS.PROFILE, INITIAL_COMPANY_PROFILE);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const payloadToSend = serializeProfileForApi({
+          ...current,
+          ...payload,
+        });
+        const res = await apiClient.put<any>('/api/organization/profile', payloadToSend);
+        if (res.data) {
+          const normalized = normalizeProfileFromApi(res.data);
+          setStoredData(STORAGE_KEYS.PROFILE, normalized);
+          return normalized;
+        }
+      } catch (err: any) {
+        const msg = err.response?.data?.message || err.message || 'Lỗi khi cập nhật hồ sơ doanh nghiệp lên máy chủ.';
+        throw new Error(msg);
+      }
+    }
+
     const updated: CompanyProfile = {
       ...current,
       ...payload,
@@ -299,7 +381,7 @@ export const organizationApi = {
     if (token && !token.startsWith('mock-')) {
       try {
         const res = await apiClient.get<any[]>('/api/departments');
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        if (res.data && Array.isArray(res.data)) {
           const mapped: Department[] = res.data.map((d: any) => ({
             id: d.id,
             name: d.name,
@@ -319,8 +401,9 @@ export const organizationApi = {
           setStoredData(STORAGE_KEYS.DEPARTMENTS, enriched);
           return enriched;
         }
-      } catch {
-        // Fallback to local storage if API call fails
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Không thể tải danh sách phòng ban từ máy chủ.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -333,28 +416,30 @@ export const organizationApi = {
   },
 
   createDepartment: async (payload: Omit<Department, 'id' | 'createdAt'>): Promise<Department> => {
-    try {
-      const res = await apiClient.post<any>('/api/departments', {
-        name: payload.name,
-        code: payload.code,
-        description: payload.description || '',
-        parentDepartmentId: payload.parentDepartmentId || null,
-        managerUserId: 1,
-      });
-      if (res.data && res.data.id) {
-        const newDept: Department = {
-          ...payload,
-          id: res.data.id,
-          createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
-        };
-        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-        list.push(newDept);
-        setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
-        return newDept;
-      }
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.post<any>('/api/departments', {
+          name: payload.name,
+          code: payload.code,
+          description: payload.description || '',
+          parentDepartmentId: payload.parentDepartmentId || null,
+          managerUserId: 1,
+        });
+        if (res.data && res.data.id) {
+          const newDept: Department = {
+            ...payload,
+            id: res.data.id,
+            createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          };
+          const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+          list.push(newDept);
+          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
+          return newDept;
+        }
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi tạo phòng ban mới trên hệ thống.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -371,17 +456,35 @@ export const organizationApi = {
   },
 
   updateDepartment: async (id: number, payload: Partial<Department>): Promise<Department> => {
-    try {
-      await apiClient.put(`/api/departments/${id}`, {
-        name: payload.name,
-        code: payload.code,
-        description: payload.description || '',
-        parentDepartmentId: payload.parentDepartmentId || null,
-        managerUserId: 1,
-      });
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        await apiClient.put(`/api/departments/${id}`, {
+          name: payload.name,
+          code: payload.code,
+          description: payload.description || '',
+          parentDepartmentId: payload.parentDepartmentId || null,
+          managerUserId: 1,
+        });
+        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+        const index = list.findIndex((d) => d.id === id);
+        if (index !== -1) {
+          const updatedDept: Department = { ...list[index], ...payload };
+          list[index] = updatedDept;
+          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
+          return updatedDept;
+        }
+        return {
+          id,
+          name: payload.name || '',
+          code: payload.code || '',
+          active: payload.active !== false,
+          createdAt: new Date().toISOString().slice(0, 10),
+          ...payload,
+        } as Department;
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi cập nhật thông tin phòng ban.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -400,11 +503,17 @@ export const organizationApi = {
   },
 
   deleteDepartment: async (id: number): Promise<{ success: boolean; message: string }> => {
-    try {
-      await apiClient.delete(`/api/departments/${id}`);
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        await apiClient.delete(`/api/departments/${id}`);
+        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+        const filtered = list.filter((d) => d.id !== id);
+        setStoredData(STORAGE_KEYS.DEPARTMENTS, filtered);
+        return { success: true, message: 'Đã xóa phòng ban thành công.' };
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi xóa phòng ban.';
+        throw new Error(errorMsg);
       }
     }
 
@@ -421,16 +530,27 @@ export const organizationApi = {
   toggleDepartmentStatus: async (id: number): Promise<Department> => {
     const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     const index = list.findIndex((d) => d.id === id);
+    const currentActive = index !== -1 ? list[index].active : true;
+    const nextActive = !currentActive;
+
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        await apiClient.patch(`/api/departments/${id}/status`, { active: nextActive });
+        if (index !== -1) {
+          list[index].active = nextActive;
+          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
+          return list[index];
+        }
+        return { id, active: nextActive } as Department;
+      } catch (err: any) {
+        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi thay đổi trạng thái phòng ban.';
+        throw new Error(errorMsg);
+      }
+    }
+
     if (index === -1) {
       throw new Error(`Không tìm thấy phòng ban với ID: ${id}`);
-    }
-    const nextActive = !list[index].active;
-    try {
-      await apiClient.patch(`/api/departments/${id}/status`, { active: nextActive });
-    } catch (err: any) {
-      if (err?.response?.data?.message) {
-        throw new Error(err.response.data.message);
-      }
     }
     list[index].active = nextActive;
     setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
@@ -487,6 +607,26 @@ export const organizationApi = {
 
   // --- Statistics ---
   getOrgStatistics: async (): Promise<OrgStatistics> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.get<any>('/api/organization/statistics');
+        if (res.data) {
+          const locs = getStoredData<BranchLocation[]>(STORAGE_KEYS.LOCATIONS, INITIAL_LOCATIONS);
+          return {
+            totalDepartments: Number(res.data.totalDepartments || 0),
+            activeDepartments: Number(res.data.activeDepartments || 0),
+            totalEmployees: Number(res.data.totalEmployees || 0),
+            totalLocations: locs.length,
+            headcountFulfillmentRate: Number(res.data.headcountFulfillmentRate || 94.2),
+            openRequisitionsCount: Number(res.data.openRequisitionsCount || 0),
+          };
+        }
+      } catch (err) {
+        console.warn('[OrganizationApi] Failed to load statistics from API, falling back to local computation:', err);
+      }
+    }
+
     const depts = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     const locs = getStoredData<BranchLocation[]>(STORAGE_KEYS.LOCATIONS, INITIAL_LOCATIONS);
     const totalEmployees = depts.reduce((sum, d) => sum + (d.employeeCount || 0), 0);

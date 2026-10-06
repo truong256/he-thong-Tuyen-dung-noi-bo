@@ -7,11 +7,17 @@ echo ========================================================
 set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
-echo [1/2] Đang khởi động Backend (Spring Boot: http://localhost:8080)...
-start "ATS Backend - Spring Boot" cmd /k "cd /d "%~dp0backend\auth-service" && "%JAVA_HOME%\bin\java.exe" "-Dspring.profiles.active=dev" -jar target\auth-service-0.0.1-SNAPSHOT.jar"
+echo [1/2] Đang kiểm tra và khởi động Backend (Spring Boot: http://localhost:8080)...
+if not exist "%~dp0backend\auth-service\target\auth-service-0.0.1-SNAPSHOT.jar" (
+    echo Đang đóng gói backend JAR...
+    pushd "%~dp0backend\auth-service"
+    call mvnw.cmd package -DskipTests
+    popd
+)
+start "ATS Backend - Spring Boot" /d "%~dp0backend\auth-service" cmd /k ""%JAVA_HOME%\bin\java.exe" -jar target\auth-service-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev"
 
 echo [2/2] Đang khởi động Frontend (Vite: http://localhost:5173)...
-start "ATS Frontend - React Vite" cmd /k "cd /d "%~dp0frontend" && npm run dev"
+start "ATS Frontend - React Vite" /d "%~dp0frontend" cmd /k "npm run dev"
 
 echo.
 echo ========================================================
