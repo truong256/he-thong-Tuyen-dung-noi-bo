@@ -404,10 +404,11 @@
 .jt-table th {
   background: #f8fafc;
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   font-weight: 600;
+  line-height: 1.4;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border-color);
   white-space: nowrap;
@@ -417,6 +418,8 @@
   padding: 14px 16px;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-body);
+  font-size: 0.875rem;
+  line-height: 1.5;
   vertical-align: middle;
 }
 
