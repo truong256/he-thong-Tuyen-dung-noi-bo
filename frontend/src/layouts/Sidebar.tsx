@@ -17,6 +17,7 @@ import {
   Award,
   HelpCircle,
   FileSpreadsheet,
+  FolderTree,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -111,6 +112,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                   >
                     <Award size={18} />
                     <span>Quản lý Chức danh</span>
+                  </NavLink>
+                </li>
+              )}
+
+              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
+                <li>
+                  <NavLink
+                    to="/categories"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <FolderTree size={18} />
+                    <span>Quản lý Danh mục</span>
                   </NavLink>
                 </li>
               )}

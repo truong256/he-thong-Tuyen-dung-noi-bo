@@ -1,5 +1,6 @@
 package com.example.auth_service.config;
 
+import com.example.auth_service.domain.sprint2.CommonCategory;
 import com.example.auth_service.domain.sprint2.CompetencyCriterion;
 import com.example.auth_service.domain.sprint2.CompetencyFramework;
 import com.example.auth_service.domain.sprint2.Department;
@@ -8,6 +9,7 @@ import com.example.auth_service.domain.sprint2.JobTitle;
 import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
+import com.example.auth_service.repository.CommonCategoryRepository;
 import com.example.auth_service.repository.CompetencyCriterionRepository;
 import com.example.auth_service.repository.CompetencyFrameworkRepository;
 import com.example.auth_service.repository.DepartmentRepository;
@@ -39,6 +41,7 @@ public class DataInitializer {
                                       CompetencyFrameworkRepository competencyFrameworkRepository,
                                       CompetencyCriterionRepository competencyCriterionRepository,
                                       InterviewQuestionRepository interviewQuestionRepository,
+                                      CommonCategoryRepository commonCategoryRepository,
                                       PasswordEncoder passwordEncoder,
                                       Environment env) {
         return args -> {
@@ -311,6 +314,11 @@ public class DataInitializer {
                     }
                 }
             }
+
+            // 6. Seed Common Categories if empty
+            if (commonCategoryRepository.count() == 0) {
+                seedCategories(commonCategoryRepository);
+            }
         };
     }
 
@@ -329,5 +337,58 @@ public class DataInitializer {
             return userRepository.save(user);
         }
         return existing.get();
+    }
+
+    private void seedCategories(CommonCategoryRepository repo) {
+        // 1. Employment Types
+        repo.save(new CommonCategory(null, "EMPLOYMENT_TYPE", "FULL_TIME", "Toàn thời gian (Full-time)", 1, true));
+        repo.save(new CommonCategory(null, "EMPLOYMENT_TYPE", "PART_TIME", "Bán thời gian (Part-time)", 2, true));
+        repo.save(new CommonCategory(null, "EMPLOYMENT_TYPE", "INTERN", "Thực tập sinh (Internship)", 3, true));
+        repo.save(new CommonCategory(null, "EMPLOYMENT_TYPE", "CONTRACTOR", "Hợp đồng thời vụ (Contract)", 4, true));
+        repo.save(new CommonCategory(null, "EMPLOYMENT_TYPE", "FREELANCE", "Cộng tác viên (Freelancer)", 5, true));
+
+        // 2. Work Locations
+        repo.save(new CommonCategory(null, "WORK_LOCATION", "HN_HQ", "Hà Nội - Trụ sở chính (Cầu Giấy)", 1, true));
+        repo.save(new CommonCategory(null, "WORK_LOCATION", "HCM_BRANCH", "TP. Hồ Chí Minh - Chi nhánh Quận 1", 2, true));
+        repo.save(new CommonCategory(null, "WORK_LOCATION", "DN_BRANCH", "Đà Nẵng - Trung tâm R&D", 3, true));
+        repo.save(new CommonCategory(null, "WORK_LOCATION", "REMOTE", "Làm việc từ xa (Remote 100%)", 4, true));
+        repo.save(new CommonCategory(null, "WORK_LOCATION", "HYBRID", "Linh hoạt kết hợp (Hybrid 3+2)", 5, true));
+
+        // 3. Education Levels
+        repo.save(new CommonCategory(null, "EDUCATION_LEVEL", "HIGH_SCHOOL", "Trung học phổ thông", 1, true));
+        repo.save(new CommonCategory(null, "EDUCATION_LEVEL", "VOCATIONAL", "Trung cấp nghề", 2, true));
+        repo.save(new CommonCategory(null, "EDUCATION_LEVEL", "COLLEGE", "Cao đẳng chuyên nghiệp", 3, true));
+        repo.save(new CommonCategory(null, "EDUCATION_LEVEL", "BACHELOR", "Cử nhân / Kỹ sư Đại học", 4, true));
+        repo.save(new CommonCategory(null, "EDUCATION_LEVEL", "MASTER", "Thạc sĩ", 5, true));
+        repo.save(new CommonCategory(null, "EDUCATION_LEVEL", "DOCTORATE", "Tiến sĩ", 6, true));
+
+        // 4. Candidate Sources
+        repo.save(new CommonCategory(null, "CANDIDATE_SOURCE", "CAREER_SITE", "Cổng tuyển dụng nội bộ (Career Portal)", 1, true));
+        repo.save(new CommonCategory(null, "CANDIDATE_SOURCE", "LINKEDIN", "Mạng xã hội nghề nghiệp LinkedIn", 2, true));
+        repo.save(new CommonCategory(null, "CANDIDATE_SOURCE", "TOPCV", "Nền tảng tuyển dụng TopCV", 3, true));
+        repo.save(new CommonCategory(null, "CANDIDATE_SOURCE", "VIETNAMWORKS", "Nền tảng việc làm VietnamWorks", 4, true));
+        repo.save(new CommonCategory(null, "CANDIDATE_SOURCE", "REFERRAL", "Giới thiệu nội bộ (Employee Referral)", 5, true));
+        repo.save(new CommonCategory(null, "CANDIDATE_SOURCE", "HEADHUNTER", "Đối tác Headhunter", 6, true));
+
+        // 5. Rejection Reasons
+        repo.save(new CommonCategory(null, "REJECTION_REASON", "SKILLS_MISMATCH", "Chưa phù hợp yêu cầu kỹ thuật", 1, true));
+        repo.save(new CommonCategory(null, "REJECTION_REASON", "EXPERIENCE_LACK", "Chưa đủ số năm kinh nghiệm yêu cầu", 2, true));
+        repo.save(new CommonCategory(null, "REJECTION_REASON", "SALARY_MISMATCH", "Mức lương kỳ vọng vượt khung ngân sách", 3, true));
+        repo.save(new CommonCategory(null, "REJECTION_REASON", "CANDIDATE_DECLINED", "Ứng viên chủ động từ chối offer", 4, true));
+        repo.save(new CommonCategory(null, "REJECTION_REASON", "FAILED_INTERVIEW", "Không đạt phỏng vấn chuyên môn", 5, true));
+
+        // 6. Interview Types
+        repo.save(new CommonCategory(null, "INTERVIEW_TYPE", "DIRECT_OFFICE", "Phỏng vấn trực tiếp tại văn phòng", 1, true));
+        repo.save(new CommonCategory(null, "INTERVIEW_TYPE", "ONLINE_MEET", "Phỏng vấn trực tuyến (Google Meet / Teams)", 2, true));
+        repo.save(new CommonCategory(null, "INTERVIEW_TYPE", "TECHNICAL_TEST", "Bài kiểm tra kỹ thuật (Coding / Test)", 3, true));
+        repo.save(new CommonCategory(null, "INTERVIEW_TYPE", "HR_SCREENING", "Sàng lọc sơ bộ qua điện thoại (Phone Screening)", 4, true));
+
+        // 7. Skill Tags
+        repo.save(new CommonCategory(null, "SKILL_TAG", "JAVA_SPRING", "Java & Spring Boot Framework", 1, true));
+        repo.save(new CommonCategory(null, "SKILL_TAG", "REACT_TS", "React, TypeScript & Frontend Modern", 2, true));
+        repo.save(new CommonCategory(null, "SKILL_TAG", "PYTHON_AI", "Python, Machine Learning & AI", 3, true));
+        repo.save(new CommonCategory(null, "SKILL_TAG", "DEVOPS_CLOUD", "DevOps, Docker, CI/CD & Cloud", 4, true));
+        repo.save(new CommonCategory(null, "SKILL_TAG", "QA_AUTOMATION", "Kiểm thử tự động & QA/QC", 5, true));
+        repo.save(new CommonCategory(null, "SKILL_TAG", "PRODUCT_MGMT", "Quản lý sản phẩm & Business Analysis", 6, true));
     }
 }
