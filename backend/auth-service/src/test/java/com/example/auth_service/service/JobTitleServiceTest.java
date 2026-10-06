@@ -4,6 +4,7 @@ import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.JobTitle;
 import com.example.auth_service.dto.JobTitleRequest;
 import com.example.auth_service.dto.JobTitleResponse;
+import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.DepartmentRepository;
@@ -68,7 +69,7 @@ class JobTitleServiceTest {
     void list_Success() {
         when(repository.searchJobTitles(any(), any(), any())).thenReturn(List.of(jobTitle));
 
-        List<JobTitleResponse> responses = service.list("Java", true, 10L);
+        List<JobTitleResponse> responses = service.list("Java", true, 10L, true);
 
         assertThat(responses).hasSize(1);
         assertThat(responses.get(0).title()).isEqualTo("Senior Java Developer");
@@ -84,7 +85,7 @@ class JobTitleServiceTest {
     void get_Success() {
         when(repository.findById(1L)).thenReturn(Optional.of(jobTitle));
 
-        JobTitleResponse response = service.get(1L);
+        JobTitleResponse response = service.get(1L, true);
 
         assertThat(response.id()).isEqualTo(1L);
         assertThat(response.title()).isEqualTo("Senior Java Developer");
@@ -95,9 +96,21 @@ class JobTitleServiceTest {
     void get_NotFound() {
         when(repository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.get(999L))
+        assertThatThrownBy(() -> service.get(999L, true))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Không tìm thấy");
+    }
+
+    @Test
+    @DisplayName("list() redacts salary for users outside the HR manager role")
+    void list_RedactsSalaryWhenNotAuthorized() {
+        when(repository.searchJobTitles(any(), any(), any())).thenReturn(List.of(jobTitle));
+
+        JobTitleResponse response = service.list(null, true, null, false).getFirst();
+
+        assertThat(response.minSalary()).isNull();
+        assertThat(response.maxSalary()).isNull();
+        assertThat(response.salaryRangeDisplay()).isNull();
     }
 
     @Test
@@ -190,6 +203,33 @@ class JobTitleServiceTest {
         assertThatThrownBy(() -> service.create(req))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Tên chức danh đã tồn tại");
+    }
+
+    @Test
+    @DisplayName("create() rejects a salary range whose minimum exceeds its maximum")
+    void create_InvalidSalaryRange() {
+        JobTitleRequest req = new JobTitleRequest(
+                "Backend Engineer",
+                "BE-01",
+                null,
+                "MIDDLE",
+                "TECH",
+                50000000L,
+                30000000L,
+                null,
+                null,
+                null,
+                null,
+                1,
+                0,
+                true
+        );
+
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Lương tối thiểu");
+
+        verifyNoInteractions(repository, departmentRepository);
     }
 
     @Test

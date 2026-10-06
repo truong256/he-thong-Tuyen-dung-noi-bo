@@ -36,6 +36,9 @@ class AuthControllerTest {
     @Mock
     private AuthService authService;
 
+    @Mock
+    private com.example.auth_service.service.AvatarService avatarService;
+
     @InjectMocks
     private AuthController authController;
 

@@ -11,6 +11,8 @@ export interface UserSummary {
   id: number;
   email: string;
   fullName: string;
+  phone?: string;
+  displayName?: string;
   department?: string;
   role: string;
   roles: string[];
@@ -21,6 +23,8 @@ export interface UserSummary {
   lockedBy?: string;
   handoverWarnings?: string[];
   mustChangePassword?: boolean;
+  avatarUrl?: string;
+  avatarThumbnailUrl?: string;
 }
 
 export interface LoginResponse {

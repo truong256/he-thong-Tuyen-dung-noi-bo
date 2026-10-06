@@ -369,6 +369,8 @@ public class AdminUserService {
         dto.setLockedAt(user.getLockedAt());
         dto.setLockedBy(user.getLockedBy());
         dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setAvatarUrl(user.getAvatarUrl());
+        dto.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
         return dto;
     }
 

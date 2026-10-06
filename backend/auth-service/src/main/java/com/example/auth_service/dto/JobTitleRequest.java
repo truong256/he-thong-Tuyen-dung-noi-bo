@@ -16,7 +16,9 @@ public record JobTitleRequest(
         Long departmentId,
         String level,
         String jobFamily,
+        @PositiveOrZero(message = "Lương tối thiểu không được âm")
         Long minSalary,
+        @PositiveOrZero(message = "Lương tối đa không được âm")
         Long maxSalary,
         String jobDescription,
         List<String> keyResponsibilities,

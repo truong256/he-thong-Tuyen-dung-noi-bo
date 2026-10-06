@@ -5,6 +5,7 @@ import com.example.auth_service.dto.JobTitleResponse;
 import com.example.auth_service.service.JobTitleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -25,14 +26,15 @@ public class JobTitleController {
     public List<JobTitleResponse> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
-            @RequestParam(required = false) Long departmentId
+            @RequestParam(required = false) Long departmentId,
+            Authentication authentication
     ) {
-        return service.list(search, active, departmentId);
+        return service.list(search, active, departmentId, canViewSalary(authentication));
     }
 
     @GetMapping("/{id}")
-    public JobTitleResponse get(@PathVariable Long id) {
-        return service.get(id);
+    public JobTitleResponse get(@PathVariable Long id, Authentication authentication) {
+        return service.get(id, canViewSalary(authentication));
     }
 
     @PostMapping
@@ -56,5 +58,10 @@ public class JobTitleController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean canViewSalary(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_HR_MANAGER".equals(authority.getAuthority()));
     }
 }

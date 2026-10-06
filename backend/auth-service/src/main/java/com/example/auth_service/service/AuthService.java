@@ -152,6 +152,8 @@ public class AuthService {
                 user.getStatus()
         );
         userSummary.setMustChangePassword(user.isMustChangePassword());
+        userSummary.setAvatarUrl(user.getAvatarUrl());
+        userSummary.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
 
         LoginResponse loginResponse = new LoginResponse(
                 "Đăng nhập thành công!",
@@ -245,6 +247,10 @@ public class AuthService {
                 user.getStatus()
         );
 
+        userSummary.setMustChangePassword(user.isMustChangePassword());
+        userSummary.setAvatarUrl(user.getAvatarUrl());
+        userSummary.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
+
         return new LoginResponse("Đăng ký thành công!", accessToken, refreshToken.getToken(), userSummary);
     }
 
@@ -293,6 +299,8 @@ public class AuthService {
                 user.getStatus()
         );
         userSummary.setMustChangePassword(user.isMustChangePassword());
+        userSummary.setAvatarUrl(user.getAvatarUrl());
+        userSummary.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
 
         LoginResponse loginResponse = new LoginResponse("Làm mới token thành công!", newAccessToken, newRefreshToken.getToken(), userSummary);
         loginResponse.setMustChangePassword(user.isMustChangePassword());
@@ -525,6 +533,8 @@ public class AuthService {
                 user.getStatus()
         );
         dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setAvatarUrl(user.getAvatarUrl());
+        dto.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
         return dto;
     }
 
@@ -544,7 +554,7 @@ public class AuthService {
         user.setUpdatedAt(Instant.now());
         User saved = userRepository.saveAndFlush(user);
 
-        return new UserSummaryDto(
+        UserSummaryDto dto = new UserSummaryDto(
                 saved.getId(),
                 saved.getEmail(),
                 saved.getFullName(),
@@ -554,6 +564,10 @@ public class AuthService {
                 extractRoleNames(saved),
                 saved.getStatus()
         );
+        dto.setMustChangePassword(saved.isMustChangePassword());
+        dto.setAvatarUrl(saved.getAvatarUrl());
+        dto.setAvatarThumbnailUrl(saved.getAvatarThumbnailUrl());
+        return dto;
     }
 
     @Transactional

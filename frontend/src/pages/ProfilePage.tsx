@@ -16,7 +16,8 @@ export const ProfilePage: React.FC = () => {
 
   // Form states
   const [fullName, setFullName] = useState(user?.fullName || '');
-  const [department, setDepartment] = useState(user?.department || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
 
   // UI status states
   const [isSaving, setIsSaving] = useState(false);
@@ -31,19 +32,27 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setFullName(user.fullName || '');
-      setDepartment(user.department || '');
+      setPhone(user.phone || '');
+      setDisplayName(user.displayName || '');
     }
   }, [user]);
 
   const handleReset = () => {
     setFullName(user?.fullName || '');
-    setDepartment(user?.department || '');
+    setPhone(user?.phone || '');
+    setDisplayName(user?.displayName || '');
     setValidationError(null);
     setErrorMsg(null);
   };
 
-  const handleDepartmentChange = (dept: string) => {
-    setDepartment(dept);
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    if (validationError) setValidationError(null);
+    if (errorMsg) setErrorMsg(null);
+  };
+
+  const handleDisplayNameChange = (value: string) => {
+    setDisplayName(value);
     if (validationError) setValidationError(null);
     if (errorMsg) setErrorMsg(null);
   };
@@ -61,7 +70,8 @@ export const ProfilePage: React.FC = () => {
     setSuccessMsg(null);
 
     const trimmedName = fullName.trim();
-    const trimmedDept = department.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedDisplayName = displayName.trim();
 
     if (!trimmedName || trimmedName.length < 2) {
       setValidationError('Họ và tên phải có tối thiểu 2 ký tự.');
@@ -73,8 +83,13 @@ export const ProfilePage: React.FC = () => {
       return;
     }
 
-    if (trimmedDept.length > 100) {
-      setValidationError('Tên phòng ban không được vượt quá 100 ký tự.');
+    if (trimmedPhone && !/^(0|\+84)[35789]\d{8}$/.test(trimmedPhone)) {
+      setValidationError('Số điện thoại không đúng định dạng Việt Nam.');
+      return;
+    }
+
+    if (trimmedDisplayName.length > 150) {
+      setValidationError('Chức danh hiển thị tối đa 150 ký tự.');
       return;
     }
 
@@ -82,7 +97,8 @@ export const ProfilePage: React.FC = () => {
     try {
       await authApi.updateProfile({
         fullName: trimmedName,
-        department: trimmedDept || undefined,
+        phone: trimmedPhone || undefined,
+        displayName: trimmedDisplayName,
       });
 
       // Refresh current user data across context and localStorage
@@ -122,13 +138,16 @@ export const ProfilePage: React.FC = () => {
           <PersonalInfoTab
             user={user}
             fullName={fullName}
-            department={department}
+            department={user?.department || ''}
+            phone={phone}
+            displayName={displayName}
             isSaving={isSaving}
             validationError={validationError}
             errorMsg={errorMsg}
             successMsg={successMsg}
             onFullNameChange={handleFullNameChange}
-            onDepartmentChange={handleDepartmentChange}
+            onPhoneChange={handlePhoneChange}
+            onDisplayNameChange={handleDisplayNameChange}
             onSubmit={handleSubmit}
             onReset={handleReset}
           />

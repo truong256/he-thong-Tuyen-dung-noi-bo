@@ -47,6 +47,7 @@ class JobTitleIntegrationTest {
     @Autowired private JobTitleRepository jobTitles;
 
     private User admin;
+    private User adminOnly;
     private User recruiter;
     private User candidate;
     private Department dept;
@@ -54,6 +55,7 @@ class JobTitleIntegrationTest {
     @BeforeEach
     void fixtures() {
         admin = createUser("jt-admin@test.com", RoleName.ADMIN, RoleName.HR_MANAGER);
+        adminOnly = createUser("jt-admin-only@test.com", RoleName.ADMIN);
         recruiter = createUser("jt-recruiter@test.com", RoleName.RECRUITER);
         candidate = createUser("jt-candidate@test.com", RoleName.CANDIDATE);
 
@@ -103,13 +105,25 @@ class JobTitleIntegrationTest {
                         .header("Authorization", token(recruiter)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.title").value("Kỹ sư DevOps"));
+                .andExpect(jsonPath("$.title").value("Kỹ sư DevOps"))
+                .andExpect(jsonPath("$.minSalary").value((Object) null))
+                .andExpect(jsonPath("$.maxSalary").value((Object) null))
+                .andExpect(jsonPath("$.salaryRangeDisplay").value((Object) null));
+
+        // HR managers can view salary data.
+        mvc.perform(get("/api/job-titles/" + id)
+                        .header("Authorization", token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.minSalary").value(30000000L))
+                .andExpect(jsonPath("$.maxSalary").value(45000000L))
+                .andExpect(jsonPath("$.salaryRangeDisplay").value("30 - 45 triệu VNĐ"));
 
         // List
         mvc.perform(get("/api/job-titles?search=DevOps")
                         .header("Authorization", token(recruiter)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].code").value("DEVOPS-01"));
+                .andExpect(jsonPath("$[0].code").value("DEVOPS-01"))
+                .andExpect(jsonPath("$[0].minSalary").value((Object) null));
 
         // Update
         JobTitleRequest updateReq = new JobTitleRequest(
@@ -174,6 +188,58 @@ class JobTitleIntegrationTest {
 
         mvc.perform(post("/api/job-titles")
                         .header("Authorization", token(candidate))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void recruiterCannotCreateOrChangeSalaryRange() throws Exception {
+        JobTitleRequest req = new JobTitleRequest(
+                "Kỹ sư Bảo mật",
+                "SEC-01",
+                dept.getId(),
+                "SENIOR",
+                "TECH",
+                35000000L,
+                50000000L,
+                null,
+                null,
+                null,
+                null,
+                1,
+                0,
+                true
+        );
+
+        mvc.perform(post("/api/job-titles")
+                        .header("Authorization", token(recruiter))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminWithoutHrManagerRoleCannotManageSalaryRanges() throws Exception {
+        JobTitleRequest req = new JobTitleRequest(
+                "Kỹ sư Dữ liệu",
+                "DATA-01",
+                dept.getId(),
+                "SENIOR",
+                "TECH",
+                40000000L,
+                60000000L,
+                null,
+                null,
+                null,
+                null,
+                1,
+                0,
+                true
+        );
+
+        mvc.perform(post("/api/job-titles")
+                        .header("Authorization", token(adminOnly))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
                 .andExpect(status().isForbidden());

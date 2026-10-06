@@ -72,6 +72,12 @@ public class User {
     )
     private Set<Role> roles = new HashSet<>();
 
+    @Column(name = "avatar_url", length = 255)
+    private String avatarUrl;
+
+    @Column(name = "avatar_thumbnail_url", length = 255)
+    private String avatarThumbnailUrl;
+
     @Column(name = "created_at")
     private Instant createdAt = Instant.now();
 
@@ -221,4 +227,10 @@ public class User {
 
     public int getTokenVersion() { return tokenVersion; }
     public void setTokenVersion(int tokenVersion) { this.tokenVersion = tokenVersion; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public String getAvatarThumbnailUrl() { return avatarThumbnailUrl; }
+    public void setAvatarThumbnailUrl(String avatarThumbnailUrl) { this.avatarThumbnailUrl = avatarThumbnailUrl; }
 }
