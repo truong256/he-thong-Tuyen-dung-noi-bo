@@ -7,6 +7,10 @@ import {
   UpdateUserPayload,
   UserSummary,
 } from '../types/user';
+import {
+  ExcelImportPreviewResponse,
+  ExcelImportResultResponse,
+} from '../types/excel';
 
 export const adminApi = {
   listUsers: async (
@@ -59,6 +63,43 @@ export const adminApi = {
 
   resetUserPassword: async (id: number): Promise<UserSummary> => {
     const res = await apiClient.post<UserSummary>(`/api/admin/users/${id}/reset-password`);
+    return res.data;
+  },
+
+  downloadImportTemplate: async (): Promise<Blob> => {
+    const res = await apiClient.get('/api/admin/users/import/template', {
+      responseType: 'blob',
+    });
+    return res.data;
+  },
+
+  previewImportExcel: async (file: File): Promise<ExcelImportPreviewResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post<ExcelImportPreviewResponse>(
+      '/api/admin/users/import/preview',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    return res.data;
+  },
+
+  executeImportExcel: async (file: File): Promise<ExcelImportResultResponse> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post<ExcelImportResultResponse>(
+      '/api/admin/users/import',
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
     return res.data;
   },
 };

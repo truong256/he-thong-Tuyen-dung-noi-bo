@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,6 +15,9 @@ import {
   User,
   Building2,
   Award,
+  HelpCircle,
+  FileSpreadsheet,
+  FolderTree,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -26,11 +29,18 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const { hasRole, hasAnyRole } = useAuth();
+  const [notice, setNotice] = useState<string | null>(null);
 
   const handleLinkClick = () => {
     if (onClose) {
       onClose();
     }
+  };
+
+  const handleUpcomingClick = (featureName: string) => {
+    setNotice(`Tính năng "${featureName}" đang được phát triển theo lộ trình Sprint tiếp theo.`);
+    setTimeout(() => setNotice(null), 3500);
+    handleLinkClick();
   };
 
   return (
@@ -113,17 +123,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 </li>
               )}
 
-              {hasRole('ADMIN') && (
+              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
                 <li>
                   <NavLink
-                    to="/admin/users"
+                    to="/categories"
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <Users size={18} />
-                    <span>Quản lý Tài khoản</span>
+                    <FolderTree size={18} />
+                    <span>Quản lý Danh mục</span>
                   </NavLink>
                 </li>
+              )}
+
+              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
+                <li>
+                  <NavLink
+                    to="/questions"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <HelpCircle size={18} />
+                    <span>Ngân hàng Câu hỏi</span>
+                  </NavLink>
+                </li>
+              )}
+
+              {hasRole('ADMIN') && (
+                <>
+                  <li>
+                    <NavLink
+                      to="/admin/users"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <Users size={18} />
+                      <span>Quản lý Tài khoản</span>
+                    </NavLink>
+                  </li>
+                  <li>
+                    <NavLink
+                      to="/admin/import-excel"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <FileSpreadsheet size={18} />
+                      <span>Nhập nhân sự Excel</span>
+                    </NavLink>
+                  </li>
+                </>
               )}
             </ul>
           </div>
@@ -136,37 +184,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 <li>
                   <a
                     href="#jobs"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Tin tuyển dụng');
                     }}
                   >
                     <Megaphone size={18} />
                     <span>Tin tuyển dụng</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
                 <li>
                   <a
                     href="#pipeline"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Hồ sơ & Pipeline');
                     }}
                   >
                     <Kanban size={18} />
                     <span>Hồ sơ & Pipeline</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
                 <li>
                   <a
                     href="#interviews"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Lịch phỏng vấn');
                     }}
                   >
                     <Calendar size={18} />
                     <span>Lịch phỏng vấn</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
               </ul>
@@ -181,25 +235,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 <li>
                   <a
                     href="#requisitions"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Yêu cầu tuyển dụng');
                     }}
                   >
                     <FileCheck size={18} />
                     <span>Yêu cầu tuyển dụng</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
                 <li>
                   <a
                     href="#approvals"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Duyệt ứng viên & Offer');
                     }}
                   >
                     <ClipboardCheck size={18} />
                     <span>Duyệt ứng viên & Offer</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
               </ul>
@@ -214,25 +272,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 <li>
                   <a
                     href="#my-interviews"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Lịch phỏng vấn của tôi');
                     }}
                   >
                     <MessageSquare size={18} />
                     <span>Lịch phỏng vấn của tôi</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
                 <li>
                   <a
                     href="#evaluation"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Phiếu đánh giá ứng viên');
                     }}
                   >
                     <Star size={18} />
                     <span>Phiếu đánh giá ứng viên</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
               </ul>
@@ -247,25 +309,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 <li>
                   <a
                     href="#jobs-candidate"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Việc làm đang mở');
                     }}
                   >
                     <Briefcase size={18} />
                     <span>Việc làm đang mở</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
                 <li>
                   <a
                     href="#my-profile"
+                    aria-disabled="true"
                     onClick={(e) => {
                       e.preventDefault();
-                      handleLinkClick();
+                      handleUpcomingClick('Hồ sơ & CV của tôi');
                     }}
                   >
                     <FileText size={18} />
                     <span>Hồ sơ & CV của tôi</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
               </ul>
@@ -273,6 +339,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           )}
         </nav>
       </aside>
+
+      {/* Roadmap notification toast */}
+      {notice && (
+        <div className="sidebar-toast-notice" role="status" aria-live="polite">
+          <HelpCircle size={16} style={{ color: '#60a5fa', flexShrink: 0 }} />
+          <span>{notice}</span>
+        </div>
+      )}
     </>
   );
 };

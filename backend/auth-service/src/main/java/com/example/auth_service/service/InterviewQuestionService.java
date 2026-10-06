@@ -4,6 +4,7 @@ import com.example.auth_service.domain.sprint2.CompetencyCriterion;
 import com.example.auth_service.domain.sprint2.CompetencyFramework;
 import com.example.auth_service.domain.sprint2.InterviewQuestion;
 import com.example.auth_service.domain.sprint2.JobTitle;
+import com.example.auth_service.dto.CompetencyCriterionResponse;
 import com.example.auth_service.dto.CreateInterviewQuestionRequest;
 import com.example.auth_service.dto.InterviewQuestionResponse;
 import com.example.auth_service.dto.UpdateInterviewQuestionRequest;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @Transactional
@@ -51,6 +54,26 @@ public class InterviewQuestionService {
     @Transactional(readOnly = true)
     public InterviewQuestionResponse getById(Long id) {
         return toResponse(findQuestion(id));
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompetencyCriterionResponse> getCriteria() {
+        return competencyCriterionRepository.findAllActiveWithDetails().stream()
+                .map(c -> new CompetencyCriterionResponse(
+                        c.getId(),
+                        c.getCriterionCode(),
+                        c.getCriterionName(),
+                        c.getDescription(),
+                        c.getWeightPercent(),
+                        c.getActive(),
+                        c.getCompetencyFramework() != null ? c.getCompetencyFramework().getId() : null,
+                        c.getCompetencyFramework() != null ? c.getCompetencyFramework().getCompetencyName() : null,
+                        (c.getCompetencyFramework() != null && c.getCompetencyFramework().getJobTitle() != null)
+                                ? c.getCompetencyFramework().getJobTitle().getId() : null,
+                        (c.getCompetencyFramework() != null && c.getCompetencyFramework().getJobTitle() != null)
+                                ? c.getCompetencyFramework().getJobTitle().getTitle() : null
+                ))
+                .toList();
     }
 
     public InterviewQuestionResponse create(CreateInterviewQuestionRequest request) {
