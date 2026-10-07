@@ -23,6 +23,7 @@ import {
   parseAndFormatRoles,
 } from '../types/excel';
 import '../styles/excel-import.css';
+import { resetActivity } from '../utils/idleTracker';
 
 export const ExcelImportPage: React.FC = () => {
   const navigate = useNavigate();
@@ -119,6 +120,7 @@ export const ExcelImportPage: React.FC = () => {
     try {
       const preview = await adminApi.previewImportExcel(selectedFile);
       setPreviewData(preview);
+      resetActivity();
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Không thể đọc tệp Excel. Vui lòng kiểm tra lại định dạng tệp.';
       setErrorMessage(msg);
@@ -164,10 +166,12 @@ export const ExcelImportPage: React.FC = () => {
 
     setIsImporting(true);
     setErrorMessage(null);
+    resetActivity();
 
     try {
       const result = await adminApi.executeImportExcel(file);
       setImportResult(result);
+      resetActivity();
       if (result.successCount > 0) {
         showToast(`Đã nhập thành công ${result.successCount} nhân sự vào hệ thống!`, 'success');
       } else {
