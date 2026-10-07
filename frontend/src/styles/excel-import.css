@@ -1,0 +1,372 @@
+/* ==========================================================================
+   EXCEL IMPORT MODULE STYLES (S2-S1 / SCRUM-60, SCRUM-61)
+   Enterprise Design System: Be Vietnam Pro, clear tables, responsive floating toast
+   ========================================================================== */
+
+.excel-import-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 16px;
+  font-family: inherit;
+}
+
+/* Floating Toast Notification */
+.excel-import-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  bottom: auto !important;
+  width: auto;
+  min-width: 320px;
+  max-width: 440px;
+  height: auto;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.06);
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: excelToastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes excelToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.excel-import-toast.success {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.excel-import-toast.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.excel-import-toast.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.excel-import-toast .toast-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.excel-import-toast .toast-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+  padding: 4px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+}
+
+.excel-import-toast .toast-close-btn:hover {
+  opacity: 1;
+}
+
+/* 6-Step Stepper Bar */
+.excel-import-stepper {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+@media (max-width: 900px) {
+  .excel-import-stepper {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .excel-import-stepper {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.excel-import-step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.excel-import-step-item.current {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.excel-import-step-item.passed {
+  color: #059669;
+  font-weight: 500;
+}
+
+.excel-import-step-item.upcoming {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.excel-import-step-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.excel-import-step-item.current .excel-import-step-circle {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.excel-import-step-item.passed .excel-import-step-circle {
+  background: #059669;
+  color: #ffffff;
+}
+
+.excel-import-step-item.upcoming .excel-import-step-circle {
+  background: #e2e8f0;
+  color: #64748b;
+}
+
+/* Card */
+.excel-import-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.04);
+}
+
+/* KPI Chips */
+.excel-import-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.excel-import-kpi-card {
+  padding: 14px 18px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.excel-import-kpi-card.success {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.excel-import-kpi-card.danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.excel-import-kpi-title {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.excel-import-kpi-card.success .excel-import-kpi-title {
+  color: #059669;
+}
+
+.excel-import-kpi-card.danger .excel-import-kpi-title {
+  color: #dc2626;
+}
+
+.excel-import-kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.excel-import-kpi-card.success .excel-import-kpi-value {
+  color: #059669;
+}
+
+.excel-import-kpi-card.danger .excel-import-kpi-value {
+  color: #dc2626;
+}
+
+/* Table container & styling */
+.excel-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  max-height: 580px;
+  overflow-y: auto;
+}
+
+.excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 720px;
+}
+
+.excel-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 2px solid #e2e8f0;
+  z-index: 5;
+  white-space: nowrap;
+}
+
+.excel-table thead th.center {
+  text-align: center;
+}
+
+.excel-table tbody tr {
+  border-bottom: 1px solid #e2e8f0;
+  transition: background-color 0.15s ease;
+}
+
+.excel-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.excel-table tbody tr.row-invalid {
+  background-color: #fff8f8;
+}
+
+.excel-table tbody tr.row-invalid:hover {
+  background-color: #fee2e2;
+}
+
+.excel-table tbody td {
+  padding: 10px 14px;
+  vertical-align: middle;
+  color: #334155;
+  line-height: 1.45;
+}
+
+.excel-table tbody td.center {
+  text-align: center;
+}
+
+/* Chips & Badges */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-status.valid {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.badge-status.invalid {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.role-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.role-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #dbeafe;
+  white-space: nowrap;
+}
+
+.role-chip.admin {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.role-chip.hr {
+  background: #f3e8ff;
+  color: #7e22ce;
+  border-color: #e9d5ff;
+}
+
+/* Error List */
+.excel-error-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #dc2626;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.excel-error-list li {
+  margin-bottom: 2px;
+}
+
+.excel-error-list li:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .excel-import-toast {
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    min-width: unset;
+    max-width: 100%;
+  }
+}

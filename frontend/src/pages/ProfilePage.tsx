@@ -84,7 +84,6 @@ export const ProfilePage: React.FC = () => {
     const trimmedName = fullName.trim();
     const trimmedPhone = phone.trim();
     const trimmedDisplayName = displayName.trim();
-    const trimmedDept = department.trim();
     const trimmedRecovery = recoveryEmail.trim();
 
     if (!trimmedName || trimmedName.length < 2) {
