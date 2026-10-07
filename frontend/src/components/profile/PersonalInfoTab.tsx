@@ -17,7 +17,6 @@ interface PersonalInfoTabProps {
   onFullNameChange: (val: string) => void;
   onPhoneChange: (val: string) => void;
   onDisplayNameChange: (val: string) => void;
-  onDepartmentChange: (val: string) => void;
   onRecoveryEmailChange?: (val: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
@@ -37,7 +36,6 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   onFullNameChange,
   onPhoneChange,
   onDisplayNameChange,
-  onDepartmentChange,
   onRecoveryEmailChange,
   onSubmit,
   onReset,

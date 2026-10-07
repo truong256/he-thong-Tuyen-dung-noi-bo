@@ -117,13 +117,23 @@ export const ProfilePage: React.FC = () => {
 
     setIsSaving(true);
     try {
-      await authApi.updateProfile({
+      const payload: {
+        fullName: string;
+        phone?: string;
+        displayName?: string;
+        recoveryEmail?: string;
+      } = {
         fullName: trimmedName,
-        phone: trimmedPhone || undefined,
-        displayName: trimmedDisplayName,
-        department: trimmedDept || undefined,
-        recoveryEmail: trimmedRecovery || (user?.recoveryEmail ? '' : undefined),
-      });
+      };
+      if (trimmedPhone) payload.phone = trimmedPhone;
+      if (trimmedDisplayName) payload.displayName = trimmedDisplayName;
+      if (trimmedRecovery) {
+        payload.recoveryEmail = trimmedRecovery;
+      } else if (user?.recoveryEmail) {
+        payload.recoveryEmail = '';
+      }
+
+      await authApi.updateProfile(payload);
 
       // Refresh current user data across context and localStorage
       await refreshUser();
@@ -174,7 +184,6 @@ export const ProfilePage: React.FC = () => {
             onFullNameChange={handleFullNameChange}
             onPhoneChange={handlePhoneChange}
             onDisplayNameChange={handleDisplayNameChange}
-            onDepartmentChange={handleDepartmentChange}
             onRecoveryEmailChange={handleRecoveryEmailChange}
             onSubmit={handleSubmit}
             onReset={handleReset}

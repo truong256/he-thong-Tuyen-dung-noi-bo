@@ -191,7 +191,6 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     await waitFor(() => {
       expect(authApi.updateProfile).toHaveBeenCalledWith({
         fullName: 'Nguyễn Văn Tuyển Dụng',
-        department: 'Tuyển dụng & Nhân sự',
         recoveryEmail: 'recruiter.personal@gmail.com',
       });
     });
