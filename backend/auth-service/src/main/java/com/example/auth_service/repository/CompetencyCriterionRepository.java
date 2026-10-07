@@ -12,7 +12,6 @@ public interface CompetencyCriterionRepository extends JpaRepository<CompetencyC
         SELECT c
         FROM CompetencyCriterion c
         JOIN FETCH c.competencyFramework f
-        LEFT JOIN FETCH f.jobTitle j
         WHERE c.active = true
         ORDER BY c.criterionCode ASC
         """)

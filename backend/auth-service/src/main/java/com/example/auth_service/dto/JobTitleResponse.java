@@ -23,5 +23,7 @@ public record JobTitleResponse(
         Integer openRequisitions,
         Boolean active,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        Long competencyFrameworkId,
+        String competencyFrameworkName
 ) {}

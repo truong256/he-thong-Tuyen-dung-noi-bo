@@ -9,6 +9,8 @@ import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
+import com.example.auth_service.repository.CompetencyFrameworkRepository;
+import com.example.auth_service.domain.sprint2.CompetencyFramework;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +24,12 @@ public class JobTitleService {
 
     private final JobTitleRepository repository;
     private final DepartmentRepository departmentRepository;
+    private final CompetencyFrameworkRepository competencyFrameworkRepository;
 
-    public JobTitleService(JobTitleRepository repository, DepartmentRepository departmentRepository) {
+    public JobTitleService(JobTitleRepository repository, DepartmentRepository departmentRepository, CompetencyFrameworkRepository competencyFrameworkRepository) {
         this.repository = repository;
         this.departmentRepository = departmentRepository;
+        this.competencyFrameworkRepository = competencyFrameworkRepository;
     }
 
     @Transactional(readOnly = true)
@@ -62,11 +66,18 @@ public class JobTitleService {
             department = departmentRepository.findById(request.departmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ban với ID: " + request.departmentId()));
         }
+        
+        CompetencyFramework framework = null;
+        if (request.competencyFrameworkId() != null) {
+            framework = competencyFrameworkRepository.findById(request.competencyFrameworkId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khung năng lực với ID: " + request.competencyFrameworkId()));
+        }
 
         JobTitle jobTitle = new JobTitle();
         jobTitle.setTitle(cleanTitle);
         jobTitle.setCode(cleanCode);
         jobTitle.setDepartment(department);
+        jobTitle.setCompetencyFramework(framework);
         jobTitle.setLevel(request.level() != null ? request.level().trim() : "MIDDLE");
         jobTitle.setJobFamily(request.jobFamily() != null ? request.jobFamily().trim() : "TECH");
         jobTitle.setMinSalary(request.minSalary());
@@ -107,9 +118,16 @@ public class JobTitleService {
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ban với ID: " + request.departmentId()));
         }
 
+        CompetencyFramework framework = null;
+        if (request.competencyFrameworkId() != null) {
+            framework = competencyFrameworkRepository.findById(request.competencyFrameworkId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khung năng lực với ID: " + request.competencyFrameworkId()));
+        }
+
         jobTitle.setTitle(cleanTitle);
         jobTitle.setCode(cleanCode);
         jobTitle.setDepartment(department);
+        jobTitle.setCompetencyFramework(framework);
         if (request.level() != null) jobTitle.setLevel(request.level().trim());
         if (request.jobFamily() != null) jobTitle.setJobFamily(request.jobFamily().trim());
         jobTitle.setMinSalary(request.minSalary());
@@ -149,6 +167,8 @@ public class JobTitleService {
         String salaryRangeDisplay = includeSalary ? formatSalary(minSalary, maxSalary) : null;
         Long deptId = j.getDepartment() != null ? j.getDepartment().getId() : null;
         String deptName = j.getDepartment() != null ? j.getDepartment().getName() : null;
+        Long frameworkId = j.getCompetencyFramework() != null ? j.getCompetencyFramework().getId() : null;
+        String frameworkName = j.getCompetencyFramework() != null ? j.getCompetencyFramework().getCompetencyName() : null;
 
         return new JobTitleResponse(
                 j.getId(),
@@ -170,7 +190,9 @@ public class JobTitleService {
                 0,
                 j.getActive(),
                 j.getCreatedAt(),
-                j.getUpdatedAt()
+                j.getUpdatedAt(),
+                frameworkId,
+                frameworkName
         );
     }
 

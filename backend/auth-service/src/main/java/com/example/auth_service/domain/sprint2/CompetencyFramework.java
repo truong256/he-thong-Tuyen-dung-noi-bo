@@ -9,12 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(
-    name = "competency_frameworks",
-    indexes = {
-        @Index(name = "idx_competency_frameworks_job_title", columnList = "job_title_id")
-    }
-)
+@Table(name = "competency_frameworks")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -36,12 +31,7 @@ public class CompetencyFramework {
     @Column(name = "weight_percent", nullable = false)
     private Integer weightPercent = 100;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "job_title_id",
-        foreignKey = @ForeignKey(name = "fk_competency_framework_job_title")
-    )
-    private JobTitle jobTitle;
+
 
     @OneToMany(
         mappedBy = "competencyFramework",

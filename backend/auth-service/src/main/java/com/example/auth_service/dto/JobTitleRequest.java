@@ -26,5 +26,6 @@ public record JobTitleRequest(
         List<String> competencies,
         Integer standardHeadcount,
         Integer currentHeadcount,
-        Boolean active
+        Boolean active,
+        Long competencyFrameworkId
 ) {}

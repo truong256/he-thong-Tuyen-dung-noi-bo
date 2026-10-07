@@ -17,6 +17,4 @@ public class CompetencyCriterionResponse {
     private Boolean active;
     private Long competencyFrameworkId;
     private String competencyName;
-    private Long jobTitleId;
-    private String jobTitle;
 }
