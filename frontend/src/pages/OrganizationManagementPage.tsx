@@ -15,7 +15,6 @@ import {
   Power,
   RotateCcw,
   Download,
-  Save,
   CheckCircle2,
   AlertCircle,
   Layers,
@@ -39,6 +38,7 @@ import {
 import OrgChartVisualizer from '../components/organization/OrgChartVisualizer';
 import DepartmentModal from '../components/organization/DepartmentModal';
 import LocationModal from '../components/organization/LocationModal';
+import CompanyProfileEditor from '../components/organization/CompanyProfileEditor';
 import '../styles/organization.css';
 
 type ActiveTab = 'overview' | 'departments' | 'locations' | 'branding';
@@ -59,10 +59,8 @@ export const OrganizationManagementPage: React.FC = () => {
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Edit Profile Form state
+  // Edit Profile state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editProfileForm, setEditProfileForm] = useState<Partial<CompanyProfile>>({});
-  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
 
   // Modals state
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -96,7 +94,6 @@ export const OrganizationManagementPage: React.FC = () => {
         organizationApi.getOrgStatistics(),
       ]);
       setProfile(profData);
-      setEditProfileForm(profData);
       setDepartments(deptData);
       setLocations(locData);
       setStatistics(statsData);
@@ -112,20 +109,15 @@ export const OrganizationManagementPage: React.FC = () => {
   }, [loadData]);
 
   // --- Profile Actions ---
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfileSaveError(null);
-    try {
-      const updated = await organizationApi.updateCompanyProfile({
-        ...editProfileForm,
-        updatedBy: user?.fullName || 'Quản trị viên',
-      });
-      setProfile(updated);
-      setIsEditingProfile(false);
-      showToast('Cập nhật thông tin tổ chức thành công!');
-    } catch (err: any) {
-      setProfileSaveError(err.message || 'Lỗi khi lưu thông tin tổ chức.');
-    }
+  const handleSaveProfile = async (data: CompanyProfile) => {
+    const updated = await organizationApi.updateCompanyProfile({
+      ...data,
+      updatedBy: user?.fullName || 'Quản trị viên',
+    });
+    setProfile(updated);
+    setIsEditingProfile(false);
+    showToast('Cập nhật hồ sơ giới thiệu công ty thành công!');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleResetSeedData = async () => {
@@ -298,7 +290,15 @@ export const OrganizationManagementPage: React.FC = () => {
         <div className="org-hero-header">
           <div className="org-identity-left">
             <div className="org-logo-box" aria-label="Logo tổ chức">
-              <Building2 size={38} />
+              {profile?.logoUrl ? (
+                <img
+                  src={profile.logoUrl}
+                  alt={`Logo ${profile.shortName || profile.companyName}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff', borderRadius: 'inherit' }}
+                />
+              ) : (
+                <Building2 size={38} />
+              )}
             </div>
             <div className="org-identity-info">
               <div className="org-title-row">
@@ -324,7 +324,7 @@ export const OrganizationManagementPage: React.FC = () => {
                 <span className="org-meta-item">
                   <Globe size={14} />
                   <a href={profile?.website} target="_blank" rel="noreferrer">
-                    {profile?.website.replace('https://', '')}
+                    {profile?.website?.replace(/^https?:\/\//, '')}
                   </a>
                 </span>
               </div>
@@ -663,209 +663,13 @@ export const OrganizationManagementPage: React.FC = () => {
                 </div>
               ) : (
                 /* EDIT PROFILE FORM */
-                <div className="edit-form-wrapper" data-testid="edit-profile-form">
-                  <div className="card-title-row">
-                    <h3>
-                      <Edit2 size={18} className="card-title-icon" />
-                      <span>Cập nhật Hồ sơ Tổ chức & Doanh nghiệp</span>
-                    </h3>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setIsEditingProfile(false)}
-                    >
-                      <X size={15} />
-                      <span>Hủy chỉnh sửa</span>
-                    </button>
-                  </div>
-
-                  {profileSaveError && (
-                    <div className="modal-alert-error" role="alert">
-                      <AlertCircle size={16} />
-                      <span>{profileSaveError}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSaveProfile}>
-                    <div className="form-grid-2">
-                      <div className="form-group span-2">
-                        <label htmlFor="company-name">Tên tổ chức / Công ty *</label>
-                        <input
-                          id="company-name"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.companyName || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, companyName: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="short-name">Tên thương mại / Viết tắt *</label>
-                        <input
-                          id="short-name"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.shortName || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, shortName: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="tax-code">Mã số thuế *</label>
-                        <input
-                          id="tax-code"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.taxCode || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, taxCode: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="industry">Lĩnh vực hoạt động</label>
-                        <input
-                          id="industry"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.industry || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, industry: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="company-size">Quy mô nhân sự</label>
-                        <input
-                          id="company-size"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.companySize || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, companySize: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="email">Email liên hệ chính *</label>
-                        <input
-                          id="email"
-                          type="email"
-                          className="form-control"
-                          value={editProfileForm.email || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, email: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="phone">Hotline / Điện thoại *</label>
-                        <input
-                          id="phone"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.phone || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, phone: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group span-2">
-                        <label htmlFor="website">Địa chỉ Website</label>
-                        <input
-                          id="website"
-                          type="url"
-                          className="form-control"
-                          value={editProfileForm.website || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, website: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group span-2">
-                        <label htmlFor="address">Địa chỉ trụ sở chính *</label>
-                        <input
-                          id="address"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.address || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, address: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group span-2">
-                        <label htmlFor="desc">Giới thiệu tổng quan</label>
-                        <textarea
-                          id="desc"
-                          rows={3}
-                          className="form-control"
-                          value={editProfileForm.description || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, description: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="mission">Sứ mệnh</label>
-                        <textarea
-                          id="mission"
-                          rows={2}
-                          className="form-control"
-                          value={editProfileForm.mission || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, mission: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="vision">Tầm nhìn</label>
-                        <textarea
-                          id="vision"
-                          rows={2}
-                          className="form-control"
-                          value={editProfileForm.vision || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, vision: e.target.value })
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="modal-footer mt-4" style={{ padding: '16px 0 0', border: 'none' }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => setIsEditingProfile(false)}
-                      >
-                        Hủy bỏ
-                      </button>
-                      <button type="submit" className="btn btn-primary">
-                        <Save size={16} />
-                        <span>Lưu thay đổi hồ sơ</span>
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                profile && (
+                  <CompanyProfileEditor
+                    profile={profile}
+                    onSave={handleSaveProfile}
+                    onCancel={() => setIsEditingProfile(false)}
+                  />
+                )
               )}
             </div>
           )}
