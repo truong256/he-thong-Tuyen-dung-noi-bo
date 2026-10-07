@@ -10,7 +10,22 @@ Write-Host "========================================================" -Foregroun
 Write-Host "  KHỞI CHẠY HỆ THỐNG TUYỂN DỤNG NỘI BỘ (ATS)" -ForegroundColor Cyan
 Write-Host "========================================================" -ForegroundColor Cyan
 
-Write-Host "`n[1/2] Kiểm tra và khởi động Backend (Spring Boot: http://localhost:8080)..." -ForegroundColor Green
+# Tải biến môi trường từ .env nếu tồn tại
+$envFile = "$projectRoot\.env"
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
+            $parts = $line.Split("=", 2)
+            $name = $parts[0].Trim()
+            $val = $parts[1].Trim()
+            [Environment]::SetEnvironmentVariable($name, $val, "Process")
+        }
+    }
+}
+$activeProfiles = if ($env:SPRING_PROFILES_ACTIVE) { $env:SPRING_PROFILES_ACTIVE } else { "dev" }
+
+Write-Host "`n[1/2] Kiểm tra và khởi động Backend (Spring Boot: http://localhost:8080 - Profiles: $activeProfiles)..." -ForegroundColor Green
 $jarPath = "$projectRoot\backend\auth-service\target\auth-service-0.0.1-SNAPSHOT.jar"
 if (-not (Test-Path $jarPath)) {
     Write-Host "  Đang đóng gói backend JAR..." -ForegroundColor Yellow
@@ -18,7 +33,22 @@ if (-not (Test-Path $jarPath)) {
     & .\mvnw.cmd package -DskipTests
     Pop-Location
 }
-Start-Process powershell -WorkingDirectory "$projectRoot\backend\auth-service" -ArgumentList "-NoExit", "-Command", "& '$javaHome\bin\java.exe' -jar target\auth-service-0.0.1-SNAPSHOT.jar --spring.profiles.active=dev"
+
+# Chuẩn bị script khởi chạy backend với các biến môi trường từ .env
+$backendCmd = "& { "
+if (Test-Path $envFile) {
+    Get-Content $envFile | ForEach-Object {
+        $line = $_.Trim()
+        if ($line -and -not $line.StartsWith("#") -and $line.Contains("=")) {
+            $parts = $line.Split("=", 2)
+            $name = $parts[0].Trim()
+            $val = $parts[1].Trim()
+            $backendCmd += "`$env:$name = '$val'; "
+        }
+    }
+}
+$backendCmd += "& '$javaHome\bin\java.exe' -jar target\auth-service-0.0.1-SNAPSHOT.jar --spring.profiles.active=$activeProfiles }"
+Start-Process powershell -WorkingDirectory "$projectRoot\backend\auth-service" -ArgumentList "-NoExit", "-Command", $backendCmd
 
 Write-Host "[2/2] Khởi động Frontend (React Vite: http://localhost:5173)..." -ForegroundColor Green
 Start-Process powershell -WorkingDirectory "$projectRoot\frontend" -ArgumentList "-NoExit", "-Command", "npm run dev"
