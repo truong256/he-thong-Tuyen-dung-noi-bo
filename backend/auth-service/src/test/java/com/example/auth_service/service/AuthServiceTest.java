@@ -224,9 +224,10 @@ class AuthServiceTest {
     }
 
     @Test
-    @DisplayName("Test 10: Forgot password luôn trả về thông báo chung bảo mật")
+    @DisplayName("Test 10: Forgot password luôn trả về thông báo chung bảo mật và gửi tới recovery_email")
     void test10_forgotPassword_securityGenericMessage() {
         User user = new User("target@company.com", encodedPassword, "CANDIDATE");
+        user.setRecoveryEmail("target-recovery@gmail.com");
         when(userRepository.findByEmail("target@company.com")).thenReturn(Optional.of(user));
         when(userRepository.findByEmail("missing@company.com")).thenReturn(Optional.empty());
 
@@ -235,11 +236,12 @@ class AuthServiceTest {
         Instant after = Instant.now();
         Map<String, String> missingResponse = authService.forgotPassword(new ForgotPasswordRequest("missing@company.com"));
 
-        assertEquals(Map.of("message", "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi."), response);
+        assertEquals(Map.of("message", "Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký."), response);
         assertEquals(response, missingResponse);
         ArgumentCaptor<String> rawToken = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<PasswordResetToken> storedToken = ArgumentCaptor.forClass(PasswordResetToken.class);
-        verify(mailService).sendPasswordResetEmail(eq("target@company.com"), rawToken.capture());
+        verify(mailService).sendPasswordResetEmail(eq("target-recovery@gmail.com"), rawToken.capture(), any());
+        verify(mailService, never()).sendPasswordResetEmail(eq("target@company.com"), anyString(), any());
         verify(passwordResetTokenRepository).save(storedToken.capture());
         assertEquals(AuthService.hashToken(rawToken.getValue()), storedToken.getValue().getToken());
         assertNotEquals(rawToken.getValue(), storedToken.getValue().getToken());
@@ -248,6 +250,19 @@ class AuthServiceTest {
         assertFalse(storedToken.getValue().getExpiryDate().isAfter(after.plus(Duration.ofMinutes(30))));
         verify(passwordResetTokenRepository, never()).findByUser(argThat(candidate -> candidate != user));
         verifyNoMoreInteractions(mailService);
+    }
+
+    @Test
+    @DisplayName("User không có recovery email: trả generic response, không crash, không gửi mail")
+    void forgotPassword_missingRecoveryEmail_skipsMailAndReturnsGenericResponse() {
+        User user = new User("norecovery@company.com", encodedPassword, "CANDIDATE");
+        user.setRecoveryEmail(null);
+        when(userRepository.findByEmail("norecovery@company.com")).thenReturn(Optional.of(user));
+
+        Map<String, String> response = authService.forgotPassword(new ForgotPasswordRequest("norecovery@company.com"));
+
+        assertEquals(Map.of("message", "Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký."), response);
+        verifyNoInteractions(mailService);
     }
 
     @Test
@@ -310,17 +325,18 @@ class AuthServiceTest {
     @DisplayName("S1-03: SMTP lỗi vẫn trả cùng thông báo với email không tồn tại, không lộ token")
     void forgotPassword_mailFailure_keepsGenericResponse() {
         User user = new User("mail-failure@company.com", encodedPassword, "CANDIDATE");
+        user.setRecoveryEmail("mail-failure-recovery@gmail.com");
         when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
         when(userRepository.findByEmail("missing@company.com")).thenReturn(Optional.empty());
         doThrow(new RuntimeException("SMTP unavailable"))
-                .when(mailService).sendPasswordResetEmail(eq(user.getEmail()), anyString());
+                .when(mailService).sendPasswordResetEmail(eq("mail-failure-recovery@gmail.com"), anyString(), any());
 
         Map<String, String> failedDelivery = authService.forgotPassword(new ForgotPasswordRequest(user.getEmail()));
         Map<String, String> missingEmail = authService.forgotPassword(new ForgotPasswordRequest("missing@company.com"));
 
         assertEquals(missingEmail, failedDelivery);
         assertEquals(Set.of("message"), failedDelivery.keySet());
-        verify(mailService, times(1)).sendPasswordResetEmail(eq(user.getEmail()), anyString());
+        verify(mailService, times(1)).sendPasswordResetEmail(eq("mail-failure-recovery@gmail.com"), anyString(), any());
         verify(passwordResetTokenRepository, times(1)).save(any(PasswordResetToken.class));
     }
 
@@ -611,5 +627,57 @@ class AuthServiceTest {
         assertEquals("Old Dept", response.getDepartment());
         
         verify(userRepository).saveAndFlush(user);
+    }
+
+    @Test
+    @DisplayName("User xem recovery email của mình qua getCurrentUser")
+    void test_getCurrentUser_returnsRecoveryEmail() {
+        User user = new User("me@company.com", encodedPassword, "RECRUITER");
+        user.setRecoveryEmail("my.recovery@gmail.com");
+        when(userRepository.findByEmail("me@company.com")).thenReturn(Optional.of(user));
+
+        UserSummaryDto dto = authService.getCurrentUser("me@company.com");
+
+        assertEquals("me@company.com", dto.getEmail());
+        assertEquals("my.recovery@gmail.com", dto.getRecoveryEmail());
+    }
+
+    @Test
+    @DisplayName("User cập nhật recovery email của chính mình qua updateProfile")
+    void test_updateProfile_updatesRecoveryEmail() {
+        User user = new User("user@company.com", encodedPassword, "RECRUITER");
+        user.setFullName("User Fullname");
+        when(userRepository.findByEmail("user@company.com")).thenReturn(Optional.of(user));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UpdateProfileRequest request = new UpdateProfileRequest();
+        request.setFullName("User Fullname");
+        request.setRecoveryEmail("new.personal@gmail.com");
+
+        UserSummaryDto response = authService.updateProfile("user@company.com", request);
+
+        assertEquals("new.personal@gmail.com", response.getRecoveryEmail());
+        assertEquals("new.personal@gmail.com", user.getRecoveryEmail());
+        // Verify company email remains untouched
+        assertEquals("user@company.com", user.getEmail());
+    }
+
+    @Test
+    @DisplayName("User cập nhật recovery email thành rỗng sẽ xóa recovery email (set null)")
+    void test_updateProfile_clearsRecoveryEmailWhenEmpty() {
+        User user = new User("user@company.com", encodedPassword, "RECRUITER");
+        user.setFullName("User Fullname");
+        user.setRecoveryEmail("old.recovery@gmail.com");
+        when(userRepository.findByEmail("user@company.com")).thenReturn(Optional.of(user));
+        when(userRepository.saveAndFlush(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UpdateProfileRequest request = new UpdateProfileRequest();
+        request.setFullName("User Fullname");
+        request.setRecoveryEmail("   ");
+
+        UserSummaryDto response = authService.updateProfile("user@company.com", request);
+
+        assertNull(response.getRecoveryEmail());
+        assertNull(user.getRecoveryEmail());
     }
 }

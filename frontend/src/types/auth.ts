@@ -10,6 +10,7 @@ export type RoleName =
 export interface UserSummary {
   id: number;
   email: string;
+  recoveryEmail?: string;
   fullName: string;
   phone?: string;
   displayName?: string;

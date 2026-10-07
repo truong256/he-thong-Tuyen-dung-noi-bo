@@ -15,6 +15,7 @@ import {
   UserCheck,
   Mail,
   Upload,
+  Pencil,
 } from 'lucide-react';
 import adminApi from '../api/admin';
 import { UserSummary } from '../types/user';
@@ -55,11 +56,20 @@ export const UserManagementPage: React.FC = () => {
 
   // Add User Form states (S1-08: Admin does not manually input temporary password)
   const [newEmail, setNewEmail] = useState('');
+  const [newRecoveryEmail, setNewRecoveryEmail] = useState('');
   const [newFullName, setNewFullName] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
   const [newRoles, setNewRoles] = useState<string[]>(['RECRUITER']);
   const [newStatus, setNewStatus] = useState('ACTIVE');
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
+
+  // Edit User Form states (Section 27)
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRecoveryEmail, setEditRecoveryEmail] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
   // Debounce search input
   useEffect(() => {
@@ -124,6 +134,7 @@ export const UserManagementPage: React.FC = () => {
     try {
       await adminApi.createUser({
         email: newEmail.trim(),
+        recoveryEmail: newRecoveryEmail.trim() || undefined,
         fullName: newFullName.trim(),
         department: newDepartment.trim() || undefined,
         roles: newRoles,
@@ -132,6 +143,7 @@ export const UserManagementPage: React.FC = () => {
       showToast(`Tạo thành công tài khoản cho ${newEmail.trim()}! Mật khẩu tạm thời đã được gửi qua email kích hoạt.`);
       setShowAddModal(false);
       setNewEmail('');
+      setNewRecoveryEmail('');
       setNewFullName('');
       setNewDepartment('');
       setNewRoles(['RECRUITER']);
@@ -150,6 +162,46 @@ export const UserManagementPage: React.FC = () => {
       showToast(msg || 'Tạo tài khoản thất bại. Vui lòng thử lại.', 'error');
     } finally {
       setIsSubmittingAdd(false);
+    }
+  };
+
+  const handleOpenEdit = (u: UserSummary) => {
+    setSelectedUser(u);
+    setEditFullName(u.fullName || '');
+    setEditEmail(u.email || '');
+    setEditRecoveryEmail(u.recoveryEmail || '');
+    setEditDepartment(u.department || '');
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    if (!editFullName.trim() || !editEmail.trim()) {
+      showToast('Vui lòng nhập họ tên và email công ty.', 'error');
+      return;
+    }
+    setIsSubmittingEdit(true);
+    try {
+      await adminApi.updateUser(selectedUser.id, {
+        fullName: editFullName.trim(),
+        email: editEmail.trim(),
+        recoveryEmail: editRecoveryEmail.trim() || undefined,
+        department: editDepartment.trim() || undefined,
+      });
+      showToast(`Cập nhật thông tin tài khoản ${editEmail.trim()} thành công!`);
+      setShowEditModal(false);
+      fetchUsers();
+    } catch (err: any) {
+      const apiErrors = err.response?.data?.validationErrors;
+      let msg = err.response?.data?.message;
+      if (apiErrors && typeof apiErrors === 'object') {
+        const firstErr = Object.values(apiErrors)[0];
+        if (firstErr) msg = String(firstErr);
+      }
+      showToast(msg || 'Cập nhật tài khoản thất bại.', 'error');
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -399,6 +451,11 @@ export const UserManagementPage: React.FC = () => {
                     </td>
                     <td>
                       <span className="user-email-text">{u.email}</span>
+                      {u.recoveryEmail && (
+                        <span className="user-recovery-email-hint" style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginTop: '2px' }} title="Email khôi phục nhận liên kết reset mật khẩu">
+                          ✉ {u.recoveryEmail}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <span className="user-department-text">{u.department || '—'}</span>
@@ -440,6 +497,16 @@ export const UserManagementPage: React.FC = () => {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div className="row-actions">
+                        <button
+                          type="button"
+                          className="btn-icon"
+                          title="Chỉnh sửa thông tin tài khoản"
+                          aria-label={`Chỉnh sửa ${u.email}`}
+                          onClick={() => handleOpenEdit(u)}
+                        >
+                          <Pencil size={18} />
+                        </button>
+
                         <button
                           type="button"
                           className="btn-icon"
@@ -541,6 +608,14 @@ export const UserManagementPage: React.FC = () => {
                 </div>
 
                 <div className="mobile-card-actions">
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => handleOpenEdit(u)}
+                  >
+                    <Pencil size={14} />
+                    <span>Sửa</span>
+                  </button>
                   <button
                     type="button"
                     className="btn btn-outline btn-sm"
@@ -675,6 +750,21 @@ export const UserManagementPage: React.FC = () => {
               </div>
 
               <div className="form-group">
+                <label htmlFor="newRecoveryEmail">Email khôi phục (tùy chọn)</label>
+                <input
+                  id="newRecoveryEmail"
+                  type="email"
+                  value={newRecoveryEmail}
+                  onChange={(e) => setNewRecoveryEmail(e.target.value)}
+                  placeholder="canhan@gmail.com"
+                  disabled={isSubmittingAdd}
+                />
+                <span className="field-hint" style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                  Email khôi phục chỉ dùng để nhận liên kết đặt lại mật khẩu và không dùng để đăng nhập.
+                </span>
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="newDepartment">Phòng ban (tùy chọn)</label>
                 <input
                   id="newDepartment"
@@ -756,6 +846,117 @@ export const UserManagementPage: React.FC = () => {
                     </>
                   ) : (
                     <span>Thêm tài khoản</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Chỉnh sửa người dùng (Section 27) */}
+      {showEditModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-user-modal-title">
+          <div className="modal-box user-form-modal-box">
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="modal-title-icon">
+                  <Pencil size={20} />
+                </div>
+                <h3 id="edit-user-modal-title">Chỉnh sửa thông tin tài khoản</h3>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setShowEditModal(false)}
+                aria-label="Đóng cửa sổ"
+                disabled={isSubmittingEdit}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUser}>
+              <div className="form-group">
+                <label htmlFor="editFullName">
+                  Họ và tên <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="editFullName"
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Ví dụ: Nguyễn Văn A"
+                  disabled={isSubmittingEdit}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editEmail">
+                  Email công ty <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="editEmail"
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="nhanvien@company.com"
+                  disabled={isSubmittingEdit}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editRecoveryEmail">
+                  Email khôi phục (tùy chọn)
+                </label>
+                <input
+                  id="editRecoveryEmail"
+                  type="email"
+                  value={editRecoveryEmail}
+                  onChange={(e) => setEditRecoveryEmail(e.target.value)}
+                  placeholder="canhan@gmail.com"
+                  disabled={isSubmittingEdit}
+                />
+                <span className="field-hint" style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                  Email khôi phục chỉ dùng để nhận liên kết đặt lại mật khẩu và không dùng để đăng nhập.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editDepartment">Phòng ban (tùy chọn)</label>
+                <input
+                  id="editDepartment"
+                  type="text"
+                  value={editDepartment}
+                  onChange={(e) => setEditDepartment(e.target.value)}
+                  placeholder="Ví dụ: Nhân sự, Công nghệ thông tin..."
+                  disabled={isSubmittingEdit}
+                />
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '20px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEditModal(false)}
+                  disabled={isSubmittingEdit}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSubmittingEdit}
+                >
+                  {isSubmittingEdit ? (
+                    <>
+                      <span className="auth-spinner" style={{ width: 14, height: 14, borderTopColor: '#fff' }} />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <span>Lưu thay đổi</span>
                   )}
                 </button>
               </div>

@@ -22,9 +22,14 @@ public class DevMailService implements MailService {
 
     @Override
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
+        sendPasswordResetEmail(toEmail, resetToken, "Quý người dùng");
+    }
+
+    @Override
+    public void sendPasswordResetEmail(String toEmail, String resetToken, String recipientName) {
         sentPasswordResetRecipients.add(toEmail);
         logger.info("==================================================================");
-        logger.info("[DEV MAIL SERVICE] Password reset email simulated for: {}", toEmail);
+        logger.info("[DEV MAIL SERVICE] Password reset email simulated for: {} ({})", toEmail, recipientName);
         logger.info("[DEV MAIL SERVICE] Password reset token dispatched (masked for security)");
         logger.info("==================================================================");
     }

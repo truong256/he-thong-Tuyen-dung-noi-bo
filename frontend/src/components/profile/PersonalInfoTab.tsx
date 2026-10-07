@@ -9,6 +9,7 @@ interface PersonalInfoTabProps {
   department: string;
   phone: string;
   displayName: string;
+  recoveryEmail?: string;
   isSaving: boolean;
   validationError: string | null;
   errorMsg: string | null;
@@ -16,6 +17,8 @@ interface PersonalInfoTabProps {
   onFullNameChange: (val: string) => void;
   onPhoneChange: (val: string) => void;
   onDisplayNameChange: (val: string) => void;
+  onDepartmentChange: (val: string) => void;
+  onRecoveryEmailChange?: (val: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
 }
@@ -26,6 +29,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   department,
   phone,
   displayName,
+  recoveryEmail = '',
   isSaving,
   validationError,
   errorMsg,
@@ -33,13 +37,17 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   onFullNameChange,
   onPhoneChange,
   onDisplayNameChange,
+  onDepartmentChange,
+  onRecoveryEmailChange,
   onSubmit,
   onReset,
 }) => {
   const isDirty =
     fullName.trim() !== (user?.fullName || '').trim() ||
     phone.trim() !== (user?.phone || '').trim() ||
-    displayName.trim() !== (user?.displayName || '').trim();
+    displayName.trim() !== (user?.displayName || '').trim() ||
+    department.trim() !== (user?.department || '').trim() ||
+    recoveryEmail.trim() !== (user?.recoveryEmail || '').trim();
 
   const primaryRole =
     user?.roles && user.roles.length > 0
@@ -134,12 +142,12 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
           </div>
         </div>
 
-        {/* 2-Column Read-only Fields: Email and Primary Role */}
+        {/* 2-Column Fields: Email đăng nhập (Read-only) & Email khôi phục (Editable) */}
         <div className="profile-form-row-2col">
-          {/* Email (Read-only) */}
+          {/* Email đăng nhập (Read-only) */}
           <div className="profile-form-group">
             <label htmlFor="profile-email" className="profile-form-label">
-              Email
+              Email đăng nhập
             </label>
             <div className="profile-input-wrapper is-readonly">
               <input
@@ -156,24 +164,46 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             </div>
           </div>
 
-          {/* Primary Role (Read-only) */}
+          {/* Email khôi phục (Editable) */}
           <div className="profile-form-group">
-            <label htmlFor="profile-role" className="profile-form-label">
-              Vai trò chính
+            <label htmlFor="profile-recovery-email" className="profile-form-label">
+              Email khôi phục
             </label>
-            <div className="profile-input-wrapper is-readonly">
+            <div className="profile-input-wrapper">
               <input
-                id="profile-role"
-                type="text"
-                className="profile-form-input is-readonly"
-                value={getRoleLabel(primaryRole)}
-                readOnly
-                disabled
+                id="profile-recovery-email"
+                type="email"
+                className="profile-form-input"
+                value={recoveryEmail}
+                onChange={(e) => onRecoveryEmailChange && onRecoveryEmailChange(e.target.value)}
+                placeholder="Ví dụ: myemail@gmail.com"
+                disabled={isSaving}
+                autoComplete="email"
               />
             </div>
             <div className="profile-form-helper">
-              Vai trò được quản lý trong mục Vai trò & Quyền hạn.
+              Email khôi phục chỉ dùng để nhận liên kết đặt lại mật khẩu và không dùng để đăng nhập.
             </div>
+          </div>
+        </div>
+
+        {/* Primary Role (Read-only) */}
+        <div className="profile-form-group" style={{ marginTop: '16px' }}>
+          <label htmlFor="profile-role" className="profile-form-label">
+            Vai trò chính
+          </label>
+          <div className="profile-input-wrapper is-readonly">
+            <input
+              id="profile-role"
+              type="text"
+              className="profile-form-input is-readonly"
+              value={getRoleLabel(primaryRole)}
+              readOnly
+              disabled
+            />
+          </div>
+          <div className="profile-form-helper">
+            Vai trò được quản lý trong mục Vai trò & Quyền hạn.
           </div>
         </div>
 

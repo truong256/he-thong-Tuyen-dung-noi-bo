@@ -133,6 +133,9 @@ public class AdminUserService {
 
         User user = new User(email, passwordEncoder.encode(rawPassword));
         user.setFullName(request.getFullName() != null ? request.getFullName().trim() : "");
+        if (request.getRecoveryEmail() != null && !request.getRecoveryEmail().isBlank()) {
+            user.setRecoveryEmail(request.getRecoveryEmail().trim().toLowerCase());
+        }
         user.setDepartment(request.getDepartment() != null ? request.getDepartment().trim() : null);
         user.setStatus(request.getStatus() != null ? request.getStatus().toUpperCase() : "ACTIVE");
         user.setMustChangePassword(true);
@@ -172,6 +175,11 @@ public class AdminUserService {
 
         if (request.getFullName() != null && !request.getFullName().isBlank()) {
             user.setFullName(request.getFullName().trim());
+        }
+
+        if (request.getRecoveryEmail() != null) {
+            String rec = request.getRecoveryEmail().trim();
+            user.setRecoveryEmail(rec.isEmpty() ? null : rec.toLowerCase());
         }
 
         if (request.getDepartment() != null) {
@@ -369,6 +377,7 @@ public class AdminUserService {
         dto.setLockedAt(user.getLockedAt());
         dto.setLockedBy(user.getLockedBy());
         dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setRecoveryEmail(user.getRecoveryEmail());
         dto.setAvatarUrl(user.getAvatarUrl());
         dto.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
         return dto;

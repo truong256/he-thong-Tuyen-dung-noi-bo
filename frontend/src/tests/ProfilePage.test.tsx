@@ -158,19 +158,58 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     expect(screen.getByText('Khóa tự động chống brute-force:')).toBeInTheDocument();
   });
 
-  it('opens ChangePasswordModal when clicking change password button', () => {
+  it('displays login email as read-only and allows user to update their recovery email', async () => {
+    vi.spyOn(authApi, 'updateProfile').mockResolvedValueOnce({
+      id: 10,
+      email: 'recruiter@company.com',
+      recoveryEmail: 'recruiter.personal@gmail.com',
+      fullName: 'Nguyễn Văn Tuyển Dụng',
+      department: 'Tuyển dụng & Nhân sự',
+      role: 'RECRUITER',
+      roles: ['RECRUITER'],
+      status: 'ACTIVE',
+    });
+
     render(
       <MemoryRouter>
         <ProfilePage />
       </MemoryRouter>
     );
 
-    const changePwdBtns = screen.getAllByRole('button', { name: /Đổi mật khẩu/i });
-    fireEvent.click(changePwdBtns[0]);
+    const loginEmailInput = screen.getByLabelText(/Email đăng nhập/i);
+    expect(loginEmailInput).toBeDisabled();
+    expect(loginEmailInput).toHaveValue('recruiter@company.com');
 
-    // Modal opens
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Mật khẩu hiện tại/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Mật khẩu mới/i)).toBeInTheDocument();
+    const recoveryEmailInput = screen.getByLabelText(/Email khôi phục/i);
+    expect(recoveryEmailInput).not.toBeDisabled();
+
+    fireEvent.change(recoveryEmailInput, { target: { value: 'recruiter.personal@gmail.com' } });
+    const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
+    expect(saveBtn).not.toBeDisabled();
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(authApi.updateProfile).toHaveBeenCalledWith({
+        fullName: 'Nguyễn Văn Tuyển Dụng',
+        department: 'Tuyển dụng & Nhân sự',
+        recoveryEmail: 'recruiter.personal@gmail.com',
+      });
+    });
+  });
+
+  it('rejects invalid recovery email format on profile submit', async () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    );
+
+    const recoveryEmailInput = screen.getByLabelText(/Email khôi phục/i);
+    fireEvent.change(recoveryEmailInput, { target: { value: 'invalid-email-format' } });
+    const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
+    fireEvent.click(saveBtn);
+
+    expect(await screen.findByText('Email khôi phục không đúng định dạng.')).toBeInTheDocument();
+    expect(authApi.updateProfile).not.toHaveBeenCalled();
   });
 });

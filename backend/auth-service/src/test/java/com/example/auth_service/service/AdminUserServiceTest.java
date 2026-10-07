@@ -151,6 +151,74 @@ class AdminUserServiceTest {
     }
 
     @Test
+    @DisplayName("Admin tạo user có recovery email thành công")
+    void testCreateUser_WithRecoveryEmail_PersistsAndReturnsRecoveryEmail() {
+        CreateUserRequest req = new CreateUserRequest();
+        req.setEmail("staff@company.com");
+        req.setRecoveryEmail("staff.personal@gmail.com");
+        req.setFullName("Lê Văn Staff");
+        req.setRoles(Set.of("RECRUITER"));
+
+        when(userRepository.existsByEmailIgnoreCase("staff@company.com")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashedPass");
+        when(roleRepository.findByName(RoleName.RECRUITER)).thenReturn(Optional.of(new Role(RoleName.RECRUITER, "RECRUITER")));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> {
+            User u = inv.getArgument(0);
+            u.setId(101L);
+            return u;
+        });
+
+        UserSummaryDto res = adminUserService.createUser(req);
+
+        assertThat(res.getEmail()).isEqualTo("staff@company.com");
+        assertThat(res.getRecoveryEmail()).isEqualTo("staff.personal@gmail.com");
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
+        assertThat(captor.getValue().getRecoveryEmail()).isEqualTo("staff.personal@gmail.com");
+    }
+
+    @Test
+    @DisplayName("Admin cập nhật recovery email thành công")
+    void testUpdateUser_UpdatesRecoveryEmail() {
+        User user = new User("employee@company.com", "pass");
+        user.setId(55L);
+        user.setRecoveryEmail("old.recovery@gmail.com");
+        when(userRepository.findById(55L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateUserRequest req = new UpdateUserRequest();
+        req.setFullName("Employee Updated");
+        req.setEmail("employee@company.com");
+        req.setRecoveryEmail("new.recovery@gmail.com");
+
+        UserSummaryDto res = adminUserService.updateUser(55L, req);
+
+        assertThat(res.getRecoveryEmail()).isEqualTo("new.recovery@gmail.com");
+        assertThat(user.getRecoveryEmail()).isEqualTo("new.recovery@gmail.com");
+    }
+
+    @Test
+    @DisplayName("Admin có thể xóa recovery email bằng cách truyền chuỗi rỗng")
+    void testUpdateUser_ClearsRecoveryEmailWhenEmpty() {
+        User user = new User("employee@company.com", "pass");
+        user.setId(56L);
+        user.setRecoveryEmail("old.recovery@gmail.com");
+        when(userRepository.findById(56L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateUserRequest req = new UpdateUserRequest();
+        req.setFullName("Employee Updated");
+        req.setEmail("employee@company.com");
+        req.setRecoveryEmail("   ");
+
+        UserSummaryDto res = adminUserService.updateUser(56L, req);
+
+        assertThat(res.getRecoveryEmail()).isNull();
+        assertThat(user.getRecoveryEmail()).isNull();
+    }
+
+    @Test
     @DisplayName("S1-08: Từ chối tạo tài khoản khi email đã tồn tại (case-insensitive)")
     void testCreateUser_RejectsDuplicateEmailCaseInsensitive() {
         CreateUserRequest req = new CreateUserRequest();

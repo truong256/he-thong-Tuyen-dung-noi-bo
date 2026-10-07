@@ -1,5 +1,6 @@
 package com.example.auth_service.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -21,4 +22,10 @@ public class UpdateProfileRequest {
 
     @Size(max = 150, message = "Chức danh hiển thị tối đa 150 ký tự")
     private String displayName;
+
+    @Size(max = 100, message = "Phòng ban tối đa 100 ký tự")
+    private String department;
+
+    @Email(message = "Email khôi phục không đúng định dạng")
+    private String recoveryEmail;
 }

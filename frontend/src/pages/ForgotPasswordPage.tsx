@@ -37,12 +37,12 @@ export const ForgotPasswordPage: React.FC = () => {
       const res = await authApi.forgotPassword(email.trim());
       setSuccessInfo(
         res.message ||
-          'Nếu email tồn tại trong hệ thống, hướng dẫn khôi phục mật khẩu đã được gửi đến hòm thư của bạn.'
+          'Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký.'
       );
     } catch {
       // Standard security practice: avoid email enumeration
       setSuccessInfo(
-        'Nếu email tồn tại trong hệ thống, hướng dẫn khôi phục mật khẩu đã được gửi đến hòm thư của bạn.'
+        'Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký.'
       );
     } finally {
       setIsSubmitting(false);
@@ -57,7 +57,7 @@ export const ForgotPasswordPage: React.FC = () => {
             <KeyRound size={28} className="auth-card-icon" />
           </div>
           <h2>Quên mật khẩu</h2>
-          <p>Nhập email đăng ký để nhận liên kết khôi phục mật khẩu tài khoản</p>
+          <p>Nhập email công ty của bạn. Liên kết đặt lại mật khẩu sẽ được gửi đến email khôi phục đã đăng ký.</p>
         </div>
 
         {successInfo ? (

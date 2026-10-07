@@ -18,6 +18,8 @@ export const ProfilePage: React.FC = () => {
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [department, setDepartment] = useState(user?.department || '');
+  const [recoveryEmail, setRecoveryEmail] = useState(user?.recoveryEmail || '');
 
   // UI status states
   const [isSaving, setIsSaving] = useState(false);
@@ -34,6 +36,8 @@ export const ProfilePage: React.FC = () => {
       setFullName(user.fullName || '');
       setPhone(user.phone || '');
       setDisplayName(user.displayName || '');
+      setDepartment(user.department || '');
+      setRecoveryEmail(user.recoveryEmail || '');
     }
   }, [user]);
 
@@ -41,6 +45,8 @@ export const ProfilePage: React.FC = () => {
     setFullName(user?.fullName || '');
     setPhone(user?.phone || '');
     setDisplayName(user?.displayName || '');
+    setDepartment(user?.department || '');
+    setRecoveryEmail(user?.recoveryEmail || '');
     setValidationError(null);
     setErrorMsg(null);
   };
@@ -63,6 +69,12 @@ export const ProfilePage: React.FC = () => {
     if (errorMsg) setErrorMsg(null);
   };
 
+  const handleRecoveryEmailChange = (emailVal: string) => {
+    setRecoveryEmail(emailVal);
+    if (validationError) setValidationError(null);
+    if (errorMsg) setErrorMsg(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setValidationError(null);
@@ -72,6 +84,8 @@ export const ProfilePage: React.FC = () => {
     const trimmedName = fullName.trim();
     const trimmedPhone = phone.trim();
     const trimmedDisplayName = displayName.trim();
+    const trimmedDept = department.trim();
+    const trimmedRecovery = recoveryEmail.trim();
 
     if (!trimmedName || trimmedName.length < 2) {
       setValidationError('Họ và tên phải có tối thiểu 2 ký tự.');
@@ -93,12 +107,22 @@ export const ProfilePage: React.FC = () => {
       return;
     }
 
+    if (trimmedRecovery) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedRecovery)) {
+        setValidationError('Email khôi phục không đúng định dạng.');
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       await authApi.updateProfile({
         fullName: trimmedName,
         phone: trimmedPhone || undefined,
         displayName: trimmedDisplayName,
+        department: trimmedDept || undefined,
+        recoveryEmail: trimmedRecovery || (user?.recoveryEmail ? '' : undefined),
       });
 
       // Refresh current user data across context and localStorage
@@ -110,6 +134,7 @@ export const ProfilePage: React.FC = () => {
       const msg =
         err.response?.data?.message ||
         err.response?.data?.validationErrors?.fullName ||
+        err.response?.data?.validationErrors?.recoveryEmail ||
         'Không thể cập nhật hồ sơ cá nhân. Vui lòng thử lại sau.';
       setErrorMsg(msg);
     } finally {
@@ -138,9 +163,10 @@ export const ProfilePage: React.FC = () => {
           <PersonalInfoTab
             user={user}
             fullName={fullName}
-            department={user?.department || ''}
+            department={department}
             phone={phone}
             displayName={displayName}
+            recoveryEmail={recoveryEmail}
             isSaving={isSaving}
             validationError={validationError}
             errorMsg={errorMsg}
@@ -148,6 +174,8 @@ export const ProfilePage: React.FC = () => {
             onFullNameChange={handleFullNameChange}
             onPhoneChange={handlePhoneChange}
             onDisplayNameChange={handleDisplayNameChange}
+            onDepartmentChange={handleDepartmentChange}
+            onRecoveryEmailChange={handleRecoveryEmailChange}
             onSubmit={handleSubmit}
             onReset={handleReset}
           />

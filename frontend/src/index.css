@@ -2087,6 +2087,9 @@ input[type="checkbox"] {
 .auth-card .card-header {
   text-align: center;
   margin-bottom: 26px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .auth-card-icon-wrap {
@@ -2113,6 +2116,9 @@ input[type="checkbox"] {
   margin: 0 0 8px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .auth-card .card-header p {
@@ -2121,6 +2127,9 @@ input[type="checkbox"] {
   line-height: 1.5;
   margin: 0 auto;
   max-width: 320px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 /* Input Wrappers with Leading and Trailing Icons */
@@ -2322,12 +2331,18 @@ input[type="checkbox"] {
   color: #334155;
   line-height: 1.5;
   margin: 0 0 8px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .forgot-hint-text {
   font-size: 0.82rem;
   color: #64748b;
   margin: 0 0 20px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 /* Password meter & criteria */
