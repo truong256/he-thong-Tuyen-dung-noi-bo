@@ -373,12 +373,26 @@
 
 .profile-form-input:focus,
 .profile-form-select:focus {
-  border-color: var(--primary-600, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+.profile-form-input:focus-visible,
+.profile-form-select:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .profile-form-input.is-invalid {
   border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.profile-form-input.is-invalid:focus,
+.profile-form-input.is-invalid:focus-visible {
+  border-color: #dc2626;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
@@ -391,9 +405,12 @@
 }
 
 .profile-form-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 0.8rem;
   color: #dc2626;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .profile-form-helper {

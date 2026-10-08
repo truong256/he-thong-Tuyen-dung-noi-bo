@@ -331,19 +331,37 @@
 }
 
 .auth-text-input:focus {
-  border-color: #3B82F6;
+  outline: none;
+  border-color: #94A3B8;
   background: #FFFFFF;
   box-shadow:
-    0 0 0 3.5px rgba(59, 130, 246, 0.16),
+    inset 1px 1px 2px rgba(15, 23, 42, 0.02);
+}
+
+.auth-text-input:focus-visible {
+  outline: none;
+  border-color: #94A3B8;
+  background: #FFFFFF;
+  box-shadow:
+    0 0 0 1px rgba(100, 116, 139, 0.20),
     inset 1px 1px 2px rgba(15, 23, 42, 0.02);
 }
 
 .auth-input-wrapper:focus-within .auth-input-leading-icon {
-  color: #2563EB;
+  color: #334155;
 }
 
 .auth-text-input.has-error {
   border-color: #EF4444;
+  background: #FFFDFD;
+  box-shadow:
+    0 0 0 3.5px rgba(239, 68, 68, 0.14),
+    inset 1px 1px 2px rgba(239, 68, 68, 0.03);
+}
+
+.auth-text-input.has-error:focus,
+.auth-text-input.has-error:focus-visible {
+  border-color: #DC2626;
   background: #FFFDFD;
   box-shadow:
     0 0 0 3.5px rgba(239, 68, 68, 0.14),
@@ -376,7 +394,7 @@
 }
 
 .auth-password-toggle-btn:focus-visible {
-  outline: 2px solid #2563EB;
+  outline: 2px solid #94A3B8;
   outline-offset: 1px;
 }
 

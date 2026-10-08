@@ -3,6 +3,13 @@ import { Save, RotateCcw, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { UserSummary } from '../../types/auth';
 import { getRoleLabel } from '../../constants/rbac';
 
+export interface ProfileFieldErrors {
+  fullName?: string;
+  phone?: string;
+  displayName?: string;
+  recoveryEmail?: string;
+}
+
 interface PersonalInfoTabProps {
   user: UserSummary | null;
   fullName: string;
@@ -11,7 +18,8 @@ interface PersonalInfoTabProps {
   displayName: string;
   recoveryEmail?: string;
   isSaving: boolean;
-  validationError: string | null;
+  fieldErrors?: ProfileFieldErrors;
+  validationError?: string | null;
   errorMsg: string | null;
   successMsg: string | null;
   onFullNameChange: (val: string) => void;
@@ -30,6 +38,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   displayName,
   recoveryEmail = '',
   isSaving,
+  fieldErrors,
   validationError,
   errorMsg,
   successMsg,
@@ -51,6 +60,37 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
     user?.roles && user.roles.length > 0
       ? user.roles[0]
       : user?.role || 'RECRUITER';
+
+  // Field-specific error mapping
+  const fullNameError =
+    fieldErrors?.fullName ||
+    (validationError && validationError.includes('Họ và tên') ? validationError : undefined);
+
+  const phoneError =
+    fieldErrors?.phone ||
+    (validationError && (validationError.includes('Số điện thoại') || validationError.includes('điện thoại'))
+      ? validationError
+      : undefined);
+
+  const displayNameError =
+    fieldErrors?.displayName ||
+    (validationError && validationError.includes('Chức danh') ? validationError : undefined);
+
+  const recoveryEmailError =
+    fieldErrors?.recoveryEmail ||
+    (validationError && (validationError.includes('Email khôi phục') || validationError.includes('khôi phục'))
+      ? validationError
+      : undefined);
+
+  // Unmapped fallback error
+  const unmappedError =
+    validationError &&
+    !fullNameError &&
+    !phoneError &&
+    !displayNameError &&
+    !recoveryEmailError
+      ? validationError
+      : null;
 
   return (
     <div className="profile-personal-info-card" role="tabpanel" id="panel-info" aria-labelledby="tab-info">
@@ -84,6 +124,13 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         </div>
       )}
 
+      {unmappedError && (
+        <div className="profile-alert error" role="alert">
+          <AlertCircle size={16} />
+          <span>{unmappedError}</span>
+        </div>
+      )}
+
       {/* Main Form */}
       <form onSubmit={onSubmit} noValidate className="profile-form">
         {/* Full Name */}
@@ -95,7 +142,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             <input
               id="profile-fullName"
               type="text"
-              className={`profile-form-input ${validationError ? 'is-invalid' : ''}`}
+              className={`profile-form-input ${fullNameError ? 'is-invalid' : ''}`}
               value={fullName}
               onChange={(e) => onFullNameChange(e.target.value)}
               placeholder="Nhập họ và tên đầy đủ..."
@@ -104,8 +151,11 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
               required
             />
           </div>
-          {validationError && (
-            <div className="profile-form-error-msg">{validationError}</div>
+          {fullNameError && (
+            <div className="profile-form-error-msg">
+              <AlertCircle size={13} style={{ flexShrink: 0 }} />
+              <span>{fullNameError}</span>
+            </div>
           )}
           <div className="profile-form-helper">
             Họ tên chính thức hiển thị trên danh sách phỏng vấn, hồ sơ tuyển dụng và phê duyệt.
@@ -118,16 +168,53 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             Số điện thoại
           </label>
           <div className="profile-input-wrapper">
-            <input id="profile-phone" type="tel" className="profile-form-input" value={phone}
-              onChange={(e) => onPhoneChange(e.target.value)} placeholder="0912345678" disabled={isSaving}
-              autoComplete="tel" inputMode="tel" />
+            <input
+              id="profile-phone"
+              type="tel"
+              className={`profile-form-input ${phoneError ? 'is-invalid' : ''}`}
+              value={phone}
+              onChange={(e) => onPhoneChange(e.target.value)}
+              placeholder="0912345678"
+              disabled={isSaving}
+              autoComplete="tel"
+              inputMode="tel"
+            />
+          </div>
+          {phoneError && (
+            <div className="profile-form-error-msg">
+              <AlertCircle size={13} style={{ flexShrink: 0 }} />
+              <span>{phoneError}</span>
+            </div>
+          )}
+          <div className="profile-form-helper">
+            Số điện thoại liên hệ cá nhân (10 chữ số, ví dụ: 0912345678).
           </div>
         </div>
+
         <div className="profile-form-group">
-          <label htmlFor="profile-displayName" className="profile-form-label">Chức danh hiển thị</label>
+          <label htmlFor="profile-displayName" className="profile-form-label">
+            Chức danh hiển thị
+          </label>
           <div className="profile-input-wrapper">
-            <input id="profile-displayName" type="text" className="profile-form-input" value={displayName}
-              onChange={(e) => onDisplayNameChange(e.target.value)} disabled={isSaving} maxLength={150} />
+            <input
+              id="profile-displayName"
+              type="text"
+              className={`profile-form-input ${displayNameError ? 'is-invalid' : ''}`}
+              value={displayName}
+              onChange={(e) => onDisplayNameChange(e.target.value)}
+              disabled={isSaving}
+              maxLength={150}
+              placeholder="Ví dụ: Quản trị viên hệ thống, Chuyên viên tuyển dụng..."
+            />
+          </div>
+          {displayNameError && (
+            <div className="profile-form-error-msg">
+              <AlertCircle size={13} style={{ flexShrink: 0 }} />
+              <span>{displayNameError}</span>
+            </div>
+          )}
+          <div className="profile-form-helper">
+            Chức danh hiển thị trên danh thiếp và hồ sơ nội bộ.
           </div>
         </div>
 
@@ -171,7 +258,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
               <input
                 id="profile-recovery-email"
                 type="email"
-                className="profile-form-input"
+                className={`profile-form-input ${recoveryEmailError ? 'is-invalid' : ''}`}
                 value={recoveryEmail}
                 onChange={(e) => onRecoveryEmailChange && onRecoveryEmailChange(e.target.value)}
                 placeholder="Ví dụ: myemail@gmail.com"
@@ -179,6 +266,12 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
                 autoComplete="email"
               />
             </div>
+            {recoveryEmailError && (
+              <div className="profile-form-error-msg">
+                <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                <span>{recoveryEmailError}</span>
+              </div>
+            )}
             <div className="profile-form-helper">
               Email khôi phục chỉ dùng để nhận liên kết đặt lại mật khẩu và không dùng để đăng nhập.
             </div>

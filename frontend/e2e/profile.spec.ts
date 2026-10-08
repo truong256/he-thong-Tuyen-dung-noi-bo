@@ -87,4 +87,37 @@ test.describe('Admin Profile Page Modern Redesign Verification', () => {
     const pageContent = await page.content();
     expect(pageContent).not.toContain('ISO 27001');
   });
+
+  test('shows phone validation error specifically under phone input and marks phone input as invalid without affecting full name', async ({ page }) => {
+    const fullNameInput = page.locator('#profile-fullName');
+    const phoneInput = page.locator('#profile-phone');
+    const saveBtn = page.locator('button[type="submit"]:has-text("Lưu thay đổi")');
+
+    // Fill invalid phone (12 digits as shown in user screenshot)
+    await phoneInput.fill('098234092839');
+    await expect(saveBtn).toBeEnabled();
+    await saveBtn.click();
+
+    // Verify error message is displayed
+    const errorMsg = page.locator('.profile-form-error-msg:has-text("Số điện thoại không đúng định dạng Việt Nam.")');
+    await expect(errorMsg).toBeVisible();
+
+    // Verify phone input is marked invalid (red border)
+    await expect(phoneInput).toHaveClass(/is-invalid/);
+
+    // CRITICAL: Full name input must NOT be marked invalid
+    await expect(fullNameInput).not.toHaveClass(/is-invalid/);
+
+    // Verify error is located within the phone form-group, not full name form-group
+    const phoneGroup = page.locator('.profile-form-group:has(#profile-phone)');
+    await expect(phoneGroup.locator('.profile-form-error-msg')).toContainText('Số điện thoại không đúng định dạng Việt Nam.');
+
+    const nameGroup = page.locator('.profile-form-group:has(#profile-fullName)');
+    await expect(nameGroup.locator('.profile-form-error-msg')).toHaveCount(0);
+
+    // Correcting the phone number clears the error state
+    await phoneInput.fill('0982340928');
+    await expect(phoneInput).not.toHaveClass(/is-invalid/);
+    await expect(phoneGroup.locator('.profile-form-error-msg')).toHaveCount(0);
+  });
 });

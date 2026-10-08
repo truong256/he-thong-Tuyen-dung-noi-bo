@@ -102,9 +102,13 @@ describe('ProfilePage Component (Personal User Profile)', () => {
 
   it('rejects invalid Vietnamese phone before sending the profile update', async () => {
     render(<MemoryRouter><ProfilePage /></MemoryRouter>);
-    fireEvent.change(screen.getByLabelText(/Số điện thoại/i), { target: { value: '12345' } });
+    const phoneInput = screen.getByLabelText(/Số điện thoại/i);
+    const nameInput = screen.getByLabelText(/Họ và tên/i);
+    fireEvent.change(phoneInput, { target: { value: '098234092839' } });
     fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
     expect(await screen.findByText('Số điện thoại không đúng định dạng Việt Nam.')).toBeInTheDocument();
+    expect(phoneInput).toHaveClass('is-invalid');
+    expect(nameInput).not.toHaveClass('is-invalid');
     expect(authApi.updateProfile).not.toHaveBeenCalled();
   });
 
