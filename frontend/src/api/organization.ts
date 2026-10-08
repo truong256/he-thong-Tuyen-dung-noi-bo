@@ -418,6 +418,7 @@ export const organizationApi = {
             managerName: d.managerName || (d.managerUserId ? `Quản lý #${d.managerUserId}` : undefined),
             managerEmail: d.managerEmail || undefined,
             employeeCount: Number(d.employeeCount) || 0,
+            openRequisitionsCount: Number(d.openRequisitionsCount) || 0,
             active: d.active !== false,
             createdAt: d.createdAt ? String(d.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
           }));
@@ -491,6 +492,7 @@ export const organizationApi = {
             managerName: res.data.managerName,
             managerEmail: res.data.managerEmail,
             employeeCount: Number(res.data.employeeCount) || 0,
+            openRequisitionsCount: Number(res.data.openRequisitionsCount) || 0,
             active: res.data.active !== false,
             createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
           };
@@ -509,6 +511,7 @@ export const organizationApi = {
       parentDepartmentId: payload.parentDepartmentId,
       managerUserId: payload.managerUserId,
       employeeCount: 0,
+      openRequisitionsCount: 0,
       active: true,
       id: maxId + 1,
       createdAt: new Date().toISOString().slice(0, 10),
@@ -545,6 +548,7 @@ export const organizationApi = {
           managerName: res.data?.managerName,
           managerEmail: res.data?.managerEmail,
           employeeCount: Number(res.data?.employeeCount) || 0,
+          openRequisitionsCount: Number(res.data?.openRequisitionsCount) || 0,
           active: res.data?.active !== false,
           createdAt: res.data?.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
         };
@@ -610,6 +614,7 @@ export const organizationApi = {
           managerName: res.data?.managerName,
           managerEmail: res.data?.managerEmail,
           employeeCount: Number(res.data?.employeeCount) || 0,
+          openRequisitionsCount: Number(res.data?.openRequisitionsCount) || 0,
           active: res.data?.active !== false,
           createdAt: res.data?.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
         };

@@ -16,6 +16,7 @@ import {
   RotateCcw,
   ListTree,
   Network,
+  Briefcase,
 } from 'lucide-react';
 import { Department } from '../../types/organization';
 
@@ -214,12 +215,23 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
           {/* Card Header / Badge */}
           <div className="node-top-bar">
             <span className="node-code-badge">{node.code}</span>
-            <div className="node-status-indicator">
-              <span
-                className={`status-dot ${node.active ? 'status-active' : 'status-inactive'}`}
-                title={node.active ? 'Đang hoạt động' : 'Tạm ngưng hoạt động'}
-              />
-              <span className="status-label">{node.active ? 'Hoạt động' : 'Ngưng'}</span>
+            <div className="node-top-indicators">
+              {Boolean(node.openRequisitionsCount && node.openRequisitionsCount > 0) && (
+                <span
+                  className="node-hiring-indicator"
+                  title={`${node.openRequisitionsCount} yêu cầu tuyển dụng đang mở`}
+                >
+                  <Briefcase size={10} />
+                  <span>Đang tuyển ({node.openRequisitionsCount})</span>
+                </span>
+              )}
+              <div className="node-status-indicator">
+                <span
+                  className={`status-dot ${node.active ? 'status-active' : 'status-inactive'}`}
+                  title={node.active ? 'Đang hoạt động' : 'Tạm ngưng hoạt động'}
+                />
+                <span className="status-label">{node.active ? 'Hoạt động' : 'Ngưng'}</span>
+              </div>
             </div>
           </div>
 
@@ -251,6 +263,16 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
                 <span className="node-metric-chip children-count" title="Số đơn vị cấp dưới trực thuộc">
                   <Layers size={12} />
                   {node.children.length} đơn vị con
+                </span>
+              )}
+
+              {Boolean(node.openRequisitionsCount && node.openRequisitionsCount > 0) && (
+                <span
+                  className="node-metric-chip hiring-count"
+                  title={`${node.openRequisitionsCount} yêu cầu tuyển dụng đang mở`}
+                >
+                  <Briefcase size={11} />
+                  <strong>{node.openRequisitionsCount}</strong> đang tuyển
                 </span>
               )}
             </div>
@@ -397,6 +419,12 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
                 {node.children.length}
               </span>
             )}
+            {Boolean(node.openRequisitionsCount && node.openRequisitionsCount > 0) && (
+              <span className="node-metric-chip hiring-count" title={`${node.openRequisitionsCount} yêu cầu tuyển dụng đang mở`}>
+                <Briefcase size={11} />
+                <strong>{node.openRequisitionsCount}</strong> tuyển
+              </span>
+            )}
             <span
               className={`status-dot ${node.active ? 'status-active' : 'status-inactive'}`}
               title={node.active ? 'Đang hoạt động' : 'Tạm ngưng'}
@@ -495,6 +523,9 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
             </span>
             <span className="legend-item" title="Cấp 3+: Phòng ban trực thuộc khối">
               <span className="legend-color-box department-color" /> Phòng ban trực thuộc
+            </span>
+            <span className="legend-item" title="Đơn vị đang có nhu cầu tuyển dụng mở">
+              <span className="legend-color-box hiring-color" /> Đang có tuyển dụng
             </span>
           </div>
         </div>

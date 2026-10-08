@@ -55,6 +55,7 @@ export interface Department {
   managerName?: string;
   managerEmail?: string;
   employeeCount: number;
+  openRequisitionsCount?: number;
   active: boolean;
   createdAt: string;
 }

@@ -30,6 +30,12 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
     boolean hasOpenRequisitions(@Param("departmentId") Long departmentId);
 
     @Query("""
+        select count(r) from RecruitmentRequisition r where r.departmentId = :departmentId
+        and (r.status is null or upper(r.status) not in ('CLOSED', 'REJECTED', 'CANCELLED'))
+        """)
+    long countOpenRequisitions(@Param("departmentId") Long departmentId);
+
+    @Query("""
         SELECT r FROM RecruitmentRequisition r
         WHERE (:createdByUserId IS NULL OR r.createdByUserId = :createdByUserId)
           AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))

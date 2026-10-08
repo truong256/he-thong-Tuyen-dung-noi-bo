@@ -127,7 +127,8 @@ public class DepartmentService {
         if (employeeCount == 0 && department.getManagerUserId() != null) {
             employeeCount = 1;
         }
-        return DepartmentResponse.from(department, managerName, managerEmail, employeeCount);
+        long openReqCount = requisitions.countOpenRequisitions(department.getId());
+        return DepartmentResponse.from(department, managerName, managerEmail, employeeCount, openReqCount);
     }
 
     private void lockTree() {
