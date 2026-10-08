@@ -22,6 +22,13 @@ export const Header: React.FC<HeaderProps> = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [avatarImgError, setAvatarImgError] = useState(false);
+
+  const avatarSrc = user?.avatarThumbnailUrl || user?.avatarUrl;
+
+  useEffect(() => {
+    setAvatarImgError(false);
+  }, [avatarSrc]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +113,16 @@ export const Header: React.FC<HeaderProps> = ({
             }}
           >
             <div className="user-avatar" aria-hidden="true">
-              {(user?.fullName || user?.email || 'U').charAt(0).toUpperCase()}
+              {avatarSrc && !avatarImgError ? (
+                <img
+                  src={avatarSrc}
+                  alt={user?.fullName || 'Avatar'}
+                  className="user-avatar-img"
+                  onError={() => setAvatarImgError(true)}
+                />
+              ) : (
+                (user?.fullName || user?.email || 'U').charAt(0).toUpperCase()
+              )}
             </div>
             <div className="user-details">
               <span className="user-name">{user?.fullName || user?.email?.split('@')[0]}</span>
@@ -124,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <strong className="dropdown-user-name">{user?.fullName || 'Người dùng'}</strong>
                   <div className="dropdown-user-email">{user?.email}</div>
                   <div className="role-tags">
-                    {(user?.roles || [primaryRole]).map((r) => (
+                    {(user?.roles || [primaryRole]).map((r: string) => (
                       <span key={r} className="tag">{getRoleLabel(r)}</span>
                     ))}
                   </div>

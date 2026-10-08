@@ -14,9 +14,16 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/**
+ * Admin user management controller.
+ *
+ * Access control strategy (S1-05, S1-08, S1-09, S1-10):
+ * - READ operations: ADMIN (full) + HR_MANAGER (read-only per backlog "R" on Users & Logs)
+ * - WRITE operations: ADMIN only (USER_MANAGE, ROLE_MANAGE)
+ * - Class-level guard removed so each endpoint can declare its own permission.
+ */
 @RestController
 @RequestMapping("/api/admin/users")
-@PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
@@ -25,7 +32,9 @@ public class AdminUserController {
         this.adminUserService = adminUserService;
     }
 
+    /** S1-08 / Backlog "Người dùng & nhật ký": HR_MANAGER có R, ADMIN có F */
     @GetMapping
+    @PreAuthorize("hasAuthority('USER_READ')")
     public ResponseEntity<Page<UserSummaryDto>> listUsers(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
@@ -38,43 +47,63 @@ public class AdminUserController {
         return ResponseEntity.ok(users);
     }
 
+    /** HR_MANAGER can view individual user detail (R access) */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_READ')")
     public ResponseEntity<UserSummaryDto> getUserById(@PathVariable Long id) {
         UserSummaryDto user = adminUserService.getUserById(id);
         return ResponseEntity.ok(user);
     }
 
+    /** S1-08: Create user – ADMIN only */
     @PostMapping
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<UserSummaryDto> createUser(@Valid @RequestBody CreateUserRequest request) {
         UserSummaryDto created = adminUserService.createUser(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    /** S1-08: Update user profile fields – ADMIN only */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<UserSummaryDto> updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
         UserSummaryDto updated = adminUserService.updateUser(id, request);
         return ResponseEntity.ok(updated);
     }
 
+    /**
+     * S1-10: Lock/unlock/deactivate account – ADMIN only.
+     * HR_MANAGER has USER_READ but NOT USER_MANAGE, so cannot change status.
+     */
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<UserSummaryDto> updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusRequest request) {
         UserSummaryDto updated = adminUserService.updateStatus(id, request);
         return ResponseEntity.ok(updated);
     }
 
+    /**
+     * S1-09: Assign/revoke roles – ADMIN only (ROLE_MANAGE).
+     * HR_MANAGER has ROLE_READ but NOT ROLE_MANAGE, so cannot change roles.
+     */
     @PutMapping("/{id}/roles")
+    @PreAuthorize("hasAuthority('ROLE_MANAGE')")
     public ResponseEntity<UserSummaryDto> updateRoles(@PathVariable Long id, @Valid @RequestBody UpdateRolesRequest request) {
         UserSummaryDto updated = adminUserService.updateRoles(id, request);
         return ResponseEntity.ok(updated);
     }
 
+    /** Delete user – ADMIN only */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         adminUserService.deleteUser(id);
         return ResponseEntity.ok(Map.of("message", "Đã xóa người dùng thành công"));
     }
 
+    /** Admin reset user password – ADMIN only */
     @PostMapping("/{id}/reset-password")
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public ResponseEntity<UserSummaryDto> resetUserPassword(@PathVariable Long id) {
         UserSummaryDto user = adminUserService.resetUserPasswordByAdmin(id);
         return ResponseEntity.ok(user);

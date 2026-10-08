@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.Optional;
 
 public interface RecruitmentRequisitionRepository extends JpaRepository<RecruitmentRequisition, Long> {
@@ -15,6 +16,8 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
     boolean existsByJobTitleId(Long jobTitleId);
 
     boolean existsByRequisitionCode(String requisitionCode);
+
+    boolean existsByRequisitionCodeIgnoreCase(String requisitionCode);
 
     Optional<RecruitmentRequisition> findByRequisitionCode(String requisitionCode);
 
@@ -42,4 +45,8 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    Page<RecruitmentRequisition> findByDepartmentIdIn(Collection<Long> departmentIds, Pageable pageable);
+
+    Page<RecruitmentRequisition> findByCreatedByUserId(Long createdByUserId, Pageable pageable);
 }

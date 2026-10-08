@@ -27,6 +27,7 @@ public class RecruitmentReadController {
     @GetMapping("/salary-ranges/{id}")
     public SalaryRange salary(@PathVariable Long id) { return service.salary(id); }
 
+
     private Pageable pageable(int page, int size) {
         return PageRequest.of(Math.max(0, page), Math.clamp(size, 1, 100), Sort.by("id"));
     }

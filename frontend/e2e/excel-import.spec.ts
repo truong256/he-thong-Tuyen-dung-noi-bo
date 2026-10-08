@@ -42,13 +42,14 @@ test.describe('SCRUM-49 / SCRUM-60: Nhập danh sách nhân sự từ Excel E2E'
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    const templateFilePath = path.join(tempDir, 'downloaded_template.xlsx');
+    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+    const templateFilePath = path.join(tempDir, `downloaded_template_${uniqueSuffix}.xlsx`);
     await download.saveAs(templateFilePath);
     expect(fs.existsSync(templateFilePath)).toBe(true);
     expect(fs.statSync(templateFilePath).size).toBeGreaterThan(100);
 
     // 7. Test invalid file format rejection
-    const invalidFilePath = path.join(tempDir, 'invalid_test.txt');
+    const invalidFilePath = path.join(tempDir, `invalid_test_${uniqueSuffix}.txt`);
     fs.writeFileSync(invalidFilePath, 'Not an excel file content');
     const fileInput = page.locator('input[data-testid="excel-file-input"]');
     await fileInput.setInputFiles(invalidFilePath);

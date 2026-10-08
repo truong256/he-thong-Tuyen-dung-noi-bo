@@ -4,7 +4,7 @@ import authApi from '../api/auth';
 import ChangePasswordModal from '../components/auth/ChangePasswordModal';
 import ProfileHeader from '../components/profile/ProfileHeader';
 import ProfileTabs, { ProfileTabType } from '../components/profile/ProfileTabs';
-import PersonalInfoTab from '../components/profile/PersonalInfoTab';
+import PersonalInfoTab, { ProfileFieldErrors } from '../components/profile/PersonalInfoTab';
 import RolesPermissionsTab from '../components/profile/RolesPermissionsTab';
 import SecuritySessionsTab from '../components/profile/SecuritySessionsTab';
 import '../styles/profile.css';
@@ -25,6 +25,7 @@ export const ProfilePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<ProfileFieldErrors>({});
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Password Modal
@@ -47,36 +48,42 @@ export const ProfilePage: React.FC = () => {
     setDisplayName(user?.displayName || '');
     setDepartment(user?.department || '');
     setRecoveryEmail(user?.recoveryEmail || '');
+    setFieldErrors({});
     setValidationError(null);
     setErrorMsg(null);
   };
 
   const handlePhoneChange = (value: string) => {
     setPhone(value);
+    setFieldErrors((prev) => ({ ...prev, phone: undefined }));
     if (validationError) setValidationError(null);
     if (errorMsg) setErrorMsg(null);
   };
 
   const handleDisplayNameChange = (value: string) => {
     setDisplayName(value);
+    setFieldErrors((prev) => ({ ...prev, displayName: undefined }));
     if (validationError) setValidationError(null);
     if (errorMsg) setErrorMsg(null);
   };
 
   const handleFullNameChange = (name: string) => {
     setFullName(name);
+    setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
     if (validationError) setValidationError(null);
     if (errorMsg) setErrorMsg(null);
   };
 
   const handleRecoveryEmailChange = (emailVal: string) => {
     setRecoveryEmail(emailVal);
+    setFieldErrors((prev) => ({ ...prev, recoveryEmail: undefined }));
     if (validationError) setValidationError(null);
     if (errorMsg) setErrorMsg(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     setValidationError(null);
     setErrorMsg(null);
     setSuccessMsg(null);
@@ -84,35 +91,36 @@ export const ProfilePage: React.FC = () => {
     const trimmedName = fullName.trim();
     const trimmedPhone = phone.trim();
     const trimmedDisplayName = displayName.trim();
-    const trimmedDept = department.trim();
     const trimmedRecovery = recoveryEmail.trim();
 
-    if (!trimmedName || trimmedName.length < 2) {
-      setValidationError('Họ và tên phải có tối thiểu 2 ký tự.');
-      return;
-    }
+    const errors: ProfileFieldErrors = {};
 
-    if (trimmedName.length > 100) {
-      setValidationError('Họ và tên không được vượt quá 100 ký tự.');
-      return;
+    if (!trimmedName || trimmedName.length < 2) {
+      errors.fullName = 'Họ và tên phải có tối thiểu 2 ký tự.';
+    } else if (trimmedName.length > 100) {
+      errors.fullName = 'Họ và tên không được vượt quá 100 ký tự.';
     }
 
     if (trimmedPhone && !/^(0|\+84)[35789]\d{8}$/.test(trimmedPhone)) {
-      setValidationError('Số điện thoại không đúng định dạng Việt Nam.');
-      return;
+      errors.phone = 'Số điện thoại không đúng định dạng Việt Nam.';
     }
 
     if (trimmedDisplayName.length > 150) {
-      setValidationError('Chức danh hiển thị tối đa 150 ký tự.');
-      return;
+      errors.displayName = 'Chức danh hiển thị tối đa 150 ký tự.';
     }
 
     if (trimmedRecovery) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(trimmedRecovery)) {
-        setValidationError('Email khôi phục không đúng định dạng.');
-        return;
+        errors.recoveryEmail = 'Email khôi phục không đúng định dạng.';
       }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstError = errors.fullName || errors.phone || errors.displayName || errors.recoveryEmail || null;
+      setValidationError(firstError);
+      return;
     }
 
     setIsSaving(true);
@@ -141,10 +149,22 @@ export const ProfilePage: React.FC = () => {
       setSuccessMsg('Thông tin hồ sơ cá nhân đã được cập nhật thành công!');
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
+      const apiValidation = err.response?.data?.validationErrors;
+      if (apiValidation && typeof apiValidation === 'object') {
+        const mappedErrors: ProfileFieldErrors = {};
+        if (apiValidation.fullName) mappedErrors.fullName = apiValidation.fullName;
+        if (apiValidation.phone) mappedErrors.phone = apiValidation.phone;
+        if (apiValidation.displayName) mappedErrors.displayName = apiValidation.displayName;
+        if (apiValidation.recoveryEmail) mappedErrors.recoveryEmail = apiValidation.recoveryEmail;
+        setFieldErrors(mappedErrors);
+      }
+
       const msg =
         err.response?.data?.message ||
-        err.response?.data?.validationErrors?.fullName ||
-        err.response?.data?.validationErrors?.recoveryEmail ||
+        apiValidation?.fullName ||
+        apiValidation?.phone ||
+        apiValidation?.displayName ||
+        apiValidation?.recoveryEmail ||
         'Không thể cập nhật hồ sơ cá nhân. Vui lòng thử lại sau.';
       setErrorMsg(msg);
     } finally {
@@ -178,6 +198,7 @@ export const ProfilePage: React.FC = () => {
             displayName={displayName}
             recoveryEmail={recoveryEmail}
             isSaving={isSaving}
+            fieldErrors={fieldErrors}
             validationError={validationError}
             errorMsg={errorMsg}
             successMsg={successMsg}

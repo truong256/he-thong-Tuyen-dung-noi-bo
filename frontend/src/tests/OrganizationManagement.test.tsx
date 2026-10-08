@@ -13,21 +13,24 @@ describe('Organization Management Page (Hồ sơ tổ chức & Cơ cấu)', () =
 
     vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
       user: {
-        id: 1,
-        email: 'admin@ats.com',
-        fullName: 'Admin Quản Trị',
-        role: 'ADMIN',
-        roles: ['ADMIN'],
+        id: 3,
+        email: 'hr_manager@ats.com',
+        fullName: 'HR Manager Quản Trị',
+        role: 'HR_MANAGER',
+        roles: ['HR_MANAGER'],
         status: 'ACTIVE',
       },
-      token: 'mock-admin-token',
+      token: 'mock-hr-token',
       isAuthenticated: true,
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
       refreshUser: vi.fn(),
-      hasRole: (r: string) => r === 'ADMIN',
-      hasAnyRole: (roles: string[]) => roles.includes('ADMIN'),
+      hasRole: (r: string) => r === 'HR_MANAGER',
+      hasAnyRole: (roles: string[]) => roles.includes('HR_MANAGER'),
+      permissions: ['DEPARTMENT_MANAGE', 'USER_READ'],
+      hasPermission: (p: string) => ['DEPARTMENT_MANAGE', 'USER_READ'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some((p) => ['DEPARTMENT_MANAGE', 'USER_READ'].includes(p)),
     });
   });
 
@@ -220,6 +223,9 @@ describe('Organization Management Page (Hồ sơ tổ chức & Cơ cấu)', () =
       refreshUser: vi.fn(),
       hasRole: (r: string) => r === 'CANDIDATE',
       hasAnyRole: () => false,
+      permissions: [],
+      hasPermission: () => false,
+      hasAnyPermission: () => false,
     });
 
     render(
@@ -235,5 +241,45 @@ describe('Organization Management Page (Hồ sơ tổ chức & Cơ cấu)', () =
     // Edit profile button should not be rendered for CANDIDATE
     expect(screen.queryByRole('button', { name: /Chỉnh sửa hồ sơ/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Dữ liệu mẫu/i })).not.toBeInTheDocument();
+  });
+
+  it('restricts department mutation buttons for ADMIN when ADMIN lacks DEPARTMENT_MANAGE', async () => {
+    vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
+      user: {
+        id: 1,
+        email: 'admin@ats.com',
+        fullName: 'Quản Trị Viên',
+        role: 'ADMIN',
+        roles: ['ADMIN'],
+        status: 'ACTIVE',
+      },
+      token: 'mock-admin-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      hasRole: (r: string) => r === 'ADMIN',
+      hasAnyRole: (roles: string[]) => roles.includes('ADMIN'),
+      permissions: ['USER_MANAGE', 'ROLE_MANAGE'],
+      hasPermission: (p: string) => ['USER_MANAGE', 'ROLE_MANAGE'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some((p) => ['USER_MANAGE', 'ROLE_MANAGE'].includes(p)),
+    });
+
+    render(
+      <MemoryRouter>
+        <OrganizationManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('tab-overview')).toBeInTheDocument();
+    });
+
+    const deptTabBtn = screen.getByRole('button', { name: /Cơ cấu tổ chức & Phòng ban/i });
+    fireEvent.click(deptTabBtn);
+
+    // ADMIN without DEPARTMENT_MANAGE must not see the Add Department button
+    expect(screen.queryByRole('button', { name: /Thêm phòng ban mới/i })).not.toBeInTheDocument();
   });
 });

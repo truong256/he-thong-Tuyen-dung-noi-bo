@@ -71,7 +71,14 @@ public class RecruitmentRequisition {
     private String status = "DRAFT"; // DRAFT, PENDING_APPROVAL, APPROVED, REJECTED, OPEN, CLOSED, CANCELLED
 
     @Column(columnDefinition = "TEXT")
-    private String reason;
+    private String reason; // REPLACEMENT, NEW_HEADCOUNT
+
+    private Long proposedMinSalary;
+
+    private Long proposedMaxSalary;
+
+    @Column(columnDefinition = "TEXT")
+    private String requirements;
 
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;

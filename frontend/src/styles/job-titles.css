@@ -247,8 +247,14 @@
 
 .jt-search-input:focus {
   outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+.jt-search-input:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .jt-search-clear {
@@ -322,7 +328,14 @@
 
 .jt-filter-select:focus {
   outline: none;
-  border-color: var(--primary-500);
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+.jt-filter-select:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .jt-status-segmented {
@@ -1368,8 +1381,16 @@
 .jt-select:focus,
 .jt-textarea:focus {
   outline: none;
-  border-color: var(--primary-500);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+.jt-input:focus-visible,
+.jt-select:focus-visible,
+.jt-textarea:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .jt-hint {

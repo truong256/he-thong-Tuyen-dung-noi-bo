@@ -38,4 +38,61 @@ public record RequisitionResponse(
         Instant approvedAt,
         Instant createdAt,
         Instant updatedAt
-) {}
+) {
+    // Overload for backward compatibility with 19-parameter constructor
+    public RequisitionResponse(
+            Long id,
+            String requisitionCode,
+            String title,
+            Long departmentId,
+            String departmentName,
+            Long jobTitleId,
+            String jobTitleName,
+            Integer quantity,
+            LocalDate targetDate,
+            String status,
+            String reason,
+            Long proposedMinSalary,
+            Long proposedMaxSalary,
+            String salaryExplanation,
+            String jobDescription,
+            String requirements,
+            Long createdByUserId,
+            String createdByName,
+            Instant createdAt
+    ) {
+        this(
+                id,
+                requisitionCode,
+                title,
+                departmentId,
+                departmentName,
+                null,
+                jobTitleId,
+                jobTitleName,
+                quantity,
+                null,
+                proposedMinSalary,
+                proposedMaxSalary,
+                "VND",
+                salaryExplanation,
+                null,
+                targetDate,
+                jobDescription,
+                requirements,
+                null,
+                null,
+                null,
+                status,
+                reason,
+                null,
+                createdByUserId,
+                createdByName,
+                null,
+                null,
+                null,
+                createdAt,
+                createdAt
+        );
+    }
+}

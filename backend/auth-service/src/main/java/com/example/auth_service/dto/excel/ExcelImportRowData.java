@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ExcelImportRowData {
     private int rowNumber;
+    private String employeeCode;
     private String fullName;
     private String email;
+    private String phone;
     private String department;
     private String role;
 }

@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import RoleGuard from './components/RoleGuard';
+import PermissionGuard from './components/PermissionGuard';
 import AppLayout from './layouts/AppLayout';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -18,6 +18,7 @@ import ExcelImportPage from './pages/ExcelImportPage';
 import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 import QuestionBankPage from './pages/QuestionBankPage';
 import CategoryManagementPage from './pages/CategoryManagementPage';
+import RequisitionManagementPage from './pages/RequisitionManagementPage';
 
 export const App: React.FC = () => {
   return (
@@ -63,42 +64,104 @@ export const App: React.FC = () => {
               index
               element={<Navigate to="/dashboard" replace />}
             />
+
+            {/* Dashboard – tất cả authenticated users */}
             <Route path="dashboard" element={<DashboardPage />} />
+
+            {/* Profile – tất cả authenticated users (PROFILE_READ base permission) */}
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="organization" element={<OrganizationManagementPage />} />
-            <Route path="job-titles" element={<JobTitleManagementPage />} />
+
+            {/*
+              Organization & Company Profile – CATALOG_READ
+              Roles: HR_MANAGER (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R), APPROVER (R)
+              ADMIN (F via catalog), CANDIDATE (–)
+            */}
+            <Route
+              path="organization"
+              element={
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                  <OrganizationManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Job Titles – CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), APPROVER (R), INTERVIEWER (R)
+            */}
+            <Route
+              path="job-titles"
+              element={
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                  <JobTitleManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Categories – CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
+              NOTE: CANDIDATE and APPROVER do NOT have CATALOG_READ
+            */}
             <Route
               path="categories"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
                   <CategoryManagementPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
             <Route
               path="admin/categories"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
                   <CategoryManagementPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
+
+            {/*
+              Question Bank – CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
+            */}
             <Route
               path="questions"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
                   <QuestionBankPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
             <Route
               path="admin/questions"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
                   <QuestionBankPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
+
+            {/*
+              Requisitions – S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL)
+              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F)
+            */}
+            <Route
+              path="recruitment/requisitions"
+              element={
+                <PermissionGuard
+                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL']}
+                  requireAny
+                >
+                  <RequisitionManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="requisitions"
+              element={<Navigate to="/recruitment/requisitions" replace />}
+            />
+
+            {/* Legacy redirects */}
             <Route
               path="excel-import"
               element={<Navigate to="/admin/import-excel" replace />}
@@ -111,37 +174,57 @@ export const App: React.FC = () => {
               path="users/import-excel"
               element={<Navigate to="/admin/import-excel" replace />}
             />
+
+            {/*
+              Excel Import – USER_MANAGE (ADMIN only)
+              HR_MANAGER has USER_READ but NOT USER_MANAGE → cannot import
+            */}
             <Route
               path="admin/import-excel"
               element={
-                <RoleGuard allowedRoles={['ADMIN']}>
+                <PermissionGuard requiredPermissions={['USER_MANAGE']}>
                   <ExcelImportPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
 
+            {/*
+              User Management – USER_READ (ADMIN=F, HR_MANAGER=R)
+              S1-08: HR_MANAGER can view user list/details but cannot create/lock/assign roles.
+              The UserManagementPage component should conditionally render action buttons
+              based on hasPermission('USER_MANAGE') and hasPermission('ROLE_MANAGE').
+            */}
             <Route
               path="admin/users"
               element={
-                <RoleGuard allowedRoles={['ADMIN']}>
+                <PermissionGuard requiredPermissions={['USER_READ']}>
                   <UserManagementPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
+
+            {/*
+              Organization (admin path) – HR_MANAGER has DEPARTMENT_MANAGE + CATALOG_MANAGE
+              ADMIN has CATALOG_MANAGE
+            */}
             <Route
               path="admin/organization"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
                   <OrganizationManagementPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
+
+            {/*
+              Job Titles (admin path) – HR_MANAGER and ADMIN both have CATALOG_MANAGE
+            */}
             <Route
               path="admin/job-titles"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER']}>
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
                   <JobTitleManagementPage />
-                </RoleGuard>
+                </PermissionGuard>
               }
             />
           </Route>
