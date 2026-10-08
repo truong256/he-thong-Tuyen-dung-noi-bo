@@ -145,6 +145,9 @@ export const OrganizationManagementPage: React.FC = () => {
     try {
       if (selectedDept) {
         await organizationApi.updateDepartment(selectedDept.id, deptData);
+        if (deptData.active !== undefined && deptData.active !== selectedDept.active) {
+          await organizationApi.toggleDepartmentStatus(selectedDept.id, selectedDept.active);
+        }
         showToast(`Đã cập nhật phòng ban "${deptData.name}"!`);
       } else {
         await organizationApi.createDepartment(deptData);
@@ -157,9 +160,11 @@ export const OrganizationManagementPage: React.FC = () => {
     }
   };
 
-  const handleToggleDeptStatus = async (id: number) => {
+  const handleToggleDeptStatus = async (id: number, currentActive?: boolean) => {
     try {
-      const updated = await organizationApi.toggleDepartmentStatus(id);
+      const targetDept = departments.find((d) => d.id === id);
+      const isCurrentlyActive = currentActive !== undefined ? currentActive : (targetDept?.active ?? true);
+      const updated = await organizationApi.toggleDepartmentStatus(id, isCurrentlyActive);
       showToast(
         `Đã ${updated.active ? 'kích hoạt lại' : 'tạm ngưng'} phòng ban "${updated.name}"!`
       );
@@ -734,7 +739,7 @@ export const OrganizationManagementPage: React.FC = () => {
                   departments={departments}
                   onAddSubDepartment={(parentId) => handleOpenAddDept(parentId)}
                   onEditDepartment={(dept) => handleOpenEditDept(dept)}
-                  onToggleStatus={(id) => handleToggleDeptStatus(id)}
+                  onToggleStatus={(id, currentActive) => handleToggleDeptStatus(id, currentActive)}
                   onDeleteDepartment={(dept) => handleDeleteDept(dept)}
                   canEdit={canEdit}
                 />
@@ -914,7 +919,7 @@ export const OrganizationManagementPage: React.FC = () => {
                                     <button
                                       type="button"
                                       className="btn btn-outline btn-sm btn-icon-only"
-                                      onClick={() => handleToggleDeptStatus(dept.id)}
+                                      onClick={() => handleToggleDeptStatus(dept.id, dept.active)}
                                       title={dept.active ? 'Tạm ngưng' : 'Kích hoạt lại'}
                                       aria-label={dept.active ? 'Tạm ngưng' : 'Kích hoạt lại'}
                                     >

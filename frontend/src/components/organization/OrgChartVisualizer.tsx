@@ -23,7 +23,7 @@ interface OrgChartVisualizerProps {
   departments: Department[];
   onAddSubDepartment: (parentId: number) => void;
   onEditDepartment: (dept: Department) => void;
-  onToggleStatus: (id: number) => void;
+  onToggleStatus: (id: number, currentActive?: boolean) => void;
   onDeleteDepartment?: (dept: Department) => void;
   canEdit: boolean;
 }
@@ -283,7 +283,7 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
               <button
                 type="button"
                 className={`node-action-btn btn-toggle ${node.active ? 'active-color' : 'inactive-color'}`}
-                onClick={() => onToggleStatus(node.id)}
+                onClick={() => onToggleStatus(node.id, node.active)}
                 title={node.active ? 'Tạm ngưng hoạt động' : 'Kích hoạt lại'}
                 aria-label={node.active ? `Ngưng hoạt động ${node.name}` : `Kích hoạt lại ${node.name}`}
               >
@@ -427,7 +427,7 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
               <button
                 type="button"
                 className={`btn-icon-subtle ${node.active ? 'text-amber' : 'text-success'}`}
-                onClick={() => onToggleStatus(node.id)}
+                onClick={() => onToggleStatus(node.id, node.active)}
                 title={node.active ? 'Tạm ngưng' : 'Kích hoạt'}
                 aria-label={node.active ? `Ngưng ${node.name}` : `Kích hoạt ${node.name}`}
               >

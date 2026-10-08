@@ -588,11 +588,17 @@ export const organizationApi = {
     return { success: true, message: 'Đã xóa phòng ban thành công.' };
   },
 
-  toggleDepartmentStatus: async (id: number, currentActive = true): Promise<Department> => {
-    const nextActive = !currentActive;
+  toggleDepartmentStatus: async (id: number, currentActive?: boolean): Promise<Department> => {
+    let nextActive: boolean;
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token && !token.startsWith('mock-')) {
       try {
+        if (currentActive !== undefined) {
+          nextActive = !currentActive;
+        } else {
+          const cur = await apiClient.get<any>(`/api/departments/${id}`);
+          nextActive = !(cur.data?.active !== false);
+        }
         const res = await apiClient.patch<any>(`/api/departments/${id}/status`, { active: nextActive });
         return {
           id: Number(res.data?.id || id),
@@ -617,6 +623,7 @@ export const organizationApi = {
     if (index === -1) {
       throw new Error(`Không tìm thấy phòng ban với ID: ${id}`);
     }
+    nextActive = currentActive !== undefined ? !currentActive : !list[index].active;
     list[index].active = nextActive;
     setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
     return list[index];
