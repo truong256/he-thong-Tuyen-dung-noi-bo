@@ -12,6 +12,7 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<UserSummary>;
   logout: (skipServerRevoke?: boolean) => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUser?: (updatedUser: UserSummary) => void;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
 }
@@ -25,6 +26,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('accessToken'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  const updateUser = useCallback((updatedUser: UserSummary) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  }, []);
 
   const refreshUser = async () => {
     try {
@@ -177,6 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         refreshUser,
+        updateUser,
         hasRole,
         hasAnyRole,
       }}

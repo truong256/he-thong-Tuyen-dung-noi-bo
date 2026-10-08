@@ -26,6 +26,8 @@ dist/
 **/.vite/
 data/
 **/data/
+uploads/
+**/uploads/
 test-downloads/
 **/test-downloads/
 

@@ -29,6 +29,7 @@ describe('ProfilePage Component (Personal User Profile)', () => {
       login: vi.fn(),
       logout: vi.fn(),
       refreshUser: mockRefreshUser,
+      updateUser: vi.fn(),
       hasRole: (r: string) => r === 'RECRUITER',
       hasAnyRole: (roles: string[]) => roles.includes('RECRUITER'),
     });

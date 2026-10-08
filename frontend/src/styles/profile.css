@@ -25,6 +25,7 @@
    1. PROFILE SUMMARY CARD (COMPACT HEADER)
    ========================================================================== */
 .profile-summary-header {
+  position: relative;
   background: #ffffff;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-md, 12px);
@@ -41,6 +42,14 @@
   display: flex;
   align-items: center;
   gap: 20px;
+}
+
+.profile-header-avatar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .profile-header-avatar-box {
@@ -62,6 +71,122 @@
   letter-spacing: -0.01em;
   user-select: none;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.18);
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-header-avatar:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+.profile-header-avatar:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 2px;
+}
+
+.profile-header-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.profile-header-avatar-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.profile-avatar-hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(2px);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+.profile-header-avatar:hover .profile-avatar-hover-overlay {
+  opacity: 1;
+}
+
+.profile-avatar-overlay-text {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Floating Camera Badge Button */
+.profile-avatar-badge-btn {
+  position: absolute;
+  bottom: -2px;
+  left: -2px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #334155;
+  border: 1.5px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  transition: all 0.15s ease;
+  z-index: 2;
+}
+
+.profile-avatar-badge-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #94a3b8;
+  transform: scale(1.08);
+}
+
+.profile-avatar-badge-btn:focus-visible {
+  outline: 2px solid #94a3b8;
+  outline-offset: 1px;
+}
+
+/* Delete Avatar Action Button */
+.profile-btn-delete-avatar {
+  background: none;
+  border: none;
+  padding: 2px 8px;
+  color: #ef4444;
+  font-size: 0.76rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 6px);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.profile-btn-delete-avatar:hover {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.profile-btn-delete-avatar:focus-visible {
+  outline: 1px solid #ef4444;
+  outline-offset: 1px;
 }
 
 .profile-header-status-dot {
@@ -73,10 +198,175 @@
   border-radius: 50%;
   background: #10b981;
   border: 2.5px solid #ffffff;
+  z-index: 2;
 }
 
 .profile-header-status-dot.locked {
   background: #ef4444;
+}
+
+/* Avatar Modal Styles */
+.avatar-modal-box {
+  max-width: 460px;
+}
+
+.avatar-preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 0 8px;
+  gap: 16px;
+}
+
+.avatar-preview-circle-wrap {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  padding: 4px;
+  background: #f1f5f9;
+  border: 2px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-preview-circle-wrap.has-preview {
+  border-style: solid;
+  border-color: #94a3b8;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.avatar-preview-circle {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+}
+
+.avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-preview-meta {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.avatar-file-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1e293b;
+  word-break: break-all;
+}
+
+.avatar-file-size {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.avatar-guidelines-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-sm, 6px);
+  padding: 12px 14px;
+  width: 100%;
+  font-size: 0.82rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.avatar-guidelines-box ul {
+  margin: 6px 0 0 18px;
+  padding: 0;
+}
+
+.avatar-guidelines-box li {
+  margin-bottom: 2px;
+}
+
+.avatar-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.avatar-modal-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Toast alert in ProfileHeader */
+.profile-header-toast {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 0.85rem;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
+  z-index: 10;
+  animation: slideDownToast 0.2s ease-out;
+}
+
+.profile-header-toast.success {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.profile-header-toast.error {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.toast-close-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.toast-close-btn:hover {
+  opacity: 1;
+}
+
+@keyframes slideDownToast {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .profile-header-info {
@@ -911,6 +1201,33 @@
     width: 58px;
     height: 58px;
     font-size: 1.5rem;
+  }
+
+  .profile-avatar-badge-btn {
+    width: 24px;
+    height: 24px;
+  }
+
+  .profile-header-toast {
+    position: static;
+    margin-bottom: 14px;
+    width: 100%;
+  }
+
+  .avatar-preview-circle-wrap {
+    width: 110px;
+    height: 110px;
+  }
+
+  .avatar-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .avatar-modal-footer-right {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .profile-header-name {

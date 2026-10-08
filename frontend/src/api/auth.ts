@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { LoginResponse, UserSummary } from '../types/auth';
+import { LoginResponse, UserSummary, AvatarUploadResponse } from '../types/auth';
 
 export const authApi = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
@@ -50,10 +50,10 @@ export const authApi = {
     return res.data;
   },
 
-  uploadAvatar: async (file: File): Promise<{ message: string; avatarUrl: string; thumbnailUrl: string; user?: UserSummary }> => {
+  uploadAvatar: async (file: File): Promise<AvatarUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await apiClient.post<{ message: string; avatarUrl: string; thumbnailUrl: string; user?: UserSummary }>(
+    const res = await apiClient.post<AvatarUploadResponse>(
       '/api/auth/avatar',
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
