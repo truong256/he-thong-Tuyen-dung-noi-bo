@@ -7,6 +7,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -75,5 +79,38 @@ public class CompanyProfileController {
         stats.put("openRequisitionsCount", jobTitleRepository.count());
 
         return ResponseEntity.ok(stats);
+    }
+
+    @PostMapping("/profile/logo")
+    public ResponseEntity<CompanyProfile> uploadLogo(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) {
+        String username = authentication != null ? authentication.getName() : "Quản trị viên";
+        CompanyProfile updated = profileService.uploadLogo(file, username);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/profile/image")
+    public ResponseEntity<CompanyProfile> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) {
+        String username = authentication != null ? authentication.getName() : "Quản trị viên";
+        CompanyProfile updated = profileService.uploadImage(file, username);
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/profile/images/{filename:.+}")
+    public ResponseEntity<Resource> serveImage(@PathVariable String filename) {
+        Resource file = profileService.loadCompanyResource(filename);
+        String contentType = "image/jpeg";
+        if (filename.toLowerCase().endsWith(".png")) {
+            contentType = "image/png";
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(file);
     }
 }

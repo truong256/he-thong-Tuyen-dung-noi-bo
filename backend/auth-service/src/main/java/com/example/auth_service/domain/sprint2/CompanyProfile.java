@@ -62,6 +62,12 @@ public class CompanyProfile {
     @Column(length = 100)
     private String country;
 
+    @Column(length = 255)
+    private String logoUrl;
+
+    @Column(length = 255)
+    private String imageUrl;
+
     @Column(columnDefinition = "TEXT")
     private String description;
 
