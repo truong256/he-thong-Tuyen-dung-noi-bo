@@ -65,6 +65,12 @@ export const authApi = {
     const res = await apiClient.delete<{ message: string }>('/api/auth/avatar');
     return res.data;
   },
+
+  /** S1-05: Fetch server-authoritative permission list for current user */
+  getPermissions: async (): Promise<string[]> => {
+    const res = await apiClient.get<string[]>('/api/auth/permissions');
+    return res.data;
+  },
 };
 
 export default authApi;

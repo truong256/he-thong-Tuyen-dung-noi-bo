@@ -21,4 +21,6 @@ public class CandidateApplication {
     private String fullName;
     @Column(nullable = false, length = 100)
     private String email;
+    @Column(length = 50)
+    private String stage = "APPLIED";
 }

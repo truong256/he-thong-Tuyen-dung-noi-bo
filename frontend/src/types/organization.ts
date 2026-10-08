@@ -51,6 +51,7 @@ export interface Department {
   description?: string;
   parentDepartmentId?: number | null;
   parentDepartmentName?: string;
+  managerUserId?: number;
   managerName?: string;
   managerEmail?: string;
   employeeCount: number;

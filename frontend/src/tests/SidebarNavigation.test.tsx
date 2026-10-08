@@ -16,8 +16,11 @@ describe('Sidebar Role Navigation & Mobile Drawer (S1-06)', () => {
       login: vi.fn(),
       logout: vi.fn(),
       refreshUser: vi.fn(),
+      permissions: ['USER_READ', 'USER_MANAGE', 'ROLE_READ', 'ROLE_MANAGE', 'CATALOG_READ', 'CATALOG_MANAGE', 'SALARY_READ', 'SALARY_MANAGE'],
       hasRole: (r: string) => r === 'ADMIN',
       hasAnyRole: (roles: string[]) => roles.includes('ADMIN'),
+      hasPermission: (p: string) => ['USER_READ', 'USER_MANAGE', 'ROLE_READ', 'ROLE_MANAGE', 'CATALOG_READ', 'CATALOG_MANAGE', 'SALARY_READ', 'SALARY_MANAGE'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some(p => ['USER_READ', 'USER_MANAGE', 'ROLE_READ', 'ROLE_MANAGE', 'CATALOG_READ', 'CATALOG_MANAGE', 'SALARY_READ', 'SALARY_MANAGE'].includes(p)),
     });
 
     render(
@@ -43,8 +46,11 @@ describe('Sidebar Role Navigation & Mobile Drawer (S1-06)', () => {
       login: vi.fn(),
       logout: vi.fn(),
       refreshUser: vi.fn(),
+      permissions: ['APPLICATION_CREATE', 'CANDIDATE_READ_OWN'],
       hasRole: (r: string) => r === 'CANDIDATE',
       hasAnyRole: () => false,
+      hasPermission: (p: string) => ['APPLICATION_CREATE', 'CANDIDATE_READ_OWN'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some(p => ['APPLICATION_CREATE', 'CANDIDATE_READ_OWN'].includes(p)),
     });
 
     render(
@@ -69,8 +75,11 @@ describe('Sidebar Role Navigation & Mobile Drawer (S1-06)', () => {
       login: vi.fn(),
       logout: vi.fn(),
       refreshUser: vi.fn(),
+      permissions: ['USER_READ', 'USER_MANAGE'],
       hasRole: () => true,
       hasAnyRole: () => true,
+      hasPermission: () => true,
+      hasAnyPermission: () => true,
     });
 
     render(

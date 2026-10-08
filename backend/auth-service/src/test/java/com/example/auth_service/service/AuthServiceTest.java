@@ -616,6 +616,7 @@ class AuthServiceTest {
         request.setFullName("New Name");
         request.setPhone("0912345678");
         request.setDisplayName("New Display");
+        request.setDepartment("Hacker Department");
         
         UserSummaryDto response = authService.updateProfile("user@company.com", request);
 

@@ -45,8 +45,8 @@ type ActiveTab = 'overview' | 'departments' | 'locations' | 'branding';
 type DepartmentViewMode = 'chart' | 'table';
 
 export const OrganizationManagementPage: React.FC = () => {
-  const { user, hasAnyRole } = useAuth();
-  const canEdit = hasAnyRole(['ADMIN', 'HR_MANAGER']);
+  const { user, hasPermission } = useAuth();
+  const canEdit = Boolean(hasPermission && hasPermission('DEPARTMENT_MANAGE'));
 
   // Tabs & Views
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -142,14 +142,19 @@ export const OrganizationManagementPage: React.FC = () => {
   };
 
   const handleSaveDept = async (deptData: any) => {
-    if (selectedDept) {
-      await organizationApi.updateDepartment(selectedDept.id, deptData);
-      showToast(`Đã cập nhật phòng ban "${deptData.name}"!`);
-    } else {
-      await organizationApi.createDepartment(deptData);
-      showToast(`Đã thêm mới phòng ban "${deptData.name}"!`);
+    try {
+      if (selectedDept) {
+        await organizationApi.updateDepartment(selectedDept.id, deptData);
+        showToast(`Đã cập nhật phòng ban "${deptData.name}"!`);
+      } else {
+        await organizationApi.createDepartment(deptData);
+        showToast(`Đã thêm mới phòng ban "${deptData.name}"!`);
+      }
+      await loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi lưu phòng ban.', 'error');
+      throw err;
     }
-    await loadData();
   };
 
   const handleToggleDeptStatus = async (id: number) => {
@@ -730,6 +735,7 @@ export const OrganizationManagementPage: React.FC = () => {
                   onAddSubDepartment={(parentId) => handleOpenAddDept(parentId)}
                   onEditDepartment={(dept) => handleOpenEditDept(dept)}
                   onToggleStatus={(id) => handleToggleDeptStatus(id)}
+                  onDeleteDepartment={(dept) => handleDeleteDept(dept)}
                   canEdit={canEdit}
                 />
               ) : (
@@ -1141,6 +1147,7 @@ export const OrganizationManagementPage: React.FC = () => {
         isOpen={isDeptModalOpen}
         onClose={() => setIsDeptModalOpen(false)}
         onSave={handleSaveDept}
+        onDelete={(dept) => handleDeleteDept(dept)}
         department={selectedDept}
         parentDepartmentId={presetParentDeptId}
         allDepartments={departments}

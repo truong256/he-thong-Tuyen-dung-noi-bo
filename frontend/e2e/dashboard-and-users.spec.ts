@@ -63,7 +63,7 @@ test.describe('Dashboard and User Management Polish Verification', () => {
 
     // Verify action cards
     const actionCards = page.locator('.dashboard-cards-grid .card');
-    await expect(actionCards).toHaveCount(2);
+    await expect(actionCards).toHaveCount(4);
 
     // Micro-interaction checks on Dashboard
     const userProfile = page.locator('.user-profile');

@@ -19,6 +19,7 @@ import {
   FileSpreadsheet,
   FolderTree,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -28,7 +29,7 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
-  const { hasRole, hasAnyRole } = useAuth();
+  const { hasRole, hasAnyRole, hasPermission } = useAuth();
   const [notice, setNotice] = useState<string | null>(null);
 
   const handleLinkClick = () => {
@@ -42,6 +43,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     setTimeout(() => setNotice(null), 3500);
     handleLinkClick();
   };
+
+  // Permission-based visibility flags (S1-06: Menu theo quyền) with role-based fallbacks
+  const checkPerm = (perm: string, fallbackRoles: string[]) =>
+    typeof hasPermission === 'function' ? hasPermission(perm) : (hasAnyRole ? hasAnyRole(fallbackRoles) : false);
+
+  const canReadCatalog = checkPerm('CATALOG_READ', ['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER', 'APPROVER']);
+  const canReadUsers = checkPerm('USER_READ', ['ADMIN', 'HR_MANAGER']);
+  const canManageUsers = checkPerm('USER_MANAGE', ['ADMIN']);
+  const canReadAudit = checkPerm('AUDIT_READ', ['ADMIN', 'HR_MANAGER']);
 
   return (
     <>
@@ -99,18 +109,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 </NavLink>
               </li>
 
-              <li>
-                <NavLink
-                  to="/organization"
-                  className={({ isActive }) => (isActive ? 'active' : '')}
-                  onClick={handleLinkClick}
-                >
-                  <Building2 size={18} />
-                  <span>Hồ sơ tổ chức</span>
-                </NavLink>
-              </li>
+              {/*
+                Hồ sơ tổ chức – CATALOG_READ
+                Visible: HR_MANAGER(F), ADMIN(F), RECRUITER(R), HIRING_MANAGER(R),
+                          INTERVIEWER(R), APPROVER(R)
+                Hidden: CANDIDATE (no CATALOG_READ)
+              */}
+              {canReadCatalog && (
+                <li>
+                  <NavLink
+                    to="/organization"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <Building2 size={18} />
+                    <span>Hồ sơ tổ chức</span>
+                  </NavLink>
+                </li>
+              )}
 
-              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER']) && (
+              {/*
+                Quản lý Chức danh – CATALOG_READ
+                Same visibility as organization (catalog module)
+              */}
+              {canReadCatalog && (
                 <li>
                   <NavLink
                     to="/job-titles"
@@ -123,7 +145,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 </li>
               )}
 
-              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
+              {/*
+                Quản lý Danh mục – CATALOG_READ
+                Same visibility as above
+              */}
+              {canReadCatalog && (
                 <li>
                   <NavLink
                     to="/categories"
@@ -136,7 +162,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 </li>
               )}
 
-              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
+              {/*
+                Ngân hàng Câu hỏi – CATALOG_READ
+                Same visibility as catalog
+              */}
+              {canReadCatalog && (
                 <li>
                   <NavLink
                     to="/questions"
@@ -149,29 +179,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 </li>
               )}
 
-              {hasRole('ADMIN') && (
-                <>
-                  <li>
-                    <NavLink
-                      to="/admin/users"
-                      className={({ isActive }) => (isActive ? 'active' : '')}
-                      onClick={handleLinkClick}
-                    >
-                      <Users size={18} />
-                      <span>Quản lý Tài khoản</span>
-                    </NavLink>
-                  </li>
-                  <li>
-                    <NavLink
-                      to="/admin/import-excel"
-                      className={({ isActive }) => (isActive ? 'active' : '')}
-                      onClick={handleLinkClick}
-                    >
-                      <FileSpreadsheet size={18} />
-                      <span>Nhập nhân sự Excel</span>
-                    </NavLink>
-                  </li>
-                </>
+              {/*
+                Quản lý Tài khoản – USER_READ
+                ADMIN: full actions (create/lock/assign roles visible in page)
+                HR_MANAGER: read-only view (action buttons hidden in UserManagementPage)
+                Others: no access
+              */}
+              {canReadUsers && (
+                <li>
+                  <NavLink
+                    to="/admin/users"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <Users size={18} />
+                    <span>{canManageUsers ? 'Quản lý Tài khoản' : 'Danh sách tài khoản'}</span>
+                  </NavLink>
+                </li>
+              )}
+
+              {/*
+                Nhập nhân sự Excel – USER_MANAGE (ADMIN only)
+                HR_MANAGER has USER_READ but NOT USER_MANAGE
+              */}
+              {canManageUsers && (
+                <li>
+                  <NavLink
+                    to="/admin/import-excel"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <FileSpreadsheet size={18} />
+                    <span>Nhập nhân sự Excel</span>
+                  </NavLink>
+                </li>
               )}
             </ul>
           </div>
@@ -228,24 +269,37 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           )}
 
           {/* Approvals Section */}
-          {(hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER'])) && (
+          {(hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER', 'ADMIN'])) && (
             <div className="sidebar-section">
               <span className="sidebar-title">PHÊ DUYỆT & ĐỀ XUẤT</span>
               <ul className="sidebar-menu">
-                <li>
-                  <a
-                    href="#requisitions"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Yêu cầu tuyển dụng');
-                    }}
-                  >
-                    <FileCheck size={18} />
-                    <span>Yêu cầu tuyển dụng</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
-                </li>
+                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']) || (hasPermission && hasPermission('REQUISITION_CREATE'))) ? (
+                  <li>
+                    <NavLink
+                      to="/recruitment/requisitions"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <FileCheck size={18} />
+                      <span>Yêu cầu tuyển dụng</span>
+                    </NavLink>
+                  </li>
+                ) : (
+                  <li>
+                    <a
+                      href="#requisitions"
+                      aria-disabled="true"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleUpcomingClick('Yêu cầu tuyển dụng');
+                      }}
+                    >
+                      <FileCheck size={18} />
+                      <span>Yêu cầu tuyển dụng</span>
+                      <span className="sidebar-badge-soon">Sắp ra mắt</span>
+                    </a>
+                  </li>
+                )}
                 <li>
                   <a
                     href="#approvals"
@@ -331,6 +385,29 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                   >
                     <FileText size={18} />
                     <span>Hồ sơ & CV của tôi</span>
+                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* HR Manager – Audit/Nhật ký section (S1-07 / AUDIT_READ) */}
+          {canReadAudit && !canManageUsers && (
+            <div className="sidebar-section">
+              <span className="sidebar-title">NHẬT KÝ HỆ THỐNG</span>
+              <ul className="sidebar-menu">
+                <li>
+                  <a
+                    href="#audit-log"
+                    aria-disabled="true"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleUpcomingClick('Nhật ký hoạt động');
+                    }}
+                  >
+                    <ShieldCheck size={18} />
+                    <span>Nhật ký hoạt động</span>
                     <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>

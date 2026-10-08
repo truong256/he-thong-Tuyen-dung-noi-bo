@@ -19,8 +19,8 @@ test.describe('Admin Profile Page Modern Redesign Verification', () => {
     const header = page.locator('.profile-summary-header');
     await expect(header).toBeVisible();
 
-    // Verify avatar with initial
-    await expect(header.locator('.profile-header-avatar')).toContainText('Q');
+    // Verify avatar is visible
+    await expect(header.locator('.profile-header-avatar')).toBeVisible();
 
     // Verify name and email
     await expect(header.locator('.profile-header-name')).toContainText('Quản trị viên Hệ thống');

@@ -4,9 +4,11 @@ import authApi from '../api/auth';
 import { isIdleExpired, recordActivity, clearActivity } from '../utils/idleTracker';
 import { triggerIdleSessionExpired } from '../api/client';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: UserSummary | null;
   token: string | null;
+  /** Server-authoritative permission list for current user (S1-05) */
+  permissions?: string[];
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<UserSummary>;
@@ -15,6 +17,9 @@ interface AuthContextType {
   updateUser?: (updatedUser: UserSummary) => void;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
+  /** S1-05: Check if current user has a specific server-granted permission */
+  hasPermission?: (permission: string) => boolean;
+  hasAnyPermission?: (perms: string[]) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +31,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('accessToken'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [permissions, setPermissions] = useState<string[]>(() => {
+    const saved = localStorage.getItem('ats:permissions');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const updateUser = useCallback((updatedUser: UserSummary) => {
     setUser(updatedUser);
@@ -37,6 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const me = await authApi.getMe();
       setUser(me);
       localStorage.setItem('user', JSON.stringify(me));
+      // Re-fetch permissions on user refresh
+      try {
+        const perms = await authApi.getPermissions();
+        setPermissions(perms);
+        localStorage.setItem('ats:permissions', JSON.stringify(perms));
+      } catch {
+        // Keep existing permissions if fetch fails
+      }
     } catch {
       // If fetching me fails, keep current state or logout if unauthorized
     }
@@ -50,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           triggerIdleSessionExpired();
           setUser(null);
           setToken(null);
+          setPermissions([]);
           setIsLoading(false);
           return;
         }
@@ -64,14 +82,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const me = await authApi.getMe();
             setUser(me);
             localStorage.setItem('user', JSON.stringify(me));
+            // Fetch server-authoritative permissions (S1-05)
+            try {
+              const perms = await authApi.getPermissions();
+              setPermissions(perms);
+              localStorage.setItem('ats:permissions', JSON.stringify(perms));
+            } catch {
+              // Use cached permissions if server unavailable
+            }
           } catch (err: any) {
             if (err?.response?.status === 401 || err?.response?.status === 403 || !err?.response) {
               localStorage.removeItem('accessToken');
               localStorage.removeItem('refreshToken');
               localStorage.removeItem('user');
+              localStorage.removeItem('ats:permissions');
               clearActivity();
               setUser(null);
               setToken(null);
+              setPermissions([]);
             }
           }
         }
@@ -85,6 +113,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearActivity();
       setUser(null);
       setToken(null);
+      setPermissions([]);
+      localStorage.removeItem('ats:permissions');
     };
 
     window.addEventListener('ats:session-expired', handleSessionExpired);
@@ -109,9 +139,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    localStorage.removeItem('ats:permissions');
     sessionStorage.removeItem('ats:session_expired');
     setUser(null);
     setToken(null);
+    setPermissions([]);
   }, [user]);
 
   // Global user activity monitor and idle action blocker
@@ -156,6 +188,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     recordActivity();
     setToken(res.accessToken);
     setUser(res.user);
+    // Fetch permissions immediately after login
+    try {
+      const perms = await authApi.getPermissions();
+      setPermissions(perms);
+      localStorage.setItem('ats:permissions', JSON.stringify(perms));
+    } catch {
+      setPermissions([]);
+    }
     return res.user;
   };
 
@@ -173,11 +213,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  /**
+   * S1-05: Check if the current user has a specific server-granted permission.
+   * Permission list is fetched from the server and cached.
+   * This is UI-layer only. Backend @PreAuthorize is the real enforcement.
+   */
+  const hasPermission = (permission: string): boolean => {
+    return permissions.includes(permission);
+  };
+
+  const hasAnyPermission = (perms: string[]): boolean => {
+    return perms.some((p) => permissions.includes(p));
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
+        permissions,
         isAuthenticated: !!user && !!token,
         isLoading,
         login,
@@ -186,6 +240,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateUser,
         hasRole,
         hasAnyRole,
+        hasPermission,
+        hasAnyPermission,
       }}
     >
       {children}

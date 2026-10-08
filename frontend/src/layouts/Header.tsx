@@ -140,7 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
                   <strong className="dropdown-user-name">{user?.fullName || 'Người dùng'}</strong>
                   <div className="dropdown-user-email">{user?.email}</div>
                   <div className="role-tags">
-                    {(user?.roles || [primaryRole]).map((r) => (
+                    {(user?.roles || [primaryRole]).map((r: string) => (
                       <span key={r} className="tag">{getRoleLabel(r)}</span>
                     ))}
                   </div>

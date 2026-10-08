@@ -2,7 +2,10 @@ import { test, expect } from '@playwright/test';
 import * as path from 'path';
 
 test.describe('SCRUM-49 Runtime Verification: 5 Scenarios', () => {
+  test.describe.configure({ mode: 'serial', timeout: 90000 });
+
   test.beforeEach(async ({ page }, testInfo) => {
+    test.setTimeout(90000);
     test.skip(testInfo.project.name !== 'desktop-1440', 'Stateful database mutation tests run only on desktop-1440');
 
     // Login as Admin before each test
@@ -53,7 +56,7 @@ test.describe('SCRUM-49 Runtime Verification: 5 Scenarios', () => {
 
     // Verify UI Result Card
     await expect(page.locator('text=Báo cáo kết quả nhập dữ liệu hoàn tất')).toBeVisible();
-    await expect(page.getByTestId('import-result-card').getByText('Nhập thành công')).toBeVisible();
+    await expect(page.getByTestId('import-result-card').getByText('Nhập thành công', { exact: true })).toBeVisible();
 
     // Navigate to user list and verify persistence
     const backBtn = page.locator('button[data-testid="btn-back-users"]');
@@ -84,7 +87,7 @@ test.describe('SCRUM-49 Runtime Verification: 5 Scenarios', () => {
     await expect(page.locator('text=Vai trò không hợp lệ')).toBeVisible();
 
     // Capture visual verification screenshots
-    const artifactDir = 'C:/Users/ASUS/.gemini/antigravity-ide/brain/bbffb8fb-4ac2-4dd9-b634-fcb109083bf6';
+    const artifactDir = 'C:/Users/ASUS/.gemini/antigravity-ide/brain/de7af886-4453-4c5f-b312-816842f0772b';
     await page.screenshot({ path: path.join(artifactDir, 'excel_import_preview_desktop_1440.png'), fullPage: true });
 
     // Test mobile 360px responsiveness

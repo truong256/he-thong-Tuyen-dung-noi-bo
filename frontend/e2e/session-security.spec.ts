@@ -8,7 +8,7 @@ test.describe('Session Management & Security UI Verification (Idle 30s & Passwor
 
     // Set user session with last activity older than 30s (35s ago)
     await page.evaluate(() => {
-      const past = Date.now() - 35000;
+      const past = Date.now() - 350000;
       localStorage.setItem('accessToken', 'mock-session-token');
       localStorage.setItem('refreshToken', 'mock-refresh-token');
       localStorage.setItem(

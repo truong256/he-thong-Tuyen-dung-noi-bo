@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 
 test.describe('S2-03: Avatar Upload & Delete Integration Flow', () => {
+  test.describe.configure({ mode: 'serial' });
   const testImagePath = path.resolve('e2e', 'fixtures', 'test-avatar.jpg');
 
   test.beforeAll(async () => {
