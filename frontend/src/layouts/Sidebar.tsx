@@ -233,18 +233,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
               <span className="sidebar-title">PHÊ DUYỆT & ĐỀ XUẤT</span>
               <ul className="sidebar-menu">
                 <li>
-                  <a
-                    href="#requisitions"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Yêu cầu tuyển dụng');
-                    }}
+                  <NavLink
+                    to="/requisitions"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
                   >
                     <FileCheck size={18} />
                     <span>Yêu cầu tuyển dụng</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
+                  </NavLink>
                 </li>
                 <li>
                   <a

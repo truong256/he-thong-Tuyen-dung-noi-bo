@@ -114,7 +114,7 @@ public class UserExcelImportService {
         List<ExcelImportRowData> rawRows = parseWorkbook(file);
         List<ExcelImportRowPreview> previewRows = validateRows(rawRows);
 
-        int validCount = (int) previewRows.stream().filter(ExcelImportRowPreview::isValid).count();
+        int validCount = (int) previewRows.stream().filter(r -> r.isValid()).count();
         int invalidCount = previewRows.size() - validCount;
 
         return ExcelImportPreviewResponse.builder()

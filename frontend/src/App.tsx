@@ -18,6 +18,7 @@ import ExcelImportPage from './pages/ExcelImportPage';
 import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 import QuestionBankPage from './pages/QuestionBankPage';
 import CategoryManagementPage from './pages/CategoryManagementPage';
+import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 
 export const App: React.FC = () => {
   return (
@@ -67,6 +68,14 @@ export const App: React.FC = () => {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="organization" element={<OrganizationManagementPage />} />
             <Route path="job-titles" element={<JobTitleManagementPage />} />
+            <Route
+              path="requisitions"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'HIRING_MANAGER']}>
+                  <RecruitmentRequestPage />
+                </RoleGuard>
+              }
+            />
             <Route
               path="categories"
               element={

@@ -1,7 +1,6 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.CompanyProfile;
-import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.repository.*;
 import com.example.auth_service.service.CompanyProfileService;
 import org.springframework.http.ResponseEntity;
@@ -57,7 +56,7 @@ public class CompanyProfileController {
     public ResponseEntity<Map<String, Object>> getStatistics() {
         Map<String, Object> stats = new HashMap<>();
         long deptCount = departmentRepository.count();
-        long activeDepts = departmentRepository.findAll().stream().filter(Department::isActive).count();
+        long activeDepts = departmentRepository.findAll().stream().filter(d -> d != null && d.isActive()).count();
         long totalEmp = userRepository.count();
         long jobTitleCount = jobTitleRepository.count();
         long userCount = userRepository.count();

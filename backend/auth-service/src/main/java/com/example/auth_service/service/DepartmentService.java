@@ -162,7 +162,7 @@ public class DepartmentService {
     }
 
     private Map<Long, Department> index(List<Department> all) {
-        return all.stream().collect(Collectors.toMap(Department::getId, Function.identity()));
+        return all.stream().collect(Collectors.toMap(d -> d.getId(), Function.identity()));
     }
 
     private void apply(Department department, DepartmentRequest request) {

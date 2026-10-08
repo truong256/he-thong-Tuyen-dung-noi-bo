@@ -97,21 +97,23 @@ public class SmtpMailService implements MailService {
         logger.info("Sent account activation email via SMTP to {}", toEmail);
     }
 
+    @SuppressWarnings("resource")
     public void sendEmail(String toEmail, String subject, String bodyHtml) {
         logger.info("Initiating SMTP email transfer to {}:{}", host, port);
         try (Socket rawSocket = new Socket()) {
             rawSocket.connect(new InetSocketAddress(host, port), timeout);
             rawSocket.setSoTimeout(timeout);
 
-            Socket initialSocket = rawSocket;
+            Socket socket = rawSocket;
+            SSLSocket sslSocket = null;
             if (port == 465) {
-                SSLSocket sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
                         .createSocket(rawSocket, host, port, true);
                 sslSocket.startHandshake();
-                initialSocket = sslSocket;
+                socket = sslSocket;
             }
 
-            try (Socket socket = initialSocket) {
+            try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
@@ -135,6 +137,10 @@ public class SmtpMailService implements MailService {
                     }
                 } else {
                     performSmtpTransaction(reader, writer, toEmail, subject, bodyHtml);
+                }
+            } finally {
+                if (sslSocket != null) {
+                    sslSocket.close();
                 }
             }
         } catch (Exception e) {

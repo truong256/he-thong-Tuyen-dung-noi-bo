@@ -1,7 +1,6 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.Department;
-import com.example.auth_service.domain.sprint2.JobTitle;
 import com.example.auth_service.dto.JobTitleRequest;
 import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
@@ -26,7 +25,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;

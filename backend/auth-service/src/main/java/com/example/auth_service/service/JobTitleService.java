@@ -196,7 +196,8 @@ public class JobTitleService {
             return minMillion + " - " + maxMillion + " triệu VNĐ";
         }
         if (min != null) return "Từ " + (min / 1_000_000) + " triệu VNĐ";
-        return "Lên đến " + (max / 1_000_000) + " triệu VNĐ";
+        if (max != null) return "Lên đến " + (max / 1_000_000) + " triệu VNĐ";
+        return "Thỏa thuận";
     }
 
     private String joinList(List<String> list) {
