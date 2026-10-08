@@ -58,7 +58,16 @@ public class InterviewQuestionService {
 
     @Transactional(readOnly = true)
     public List<CompetencyCriterionResponse> getCriteria() {
+        return getCriteria(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompetencyCriterionResponse> getCriteria(Long jobTitleId) {
         return competencyCriterionRepository.findAllActiveWithDetails().stream()
+                .filter(c -> jobTitleId == null ||
+                        (c.getCompetencyFramework() != null &&
+                         c.getCompetencyFramework().getJobTitle() != null &&
+                         jobTitleId.equals(c.getCompetencyFramework().getJobTitle().getId())))
                 .map(c -> new CompetencyCriterionResponse(
                         c.getId(),
                         c.getCriterionCode(),

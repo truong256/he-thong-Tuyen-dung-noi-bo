@@ -18,8 +18,10 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
         WHERE (:search IS NULL
             OR LOWER(q.questionText) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(q.category) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(c.criterionCode) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(c.criterionName) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(f.competencyName) LIKE LOWER(CONCAT('%', :search, '%')))
+            OR LOWER(f.competencyName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')))
         AND (:difficultyLevel IS NULL OR q.difficultyLevel = :difficultyLevel)
         AND (:jobTitleId IS NULL OR j.id = :jobTitleId)
         AND (:criterionId IS NULL OR c.id = :criterionId)
