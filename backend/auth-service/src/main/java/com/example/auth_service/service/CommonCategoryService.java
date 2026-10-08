@@ -42,7 +42,7 @@ public class CommonCategoryService {
     public List<CategoryTypeResponse> getTypes() {
         List<CommonCategory> all = repository.findAll();
         Map<String, Long> countByType = all.stream()
-                .collect(Collectors.groupingBy(CommonCategory::getType, Collectors.counting()));
+                .collect(Collectors.groupingBy(c -> c.getType(), Collectors.counting()));
 
         List<CategoryTypeResponse> results = new ArrayList<>();
         countByType.forEach((type, count) -> {

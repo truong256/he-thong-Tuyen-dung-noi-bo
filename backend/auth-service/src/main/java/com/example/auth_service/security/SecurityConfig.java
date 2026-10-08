@@ -9,7 +9,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -96,6 +95,18 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/salary-ranges", "/api/salary-ranges/{id}").hasAuthority("SALARY_READ")
                 .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}")
                         .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "CANDIDATE_READ_OWN")
+                .requestMatchers(HttpMethod.POST, "/api/requisitions/draft")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/draft")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                .requestMatchers(HttpMethod.POST, "/api/requisitions")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/submit")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
+                        .hasAnyAuthority("REQUISITION_READ_ALL", "REQUISITION_READ_OWN")
+                .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
                 .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/assignments/{userId}")
                         .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}/assignments/{userId}")
