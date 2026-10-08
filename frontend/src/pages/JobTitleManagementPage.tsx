@@ -39,7 +39,8 @@ type ViewMode = 'table' | 'cards' | 'matrix';
 
 export const JobTitleManagementPage: React.FC = () => {
   const { user, hasAnyRole } = useAuth();
-  const canEdit = hasAnyRole(['ADMIN', 'HR_MANAGER']);
+  const canEdit = hasAnyRole(['HR_MANAGER']);
+  const canViewSalary = hasAnyRole(['HR_MANAGER']);
 
   // Data states
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
@@ -170,7 +171,7 @@ export const JobTitleManagementPage: React.FC = () => {
 
   const handleExportCSV = async () => {
     try {
-      const csv = await jobTitleApi.exportToCSV(jobTitles);
+      const csv = await jobTitleApi.exportToCSV(jobTitles, canViewSalary);
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -427,6 +428,30 @@ export const JobTitleManagementPage: React.FC = () => {
             ))}
           </select>
 
+          {/* Sort Selector */}
+          <select
+            className="jt-filter-select"
+            value={`${sortBy}-${sortOrder}`}
+            onChange={(e) => {
+              const [field, order] = e.target.value.split('-') as [
+                'title' | 'level' | 'headcount' | 'createdAt',
+                'asc' | 'desc',
+              ];
+              setSortBy(field);
+              setSortOrder(order);
+            }}
+            aria-label="Sắp xếp danh sách"
+          >
+            <option value="level-asc">Sắp xếp: Cấp bậc (Thấp → Cao)</option>
+            <option value="level-desc">Sắp xếp: Cấp bậc (Cao → Thấp)</option>
+            <option value="title-asc">Sắp xếp: Tên A - Z</option>
+            <option value="title-desc">Sắp xếp: Tên Z - A</option>
+            <option value="headcount-desc">Sắp xếp: Định biên (Cao → Thấp)</option>
+            <option value="headcount-asc">Sắp xếp: Định biên (Thấp → Cao)</option>
+            <option value="createdAt-desc">Sắp xếp: Ngày tạo (Mới nhất)</option>
+            <option value="createdAt-asc">Sắp xếp: Ngày tạo (Cũ nhất)</option>
+          </select>
+
           {/* Status Filter */}
           <div className="jt-status-segmented" role="group" aria-label="Lọc trạng thái">
             <button
@@ -457,7 +482,9 @@ export const JobTitleManagementPage: React.FC = () => {
             departmentFilter !== 'ALL' ||
             levelFilter !== 'ALL' ||
             jobFamilyFilter !== 'ALL' ||
-            statusFilter !== 'ALL') && (
+            statusFilter !== 'ALL' ||
+            sortBy !== 'level' ||
+            sortOrder !== 'asc') && (
             <button
               type="button"
               className="jt-filter-reset-btn"
@@ -483,6 +510,7 @@ export const JobTitleManagementPage: React.FC = () => {
         <CareerMatrixVisualizer
           jobTitles={jobTitles}
           departments={departments}
+          canViewSalary={canViewSalary}
           onSelectJobTitle={(jt) => {
             setDetailJobTitle(jt);
             setIsDetailModalOpen(true);
@@ -554,12 +582,14 @@ export const JobTitleManagementPage: React.FC = () => {
                       <span className="jt-card-detail-value">{jt.departmentName}</span>
                     </div>
 
-                    <div className="jt-card-detail-line">
-                      <span className="jt-card-detail-label">Dải lương:</span>
-                      <span className="jt-card-detail-value salary">
-                        {jt.salaryRangeDisplay || 'Thỏa thuận'}
-                      </span>
-                    </div>
+                    {canViewSalary && (
+                      <div className="jt-card-detail-line">
+                        <span className="jt-card-detail-label">Dải lương:</span>
+                        <span className="jt-card-detail-value salary">
+                          {jt.salaryRangeDisplay || 'Chưa khai báo'}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="jt-card-detail-line">
                       <span className="jt-card-detail-label">Nhân sự / Định biên:</span>
@@ -645,7 +675,7 @@ export const JobTitleManagementPage: React.FC = () => {
                   <th style={{ width: '120px' }}>Mã CD</th>
                   <th>Chức danh & Phòng ban</th>
                   <th style={{ width: '150px' }}>Cấp bậc</th>
-                  <th style={{ width: '170px' }}>Dải lương tham chiếu</th>
+                  {canViewSalary && <th style={{ width: '170px' }}>Dải lương tham chiếu</th>}
                   <th style={{ width: '150px' }}>Thực tế / Định biên</th>
                   <th style={{ width: '140px' }}>Tuyển dụng</th>
                   <th style={{ width: '110px' }}>Trạng thái</th>
@@ -655,7 +685,7 @@ export const JobTitleManagementPage: React.FC = () => {
               <tbody>
                 {jobTitles.length === 0 ? (
                   <tr>
-                    <td colSpan={8}>
+                    <td colSpan={canViewSalary ? 8 : 7}>
                       <div className="jt-empty-state">
                         <div className="jt-empty-icon">
                           <Award size={36} />
@@ -719,11 +749,13 @@ export const JobTitleManagementPage: React.FC = () => {
                             {levelInfo?.label || jt.level}
                           </span>
                         </td>
-                        <td>
-                          <span className="jt-salary-cell">
-                            {jt.salaryRangeDisplay || 'Thỏa thuận'}
-                          </span>
-                        </td>
+                        {canViewSalary && (
+                          <td>
+                            <span className="jt-salary-cell">
+                              {jt.salaryRangeDisplay || 'Chưa khai báo'}
+                            </span>
+                          </td>
+                        )}
                         <td>
                           <div className="jt-headcount-cell">
                             <span className="jt-headcount-nums">
@@ -837,6 +869,7 @@ export const JobTitleManagementPage: React.FC = () => {
         }}
         onToggleStatus={handleToggleStatus}
         canEdit={canEdit}
+        canViewSalary={canViewSalary}
       />
 
       {/* Delete Confirmation Modal */}

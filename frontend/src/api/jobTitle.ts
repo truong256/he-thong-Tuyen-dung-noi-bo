@@ -434,6 +434,18 @@ export const jobTitleApi = {
         if (filters?.departmentId && filters.departmentId !== 'ALL') {
           params.append('departmentId', String(filters.departmentId));
         }
+        if (filters?.level && filters.level !== 'ALL') {
+          params.append('level', filters.level);
+        }
+        if (filters?.jobFamily && filters.jobFamily !== 'ALL') {
+          params.append('jobFamily', filters.jobFamily);
+        }
+        if (filters?.sortBy) {
+          params.append('sortBy', filters.sortBy);
+        }
+        if (filters?.sortOrder) {
+          params.append('sortOrder', filters.sortOrder);
+        }
 
         const res = await apiClient.get<any[]>(`/api/job-titles?${params.toString()}`);
         if (res.data && Array.isArray(res.data)) {
@@ -445,9 +457,9 @@ export const jobTitleApi = {
             departmentName: j.departmentName || 'Chưa phân bổ',
             level: j.level || 'MIDDLE',
             jobFamily: j.jobFamily || 'TECH',
-            minSalary: j.minSalary,
-            maxSalary: j.maxSalary,
-            salaryRangeDisplay: j.salaryRangeDisplay || 'Thỏa thuận',
+            minSalary: j.minSalary ?? undefined,
+            maxSalary: j.maxSalary ?? undefined,
+            salaryRangeDisplay: j.salaryRangeDisplay ?? undefined,
             jobDescription: j.jobDescription || '',
             keyResponsibilities: j.keyResponsibilities || [],
             requirements: j.requirements || [],
@@ -459,7 +471,6 @@ export const jobTitleApi = {
             createdAt: j.createdAt ? String(j.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
             updatedAt: j.updatedAt ? String(j.updatedAt).slice(0, 10) : undefined,
           }));
-          setStoredData(STORAGE_KEYS.JOB_TITLES, mapped);
           return mapped;
         }
       } catch (err: any) {
@@ -548,9 +559,9 @@ export const jobTitleApi = {
             departmentName: j.departmentName || 'Chưa phân bổ',
             level: j.level || 'MIDDLE',
             jobFamily: j.jobFamily || 'TECH',
-            minSalary: j.minSalary,
-            maxSalary: j.maxSalary,
-            salaryRangeDisplay: j.salaryRangeDisplay || 'Thỏa thuận',
+            minSalary: j.minSalary ?? undefined,
+            maxSalary: j.maxSalary ?? undefined,
+            salaryRangeDisplay: j.salaryRangeDisplay ?? undefined,
             jobDescription: j.jobDescription || '',
             keyResponsibilities: j.keyResponsibilities || [],
             requirements: j.requirements || [],
@@ -606,9 +617,6 @@ export const jobTitleApi = {
             createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
             updatedAt: res.data.updatedAt ? String(res.data.updatedAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
           };
-          const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
-          list.unshift(created);
-          setStoredData(STORAGE_KEYS.JOB_TITLES, list);
           return created;
         }
       } catch (err: any) {
@@ -642,7 +650,7 @@ export const jobTitleApi = {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token && !token.startsWith('mock-')) {
       try {
-        await apiClient.put(`/api/job-titles/${id}`, {
+        const res = await apiClient.put<any>(`/api/job-titles/${id}`, {
           title: payload.title,
           code: payload.code,
           departmentId: payload.departmentId || null,
@@ -658,19 +666,32 @@ export const jobTitleApi = {
           currentHeadcount: payload.currentHeadcount,
           active: payload.active,
         });
-        const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
-        const index = list.findIndex((jt) => jt.id === id);
-        if (index !== -1) {
-          const updated: JobTitle = { ...list[index], ...payload, updatedAt: new Date().toISOString().slice(0, 10) };
-          list[index] = updated;
-          setStoredData(STORAGE_KEYS.JOB_TITLES, list);
-          return updated;
+        if (res.data) {
+          const j = res.data;
+          return {
+            id: j.id,
+            title: j.title,
+            code: j.code,
+            departmentId: j.departmentId || 0,
+            departmentName: j.departmentName || 'Chưa phân bổ',
+            level: j.level || 'MIDDLE',
+            jobFamily: j.jobFamily || 'TECH',
+            minSalary: j.minSalary ?? undefined,
+            maxSalary: j.maxSalary ?? undefined,
+            salaryRangeDisplay: j.salaryRangeDisplay ?? undefined,
+            jobDescription: j.jobDescription || '',
+            keyResponsibilities: j.keyResponsibilities || [],
+            requirements: j.requirements || [],
+            competencies: j.competencies || [],
+            standardHeadcount: j.standardHeadcount || 1,
+            currentHeadcount: j.currentHeadcount || 0,
+            openRequisitions: j.openRequisitions || 0,
+            active: j.active !== false,
+            createdAt: j.createdAt ? String(j.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+            updatedAt: j.updatedAt ? String(j.updatedAt).slice(0, 10) : undefined,
+          };
         }
-        return {
-          id,
-          ...payload,
-          updatedAt: new Date().toISOString().slice(0, 10),
-        } as JobTitle;
+        return { id, ...payload } as JobTitle;
       } catch (err: any) {
         const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi cập nhật chức danh công việc.';
         throw new Error(errorMsg);
@@ -709,9 +730,6 @@ export const jobTitleApi = {
     if (token && !token.startsWith('mock-')) {
       try {
         await apiClient.delete(`/api/job-titles/${id}`);
-        const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
-        const filtered = list.filter((jt) => jt.id !== id);
-        setStoredData(STORAGE_KEYS.JOB_TITLES, filtered);
         return { success: true, message: 'Đã xóa thành công chức danh công việc.' };
       } catch (err: any) {
         const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi xóa chức danh công việc.';
@@ -743,32 +761,49 @@ export const jobTitleApi = {
   },
 
   toggleJobTitleStatus: async (id: number): Promise<JobTitle> => {
-    const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
-    const index = list.findIndex((jt) => jt.id === id);
-    const currentActive = index !== -1 ? list[index].active : true;
-    const nextActive = !currentActive;
-
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token && !token.startsWith('mock-')) {
       try {
-        await apiClient.patch(`/api/job-titles/${id}/status`, { active: nextActive });
-        if (index !== -1) {
-          list[index].active = nextActive;
-          list[index].updatedAt = new Date().toISOString().slice(0, 10);
-          setStoredData(STORAGE_KEYS.JOB_TITLES, list);
-          return list[index];
+        const res = await apiClient.patch<any>(`/api/job-titles/${id}/status`);
+        if (res.data) {
+          const j = res.data;
+          return {
+            id: j.id,
+            title: j.title,
+            code: j.code,
+            departmentId: j.departmentId || 0,
+            departmentName: j.departmentName || 'Chưa phân bổ',
+            level: j.level || 'MIDDLE',
+            jobFamily: j.jobFamily || 'TECH',
+            minSalary: j.minSalary ?? undefined,
+            maxSalary: j.maxSalary ?? undefined,
+            salaryRangeDisplay: j.salaryRangeDisplay ?? undefined,
+            jobDescription: j.jobDescription || '',
+            keyResponsibilities: j.keyResponsibilities || [],
+            requirements: j.requirements || [],
+            competencies: j.competencies || [],
+            standardHeadcount: j.standardHeadcount || 1,
+            currentHeadcount: j.currentHeadcount || 0,
+            openRequisitions: j.openRequisitions || 0,
+            active: j.active !== false,
+            createdAt: j.createdAt ? String(j.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+            updatedAt: j.updatedAt ? String(j.updatedAt).slice(0, 10) : undefined,
+          };
         }
-        return { id, active: nextActive } as JobTitle;
+        return { id, active: true } as JobTitle;
       } catch (err: any) {
         const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi cập nhật trạng thái chức danh.';
         throw new Error(errorMsg);
       }
     }
 
+    const list = getStoredData<JobTitle[]>(STORAGE_KEYS.JOB_TITLES, INITIAL_JOB_TITLES);
+    const index = list.findIndex((jt) => jt.id === id);
     if (index === -1) {
       throw new Error(`Không tìm thấy chức danh với ID: ${id}`);
     }
 
+    const nextActive = !list[index].active;
     list[index].active = nextActive;
     list[index].updatedAt = new Date().toISOString().slice(0, 10);
     setStoredData(STORAGE_KEYS.JOB_TITLES, list);
@@ -815,7 +850,7 @@ export const jobTitleApi = {
     return INITIAL_JOB_TITLES;
   },
 
-  exportToCSV: async (providedList?: JobTitle[]): Promise<string> => {
+  exportToCSV: async (providedList?: JobTitle[], canViewSalary: boolean = false): Promise<string> => {
     let list = providedList;
     if (!list) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
@@ -837,7 +872,7 @@ export const jobTitleApi = {
       'Phòng ban',
       'Cấp bậc',
       'Khối ngành',
-      'Dải lương',
+      ...(canViewSalary ? ['Dải lương'] : []),
       'Nhân sự hiện tại',
       'Định biên',
       'Vị trí đang tuyển',
@@ -852,7 +887,7 @@ export const jobTitleApi = {
       `"${jt.departmentName || ''}"`,
       `"${LEVEL_METADATA[jt.level]?.label || jt.level}"`,
       `"${jt.jobFamily}"`,
-      `"${jt.salaryRangeDisplay || ''}"`,
+      ...(canViewSalary ? [`"${jt.salaryRangeDisplay || 'Chưa khai báo'}"`] : []),
       jt.currentHeadcount,
       jt.standardHeadcount || 0,
       jt.openRequisitions,

@@ -8,12 +8,27 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface RecruitmentRequisitionRepository extends JpaRepository<RecruitmentRequisition, Long> {
     boolean existsByDepartmentId(Long departmentId);
 
     boolean existsByJobTitleId(Long jobTitleId);
+
+    @Query("""
+        select count(r) from RecruitmentRequisition r where r.jobTitleId = :jobTitleId
+        and (r.status is null or upper(r.status) not in ('CLOSED', 'REJECTED', 'CANCELLED'))
+        """)
+    long countOpenRequisitionsByJobTitleId(@Param("jobTitleId") Long jobTitleId);
+
+    @Query("""
+        select r.jobTitleId, count(r) from RecruitmentRequisition r
+        where r.jobTitleId is not null
+        and (r.status is null or upper(r.status) not in ('CLOSED', 'REJECTED', 'CANCELLED'))
+        group by r.jobTitleId
+        """)
+    List<Object[]> countOpenRequisitionsGroupedByJobTitle();
 
     boolean existsByRequisitionCode(String requisitionCode);
 

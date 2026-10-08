@@ -14,20 +14,20 @@ describe('Job Title Management Page (Quản lý Chức danh & Vị trí - EP-02)
     vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
       user: {
         id: 1,
-        email: 'admin@ats.com',
-        fullName: 'Admin Quản Trị',
-        role: 'ADMIN',
-        roles: ['ADMIN'],
+        email: 'hrmanager@ats.com',
+        fullName: 'HR Manager Quản Trị',
+        role: 'HR_MANAGER',
+        roles: ['HR_MANAGER'],
         status: 'ACTIVE',
       },
-      token: 'mock-admin-token',
+      token: 'mock-hr-token',
       isAuthenticated: true,
       isLoading: false,
       login: vi.fn(),
       logout: vi.fn(),
       refreshUser: vi.fn(),
-      hasRole: (r: string) => r === 'ADMIN',
-      hasAnyRole: (roles: string[]) => roles.includes('ADMIN') || roles.includes('HR_MANAGER'),
+      hasRole: (r: string) => r === 'HR_MANAGER',
+      hasAnyRole: (roles: string[]) => roles.includes('HR_MANAGER'),
     });
   });
 
@@ -184,5 +184,106 @@ describe('Job Title Management Page (Quản lý Chức danh & Vị trí - EP-02)
     // Confirm button is disabled
     const confirmDeleteBtn = screen.getByRole('button', { name: /Xác nhận Xóa vĩnh viễn/i });
     expect(confirmDeleteBtn).toBeDisabled();
+  });
+
+  it('hides salary column and management buttons for RECRUITER', async () => {
+    vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
+      user: {
+        id: 2,
+        email: 'recruiter@ats.com',
+        fullName: 'Chuyên viên Tuyển dụng',
+        role: 'RECRUITER',
+        roles: ['RECRUITER'],
+        status: 'ACTIVE',
+      },
+      token: 'mock-recruiter-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      hasRole: (r: string) => r === 'RECRUITER',
+      hasAnyRole: (roles: string[]) => roles.includes('RECRUITER'),
+    });
+
+    render(
+      <MemoryRouter>
+        <JobTitleManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    // Salary header must not exist
+    expect(screen.queryByText('Dải lương tham chiếu')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Thỏa thuận/i)).not.toBeInTheDocument();
+    // Add button must not exist
+    expect(screen.queryByRole('button', { name: /Thêm Chức danh mới/i })).not.toBeInTheDocument();
+  });
+
+  it('hides salary column and management buttons for ADMIN without HR_MANAGER role', async () => {
+    vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
+      user: {
+        id: 3,
+        email: 'admin@ats.com',
+        fullName: 'System Administrator',
+        role: 'ADMIN',
+        roles: ['ADMIN'],
+        status: 'ACTIVE',
+      },
+      token: 'mock-admin-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      hasRole: (r: string) => r === 'ADMIN',
+      hasAnyRole: (roles: string[]) => roles.includes('ADMIN'),
+    });
+
+    render(
+      <MemoryRouter>
+        <JobTitleManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole('table')).toBeInTheDocument();
+    });
+
+    // Salary header must not exist
+    expect(screen.queryByText('Dải lương tham chiếu')).not.toBeInTheDocument();
+    // Add button must not exist
+    expect(screen.queryByRole('button', { name: /Thêm Chức danh mới/i })).not.toBeInTheDocument();
+  });
+
+  it('validates min salary not greater than max salary', async () => {
+    render(
+      <MemoryRouter>
+        <JobTitleManagementPage />
+      </MemoryRouter>
+    );
+
+    const addBtn = await screen.findByRole('button', { name: /Thêm Chức danh mới/i });
+    fireEvent.click(addBtn);
+
+    const titleInput = screen.getByLabelText(/Tên chức danh/i);
+    const codeInput = screen.getByLabelText(/Mã chức danh/i);
+    const minSalaryInput = screen.getByLabelText(/Lương tối thiểu/i);
+    const maxSalaryInput = screen.getByLabelText(/Lương tối đa/i);
+
+    fireEvent.change(titleInput, { target: { value: 'Tester' } });
+    fireEvent.change(codeInput, { target: { value: 'QC-TEST-01' } });
+    fireEvent.change(minSalaryInput, { target: { value: '30000000' } });
+    fireEvent.change(maxSalaryInput, { target: { value: '20000000' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Tạo chức danh/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('Mức lương tối thiểu không được lớn hơn mức lương tối đa.')).toBeInTheDocument();
+    });
   });
 });

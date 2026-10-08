@@ -7,8 +7,10 @@ import com.example.auth_service.dto.JobTitleResponse;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.auth_service.repository.CompetencyFrameworkRepository;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
+import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,18 +24,95 @@ public class JobTitleService {
 
     private final JobTitleRepository repository;
     private final DepartmentRepository departmentRepository;
+    private final RecruitmentRequisitionRepository requisitionRepository;
+    private final CompetencyFrameworkRepository competencyFrameworkRepository;
 
-    public JobTitleService(JobTitleRepository repository, DepartmentRepository departmentRepository) {
+    public JobTitleService(
+            JobTitleRepository repository,
+            DepartmentRepository departmentRepository,
+            RecruitmentRequisitionRepository requisitionRepository,
+            CompetencyFrameworkRepository competencyFrameworkRepository
+    ) {
         this.repository = repository;
         this.departmentRepository = departmentRepository;
+        this.requisitionRepository = requisitionRepository;
+        this.competencyFrameworkRepository = competencyFrameworkRepository;
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('CATALOG_READ')")
+    public List<JobTitleResponse> list(
+            String search,
+            Boolean active,
+            Long departmentId,
+            String level,
+            String jobFamily,
+            String sortBy,
+            String sortOrder,
+            boolean includeSalary
+    ) {
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String cleanLevel = (level != null && !level.trim().isEmpty() && !"ALL".equalsIgnoreCase(level.trim())) ? level.trim() : null;
+        String cleanJobFamily = (jobFamily != null && !jobFamily.trim().isEmpty() && !"ALL".equalsIgnoreCase(jobFamily.trim())) ? jobFamily.trim() : null;
+
+        List<JobTitle> list = repository.searchJobTitles(cleanSearch, active, departmentId, cleanLevel, cleanJobFamily);
+
+        // Fetch open requisitions count grouped by job title
+        Map<Long, Integer> openReqMap = new HashMap<>();
+        List<Object[]> groupedReqs = requisitionRepository.countOpenRequisitionsGroupedByJobTitle();
+        if (groupedReqs != null) {
+            for (Object[] row : groupedReqs) {
+                if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
+                    openReqMap.put(((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+                }
+            }
+        }
+
+        List<JobTitleResponse> responses = new ArrayList<>(list.stream()
+                .map(jobTitle -> toResponse(jobTitle, includeSalary, openReqMap.getOrDefault(jobTitle.getId(), 0)))
+                .toList());
+
+        // Sort if sortBy is specified
+        if (sortBy != null && !sortBy.trim().isEmpty()) {
+            boolean desc = "desc".equalsIgnoreCase(sortOrder);
+            Comparator<JobTitleResponse> comparator = switch (sortBy.toLowerCase().trim()) {
+                case "title" -> Comparator.comparing(JobTitleResponse::title, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                case "level" -> Comparator.comparingInt(this::getLevelOrder);
+                case "headcount" -> Comparator.comparingInt(r -> r.currentHeadcount() != null ? r.currentHeadcount() : 0);
+                case "createdat" -> Comparator.comparing(JobTitleResponse::createdAt, Comparator.nullsLast(Comparator.naturalOrder()));
+                default -> null;
+            };
+
+            if (comparator != null) {
+                if (desc) {
+                    comparator = comparator.reversed();
+                }
+                responses.sort(comparator);
+            }
+        }
+
+        return responses;
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasAuthority('CATALOG_READ')")
     public List<JobTitleResponse> list(String search, Boolean active, Long departmentId, boolean includeSalary) {
-        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
-        List<JobTitle> list = repository.searchJobTitles(cleanSearch, active, departmentId);
-        return list.stream().map(jobTitle -> toResponse(jobTitle, includeSalary)).toList();
+        return list(search, active, departmentId, null, null, null, null, includeSalary);
+    }
+
+    private int getLevelOrder(JobTitleResponse r) {
+        if (r.level() == null) return 99;
+        return switch (r.level().toUpperCase()) {
+            case "INTERN" -> 1;
+            case "JUNIOR" -> 2;
+            case "MIDDLE" -> 3;
+            case "SENIOR" -> 4;
+            case "LEAD" -> 5;
+            case "MANAGER" -> 6;
+            case "DIRECTOR" -> 7;
+            case "EXECUTIVE" -> 8;
+            default -> 99;
+        };
     }
 
     @Transactional(readOnly = true)
@@ -41,7 +120,8 @@ public class JobTitleService {
     public JobTitleResponse get(Long id, boolean includeSalary) {
         JobTitle jobTitle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
-        return toResponse(jobTitle, includeSalary);
+        int openRequisitions = (int) requisitionRepository.countOpenRequisitionsByJobTitleId(id);
+        return toResponse(jobTitle, includeSalary, openRequisitions);
     }
 
     @PreAuthorize("hasRole('HR_MANAGER')")
@@ -61,6 +141,9 @@ public class JobTitleService {
         if (request.departmentId() != null) {
             department = departmentRepository.findById(request.departmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ban với ID: " + request.departmentId()));
+            if (!department.isActive()) {
+                throw new BadRequestException("Phòng ban đã ngừng áp dụng, không thể gán chức danh.");
+            }
         }
 
         JobTitle jobTitle = new JobTitle();
@@ -82,7 +165,7 @@ public class JobTitleService {
         jobTitle.setUpdatedAt(Instant.now());
 
         JobTitle saved = repository.save(jobTitle);
-        return toResponse(saved, true);
+        return toResponse(saved, true, 0);
     }
 
     @PreAuthorize("hasRole('HR_MANAGER')")
@@ -105,6 +188,9 @@ public class JobTitleService {
         if (request.departmentId() != null) {
             department = departmentRepository.findById(request.departmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng ban với ID: " + request.departmentId()));
+            if (!department.isActive()) {
+                throw new BadRequestException("Phòng ban đã ngừng áp dụng, không thể gán chức danh.");
+            }
         }
 
         jobTitle.setTitle(cleanTitle);
@@ -124,7 +210,8 @@ public class JobTitleService {
         jobTitle.setUpdatedAt(Instant.now());
 
         JobTitle saved = repository.save(jobTitle);
-        return toResponse(saved, true);
+        int openRequisitions = (int) requisitionRepository.countOpenRequisitionsByJobTitleId(id);
+        return toResponse(saved, true, openRequisitions);
     }
 
     @PreAuthorize("hasRole('HR_MANAGER')")
@@ -133,17 +220,29 @@ public class JobTitleService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
         jobTitle.setActive(active);
         jobTitle.setUpdatedAt(Instant.now());
-        return toResponse(repository.save(jobTitle), true);
+        int openRequisitions = (int) requisitionRepository.countOpenRequisitionsByJobTitleId(id);
+        return toResponse(repository.save(jobTitle), true, openRequisitions);
     }
 
     @PreAuthorize("hasRole('HR_MANAGER')")
     public void delete(Long id) {
         JobTitle jobTitle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
+
+        if (jobTitle.getCurrentHeadcount() != null && jobTitle.getCurrentHeadcount() > 0) {
+            throw new ConflictException("Không thể xóa chức danh đang có " + jobTitle.getCurrentHeadcount() + " nhân sự đảm nhiệm. Vui lòng chuyển chức danh nhân sự trước khi xóa.");
+        }
+        if (requisitionRepository.existsByJobTitleId(id)) {
+            throw new ConflictException("Không thể xóa chức danh đang có yêu cầu tuyển dụng liên kết. Vui lòng ngừng áp dụng chức danh thay vì xóa.");
+        }
+        if (competencyFrameworkRepository.existsByJobTitleId(id)) {
+            throw new ConflictException("Không thể xóa chức danh đang có khung năng lực liên kết. Vui lòng ngừng áp dụng chức danh thay vì xóa.");
+        }
+
         repository.delete(jobTitle);
     }
 
-    private JobTitleResponse toResponse(JobTitle j, boolean includeSalary) {
+    private JobTitleResponse toResponse(JobTitle j, boolean includeSalary, int openRequisitions) {
         Long minSalary = includeSalary ? j.getMinSalary() : null;
         Long maxSalary = includeSalary ? j.getMaxSalary() : null;
         String salaryRangeDisplay = includeSalary ? formatSalary(minSalary, maxSalary) : null;
@@ -167,7 +266,7 @@ public class JobTitleService {
                 splitList(j.getCompetencies()),
                 j.getStandardHeadcount(),
                 j.getCurrentHeadcount(),
-                0,
+                openRequisitions,
                 j.getActive(),
                 j.getCreatedAt(),
                 j.getUpdatedAt()
@@ -189,7 +288,7 @@ public class JobTitleService {
     }
 
     private String formatSalary(Long min, Long max) {
-        if (min == null && max == null) return "Thỏa thuận";
+        if (min == null && max == null) return "Chưa khai báo";
         if (min != null && max != null) {
             long minMillion = min / 1_000_000;
             long maxMillion = max / 1_000_000;
@@ -197,7 +296,7 @@ public class JobTitleService {
         }
         if (min != null) return "Từ " + (min / 1_000_000) + " triệu VNĐ";
         if (max != null) return "Lên đến " + (max / 1_000_000) + " triệu VNĐ";
-        return "Thỏa thuận";
+        return "Chưa khai báo";
     }
 
     private String joinList(List<String> list) {

@@ -22,6 +22,7 @@ interface JobTitleDetailModalProps {
   onEdit?: (jt: JobTitle) => void;
   onToggleStatus?: (id: number) => void;
   canEdit?: boolean;
+  canViewSalary?: boolean;
 }
 
 export const JobTitleDetailModal: React.FC<JobTitleDetailModalProps> = ({
@@ -31,6 +32,7 @@ export const JobTitleDetailModal: React.FC<JobTitleDetailModalProps> = ({
   onEdit,
   onToggleStatus,
   canEdit = false,
+  canViewSalary = false,
 }) => {
   if (!isOpen || !jobTitle) return null;
 
@@ -95,17 +97,19 @@ export const JobTitleDetailModal: React.FC<JobTitleDetailModalProps> = ({
         <div className="jt-detail-body">
           {/* Quick Metrics Cards */}
           <div className="jt-detail-metrics-grid">
-            <div className="jt-metric-box">
-              <div className="jt-metric-icon dollar">
-                <DollarSign size={20} />
+            {canViewSalary && (
+              <div className="jt-metric-box">
+                <div className="jt-metric-icon dollar">
+                  <DollarSign size={20} />
+                </div>
+                <div className="jt-metric-content">
+                  <span className="jt-metric-label">Dải lương tham chiếu</span>
+                  <span className="jt-metric-value salary">
+                    {jobTitle.salaryRangeDisplay || 'Chưa khai báo'}
+                  </span>
+                </div>
               </div>
-              <div className="jt-metric-content">
-                <span className="jt-metric-label">Dải lương tham chiếu</span>
-                <span className="jt-metric-value salary">
-                  {jobTitle.salaryRangeDisplay || 'Thỏa thuận theo năng lực'}
-                </span>
-              </div>
-            </div>
+            )}
 
             <div className="jt-metric-box">
               <div className="jt-metric-icon users">

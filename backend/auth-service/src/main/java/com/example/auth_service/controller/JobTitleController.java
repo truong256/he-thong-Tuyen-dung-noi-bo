@@ -27,9 +27,13 @@ public class JobTitleController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String jobFamily,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
             Authentication authentication
     ) {
-        return service.list(search, active, departmentId, canViewSalary(authentication));
+        return service.list(search, active, departmentId, level, jobFamily, sortBy, sortOrder, canViewSalary(authentication));
     }
 
     @GetMapping("/{id}")
