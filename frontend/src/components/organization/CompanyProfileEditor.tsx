@@ -1275,8 +1275,11 @@ export const CompanyProfileEditor: React.FC<CompanyProfileEditorProps> = ({ prof
             <div className="cpe-preview-head">
               <Eye size={15} />
               <span>Xem trước trên Cổng tuyển dụng</span>
-              <span className="cpe-live-dot">Live</span>
+              <span className="cpe-live-dot">Trực tiếp</span>
             </div>
+            <p className="cpe-preview-notice">
+              Bản xem trước cập nhật theo biểu mẫu. Nhấn “Lưu thay đổi hồ sơ” để lưu.
+            </p>
             <article className="cpe-preview-card">
               <div
                 className="cpe-preview-banner"
@@ -1314,19 +1317,42 @@ export const CompanyProfileEditor: React.FC<CompanyProfileEditorProps> = ({ prof
                 <div className="cpe-preview-block">
                   <span className="cpe-preview-label">Về chúng tôi</span>
                   <p className={form.description ? '' : 'cpe-placeholder-text'}>
-                    {form.description
-                      ? form.description.length > 240
-                        ? `${form.description.slice(0, 240)}…`
-                        : form.description
-                      : 'Phần giới thiệu sẽ hiển thị tại đây.'}
+                    {form.description?.trim() || 'Phần giới thiệu sẽ hiển thị tại đây.'}
                   </p>
+                </div>
+
+                {form.mission?.trim() && (
+                  <div className="cpe-preview-block">
+                    <span className="cpe-preview-label">Sứ mệnh</span>
+                    <p>{form.mission}</p>
+                  </div>
+                )}
+                {form.vision?.trim() && (
+                  <div className="cpe-preview-block">
+                    <span className="cpe-preview-label">Tầm nhìn</span>
+                    <p>{form.vision}</p>
+                  </div>
+                )}
+                <div className="cpe-preview-block">
+                  <span className="cpe-preview-label">Chính sách làm việc</span>
+                  {[
+                    ['Khung giờ', form.workPolicy.standardWorkingHours],
+                    ['Mô hình làm việc', form.workPolicy.workModel],
+                    ['Thử việc', form.workPolicy.probationPeriod],
+                    ['Trang phục', form.workPolicy.dressCode],
+                  ].map(([label, value]) => value?.trim() ? (
+                    <p key={label}><strong>{label}:</strong> {value}</p>
+                  ) : null)}
+                  {Number.isFinite(form.workPolicy.leaveDaysPerYear) && (
+                    <p><strong>Nghỉ phép:</strong> {form.workPolicy.leaveDaysPerYear} ngày/năm</p>
+                  )}
                 </div>
 
                 {form.coreValues.length > 0 && (
                   <div className="cpe-preview-block">
                     <span className="cpe-preview-label">Giá trị cốt lõi</span>
                     <div className="cpe-preview-tags">
-                      {form.coreValues.slice(0, 6).map((v) => (
+                      {form.coreValues.map((v) => (
                         <span key={v}>{v}</span>
                       ))}
                     </div>
@@ -1339,7 +1365,6 @@ export const CompanyProfileEditor: React.FC<CompanyProfileEditorProps> = ({ prof
                     <ul className="cpe-preview-benefits">
                       {benefits
                         .filter((b) => b.trim())
-                        .slice(0, 3)
                         .map((b, i) => (
                           <li key={i}>
                             <CheckCircle2 size={13} />
@@ -1350,7 +1375,13 @@ export const CompanyProfileEditor: React.FC<CompanyProfileEditorProps> = ({ prof
                   </div>
                 )}
 
-                {form.website && (
+                <div className="cpe-preview-block">
+                  <span className="cpe-preview-label">Liên hệ</span>
+                  {form.address?.trim() && <p className="cpe-preview-contact"><MapPin size={14} /><span>{form.address}</span></p>}
+                  {form.email?.trim() && <p className="cpe-preview-contact"><Mail size={14} /><span>{form.email}</span></p>}
+                  {form.phone?.trim() && <p className="cpe-preview-contact"><Phone size={14} /><span>{form.phone}</span></p>}
+                </div>
+                {form.website && URL_RE.test(form.website.trim()) && (
                   <a className="cpe-preview-link" href={form.website} target="_blank" rel="noreferrer">
                     <Globe size={13} />
                     <span>{form.website.replace(/^https?:\/\//, '')}</span>

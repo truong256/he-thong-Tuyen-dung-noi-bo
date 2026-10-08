@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleGuard from './components/RoleGuard';
 import AppLayout from './layouts/AppLayout';
+
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -18,6 +19,7 @@ import ExcelImportPage from './pages/ExcelImportPage';
 import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 import QuestionBankPage from './pages/QuestionBankPage';
 import CategoryManagementPage from './pages/CategoryManagementPage';
+import CompanyProfilePreviewPage from './pages/CompanyProfilePreviewPage';
 
 export const App: React.FC = () => {
   return (
@@ -42,12 +44,18 @@ export const App: React.FC = () => {
             }
           />
 
-          {/* Xem thử frontend Excel khi chạy môi trường phát triển */}
+          {/* Các trang xem thử chỉ chạy trong môi trường phát triển */}
           {import.meta.env.DEV && (
-            <Route
-              path="/preview/import-excel"
-              element={<ExcelImportPage />}
-            />
+            <>
+              <Route
+                path="/preview/import-excel"
+                element={<ExcelImportPage />}
+              />
+              <Route
+                path="/preview/company-profile"
+                element={<CompanyProfilePreviewPage />}
+              />
+            </>
           )}
 
           {/* Các trang yêu cầu đăng nhập */}
@@ -65,12 +73,27 @@ export const App: React.FC = () => {
             />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="organization" element={<OrganizationManagementPage />} />
-            <Route path="job-titles" element={<JobTitleManagementPage />} />
+            <Route
+              path="organization"
+              element={<OrganizationManagementPage />}
+            />
+            <Route
+              path="job-titles"
+              element={<JobTitleManagementPage />}
+            />
+
             <Route
               path="categories"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <RoleGuard
+                  allowedRoles={[
+                    'ADMIN',
+                    'HR_MANAGER',
+                    'RECRUITER',
+                    'HIRING_MANAGER',
+                    'INTERVIEWER',
+                  ]}
+                >
                   <CategoryManagementPage />
                 </RoleGuard>
               }
@@ -78,15 +101,32 @@ export const App: React.FC = () => {
             <Route
               path="admin/categories"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <RoleGuard
+                  allowedRoles={[
+                    'ADMIN',
+                    'HR_MANAGER',
+                    'RECRUITER',
+                    'HIRING_MANAGER',
+                    'INTERVIEWER',
+                  ]}
+                >
                   <CategoryManagementPage />
                 </RoleGuard>
               }
             />
+
             <Route
               path="questions"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <RoleGuard
+                  allowedRoles={[
+                    'ADMIN',
+                    'HR_MANAGER',
+                    'RECRUITER',
+                    'HIRING_MANAGER',
+                    'INTERVIEWER',
+                  ]}
+                >
                   <QuestionBankPage />
                 </RoleGuard>
               }
@@ -94,11 +134,20 @@ export const App: React.FC = () => {
             <Route
               path="admin/questions"
               element={
-                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']}>
+                <RoleGuard
+                  allowedRoles={[
+                    'ADMIN',
+                    'HR_MANAGER',
+                    'RECRUITER',
+                    'HIRING_MANAGER',
+                    'INTERVIEWER',
+                  ]}
+                >
                   <QuestionBankPage />
                 </RoleGuard>
               }
             />
+
             <Route
               path="excel-import"
               element={<Navigate to="/admin/import-excel" replace />}
@@ -111,6 +160,7 @@ export const App: React.FC = () => {
               path="users/import-excel"
               element={<Navigate to="/admin/import-excel" replace />}
             />
+
             <Route
               path="admin/import-excel"
               element={
@@ -119,7 +169,6 @@ export const App: React.FC = () => {
                 </RoleGuard>
               }
             />
-
             <Route
               path="admin/users"
               element={
