@@ -955,3 +955,78 @@ kbd {
 @media (prefers-reduced-motion: reduce) {
   .cpe-root, .cpe-root * { animation: none !important; transition: none !important; }
 }
+/* SCRUM-90: Hoàn thiện giao diện xem trước trang công ty */
+
+.cpe-preview {
+  min-width: 0;
+}
+
+.cpe-preview-head {
+  flex-wrap: wrap;
+}
+
+.cpe-preview-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--cpe-border);
+  border-radius: 10px;
+  background: var(--cpe-primary-soft);
+  color: var(--cpe-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.cpe-layout.with-preview .cpe-preview-card {
+  display: block;
+}
+
+.cpe-layout.with-preview .cpe-preview-banner {
+  height: 120px;
+  min-height: 120px;
+}
+
+.cpe-layout.with-preview .cpe-preview-logo {
+  position: relative;
+  margin-top: -30px;
+}
+
+.cpe-preview-body,
+.cpe-preview-body p,
+.cpe-preview-tags span,
+.cpe-preview-benefits span,
+.cpe-preview-link span {
+  overflow-wrap: anywhere;
+}
+
+.cpe-preview-block p {
+  white-space: pre-wrap;
+}
+
+.cpe-preview-block p + p {
+  margin-top: 8px;
+}
+
+.cpe-preview-contact {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cpe-preview-contact svg,
+.cpe-preview-link svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.cpe-preview-link {
+  max-width: 100%;
+  align-items: flex-start;
+}
+
+@media (min-width: 1281px) {
+  .cpe-preview {
+    max-height: calc(100vh - var(--cpe-sticky-top) - 24px);
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+}
