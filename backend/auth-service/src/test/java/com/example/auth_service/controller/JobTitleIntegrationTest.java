@@ -158,6 +158,12 @@ class JobTitleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
 
+        // Status toggle without body (inverts to true)
+        mvc.perform(patch("/api/job-titles/" + id + "/status")
+                        .header("Authorization", token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+
         // Delete fails with 409 Conflict when headcount > 0
         mvc.perform(delete("/api/job-titles/" + id)
                         .header("Authorization", token(admin)))

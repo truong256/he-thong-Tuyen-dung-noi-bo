@@ -225,6 +225,17 @@ public class JobTitleService {
     }
 
     @PreAuthorize("hasRole('HR_MANAGER')")
+    public JobTitleResponse toggleStatus(Long id) {
+        JobTitle jobTitle = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));
+        boolean currentActive = jobTitle.getActive() != null ? jobTitle.getActive() : true;
+        jobTitle.setActive(!currentActive);
+        jobTitle.setUpdatedAt(Instant.now());
+        int openRequisitions = (int) requisitionRepository.countOpenRequisitionsByJobTitleId(id);
+        return toResponse(repository.save(jobTitle), true, openRequisitions);
+    }
+
+    @PreAuthorize("hasRole('HR_MANAGER')")
     public void delete(Long id) {
         JobTitle jobTitle = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy chức danh với ID: " + id));

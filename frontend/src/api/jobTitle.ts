@@ -764,7 +764,7 @@ export const jobTitleApi = {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token && !token.startsWith('mock-')) {
       try {
-        const res = await apiClient.patch<any>(`/api/job-titles/${id}/status`);
+        const res = await apiClient.patch<any>(`/api/job-titles/${id}/status`, {});
         if (res.data) {
           const j = res.data;
           return {
