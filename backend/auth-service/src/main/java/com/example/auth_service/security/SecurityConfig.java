@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/auth/avatar", "/api/auth/profile/avatar").hasAuthority("PROFILE_UPDATE")
                 .requestMatchers(HttpMethod.GET, "/api/auth/avatar", "/api/auth/avatar/thumbnail", "/api/auth/profile/avatar").hasAuthority("PROFILE_READ")
                 .requestMatchers(HttpMethod.GET, "/api/auth/avatar/**", "/api/auth/avatars/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/organization/profile/images/**").permitAll()
                 // S1-05 / S1-09: ROLE_READ → ADMIN + HR_MANAGER
                 .requestMatchers(HttpMethod.GET, "/api/admin/roles").hasAuthority("ROLE_READ")
                 // S1-08: USER_READ → ADMIN (F) + HR_MANAGER (R — only view, cannot mutate)
