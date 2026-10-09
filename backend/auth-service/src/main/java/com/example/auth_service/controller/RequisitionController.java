@@ -3,6 +3,7 @@ package com.example.auth_service.controller;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionDraftRequest;
 import com.example.auth_service.dto.RequisitionResponse;
+import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.service.RequisitionService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -47,11 +48,17 @@ public class RequisitionController {
 
     /**
      * API tạo và gửi phê duyệt yêu cầu tuyển dụng chính thức.
+     * Hỗ trợ lưu nháp nếu payload truyền isDraft = true.
      */
     @PostMapping
     public ResponseEntity<RequisitionResponse> createAndSubmit(
-            @Valid @RequestBody CreateRequisitionRequest request
+            @RequestBody CreateRequisitionRequest request
     ) {
+        if (Boolean.TRUE.equals(request.isDraft())) {
+            RequisitionResponse created = service.saveDraft(request.toDraftRequest());
+            return ResponseEntity.created(URI.create("/api/requisitions/" + created.id())).body(created);
+        }
+
         RequisitionResponse created = service.createAndSubmit(request);
         return ResponseEntity.created(URI.create("/api/requisitions/" + created.id())).body(created);
     }

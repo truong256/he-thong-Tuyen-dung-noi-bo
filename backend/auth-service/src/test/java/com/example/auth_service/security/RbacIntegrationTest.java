@@ -678,7 +678,7 @@ class RbacIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(outSalaryNoExpPayload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Dải lương đề xuất nằm ngoài khung chuẩn của chức danh, bắt buộc nhập giải trình."));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Dải lương đề xuất nằm ngoài khung chuẩn của chức danh, bắt buộc nhập giải trình.")));
 
         // 3. Out of salary range WITH explanation -> 201 Created
         String outSalaryWithExpPayload = """

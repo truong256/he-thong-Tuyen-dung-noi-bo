@@ -31,6 +31,8 @@ import {
   CheckSquare,
   ChevronDown,
   ChevronUp,
+  ArrowUp,
+  ArrowDown,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -48,8 +50,10 @@ type ViewMode = 'table' | 'cards' | 'grouped';
 type SortField = 'sortOrder' | 'code' | 'name' | 'active';
 
 export const CategoryManagementPage: React.FC = () => {
-  const { hasAnyRole } = useAuth();
-  const canManage = hasAnyRole(['ADMIN', 'HR_MANAGER']);
+  const { hasAnyRole, hasPermission } = useAuth();
+  const canManage = typeof hasPermission === 'function'
+    ? hasPermission('CATALOG_MANAGE')
+    : (hasAnyRole ? hasAnyRole(['ADMIN', 'HR_MANAGER']) : false);
 
   // Data states
   const [categories, setCategories] = useState<CommonCategory[]>([]);
@@ -69,12 +73,14 @@ export const CategoryManagementPage: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState<boolean>(false);
 
-  // Modals
+  // Modals & Actions
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingCategory, setEditingCategory] = useState<CommonCategory | null>(null);
   const [detailCategory, setDetailCategory] = useState<CommonCategory | null>(null);
   const [deletingCategory, setDeletingCategory] = useState<CommonCategory | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isReordering, setIsReordering] = useState<boolean>(false);
 
   // Quick Copy Feedback
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -276,6 +282,7 @@ export const CategoryManagementPage: React.FC = () => {
   const handleConfirmDelete = async () => {
     if (!deletingCategory) return;
     setIsDeleting(true);
+    setDeleteError(null);
     try {
       await categoryApi.delete(deletingCategory.id);
       showToast(`Đã xóa danh mục "${deletingCategory.name}" thành công!`);
@@ -283,10 +290,52 @@ export const CategoryManagementPage: React.FC = () => {
       await loadCategories();
       await loadTypes();
     } catch (err: any) {
-      showToast(err.message || 'Không thể xóa danh mục này', 'error');
+      const msg = err.response?.data?.message || err.message || 'Không thể xóa danh mục này';
+      setDeleteError(msg);
+      showToast(msg, 'error');
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  // Handle Reorder
+  const handleMoveOrder = async (cat: CommonCategory, direction: 'up' | 'down') => {
+    if (!canManage || isReordering) return;
+    const sameTypeCats = [...categories]
+      .filter((c) => c.type === cat.type)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    const currentIndex = sameTypeCats.findIndex((c) => c.id === cat.id);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sameTypeCats.length) return;
+
+    const newOrderList = [...sameTypeCats];
+    const temp = newOrderList[currentIndex];
+    newOrderList[currentIndex] = newOrderList[targetIndex];
+    newOrderList[targetIndex] = temp;
+
+    const items = newOrderList.map((item, index) => ({
+      id: item.id,
+      sortOrder: index + 1,
+    }));
+
+    setIsReordering(true);
+    try {
+      await categoryApi.reorder({ items });
+      showToast(`Đã thay đổi thứ tự danh mục "${cat.name}".`);
+      await loadCategories();
+    } catch (err: any) {
+      showToast(err.message || 'Không thể cập nhật thứ tự danh mục', 'error');
+    } finally {
+      setIsReordering(false);
+    }
+  };
+
+  const startDelete = (cat: CommonCategory) => {
+    setDeleteError(null);
+    setDeletingCategory(cat);
   };
 
   // Helper: Format badge class and icon by type
@@ -323,7 +372,7 @@ export const CategoryManagementPage: React.FC = () => {
       case 'REJECTION_REASON':
         return {
           className: 'cat-badge-rejection',
-          label: 'Lý do từ chối',
+          label: 'Lý do loại hồ sơ',
           icon: <AlertCircle size={13} />,
           desc: 'Lý do loại hồ sơ hoặc không đạt phỏng vấn, chuẩn hóa cho báo cáo nhân sự.',
         };
@@ -367,27 +416,30 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Hero Banner */}
+      {/* Hero Banner Card */}
       <section className="cat-hero-banner" aria-label="Tiêu đề trang quản lý danh mục">
-        <div className="cat-hero-content">
-          <div className="cat-hero-title-row">
+        <div className="cat-hero-header">
+          <div className="cat-identity-left">
             <div className="cat-hero-icon-box">
-              <FolderTree size={26} />
+              <FolderTree size={34} />
             </div>
-            <h1 className="cat-hero-title">
-              <span>Quản lý Danh mục Dùng chung</span>
-            </h1>
-            <span className="cat-badge-enterprise">
-              Master Data & Metadata
-            </span>
-            <span className="cat-badge-subtle hidden sm:inline-flex">
-              Chuẩn hóa Tuyển dụng ATS
-            </span>
+            <div className="cat-identity-info">
+              <div className="cat-hero-title-row">
+                <h1 className="cat-hero-title">Quản lý Danh mục Dùng chung</h1>
+                <span className="cat-badge-enterprise">
+                  <Layers size={13} />
+                  Master Data & Metadata
+                </span>
+                <span className="cat-badge-subtle hidden sm:inline-flex">
+                  Chuẩn hóa Tuyển dụng ATS
+                </span>
+              </div>
+              <p className="cat-hero-subtitle">
+                Hệ thống danh mục dữ liệu dùng chung (Master Data) đồng bộ cho toàn bộ vòng đời tuyển dụng:
+                Hình thức làm việc, Chi nhánh & Địa điểm, Trình độ học vấn, Kênh nguồn, Quy chuẩn từ chối và Kỹ năng chuyên môn.
+              </p>
+            </div>
           </div>
-          <p className="cat-hero-subtitle">
-            Hệ thống danh mục dữ liệu dùng chung (Master Data) đồng bộ cho toàn bộ vòng đời tuyển dụng:
-            Hình thức làm việc, Chi nhánh & Địa điểm, Trình độ học vấn, Kênh nguồn, Quy chuẩn từ chối và Kỹ năng chuyên môn.
-          </p>
         </div>
 
         <div className="cat-hero-actions">
@@ -398,7 +450,7 @@ export const CategoryManagementPage: React.FC = () => {
             title="Xuất toàn bộ danh mục ra file CSV (Excel tiếng Việt chuẩn)"
           >
             <Download size={16} />
-            <span className="hidden sm:inline">Xuất CSV</span>
+            <span>Xuất CSV</span>
           </button>
 
           <button
@@ -413,7 +465,7 @@ export const CategoryManagementPage: React.FC = () => {
             title="Đặt lại bộ lọc về mặc định"
           >
             <RotateCcw size={16} />
-            <span className="hidden sm:inline">Đặt lại bộ lọc</span>
+            <span>Đặt lại bộ lọc</span>
           </button>
 
           <button
@@ -426,7 +478,7 @@ export const CategoryManagementPage: React.FC = () => {
             title="Tải lại danh sách"
           >
             <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-            <span className="hidden sm:inline">Làm mới</span>
+            <span>Làm mới</span>
           </button>
 
           {canManage && (
@@ -725,7 +777,33 @@ export const CategoryManagementPage: React.FC = () => {
                             </td>
                           )}
                           <td className="text-slate-500 font-mono font-medium text-xs">
-                            #{cat.sortOrder}
+                            <div className="flex items-center gap-1.5">
+                              <span>#{cat.sortOrder}</span>
+                              {canManage && (
+                                <div className="inline-flex flex-col ml-0.5">
+                                  <button
+                                    type="button"
+                                    className="p-0.5 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    onClick={() => handleMoveOrder(cat, 'up')}
+                                    disabled={isReordering}
+                                    title="Di chuyển lên trên"
+                                    aria-label={`Di chuyển lên ${cat.name}`}
+                                  >
+                                    <ArrowUp size={11} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="p-0.5 text-slate-400 hover:text-blue-600 disabled:opacity-30 disabled:cursor-not-allowed"
+                                    onClick={() => handleMoveOrder(cat, 'down')}
+                                    disabled={isReordering}
+                                    title="Di chuyển xuống dưới"
+                                    aria-label={`Di chuyển xuống ${cat.name}`}
+                                  >
+                                    <ArrowDown size={11} />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td>
                             <span className={`cat-badge ${typeDetails.className}`}>
@@ -809,7 +887,7 @@ export const CategoryManagementPage: React.FC = () => {
                                   <button
                                     type="button"
                                     className="cat-icon-btn delete"
-                                    onClick={() => setDeletingCategory(cat)}
+                                    onClick={() => startDelete(cat)}
                                     title="Xóa danh mục"
                                     aria-label={`Xóa ${cat.name}`}
                                   >
@@ -881,7 +959,33 @@ export const CategoryManagementPage: React.FC = () => {
                     </div>
 
                     <div className="cat-card-meta">
-                      <span>Thứ tự: #{cat.sortOrder}</span>
+                      <div className="flex items-center gap-1">
+                        <span>Thứ tự: #{cat.sortOrder}</span>
+                        {canManage && (
+                          <div className="inline-flex items-center gap-0.5 ml-1">
+                            <button
+                              type="button"
+                              className="p-0.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 disabled:opacity-30"
+                              onClick={() => handleMoveOrder(cat, 'up')}
+                              disabled={isReordering}
+                              title="Di chuyển lên"
+                              aria-label={`Di chuyển lên ${cat.name}`}
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              className="p-0.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 disabled:opacity-30"
+                              onClick={() => handleMoveOrder(cat, 'down')}
+                              disabled={isReordering}
+                              title="Di chuyển xuống"
+                              aria-label={`Di chuyển xuống ${cat.name}`}
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                       <span>Mã ID: #{cat.id}</span>
                     </div>
 
@@ -912,7 +1016,7 @@ export const CategoryManagementPage: React.FC = () => {
                           <button
                             type="button"
                             className="cat-icon-btn delete"
-                            onClick={() => setDeletingCategory(cat)}
+                            onClick={() => startDelete(cat)}
                             title="Xóa danh mục"
                             aria-label={`Xóa ${cat.name}`}
                           >
@@ -1006,7 +1110,33 @@ export const CategoryManagementPage: React.FC = () => {
                             </div>
 
                             <div className="cat-card-footer">
-                              <span className="text-xs text-slate-500 font-mono">Thứ tự: #{cat.sortOrder}</span>
+                              <div className="flex items-center gap-1">
+                                <span className="text-xs text-slate-500 font-mono">Thứ tự: #{cat.sortOrder}</span>
+                                {canManage && (
+                                  <div className="inline-flex items-center gap-0.5 ml-1">
+                                    <button
+                                      type="button"
+                                      className="p-0.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 disabled:opacity-30"
+                                      onClick={() => handleMoveOrder(cat, 'up')}
+                                      disabled={isReordering}
+                                      title="Di chuyển lên"
+                                      aria-label={`Di chuyển lên ${cat.name}`}
+                                    >
+                                      <ArrowUp size={12} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="p-0.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 disabled:opacity-30"
+                                      onClick={() => handleMoveOrder(cat, 'down')}
+                                      disabled={isReordering}
+                                      title="Di chuyển xuống"
+                                      aria-label={`Di chuyển xuống ${cat.name}`}
+                                    >
+                                      <ArrowDown size={12} />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
 
                               {canManage && (
                                 <div className="cat-action-btn-group">
@@ -1025,7 +1155,7 @@ export const CategoryManagementPage: React.FC = () => {
                                   <button
                                     type="button"
                                     className="cat-icon-btn delete"
-                                    onClick={() => setDeletingCategory(cat)}
+                                    onClick={() => startDelete(cat)}
                                     title="Xóa danh mục"
                                     aria-label={`Xóa ${cat.name}`}
                                   >
@@ -1106,7 +1236,7 @@ export const CategoryManagementPage: React.FC = () => {
           setEditingCategory(cat);
           setIsModalOpen(true);
         }}
-        onDelete={(cat) => setDeletingCategory(cat)}
+        onDelete={(cat) => startDelete(cat)}
         canManage={canManage}
       />
 
@@ -1114,11 +1244,19 @@ export const CategoryManagementPage: React.FC = () => {
       {deletingCategory && (
         <div
           className="cat-modal-backdrop"
-          onClick={() => setDeletingCategory(null)}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setDeletingCategory(null);
+              setDeleteError(null);
+            }
+          }}
           role="dialog"
           aria-modal="true"
         >
-          <div className="cat-modal-card max-w-md">
+          <div
+            className="cat-modal-card max-w-md"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="cat-modal-header bg-rose-50 border-b border-rose-100">
               <h3 className="cat-modal-title text-rose-700">
                 <AlertCircle size={20} className="text-rose-600" />
@@ -1134,26 +1272,40 @@ export const CategoryManagementPage: React.FC = () => {
                 thuộc nhóm{' '}
                 <strong className="text-blue-700">{deletingCategory.type}</strong> không?
               </p>
+
+              {deleteError && (
+                <div className="p-3 bg-red-50 border border-red-300 rounded-lg text-xs text-red-800 flex items-start gap-2">
+                  <AlertCircle size={16} className="shrink-0 text-red-600 mt-0.5" />
+                  <div>
+                    <span className="font-semibold block mb-0.5">Không thể xóa danh mục:</span>
+                    <span>{deleteError}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-start gap-2">
                 <AlertCircle size={16} className="shrink-0 text-amber-600 mt-0.5" />
                 <span>
                   Lưu ý: Nếu danh mục này đang được liên kết trong các tin tuyển dụng hoặc hồ sơ ứng viên,
-                  việc xóa có thể ảnh hưởng đến dữ liệu báo cáo. Bạn có thể chọn "Tạm ngưng" thay vì xóa vĩnh viễn.
+                  việc xóa sẽ bị hệ thống chặn để bảo toàn dữ liệu. Bạn có thể chọn "Tạm ngưng" thay vì xóa vĩnh viễn.
                 </span>
               </div>
             </div>
             <div className="cat-modal-footer">
               <button
                 type="button"
-                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-                onClick={() => setDeletingCategory(null)}
+                className="cat-btn-outline"
+                onClick={() => {
+                  setDeletingCategory(null);
+                  setDeleteError(null);
+                }}
                 disabled={isDeleting}
               >
                 Hủy bỏ
               </button>
               <button
                 type="button"
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition disabled:opacity-50"
+                className="cat-btn-danger"
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
               >

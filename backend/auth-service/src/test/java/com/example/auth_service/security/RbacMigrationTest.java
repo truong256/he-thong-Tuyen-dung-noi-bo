@@ -33,7 +33,7 @@ class RbacMigrationTest {
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V1__create_roles_and_users.sql"));
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V6__rbac_resource_scope.sql"));
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V7__complete_s1_account_management.sql"));
-            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V20__rbac_candidate_stage_and_evaluations.sql"));
+            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/migration/V20_1__rbac_candidate_stage_and_evaluations.sql"));
             try (var statement = connection.createStatement()) {
                 var dropConstraints = new java.util.ArrayList<String>();
                 try (var cRs = statement.executeQuery("SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE UPPER(TABLE_NAME) = 'REQUISITION_ASSIGNMENTS' AND CONSTRAINT_TYPE = 'CHECK'")) {

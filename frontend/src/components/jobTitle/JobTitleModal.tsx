@@ -189,7 +189,17 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
       return;
     }
 
-    if (minSalary && maxSalary && Number(minSalary) > Number(maxSalary)) {
+    if (minSalary !== '' && Number(minSalary) < 0) {
+      setValidationError('Mức lương tối thiểu không được âm.');
+      return;
+    }
+
+    if (maxSalary !== '' && Number(maxSalary) < 0) {
+      setValidationError('Mức lương tối đa không được âm.');
+      return;
+    }
+
+    if (minSalary !== '' && maxSalary !== '' && Number(minSalary) > Number(maxSalary)) {
       setValidationError('Mức lương tối thiểu không được lớn hơn mức lương tối đa.');
       return;
     }
@@ -221,7 +231,8 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
       });
       onClose();
     } catch (err: any) {
-      setValidationError(err.message || 'Đã có lỗi xảy ra khi lưu thông tin chức danh.');
+      const msg = err.response?.data?.message || err.message || 'Đã có lỗi xảy ra khi lưu thông tin chức danh.';
+      setValidationError(msg);
     } finally {
       setIsSubmitting(false);
     }

@@ -7,8 +7,10 @@ import com.example.auth_service.dto.JobTitleResponse;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.auth_service.repository.CompetencyFrameworkRepository;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
+import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,12 @@ class JobTitleServiceTest {
 
     @Mock
     private DepartmentRepository departmentRepository;
+
+    @Mock
+    private RecruitmentRequisitionRepository requisitionRepository;
+
+    @Mock
+    private CompetencyFrameworkRepository competencyFrameworkRepository;
 
     @InjectMocks
     private JobTitleService service;
@@ -67,7 +75,7 @@ class JobTitleServiceTest {
     @Test
     @DisplayName("list() returns matching job titles")
     void list_Success() {
-        when(repository.searchJobTitles(any(), any(), any())).thenReturn(List.of(jobTitle));
+        when(repository.searchJobTitles(any(), any(), any(), any(), any())).thenReturn(List.of(jobTitle));
 
         List<JobTitleResponse> responses = service.list("Java", true, 10L, true);
 
@@ -104,7 +112,7 @@ class JobTitleServiceTest {
     @Test
     @DisplayName("list() redacts salary for users outside the HR manager role")
     void list_RedactsSalaryWhenNotAuthorized() {
-        when(repository.searchJobTitles(any(), any(), any())).thenReturn(List.of(jobTitle));
+        when(repository.searchJobTitles(any(), any(), any(), any(), any())).thenReturn(List.of(jobTitle));
 
         JobTitleResponse response = service.list(null, true, null, false).getFirst();
 
@@ -276,13 +284,88 @@ class JobTitleServiceTest {
     }
 
     @Test
-    @DisplayName("delete() deletes job title")
+    @DisplayName("delete() deletes job title when no dependencies exist")
     void delete_Success() {
+        jobTitle.setCurrentHeadcount(0);
         when(repository.findById(1L)).thenReturn(Optional.of(jobTitle));
+        when(requisitionRepository.existsByJobTitleId(1L)).thenReturn(false);
+        when(competencyFrameworkRepository.existsByJobTitleId(1L)).thenReturn(false);
         doNothing().when(repository).delete(jobTitle);
 
         service.delete(1L);
 
         verify(repository, times(1)).delete(jobTitle);
+    }
+
+    @Test
+    @DisplayName("delete() rejects when current headcount > 0")
+    void delete_FailsWhenCurrentHeadcountPositive() {
+        jobTitle.setCurrentHeadcount(5);
+        when(repository.findById(1L)).thenReturn(Optional.of(jobTitle));
+
+        assertThatThrownBy(() -> service.delete(1L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("nhân sự đảm nhiệm");
+
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("delete() rejects when recruitment requisitions reference job title")
+    void delete_FailsWhenRequisitionsExist() {
+        jobTitle.setCurrentHeadcount(0);
+        when(repository.findById(1L)).thenReturn(Optional.of(jobTitle));
+        when(requisitionRepository.existsByJobTitleId(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.delete(1L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("yêu cầu tuyển dụng liên kết");
+
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("delete() rejects when competency frameworks reference job title")
+    void delete_FailsWhenCompetencyFrameworksExist() {
+        jobTitle.setCurrentHeadcount(0);
+        when(repository.findById(1L)).thenReturn(Optional.of(jobTitle));
+        when(requisitionRepository.existsByJobTitleId(1L)).thenReturn(false);
+        when(competencyFrameworkRepository.existsByJobTitleId(1L)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.delete(1L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessageContaining("khung năng lực liên kết");
+
+        verify(repository, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("create() rejects inactive department")
+    void create_InactiveDepartment() {
+        Department inactiveDept = new Department(10L, "Phòng Đã Đóng", "OLD", "Mô tả", null, 1L, false, Instant.now());
+        JobTitleRequest req = new JobTitleRequest(
+                "Frontend Lead",
+                "FE-LEAD",
+                10L,
+                "LEAD",
+                "TECH",
+                40000000L,
+                60000000L,
+                "Mô tả",
+                null,
+                null,
+                null,
+                5,
+                0,
+                true
+        );
+
+        when(repository.existsByCodeIgnoreCase("FE-LEAD")).thenReturn(false);
+        when(repository.existsByTitleIgnoreCase("Frontend Lead")).thenReturn(false);
+        when(departmentRepository.findById(10L)).thenReturn(Optional.of(inactiveDept));
+
+        assertThatThrownBy(() -> service.create(req))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Phòng ban đã ngừng áp dụng");
     }
 }
