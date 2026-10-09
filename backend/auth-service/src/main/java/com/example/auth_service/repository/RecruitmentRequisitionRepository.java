@@ -30,6 +30,20 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
         """)
     List<Object[]> countOpenRequisitionsGroupedByJobTitle();
 
+    boolean existsByWorkLocationId(Long workLocationId);
+
+    boolean existsByEmploymentTypeId(Long employmentTypeId);
+
+    boolean existsByRejectionReasonId(Long rejectionReasonId);
+
+    boolean existsByWorkLocationIgnoreCase(String workLocation);
+
+    boolean existsByRecruitmentTypeIgnoreCase(String recruitmentType);
+
+    boolean existsByWorkingModelIgnoreCase(String workingModel);
+
+    boolean existsByRejectionReasonIgnoreCase(String rejectionReason);
+
     boolean existsByRequisitionCode(String requisitionCode);
 
     boolean existsByRequisitionCodeIgnoreCase(String requisitionCode);

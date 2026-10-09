@@ -64,6 +64,12 @@ public class RecruitmentRequisition {
     @Column(length = 255)
     private String workLocation;
 
+    @Column(name = "work_location_id")
+    private Long workLocationId;
+
+    @Column(name = "employment_type_id")
+    private Long employmentTypeId;
+
     @Column(length = 30)
     private String workingModel = "ONSITE"; // ONSITE, HYBRID, REMOTE
 
@@ -82,6 +88,9 @@ public class RecruitmentRequisition {
 
     @Column(columnDefinition = "TEXT")
     private String rejectionReason;
+
+    @Column(name = "rejection_reason_id")
+    private Long rejectionReasonId;
 
     private Long createdByUserId;
 

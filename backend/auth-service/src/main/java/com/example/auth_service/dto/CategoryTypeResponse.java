@@ -12,7 +12,7 @@ public record CategoryTypeResponse(
             case "WORK_LOCATION" -> "Địa điểm làm việc";
             case "EDUCATION_LEVEL" -> "Trình độ học vấn";
             case "CANDIDATE_SOURCE" -> "Nguồn ứng viên";
-            case "REJECTION_REASON" -> "Lý do từ chối";
+            case "REJECTION_REASON" -> "Lý do loại hồ sơ";
             case "INTERVIEW_TYPE" -> "Hình thức phỏng vấn";
             case "SKILL_TAG" -> "Kỹ năng & Chuyên môn";
             default -> type;

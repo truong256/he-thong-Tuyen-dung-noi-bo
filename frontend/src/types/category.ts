@@ -34,3 +34,13 @@ export interface CategoryFilterParams {
   type?: string;
   active?: boolean;
 }
+
+export interface CategoryReorderItem {
+  id: number;
+  sortOrder: number;
+}
+
+export interface CategoryReorderPayload {
+  items: CategoryReorderItem[];
+}
+

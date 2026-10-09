@@ -306,5 +306,98 @@ describe('CategoryManagementPage Component (Quản lý Danh mục dùng chung)',
       expect(screen.queryByText('Đã chọn 1 danh mục')).not.toBeInTheDocument();
     });
   });
+
+  it('supports reordering categories via Move Up / Move Down buttons', async () => {
+    vi.mocked(categoryApi.reorder).mockResolvedValue(mockCategories);
+
+    render(
+      <MemoryRouter>
+        <CategoryManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Di chuyển xuống Toàn thời gian (Full-time)')).toBeInTheDocument();
+    });
+
+    const moveDownBtn = screen.getByLabelText('Di chuyển xuống Toàn thời gian (Full-time)');
+    fireEvent.click(moveDownBtn);
+
+    await waitFor(() => {
+      expect(categoryApi.reorder).toHaveBeenCalledWith({
+        items: expect.arrayContaining([
+          expect.objectContaining({ id: 1 }),
+          expect.objectContaining({ id: 2 }),
+        ]),
+      });
+    });
+  });
+
+  it('displays error message when deleting a referenced category (409 Conflict)', async () => {
+    const conflictError: any = new Error('Không thể xóa nguồn ứng viên vì đang được sử dụng bởi hồ sơ ứng viên.');
+    conflictError.response = {
+      status: 409,
+      data: {
+        success: false,
+        message: 'Không thể xóa nguồn ứng viên vì đang được sử dụng bởi hồ sơ ứng viên.',
+      },
+    };
+    vi.mocked(categoryApi.delete).mockRejectedValue(conflictError);
+
+    render(
+      <MemoryRouter>
+        <CategoryManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Xóa Toàn thời gian (Full-time)')).toBeInTheDocument();
+    });
+
+    const deleteBtn = screen.getByLabelText('Xóa Toàn thời gian (Full-time)');
+    fireEvent.click(deleteBtn);
+
+    const confirmBtn = screen.getByRole('button', { name: 'Xác nhận xóa' });
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toBeInTheDocument();
+    });
+    expect(screen.getByRole('status')).toHaveTextContent(/Không thể xóa/i);
+  });
+
+  it('hides Add, Edit, Delete, and Reorder actions for read-only users without CATALOG_MANAGE', async () => {
+    vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
+      user: {
+        id: 99,
+        email: 'viewer@company.com',
+        fullName: 'Viewer User',
+        roles: ['EMPLOYEE'],
+        role: 'EMPLOYEE',
+      },
+      hasRole: () => false,
+      hasAnyRole: () => false,
+      hasPermission: () => false,
+      hasAnyPermission: () => false,
+      isAuthenticated: true,
+      loading: false,
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <CategoryManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('FULL_TIME')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Thêm danh mục mới')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Xóa Toàn thời gian (Full-time)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Sửa Toàn thời gian (Full-time)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Di chuyển lên Toàn thời gian (Full-time)')).not.toBeInTheDocument();
+  });
 });
+
 
