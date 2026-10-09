@@ -19,6 +19,7 @@ import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 import QuestionBankPage from './pages/QuestionBankPage';
 import CategoryManagementPage from './pages/CategoryManagementPage';
 import RequisitionManagementPage from './pages/RequisitionManagementPage';
+import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
 
 export const App: React.FC = () => {
@@ -183,7 +184,22 @@ export const App: React.FC = () => {
               }
             />
             <Route
+              path="recruitment/create"
+              element={
+                <PermissionGuard
+                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL']}
+                  requireAny
+                >
+                  <RecruitmentRequestPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
               path="requisitions"
+              element={<Navigate to="/recruitment/requisitions" replace />}
+            />
+            <Route
+              path="recruitment-requests"
               element={<Navigate to="/recruitment/requisitions" replace />}
             />
 

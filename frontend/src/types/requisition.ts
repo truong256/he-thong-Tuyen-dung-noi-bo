@@ -18,6 +18,7 @@ export interface Requisition {
   createdByUserId?: number;
   createdByName?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RequisitionPayload {
