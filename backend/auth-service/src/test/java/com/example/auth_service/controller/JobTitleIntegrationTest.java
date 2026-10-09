@@ -1,6 +1,7 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.Department;
+import com.example.auth_service.domain.sprint2.JobTitle;
 import com.example.auth_service.dto.JobTitleRequest;
 import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
@@ -157,7 +158,23 @@ class JobTitleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
 
-        // Delete
+        // Status toggle without body (inverts to true)
+        mvc.perform(patch("/api/job-titles/" + id + "/status")
+                        .header("Authorization", token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+
+        // Delete fails with 409 Conflict when headcount > 0
+        mvc.perform(delete("/api/job-titles/" + id)
+                        .header("Authorization", token(admin)))
+                .andExpect(status().isConflict());
+
+        // Transfer/reset headcount to 0 before delete
+        JobTitle existingJt = jobTitles.findById(id).orElseThrow();
+        existingJt.setCurrentHeadcount(0);
+        jobTitles.save(existingJt);
+
+        // Delete succeeds when headcount is 0 and no dependencies
         mvc.perform(delete("/api/job-titles/" + id)
                         .header("Authorization", token(admin)))
                 .andExpect(status().isNoContent());
@@ -241,6 +258,37 @@ class JobTitleIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void candidateCannotListJobTitles() throws Exception {
+        mvc.perform(get("/api/job-titles")
+                        .header("Authorization", token(candidate)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void recruiterCanSearchByDepartmentNameWithoutSalaryLeak() throws Exception {
+        JobTitle jt = new JobTitle();
+        jt.setTitle("Kỹ sư Kiểm thử Tích Hợp");
+        jt.setCode("QA-INT-01");
+        jt.setDepartment(dept);
+        jt.setLevel("JUNIOR");
+        jt.setJobFamily("TECH");
+        jt.setMinSalary(15000000L);
+        jt.setMaxSalary(22000000L);
+        jt.setStandardHeadcount(2);
+        jt.setCurrentHeadcount(0);
+        jt.setActive(true);
+        jobTitles.save(jt);
+
+        mvc.perform(get("/api/job-titles?search=Tích Hợp")
+                        .header("Authorization", token(recruiter)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].code").value("QA-INT-01"))
+                .andExpect(jsonPath("$[0].minSalary").value((Object) null))
+                .andExpect(jsonPath("$[0].maxSalary").value((Object) null))
+                .andExpect(jsonPath("$[0].salaryRangeDisplay").value((Object) null));
     }
 
     @Test

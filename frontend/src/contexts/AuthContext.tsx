@@ -96,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               localStorage.removeItem('refreshToken');
               localStorage.removeItem('user');
               localStorage.removeItem('ats:permissions');
+              localStorage.removeItem('ats_job_titles');
               clearActivity();
               setUser(null);
               setToken(null);
@@ -115,6 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(null);
       setPermissions([]);
       localStorage.removeItem('ats:permissions');
+      localStorage.removeItem('ats_job_titles');
     };
 
     window.addEventListener('ats:session-expired', handleSessionExpired);
@@ -140,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     localStorage.removeItem('ats:permissions');
+    localStorage.removeItem('ats_job_titles');
     sessionStorage.removeItem('ats:session_expired');
     setUser(null);
     setToken(null);
@@ -181,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [token, user, logout]);
 
   const login = async (email: string, pass: string): Promise<UserSummary> => {
+    localStorage.removeItem('ats_job_titles');
     const res = await authApi.login(email, pass);
     localStorage.setItem('accessToken', res.accessToken);
     localStorage.setItem('refreshToken', res.refreshToken);
