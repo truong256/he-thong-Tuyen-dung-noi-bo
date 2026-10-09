@@ -5,16 +5,10 @@ import {
   Menu,
   ChevronDown,
   ChevronUp,
-  Key,
-  LogOut,
   Briefcase,
-  User,
   Bell,
   PanelLeftClose,
   PanelLeftOpen,
-  ShieldCheck,
-  Clock,
-  Sparkles,
 } from 'lucide-react';
 import LogoutConfirmModal from '../components/common/LogoutConfirmModal';
 import { getRoleLabel } from '../constants/rbac';
@@ -154,28 +148,28 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
-                <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px', borderRadius: '8px', background: '#F8FAFC' }}>
-                    <ShieldCheck size={18} style={{ color: '#059669', flexShrink: 0, marginTop: '2px' }} />
-                    <div style={{ fontSize: '0.8125rem' }}>
-                      <strong style={{ color: '#0F172A', display: 'block' }}>Bảo mật tài khoản</strong>
-                      <span style={{ color: '#64748B' }}>Hệ thống xác thực JWT & RBAC bảo vệ 100% dữ liệu tuyển dụng.</span>
+                <div className="notification-list">
+                  <div className="notification-item">
+                    <span className="notification-dot-indicator success" aria-hidden="true" />
+                    <div className="notification-item-content">
+                      <strong className="notification-item-title">Bảo mật tài khoản</strong>
+                      <span className="notification-item-desc">Hệ thống xác thực JWT & RBAC bảo vệ 100% dữ liệu tuyển dụng.</span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px', borderRadius: '8px', background: '#F8FAFC' }}>
-                    <Clock size={18} style={{ color: '#2563EB', flexShrink: 0, marginTop: '2px' }} />
-                    <div style={{ fontSize: '0.8125rem' }}>
-                      <strong style={{ color: '#0F172A', display: 'block' }}>Phiên làm việc tự động</strong>
-                      <span style={{ color: '#64748B' }}>Tự động thu hồi phiên sau 5 phút không hoạt động để bảo vệ dữ liệu.</span>
+                  <div className="notification-item">
+                    <span className="notification-dot-indicator info" aria-hidden="true" />
+                    <div className="notification-item-content">
+                      <strong className="notification-item-title">Phiên làm việc tự động</strong>
+                      <span className="notification-item-desc">Tự động thu hồi phiên sau 5 phút không hoạt động để bảo vệ dữ liệu.</span>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px', borderRadius: '8px', background: '#F8FAFC' }}>
-                    <Sparkles size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: '2px' }} />
-                    <div style={{ fontSize: '0.8125rem' }}>
-                      <strong style={{ color: '#0F172A', display: 'block' }}>Sprint 2 Enterprise</strong>
-                      <span style={{ color: '#64748B' }}>Đã hoàn thiện trọn bộ S2-01 đến S2-10 trên hệ thống.</span>
+                  <div className="notification-item">
+                    <span className="notification-dot-indicator warning" aria-hidden="true" />
+                    <div className="notification-item-content">
+                      <strong className="notification-item-title">Sprint 2 Enterprise</strong>
+                      <span className="notification-item-desc">Đã hoàn thiện trọn bộ S2-01 đến S2-10 trên hệ thống.</span>
                     </div>
                   </div>
                 </div>
@@ -247,7 +241,6 @@ export const Header: React.FC<HeaderProps> = ({
                     navigate('/profile');
                   }}
                 >
-                  <User size={15} />
                   <span>Hồ sơ cá nhân</span>
                 </button>
 
@@ -261,7 +254,6 @@ export const Header: React.FC<HeaderProps> = ({
                     onChangePasswordClick();
                   }}
                 >
-                  <Key size={15} />
                   <span>Đổi mật khẩu</span>
                 </button>
 
@@ -275,7 +267,6 @@ export const Header: React.FC<HeaderProps> = ({
                     setShowLogoutModal(true);
                   }}
                 >
-                  <LogOut size={15} />
                   <span>Đăng xuất</span>
                 </button>
               </div>

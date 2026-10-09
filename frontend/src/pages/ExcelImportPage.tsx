@@ -2,12 +2,10 @@ import React, { useState, useRef, ChangeEvent, DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FileSpreadsheet,
-  Download,
   UploadCloud,
   CheckCircle2,
   AlertCircle,
   XCircle,
-  ArrowLeft,
   RefreshCw,
   FileCheck,
   AlertTriangle,
@@ -252,7 +250,6 @@ export const ExcelImportPage: React.FC = () => {
               onClick={() => navigate('/admin/users')}
               aria-label="Quay lại danh sách người dùng"
             >
-              <ArrowLeft size={16} />
               <span>Quay lại Quản lý tài khoản</span>
             </button>
             <button
@@ -263,7 +260,7 @@ export const ExcelImportPage: React.FC = () => {
               data-testid="btn-download-template"
               aria-label="Tải tệp Excel mẫu"
             >
-              {isDownloadingTemplate ? <RefreshCw size={16} className="spin-animation" /> : <Download size={16} />}
+              {isDownloadingTemplate ? <RefreshCw size={16} className="spin-animation" /> : null}
               <span>{isDownloadingTemplate ? 'Đang tải file mẫu...' : 'Tải tệp Excel mẫu'}</span>
             </button>
           </div>

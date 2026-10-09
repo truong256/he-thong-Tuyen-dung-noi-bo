@@ -1,15 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Award,
-  Plus,
   Search,
   Eye,
   Edit2,
   Trash2,
   CheckCircle2,
-  Briefcase,
-  Layers,
-  Sparkles,
   AlertCircle,
   RefreshCw,
 } from 'lucide-react';
@@ -158,7 +153,7 @@ export const CompetencyFrameworkPage: React.FC = () => {
               onClick={loadFrameworks}
               title="Tải lại dữ liệu"
             >
-              <RefreshCw size={15} /> Làm mới
+              Làm mới
             </button>
             {canManage && (
               <button
@@ -169,7 +164,7 @@ export const CompetencyFrameworkPage: React.FC = () => {
                   setIsModalOpen(true);
                 }}
               >
-                <Plus size={16} /> Thêm khung năng lực
+                Thêm khung năng lực
               </button>
             )}
           </div>
@@ -179,9 +174,6 @@ export const CompetencyFrameworkPage: React.FC = () => {
       {/* Stats Cards */}
       <div className="cf-stats-grid">
         <div className="cf-stat-card">
-          <div className="cf-stat-icon-wrap blue">
-            <Award size={24} />
-          </div>
           <div className="cf-stat-meta">
             <div className="cf-stat-label">Tổng số Khung Năng lực</div>
             <div className="cf-stat-val">{stats.totalFrameworks}</div>
@@ -189,9 +181,6 @@ export const CompetencyFrameworkPage: React.FC = () => {
         </div>
 
         <div className="cf-stat-card">
-          <div className="cf-stat-icon-wrap emerald">
-            <Layers size={24} />
-          </div>
           <div className="cf-stat-meta">
             <div className="cf-stat-label">Tổng số Tiêu chí Đánh giá</div>
             <div className="cf-stat-val">{stats.totalCriteria}</div>
@@ -199,9 +188,6 @@ export const CompetencyFrameworkPage: React.FC = () => {
         </div>
 
         <div className="cf-stat-card">
-          <div className="cf-stat-icon-wrap purple">
-            <Briefcase size={24} />
-          </div>
           <div className="cf-stat-meta">
             <div className="cf-stat-label">Chức danh Đang áp dụng</div>
             <div className="cf-stat-val">{stats.totalJobTitlesLinked}</div>
@@ -255,9 +241,6 @@ export const CompetencyFrameworkPage: React.FC = () => {
           </div>
         ) : filteredFrameworks.length === 0 ? (
           <div className="cf-empty-state">
-            <div className="cf-empty-icon">
-              <Sparkles size={32} />
-            </div>
             <h3>
               {searchTerm || selectedCategory !== 'ALL'
                 ? 'Không tìm thấy khung năng lực phù hợp'
@@ -277,7 +260,7 @@ export const CompetencyFrameworkPage: React.FC = () => {
                   setIsModalOpen(true);
                 }}
               >
-                <Plus size={16} /> Thêm khung năng lực mới
+                Thêm khung năng lực mới
               </button>
             )}
           </div>
@@ -318,8 +301,7 @@ export const CompetencyFrameworkPage: React.FC = () => {
 
                     <td style={{ textAlign: 'center' }}>
                       <span className="cf-criteria-chip">
-                        <Layers size={13} />
-                        {f.criteria?.length || f.criteriaCount || 0}
+                        {f.criteria?.length || f.criteriaCount || 0} tiêu chí
                       </span>
                     </td>
 

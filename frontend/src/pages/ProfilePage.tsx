@@ -179,13 +179,20 @@ export const ProfilePage: React.FC = () => {
     <div className="profile-page-clean-container" data-testid="profile-page">
       {/* Enterprise Breadcrumb and Page Header */}
       <PageHeader
-        title="Hồ sơ & Tài khoản Cá nhân"
+        title="Hồ sơ cá nhân"
         subtitle="Quản lý thông tin định danh, tài khoản khôi phục và thiết lập bảo mật phiên đăng nhập"
         breadcrumbs={[
           { label: 'Tổng quan', path: '/dashboard' },
           { label: 'Hồ sơ cá nhân' },
         ]}
       />
+
+      {/* Floating success toast notification */}
+      {successMsg && (
+        <div className="profile-toast-success" role="status" aria-live="polite">
+          <span>{successMsg}</span>
+        </div>
+      )}
 
       {/* 1. Profile Summary Card (Clean, compact, no huge gradients) */}
       <ProfileHeader
