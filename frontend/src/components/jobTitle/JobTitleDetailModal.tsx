@@ -186,9 +186,42 @@ export const JobTitleDetailModal: React.FC<JobTitleDetailModalProps> = ({
           )}
 
           {/* Competency Framework */}
-          {jobTitle.competencies && jobTitle.competencies.length > 0 && (
-            <div className="jt-detail-section">
-              <h3 className="jt-detail-section-title">Khung năng lực áp dụng</h3>
+          <div className="jt-detail-section">
+            <h3 className="jt-detail-section-title">Khung năng lực chuẩn hóa (S2-06)</h3>
+            {jobTitle.competencyFrameworkName ? (
+              <div
+                className="jt-framework-linked-card"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px 14px',
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '8px',
+                  marginBottom: '10px',
+                }}
+              >
+                <ShieldCheck size={20} style={{ color: '#16a34a', flexShrink: 0 }} />
+                <div>
+                  <span style={{ fontSize: '0.875rem', color: '#15803d', fontWeight: 600 }}>
+                    {jobTitle.competencyFrameworkName}
+                  </span>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#166534' }}>
+                    Đã liên kết với khung năng lực hệ thống để kiểm soát bộ tiêu chí và ngân hàng câu hỏi (S2-07).
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <p
+                className="jt-detail-description"
+                style={{ color: '#64748b', fontStyle: 'italic', marginBottom: '8px' }}
+              >
+                Chưa gán khung năng lực chuẩn hóa.
+              </p>
+            )}
+
+            {jobTitle.competencies && jobTitle.competencies.length > 0 && (
               <div className="jt-competencies-wrap">
                 {jobTitle.competencies.map((comp, idx) => (
                   <span key={idx} className="jt-comp-pill">
@@ -197,8 +230,8 @@ export const JobTitleDetailModal: React.FC<JobTitleDetailModalProps> = ({
                   </span>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Audit Info Footer */}
           <div className="jt-detail-audit-box">

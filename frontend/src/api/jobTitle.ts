@@ -456,6 +456,8 @@ export const jobTitleApi = {
             currentHeadcount: j.currentHeadcount || 0,
             openRequisitions: j.openRequisitions || 0,
             active: j.active !== false,
+            competencyFrameworkId: j.competencyFrameworkId,
+            competencyFrameworkName: j.competencyFrameworkName,
             createdAt: j.createdAt ? String(j.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
             updatedAt: j.updatedAt ? String(j.updatedAt).slice(0, 10) : undefined,
           }));
@@ -559,6 +561,8 @@ export const jobTitleApi = {
             currentHeadcount: j.currentHeadcount || 0,
             openRequisitions: j.openRequisitions || 0,
             active: j.active !== false,
+            competencyFrameworkId: j.competencyFrameworkId,
+            competencyFrameworkName: j.competencyFrameworkName,
             createdAt: j.createdAt ? String(j.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
             updatedAt: j.updatedAt ? String(j.updatedAt).slice(0, 10) : undefined,
           };
@@ -586,6 +590,7 @@ export const jobTitleApi = {
           title: payload.title,
           code: payload.code,
           departmentId: payload.departmentId || null,
+          competencyFrameworkId: payload.competencyFrameworkId || null,
           level: payload.level,
           jobFamily: payload.jobFamily,
           minSalary: payload.minSalary,
@@ -603,6 +608,8 @@ export const jobTitleApi = {
           const created: JobTitle = {
             ...payload,
             id: res.data.id,
+            competencyFrameworkId: res.data.competencyFrameworkId,
+            competencyFrameworkName: res.data.competencyFrameworkName,
             createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
             updatedAt: res.data.updatedAt ? String(res.data.updatedAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
           };
@@ -646,6 +653,7 @@ export const jobTitleApi = {
           title: payload.title,
           code: payload.code,
           departmentId: payload.departmentId || null,
+          competencyFrameworkId: payload.competencyFrameworkId !== undefined ? payload.competencyFrameworkId : null,
           level: payload.level,
           jobFamily: payload.jobFamily,
           minSalary: payload.minSalary,

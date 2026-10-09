@@ -209,6 +209,10 @@ public class DataInitializer {
                     fwBe.setWeightPercent(100);
                     fwBe.setJobTitle(beSenior);
                     fwBe = competencyFrameworkRepository.save(fwBe);
+                    if (beSenior != null) {
+                        beSenior.setCompetencyFramework(fwBe);
+                        jobTitleRepository.save(beSenior);
+                    }
 
                     CompetencyCriterion critBe01 = new CompetencyCriterion();
                     critBe01.setCompetencyFramework(fwBe);
@@ -245,6 +249,10 @@ public class DataInitializer {
                     fwFe.setWeightPercent(100);
                     fwFe.setJobTitle(feMid);
                     fwFe = competencyFrameworkRepository.save(fwFe);
+                    if (feMid != null) {
+                        feMid.setCompetencyFramework(fwFe);
+                        jobTitleRepository.save(feMid);
+                    }
 
                     CompetencyCriterion critFe01 = new CompetencyCriterion();
                     critFe01.setCompetencyFramework(fwFe);
@@ -272,6 +280,10 @@ public class DataInitializer {
                     fwHr.setWeightPercent(100);
                     fwHr.setJobTitle(recSpecialist);
                     fwHr = competencyFrameworkRepository.save(fwHr);
+                    if (recSpecialist != null) {
+                        recSpecialist.setCompetencyFramework(fwHr);
+                        jobTitleRepository.save(recSpecialist);
+                    }
 
                     CompetencyCriterion critHr01 = new CompetencyCriterion();
                     critHr01.setCompetencyFramework(fwHr);

@@ -9,12 +9,14 @@ import java.util.List;
 public interface CompetencyCriterionRepository extends JpaRepository<CompetencyCriterion, Long> {
 
     @Query("""
-        SELECT c
+        SELECT DISTINCT c
         FROM CompetencyCriterion c
         JOIN FETCH c.competencyFramework f
-        LEFT JOIN FETCH f.jobTitle j
+        LEFT JOIN FETCH f.jobTitles j
         WHERE c.active = true
         ORDER BY c.criterionCode ASC
         """)
     List<CompetencyCriterion> findAllActiveWithDetails();
+
+    List<CompetencyCriterion> findByCompetencyFrameworkId(Long frameworkId);
 }

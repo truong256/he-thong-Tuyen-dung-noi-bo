@@ -1,5 +1,6 @@
 package com.example.auth_service.service;
 
+import com.example.auth_service.domain.sprint2.CompetencyFramework;
 import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.JobTitle;
 import com.example.auth_service.dto.JobTitleRequest;
@@ -7,8 +8,10 @@ import com.example.auth_service.dto.JobTitleResponse;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
+import com.example.auth_service.repository.CompetencyFrameworkRepository;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,10 +25,17 @@ public class JobTitleService {
 
     private final JobTitleRepository repository;
     private final DepartmentRepository departmentRepository;
+    private final CompetencyFrameworkRepository competencyFrameworkRepository;
 
-    public JobTitleService(JobTitleRepository repository, DepartmentRepository departmentRepository) {
+    @Autowired
+    public JobTitleService(JobTitleRepository repository, DepartmentRepository departmentRepository, CompetencyFrameworkRepository competencyFrameworkRepository) {
         this.repository = repository;
         this.departmentRepository = departmentRepository;
+        this.competencyFrameworkRepository = competencyFrameworkRepository;
+    }
+
+    public JobTitleService(JobTitleRepository repository, DepartmentRepository departmentRepository) {
+        this(repository, departmentRepository, null);
     }
 
     @Transactional(readOnly = true)
@@ -80,6 +90,13 @@ public class JobTitleService {
         jobTitle.setActive(request.active() != null ? request.active() : true);
         jobTitle.setCreatedAt(Instant.now());
         jobTitle.setUpdatedAt(Instant.now());
+        if (request.competencyFrameworkId() != null && competencyFrameworkRepository != null) {
+            CompetencyFramework framework = competencyFrameworkRepository.findById(request.competencyFrameworkId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khung năng lực với ID: " + request.competencyFrameworkId()));
+            jobTitle.setCompetencyFramework(framework);
+        } else {
+            jobTitle.setCompetencyFramework(null);
+        }
 
         JobTitle saved = repository.save(jobTitle);
         return toResponse(saved, true);
@@ -110,6 +127,13 @@ public class JobTitleService {
         jobTitle.setTitle(cleanTitle);
         jobTitle.setCode(cleanCode);
         jobTitle.setDepartment(department);
+        if (request.competencyFrameworkId() != null && competencyFrameworkRepository != null) {
+            CompetencyFramework framework = competencyFrameworkRepository.findById(request.competencyFrameworkId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy khung năng lực với ID: " + request.competencyFrameworkId()));
+            jobTitle.setCompetencyFramework(framework);
+        } else if (request.competencyFrameworkId() == null) {
+            jobTitle.setCompetencyFramework(null);
+        }
         if (request.level() != null) jobTitle.setLevel(request.level().trim());
         if (request.jobFamily() != null) jobTitle.setJobFamily(request.jobFamily().trim());
         jobTitle.setMinSalary(request.minSalary());
@@ -149,6 +173,8 @@ public class JobTitleService {
         String salaryRangeDisplay = includeSalary ? formatSalary(minSalary, maxSalary) : null;
         Long deptId = j.getDepartment() != null ? j.getDepartment().getId() : null;
         String deptName = j.getDepartment() != null ? j.getDepartment().getName() : null;
+        Long frameworkId = j.getCompetencyFramework() != null ? j.getCompetencyFramework().getId() : null;
+        String frameworkName = j.getCompetencyFramework() != null ? j.getCompetencyFramework().getCompetencyName() : null;
 
         return new JobTitleResponse(
                 j.getId(),
@@ -170,7 +196,9 @@ public class JobTitleService {
                 0,
                 j.getActive(),
                 j.getCreatedAt(),
-                j.getUpdatedAt()
+                j.getUpdatedAt(),
+                frameworkId,
+                frameworkName
         );
     }
 

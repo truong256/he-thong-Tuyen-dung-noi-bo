@@ -19,6 +19,7 @@ import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
 import QuestionBankPage from './pages/QuestionBankPage';
 import CategoryManagementPage from './pages/CategoryManagementPage';
 import RequisitionManagementPage from './pages/RequisitionManagementPage';
+import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
 
 export const App: React.FC = () => {
   return (
@@ -137,6 +138,31 @@ export const App: React.FC = () => {
               element={
                 <PermissionGuard requiredPermissions={['CATALOG_READ']}>
                   <QuestionBankPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Competency Frameworks (S2-06) – CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
+            */}
+            <Route
+              path="competencies"
+              element={
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                  <CompetencyFrameworkPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="competency-frameworks"
+              element={<Navigate to="/competencies" replace />}
+            />
+            <Route
+              path="admin/competencies"
+              element={
+                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                  <CompetencyFrameworkPage />
                 </PermissionGuard>
               }
             />

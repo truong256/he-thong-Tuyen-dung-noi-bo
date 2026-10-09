@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import jobTitleApi from '../api/jobTitle';
@@ -554,6 +555,15 @@ export const JobTitleManagementPage: React.FC = () => {
                       <span className="jt-card-detail-value">{jt.departmentName}</span>
                     </div>
 
+                    {jt.competencyFrameworkName && (
+                      <div className="jt-card-detail-line">
+                        <span className="jt-card-detail-label">Khung NL:</span>
+                        <span className="jt-card-detail-value" style={{ color: '#16a34a', fontWeight: 600 }}>
+                          {jt.competencyFrameworkName}
+                        </span>
+                      </div>
+                    )}
+
                     <div className="jt-card-detail-line">
                       <span className="jt-card-detail-label">Dải lương:</span>
                       <span className="jt-card-detail-value salary">
@@ -706,6 +716,16 @@ export const JobTitleManagementPage: React.FC = () => {
                               <Building2 size={12} />
                               {jt.departmentName}
                             </span>
+                            {jt.competencyFrameworkName && (
+                              <span
+                                className="jt-dept-sub"
+                                style={{ color: '#16a34a', fontWeight: 500 }}
+                                title={`Khung năng lực chuẩn hóa: ${jt.competencyFrameworkName}`}
+                              >
+                                <ShieldCheck size={12} />
+                                {jt.competencyFrameworkName}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td>

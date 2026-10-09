@@ -58,21 +58,45 @@ public class InterviewQuestionService {
 
     @Transactional(readOnly = true)
     public List<CompetencyCriterionResponse> getCriteria() {
+        return getCriteria(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CompetencyCriterionResponse> getCriteria(Long jobTitleId) {
         return competencyCriterionRepository.findAllActiveWithDetails().stream()
-                .map(c -> new CompetencyCriterionResponse(
-                        c.getId(),
-                        c.getCriterionCode(),
-                        c.getCriterionName(),
-                        c.getDescription(),
-                        c.getWeightPercent(),
-                        c.getActive(),
-                        c.getCompetencyFramework() != null ? c.getCompetencyFramework().getId() : null,
-                        c.getCompetencyFramework() != null ? c.getCompetencyFramework().getCompetencyName() : null,
-                        (c.getCompetencyFramework() != null && c.getCompetencyFramework().getJobTitle() != null)
-                                ? c.getCompetencyFramework().getJobTitle().getId() : null,
-                        (c.getCompetencyFramework() != null && c.getCompetencyFramework().getJobTitle() != null)
-                                ? c.getCompetencyFramework().getJobTitle().getTitle() : null
-                ))
+                .filter(c -> jobTitleId == null ||
+                        (c.getCompetencyFramework() != null &&
+                         c.getCompetencyFramework().getJobTitles() != null &&
+                         c.getCompetencyFramework().getJobTitles().stream()
+                                 .anyMatch(jt -> jobTitleId.equals(jt.getId()))))
+                .map(c -> {
+                    Long jId = null;
+                    String jTitle = null;
+                    if (c.getCompetencyFramework() != null && c.getCompetencyFramework().getJobTitles() != null) {
+                        if (jobTitleId != null) {
+                            jId = jobTitleId;
+                            jTitle = c.getCompetencyFramework().getJobTitles().stream()
+                                    .filter(jt -> jobTitleId.equals(jt.getId()))
+                                    .map(JobTitle::getTitle)
+                                    .findFirst().orElse(null);
+                        } else if (!c.getCompetencyFramework().getJobTitles().isEmpty()) {
+                            jId = c.getCompetencyFramework().getJobTitles().get(0).getId();
+                            jTitle = c.getCompetencyFramework().getJobTitles().get(0).getTitle();
+                        }
+                    }
+                    return new CompetencyCriterionResponse(
+                            c.getId(),
+                            c.getCriterionCode(),
+                            c.getCriterionName(),
+                            c.getDescription(),
+                            c.getWeightPercent(),
+                            c.getActive(),
+                            c.getCompetencyFramework() != null ? c.getCompetencyFramework().getId() : null,
+                            c.getCompetencyFramework() != null ? c.getCompetencyFramework().getCompetencyName() : null,
+                            jId,
+                            jTitle
+                    );
+                })
                 .toList();
     }
 

@@ -22,6 +22,8 @@ public interface JobTitleRepository extends JpaRepository<JobTitle, Long> {
 
     List<JobTitle> findByActive(boolean active);
     List<JobTitle> findByDepartmentId(Long departmentId);
+    List<JobTitle> findByCompetencyFrameworkId(Long competencyFrameworkId);
+    boolean existsByCompetencyFrameworkId(Long competencyFrameworkId);
 
     @Query("SELECT j FROM JobTitle j WHERE " +
            "(:active IS NULL OR j.active = :active) AND " +

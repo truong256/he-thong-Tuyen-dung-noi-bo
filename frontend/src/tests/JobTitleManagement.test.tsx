@@ -5,6 +5,22 @@ import JobTitleManagementPage from '../pages/JobTitleManagementPage';
 import * as useAuthHook from '../hooks/useAuth';
 
 vi.mock('../hooks/useAuth');
+vi.mock('../api/competencyFramework', () => ({
+  competencyFrameworkApi: {
+    getFrameworks: vi.fn().mockResolvedValue([]),
+    getFrameworkById: vi.fn(),
+    createFramework: vi.fn(),
+    updateFramework: vi.fn(),
+    deleteFramework: vi.fn(),
+  },
+  default: {
+    getFrameworks: vi.fn().mockResolvedValue([]),
+    getFrameworkById: vi.fn(),
+    createFramework: vi.fn(),
+    updateFramework: vi.fn(),
+    deleteFramework: vi.fn(),
+  },
+}));
 
 describe('Job Title Management Page (Quản lý Chức danh & Vị trí - EP-02)', () => {
   beforeEach(() => {

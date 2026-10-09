@@ -20,6 +20,7 @@ import {
   FolderTree,
   X,
   ShieldCheck,
+  Target,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -158,6 +159,22 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                   >
                     <FolderTree size={18} />
                     <span>Quản lý Danh mục</span>
+                  </NavLink>
+                </li>
+              )}
+
+              {/*
+                Khung Năng lực – CATALOG_READ
+              */}
+              {canReadCatalog && (
+                <li>
+                  <NavLink
+                    to="/competencies"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <Target size={18} />
+                    <span>Khung Năng lực</span>
                   </NavLink>
                 </li>
               )}
