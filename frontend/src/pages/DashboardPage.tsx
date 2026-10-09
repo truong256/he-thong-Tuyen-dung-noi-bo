@@ -23,6 +23,8 @@ import {
   HelpCircle,
   Building2,
   FileSpreadsheet,
+  GitBranch,
+  CheckCircle2,
 } from 'lucide-react';
 import adminApi from '../api/admin';
 import organizationApi from '../api/organization';
@@ -510,6 +512,58 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Recruitment Pipeline Overview Widget */}
+      <div className="pipeline-widget">
+        <div className="pipeline-header">
+          <h2 className="pipeline-title">
+            <GitBranch size={18} className="text-primary" />
+            <span>Quy trình Tuyển dụng Nội bộ Tiêu chuẩn</span>
+          </h2>
+          <span className="badge" style={{ background: '#eff6ff', color: '#1d4ed8', fontWeight: 600, fontSize: '0.75rem', padding: '3px 8px', borderRadius: 999 }}>
+            Chuẩn ISO 9001:2015
+          </span>
+        </div>
+        <div className="pipeline-steps">
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">1</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Đề xuất tuyển</span>
+              <span className="pipeline-step-desc">Khởi tạo phiếu & định biên lương</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">2</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Phê duyệt</span>
+              <span className="pipeline-step-desc">Duyệt ngân sách & headcount</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">3</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Đăng tin & Nguồn</span>
+              <span className="pipeline-step-desc">Truyền thông & thu hút hồ sơ</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">4</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Đánh giá & Phỏng vấn</span>
+              <span className="pipeline-step-desc">Theo chuẩn khung năng lực</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge" style={{ background: '#059669' }}>
+              <CheckCircle2 size={15} />
+            </div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Offer & Nhận việc</span>
+              <span className="pipeline-step-desc">Đồng bộ hồ sơ nhân sự</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Security Config Inspection Modal */}
       {showSecurityConfig && (

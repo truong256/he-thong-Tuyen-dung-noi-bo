@@ -44,6 +44,7 @@ import {
 } from '../types/category';
 import CategoryModal from '../components/category/CategoryModal';
 import CategoryDetailModal from '../components/category/CategoryDetailModal';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/category-management.css';
 
 type ViewMode = 'table' | 'cards' | 'grouped';
@@ -415,6 +416,16 @@ export const CategoryManagementPage: React.FC = () => {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Hệ thống Danh mục Dữ liệu Master Data"
+        subtitle="Hệ thống danh mục dữ liệu dùng chung (Master Data) đồng bộ cho toàn bộ vòng đời tuyển dụng"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Danh mục dùng chung' },
+        ]}
+      />
 
       {/* Hero Banner Card */}
       <section className="cat-hero-banner" aria-label="Tiêu đề trang quản lý danh mục">

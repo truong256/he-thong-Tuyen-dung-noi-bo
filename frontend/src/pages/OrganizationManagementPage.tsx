@@ -39,6 +39,7 @@ import OrgChartVisualizer from '../components/organization/OrgChartVisualizer';
 import DepartmentModal from '../components/organization/DepartmentModal';
 import LocationModal from '../components/organization/LocationModal';
 import CompanyProfileEditor from '../components/organization/CompanyProfileEditor';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/organization.css';
 
 type ActiveTab = 'overview' | 'departments' | 'locations' | 'branding';
@@ -292,6 +293,16 @@ export const OrganizationManagementPage: React.FC = () => {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Cơ cấu Tổ chức & Hồ sơ Doanh nghiệp"
+        subtitle="Quản lý pháp lý công ty, cây phân cấp phòng ban và mạng lưới chi nhánh hoạt động"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Hồ sơ tổ chức & Cơ cấu' },
+        ]}
+      />
 
       {/* ====================================================================
           HERO BANNER: COMPANY IDENTITY

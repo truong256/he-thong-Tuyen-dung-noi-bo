@@ -1,7 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { Menu, ChevronDown, ChevronUp, Key, LogOut, Briefcase, User } from 'lucide-react';
+import {
+  Menu,
+  ChevronDown,
+  ChevronUp,
+  Key,
+  LogOut,
+  Briefcase,
+  User,
+  Bell,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ShieldCheck,
+  Clock,
+  Sparkles,
+} from 'lucide-react';
 import LogoutConfirmModal from '../components/common/LogoutConfirmModal';
 import { getRoleLabel } from '../constants/rbac';
 
@@ -9,17 +23,22 @@ interface HeaderProps {
   onChangePasswordClick: () => void;
   onToggleMobileSidebar?: () => void;
   isMobileSidebarOpen?: boolean;
+  isSidebarCollapsed?: boolean;
+  onToggleCollapseSidebar?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onChangePasswordClick,
   onToggleMobileSidebar,
   isMobileSidebarOpen = false,
+  isSidebarCollapsed = false,
+  onToggleCollapseSidebar,
 }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
@@ -31,21 +50,26 @@ export const Header: React.FC<HeaderProps> = ({
   }, [avatarSrc]);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target)) {
         setDropdownOpen(false);
       }
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setNotificationOpen(false);
+      }
     };
-    if (dropdownOpen) {
+    if (dropdownOpen || notificationOpen) {
       document.addEventListener('mousedown', handleOutsideClick);
     }
     return () => {
       document.removeEventListener('mousedown', handleOutsideClick);
     };
-  }, [dropdownOpen]);
+  }, [dropdownOpen, notificationOpen]);
 
   const handleConfirmLogout = async () => {
     setIsLoggingOut(true);
@@ -54,7 +78,6 @@ export const Header: React.FC<HeaderProps> = ({
       setShowLogoutModal(false);
       navigate('/login', { replace: true });
     } catch {
-      // Clean fallback redirect
       setShowLogoutModal(false);
       navigate('/login', { replace: true });
     } finally {
@@ -77,7 +100,20 @@ export const Header: React.FC<HeaderProps> = ({
               aria-label={isMobileSidebarOpen ? 'Đóng menu' : 'Mở menu điều hướng'}
               aria-expanded={isMobileSidebarOpen}
             >
-              <Menu size={22} />
+              <Menu size={20} />
+            </button>
+          )}
+
+          {/* Desktop sidebar collapse / expand toggle */}
+          {onToggleCollapseSidebar && (
+            <button
+              type="button"
+              className="sidebar-toggle-btn desktop-only"
+              onClick={onToggleCollapseSidebar}
+              aria-label={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+              title={isSidebarCollapsed ? 'Mở rộng thanh điều hướng' : 'Thu gọn thanh điều hướng'}
+            >
+              {isSidebarCollapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
             </button>
           )}
 
@@ -87,15 +123,67 @@ export const Header: React.FC<HeaderProps> = ({
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && navigate('/dashboard')}
-            style={{ cursor: 'pointer' }}
             aria-label="Về trang tổng quan"
           >
             <Briefcase size={22} className="header-logo-icon" />
             <span className="header-logo-text">HR Recruit ATS</span>
+            <span className="header-badge">Enterprise</span>
           </div>
         </div>
 
         <div className="header-right">
+          {/* Notification Center */}
+          <div ref={notificationRef} className="notification-wrapper" style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="header-notification-btn"
+              onClick={() => setNotificationOpen(!notificationOpen)}
+              aria-label="Thông báo hệ thống"
+              aria-expanded={notificationOpen}
+            >
+              <Bell size={18} />
+              <span className="notification-badge-dot" aria-hidden="true" />
+            </button>
+
+            {notificationOpen && (
+              <div className="dropdown-menu notification-dropdown" style={{ width: '300px' }} role="menu">
+                <div className="dropdown-header">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <strong className="dropdown-user-name">Thông báo hệ thống</strong>
+                    <span className="enterprise-badge badge-primary badge-sm">Mới</span>
+                  </div>
+                </div>
+
+                <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px', borderRadius: '8px', background: '#F8FAFC' }}>
+                    <ShieldCheck size={18} style={{ color: '#059669', flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ fontSize: '0.8125rem' }}>
+                      <strong style={{ color: '#0F172A', display: 'block' }}>Bảo mật tài khoản</strong>
+                      <span style={{ color: '#64748B' }}>Hệ thống xác thực JWT & RBAC bảo vệ 100% dữ liệu tuyển dụng.</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px', borderRadius: '8px', background: '#F8FAFC' }}>
+                    <Clock size={18} style={{ color: '#2563EB', flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ fontSize: '0.8125rem' }}>
+                      <strong style={{ color: '#0F172A', display: 'block' }}>Phiên làm việc tự động</strong>
+                      <span style={{ color: '#64748B' }}>Tự động thu hồi phiên sau 5 phút không hoạt động để bảo vệ dữ liệu.</span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '8px', borderRadius: '8px', background: '#F8FAFC' }}>
+                    <Sparkles size={18} style={{ color: '#D97706', flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ fontSize: '0.8125rem' }}>
+                      <strong style={{ color: '#0F172A', display: 'block' }}>Sprint 2 Enterprise</strong>
+                      <span style={{ color: '#64748B' }}>Đã hoàn thiện trọn bộ S2-01 đến S2-10 trên hệ thống.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* User Profile */}
           <div
             ref={dropdownRef}
             className={`user-profile ${dropdownOpen ? 'is-active' : ''}`}
@@ -139,9 +227,11 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="dropdown-header">
                   <strong className="dropdown-user-name">{user?.fullName || 'Người dùng'}</strong>
                   <div className="dropdown-user-email">{user?.email}</div>
-                  <div className="role-tags">
+                  <div className="role-tags" style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
                     {(user?.roles || [primaryRole]).map((r: string) => (
-                      <span key={r} className="tag">{getRoleLabel(r)}</span>
+                      <span key={r} className="tag enterprise-badge badge-primary badge-sm">
+                        {getRoleLabel(r)}
+                      </span>
                     ))}
                   </div>
                 </div>
