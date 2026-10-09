@@ -759,6 +759,44 @@
   gap: 20px;
 }
 
+@media (max-width: 768px) {
+  .profile-form-row-2col {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* Floating Toast Notification */
+.profile-toast-success {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: var(--radius-sm, 8px);
+  color: #065f46;
+  font-size: 0.88rem;
+  font-weight: 550;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.03);
+  animation: toastSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Form Action Buttons */
 .profile-form-actions-clean {
   margin-top: 12px;

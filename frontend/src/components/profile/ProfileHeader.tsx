@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { KeyRound, Camera, Trash2, X, Check, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Camera, Trash2, X, Check, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { UserSummary } from '../../types/auth';
 import { getRoleLabel } from '../../constants/rbac';
 import { useAuth } from '../../hooks/useAuth';
@@ -347,7 +347,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           onClick={onOpenPasswordModal}
           title="Đổi mật khẩu tài khoản"
         >
-          <KeyRound size={15} />
           <span>Đổi mật khẩu</span>
         </button>
       </div>

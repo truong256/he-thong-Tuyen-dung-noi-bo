@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, AlertCircle, Save, Trash2 } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import { Department } from '../../types/organization';
 import organizationApi from '../../api/organization';
 
@@ -188,7 +188,6 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title-wrap">
-            <Building2 size={20} className="modal-title-icon" />
             <h3 id="dept-modal-title">
               {isEditing ? 'Chỉnh sửa Phòng ban / Đơn vị' : 'Thêm mới Phòng ban / Đơn vị'}
             </h3>
@@ -396,7 +395,6 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 disabled={isSubmitting}
                 data-testid="dept-modal-delete-btn"
               >
-                <Trash2 size={16} />
                 <span>Xóa phòng ban</span>
               </button>
             )}
@@ -415,7 +413,6 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 disabled={isSubmitting}
                 data-testid="dept-modal-submit"
               >
-                <Save size={16} />
                 <span>{isSubmitting ? 'Đang lưu...' : isEditing ? 'Cập nhật' : 'Thêm mới'}</span>
               </button>
             </div>

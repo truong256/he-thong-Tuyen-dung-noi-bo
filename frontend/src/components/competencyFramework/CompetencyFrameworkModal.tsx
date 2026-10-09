@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
-  Plus,
   Trash2,
   AlertTriangle,
   CheckCircle2,
   AlertCircle,
-  Save,
 } from 'lucide-react';
 import {
   CompetencyFramework,
@@ -323,7 +321,7 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
                 onClick={handleAddCriterion}
                 style={{ padding: '6px 12px', fontSize: '13px' }}
               >
-                <Plus size={15} /> Thêm tiêu chí
+                Thêm tiêu chí
               </button>
             </div>
 
@@ -460,7 +458,6 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
             onClick={handleSubmit}
             disabled={!isFormValid || isSubmitting}
           >
-            <Save size={16} />
             {isSubmitting ? 'Đang lưu...' : isEditing ? 'Cập nhật khung' : 'Tạo khung năng lực'}
           </button>
         </div>

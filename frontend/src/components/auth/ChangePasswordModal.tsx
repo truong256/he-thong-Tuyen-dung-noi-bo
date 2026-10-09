@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, KeyRound, Check, X, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Check, X, ShieldCheck } from 'lucide-react';
 import authApi from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
 import { validatePasswordPolicy } from '../../utils/passwordPolicy';
@@ -112,12 +112,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="change-pwd-title">
       <div className="modal-box change-pwd-modal">
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="modal-title-icon">
-              <KeyRound size={20} />
-            </div>
-            <h3 id="change-pwd-title">Đổi mật khẩu</h3>
-          </div>
+          <h3 id="change-pwd-title">Đổi mật khẩu</h3>
           <button
             type="button"
             className="close-btn"

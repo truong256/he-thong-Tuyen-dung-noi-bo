@@ -2,21 +2,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
-  UserPlus,
-  FileSpreadsheet,
-  ShieldCheck,
   Lock,
   Unlock,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
-  X,
-  UserCheck,
-  Mail,
-  Upload,
-  Pencil,
+  CheckCircle2,
+  ShieldCheck,
   Trash2,
+  X,
+  Mail,
+  Pencil,
 } from 'lucide-react';
 import adminApi from '../api/admin';
 import { UserSummary } from '../types/user';
@@ -284,7 +281,6 @@ export const UserManagementPage: React.FC = () => {
               onClick={() => setShowRbacMatrixModal(true)}
               aria-label="Xem ma trận phân quyền RBAC"
             >
-              <ShieldCheck size={16} />
               <span>Ma trận RBAC</span>
             </button>
             <button
@@ -293,7 +289,6 @@ export const UserManagementPage: React.FC = () => {
               onClick={handleExportCsv}
               aria-label="Xuất file CSV danh sách người dùng"
             >
-              <FileSpreadsheet size={16} />
               <span>Xuất CSV</span>
             </button>
             {/* S1-08: Only ADMIN (USER_MANAGE) can import Excel */}
@@ -305,7 +300,6 @@ export const UserManagementPage: React.FC = () => {
                 aria-label="Nhập danh sách người dùng từ file Excel"
                 data-testid="btn-import-excel"
               >
-                <Upload size={16} />
                 <span>Nhập từ Excel</span>
               </button>
             )}
@@ -317,7 +311,6 @@ export const UserManagementPage: React.FC = () => {
                 onClick={() => setShowAddModal(true)}
                 aria-label="Thêm người dùng mới"
               >
-                <UserPlus size={16} />
                 <span>Thêm tài khoản</span>
               </button>
             )}
@@ -329,7 +322,7 @@ export const UserManagementPage: React.FC = () => {
       {toast && (
         <div className={`toast-notification ${toast.type}`} role="status" aria-live="polite">
           {toast.type === 'success' ? (
-            <UserCheck size={18} className="text-green" />
+            <CheckCircle2 size={18} className="text-green" />
           ) : (
             <AlertCircle size={18} className="text-red" />
           )}
@@ -787,9 +780,6 @@ export const UserManagementPage: React.FC = () => {
           <div className="modal-box user-form-modal-box">
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div className="modal-title-icon">
-                  <UserPlus size={20} />
-                </div>
                 <h3 id="add-user-modal-title">Thêm tài khoản nhân viên nội bộ</h3>
               </div>
               <button
@@ -1163,7 +1153,6 @@ export const UserManagementPage: React.FC = () => {
                 disabled={isSubmittingDelete}
                 data-testid="confirm-delete-user-btn"
               >
-                <Trash2 size={16} />
                 <span>{isSubmittingDelete ? 'Đang xóa...' : 'Xóa vĩnh viễn'}</span>
               </button>
             </div>

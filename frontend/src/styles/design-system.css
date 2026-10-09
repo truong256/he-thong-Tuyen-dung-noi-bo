@@ -339,6 +339,66 @@
   color: var(--danger);
 }
 
+.notification-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notification-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+}
+
+.notification-dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.notification-dot-indicator.success {
+  background-color: var(--success);
+}
+
+.notification-dot-indicator.info {
+  background-color: var(--primary);
+}
+
+.notification-dot-indicator.warning {
+  background-color: var(--warning);
+}
+
+.notification-item-content {
+  font-size: 0.8125rem;
+}
+
+.notification-item-title {
+  color: var(--text-primary);
+  display: block;
+  font-weight: 600;
+}
+
+.notification-item-desc {
+  color: var(--text-secondary);
+}
+
+.sidebar-link-upcoming {
+  opacity: 0.72;
+  cursor: pointer;
+}
+
+.sidebar-link-upcoming:hover {
+  opacity: 1;
+}
+
 /* App Body & Sidebar */
 .app-body {
   display: flex;
@@ -469,9 +529,34 @@
   padding: var(--space-6) var(--space-8);
   background-color: var(--bg-page);
   min-height: calc(100vh - 64px);
-  max-width: 1600px;
-  margin: 0 auto;
   width: 100%;
+}
+
+/* Page Layout Container Modifiers */
+.page-container-wide,
+.page-table-layout {
+  width: 100%;
+  max-width: 100%;
+}
+
+.page-container-dashboard {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.page-container-standard {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.page-container-form,
+.page-container-profile,
+.profile-page-clean-container {
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
 }
 
 /* ==========================================================================

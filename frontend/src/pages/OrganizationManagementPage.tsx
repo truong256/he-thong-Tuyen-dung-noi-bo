@@ -13,7 +13,6 @@ import {
   Edit2,
   Trash2,
   Power,
-  RotateCcw,
   Download,
   CheckCircle2,
   AlertCircle,
@@ -24,7 +23,6 @@ import {
   Globe,
   Clock,
   Check,
-  FileSpreadsheet,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -369,7 +367,6 @@ export const OrganizationManagementPage: React.FC = () => {
                   onClick={handleResetSeedData}
                   title="Đặt lại dữ liệu mẫu"
                 >
-                  <RotateCcw size={15} />
                   <span>Dữ liệu mẫu</span>
                 </button>
                 <button
@@ -378,7 +375,6 @@ export const OrganizationManagementPage: React.FC = () => {
                   onClick={handleExportDeptCsv}
                   title="Xuất cơ cấu tổ chức ra CSV"
                 >
-                  <FileSpreadsheet size={15} />
                   <span>Xuất CSV</span>
                 </button>
                 <button
@@ -389,7 +385,6 @@ export const OrganizationManagementPage: React.FC = () => {
                     setIsEditingProfile(!isEditingProfile);
                   }}
                 >
-                  <Edit2 size={15} />
                   <span>{isEditingProfile ? 'Xem tổng quan' : 'Chỉnh sửa hồ sơ'}</span>
                 </button>
               </>
@@ -461,7 +456,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('overview')}
             aria-selected={activeTab === 'overview'}
           >
-            <Building2 size={17} />
             <span>Thông tin chung & Pháp lý</span>
           </button>
 
@@ -471,7 +465,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('departments')}
             aria-selected={activeTab === 'departments'}
           >
-            <Network size={17} />
             <span>Cơ cấu tổ chức & Phòng ban</span>
             <span className="tab-badge">{departments.length}</span>
           </button>
@@ -482,7 +475,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('locations')}
             aria-selected={activeTab === 'locations'}
           >
-            <MapPin size={17} />
             <span>Chi nhánh & Địa điểm</span>
             <span className="tab-badge">{locations.length}</span>
           </button>
@@ -493,7 +485,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('branding')}
             aria-selected={activeTab === 'branding'}
           >
-            <Award size={17} />
             <span>Chính sách & Đãi ngộ</span>
           </button>
         </nav>
