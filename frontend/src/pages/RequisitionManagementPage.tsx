@@ -22,6 +22,7 @@ import jobTitleApi from '../api/jobTitle';
 import { Requisition, RequisitionPayload } from '../types/requisition';
 import { Department } from '../types/organization';
 import { JobTitle } from '../types/jobTitle';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/requisitions.css';
 
 export const RequisitionManagementPage: React.FC = () => {
@@ -284,6 +285,16 @@ export const RequisitionManagementPage: React.FC = () => {
           {toast.message}
         </div>
       )}
+
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Quản lý Phiếu Yêu cầu Tuyển dụng"
+        subtitle="Khai báo nhu cầu nhân sự, quản lý và theo dõi trạng thái yêu cầu tuyển dụng nội bộ"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Yêu cầu tuyển dụng' },
+        ]}
+      />
 
       {/* Hero Banner */}
       <div className="req-hero-card">

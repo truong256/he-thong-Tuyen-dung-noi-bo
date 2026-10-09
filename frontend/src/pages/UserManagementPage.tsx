@@ -25,6 +25,7 @@ import RoleAssignmentModal from '../components/admin/RoleAssignmentModal';
 import LockAccountModal from '../components/admin/LockAccountModal';
 import RbacMatrixModal from '../components/admin/RbacMatrixModal';
 import { ATS_ROLES_INFO, getRoleLabel } from '../constants/rbac';
+import { PageHeader } from '../components/common/PageHeader';
 
 export const UserManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -263,62 +264,66 @@ export const UserManagementPage: React.FC = () => {
 
   return (
     <div className="admin-page" data-testid="user-management-page">
-      {/* Page Header */}
-      <div className="page-header">
-        <div className="page-header-text">
-          <h2>{canManageUsers ? 'Quản lý Tài khoản & Phân quyền' : 'Danh sách tài khoản'}</h2>
-          <p>
-            {canManageUsers
-              ? 'Quản lý người dùng nội bộ, phân quyền RBAC và kiểm soát truy cập hệ thống'
-              : 'Xem danh sách người dùng nội bộ và thông tin vai trò (chỉ xem)'}
-          </p>
-        </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setShowRbacMatrixModal(true)}
-            aria-label="Xem ma trận phân quyền RBAC"
-          >
-            <ShieldCheck size={16} />
-            <span>Ma trận RBAC</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={handleExportCsv}
-            aria-label="Xuất file CSV danh sách người dùng"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Xuất CSV</span>
-          </button>
-          {/* S1-08: Only ADMIN (USER_MANAGE) can import Excel */}
-          {canManageUsers && (
+      {/* Standardized Enterprise Page Header */}
+      <PageHeader
+        title={canManageUsers ? 'Quản lý Tài khoản & Phân quyền' : 'Danh sách tài khoản'}
+        subtitle={
+          canManageUsers
+            ? 'Quản lý người dùng nội bộ, phân quyền RBAC và kiểm soát truy cập hệ thống'
+            : 'Xem danh sách người dùng nội bộ và thông tin vai trò (chỉ xem)'
+        }
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Quản lý tài khoản' },
+        ]}
+        actions={
+          <div className="header-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setShowRbacMatrixModal(true)}
+              aria-label="Xem ma trận phân quyền RBAC"
+            >
+              <ShieldCheck size={16} />
+              <span>Ma trận RBAC</span>
+            </button>
             <button
               type="button"
               className="btn btn-outline"
-              onClick={() => navigate('/admin/import-excel')}
-              aria-label="Nhập danh sách người dùng từ file Excel"
-              data-testid="btn-import-excel"
+              onClick={handleExportCsv}
+              aria-label="Xuất file CSV danh sách người dùng"
             >
-              <Upload size={16} />
-              <span>Nhập từ Excel</span>
+              <FileSpreadsheet size={16} />
+              <span>Xuất CSV</span>
             </button>
-          )}
-          {/* S1-08: Only ADMIN (USER_MANAGE) can add user */}
-          {canManageUsers && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setShowAddModal(true)}
-              aria-label="Thêm người dùng mới"
-            >
-              <UserPlus size={16} />
-              <span>Thêm tài khoản</span>
-            </button>
-          )}
-        </div>
-      </div>
+            {/* S1-08: Only ADMIN (USER_MANAGE) can import Excel */}
+            {canManageUsers && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => navigate('/admin/import-excel')}
+                aria-label="Nhập danh sách người dùng từ file Excel"
+                data-testid="btn-import-excel"
+              >
+                <Upload size={16} />
+                <span>Nhập từ Excel</span>
+              </button>
+            )}
+            {/* S1-08: Only ADMIN (USER_MANAGE) can add user */}
+            {canManageUsers && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowAddModal(true)}
+                aria-label="Thêm người dùng mới"
+              >
+                <UserPlus size={16} />
+                <span>Thêm tài khoản</span>
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {/* Toast Notification */}
       {toast && (

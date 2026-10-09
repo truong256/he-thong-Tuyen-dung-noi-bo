@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/recruitment-request.css';
 
 interface DepartmentItem {
@@ -493,6 +494,16 @@ export const RecruitmentRequestPage: React.FC = () => {
 
   return (
     <div className="rr-page-container">
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Quản lý & Đề xuất Yêu cầu Tuyển dụng"
+        subtitle="Khởi tạo phiếu đề xuất nhân sự, lưu nháp và luân chuyển phê duyệt định biên ngân sách"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Đề xuất tuyển dụng' },
+        ]}
+      />
+
       {/* ====================================================================
           HERO BANNER & HEADER
           ==================================================================== */}

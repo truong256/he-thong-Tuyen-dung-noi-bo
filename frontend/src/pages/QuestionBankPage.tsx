@@ -29,6 +29,7 @@ import {
   UpdateQuestionPayload,
 } from '../types/questionBank';
 import QuestionModal from '../components/questionBank/QuestionModal';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/question-bank.css';
 
 export const QuestionBankPage: React.FC = () => {
@@ -230,6 +231,16 @@ export const QuestionBankPage: React.FC = () => {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Kho Dữ liệu Câu hỏi Phỏng vấn Chuyên môn"
+        subtitle="Chuẩn hóa bộ câu hỏi đánh giá theo tiêu chí khung năng lực và vị trí chuyên môn"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Ngân hàng câu hỏi' },
+        ]}
+      />
 
       {/* Hero Banner */}
       <section className="qb-hero-card" aria-label="Giới thiệu Ngân hàng Câu hỏi">

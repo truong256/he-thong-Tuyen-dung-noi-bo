@@ -24,6 +24,7 @@ import {
 } from '../types/excel';
 import '../styles/excel-import.css';
 import { resetActivity } from '../utils/idleTracker';
+import { PageHeader } from '../components/common/PageHeader';
 
 export const ExcelImportPage: React.FC = () => {
   const navigate = useNavigate();
@@ -234,43 +235,41 @@ export const ExcelImportPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header & Back link */}
-      <div style={{ marginBottom: 24 }}>
-        <button
-          type="button"
-          className="btn btn-outline"
-          onClick={() => navigate('/admin/users')}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 12, padding: '6px 12px', fontSize: '0.875rem' }}
-          aria-label="Quay lại danh sách người dùng"
-        >
-          <ArrowLeft size={16} />
-          <span>Quay lại Quản lý tài khoản</span>
-        </button>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
-          <div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-main, #0f172a)', margin: 0 }}>
-              Nhập danh sách nhân sự từ Excel
-            </h1>
-            <p style={{ color: 'var(--text-muted, #64748b)', margin: '4px 0 0', fontSize: '0.95rem' }}>
-              Tạo hàng loạt tài khoản người dùng nội bộ từ tệp Excel chuẩn với kiểm tra dữ liệu theo từng dòng và hỗ trợ partial success.
-            </p>
+      {/* Standardized Enterprise Page Header */}
+      <PageHeader
+        title="Nhập danh sách nhân sự từ Excel"
+        subtitle="Tạo hàng loạt tài khoản người dùng nội bộ từ tệp Excel chuẩn với kiểm tra dữ liệu theo từng dòng và hỗ trợ partial success."
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Quản lý tài khoản', path: '/admin/users' },
+          { label: 'Nhập Excel' },
+        ]}
+        actions={
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => navigate('/admin/users')}
+              aria-label="Quay lại danh sách người dùng"
+            >
+              <ArrowLeft size={16} />
+              <span>Quay lại Quản lý tài khoản</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleDownloadTemplate}
+              disabled={isDownloadingTemplate || isImporting}
+              data-testid="btn-download-template"
+              aria-label="Tải tệp Excel mẫu"
+            >
+              {isDownloadingTemplate ? <RefreshCw size={16} className="spin-animation" /> : <Download size={16} />}
+              <span>{isDownloadingTemplate ? 'Đang tải file mẫu...' : 'Tải tệp Excel mẫu'}</span>
+            </button>
           </div>
+        }
+      />
 
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={handleDownloadTemplate}
-            disabled={isDownloadingTemplate || isImporting}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}
-            data-testid="btn-download-template"
-            aria-label="Tải tệp Excel mẫu"
-          >
-            {isDownloadingTemplate ? <RefreshCw size={16} className="spin-animation" /> : <Download size={16} />}
-            <span>{isDownloadingTemplate ? 'Đang tải file mẫu...' : 'Tải tệp Excel mẫu'}</span>
-          </button>
-        </div>
-      </div>
 
       {/* 6-Step Stepper Bar */}
       <div className="excel-import-stepper" role="region" aria-label="Quy trình nhập dữ liệu">

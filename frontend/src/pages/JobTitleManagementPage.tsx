@@ -34,6 +34,7 @@ import JobTitleModal from '../components/jobTitle/JobTitleModal';
 import JobTitleDetailModal from '../components/jobTitle/JobTitleDetailModal';
 import DeleteJobTitleModal from '../components/jobTitle/DeleteJobTitleModal';
 import CareerMatrixVisualizer from '../components/jobTitle/CareerMatrixVisualizer';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/job-titles.css';
 
 type ViewMode = 'table' | 'cards' | 'matrix';
@@ -204,6 +205,16 @@ export const JobTitleManagementPage: React.FC = () => {
           <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Enterprise Breadcrumbs */}
+      <PageHeader
+        title="Danh mục Chức danh & Vị trí Chuẩn hóa"
+        subtitle="Hệ thống danh mục chức danh, khung năng lực và định biên lương toàn doanh nghiệp"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Chức danh & Vị trí' },
+        ]}
+      />
 
       {/* Hero Banner Card */}
       <section className="jt-hero-card" aria-label="Giới thiệu Quản lý Chức danh">

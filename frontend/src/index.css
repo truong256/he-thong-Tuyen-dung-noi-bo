@@ -1,3 +1,5 @@
+@import './styles/design-system.css';
+
 /* ==========================================================================
    HR RECRUIT ATS - MODERN DESIGN SYSTEM & TOKENS
    ========================================================================== */
@@ -3397,6 +3399,11 @@ html, body {
 
   .sidebar-backdrop {
     display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 998;
+    background-color: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
   }
 
   .sidebar-mobile-header {
@@ -3440,10 +3447,11 @@ html, body {
     left: 0;
     width: 280px;
     max-width: 85vw;
-    z-index: 160;
+    z-index: 1000 !important;
+    background-color: #ffffff !important;
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
     display: flex;
     flex-direction: column;

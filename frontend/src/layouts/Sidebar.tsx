@@ -26,10 +26,15 @@ import { useAuth } from '../hooks/useAuth';
 
 interface SidebarProps {
   isOpen?: boolean;
+  isCollapsed?: boolean;
   onClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  isOpen = false,
+  isCollapsed = false,
+  onClose,
+}) => {
   const { hasRole, hasAnyRole, hasPermission } = useAuth();
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -65,7 +70,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         />
       )}
 
-      <aside className={`app-sidebar ${isOpen ? 'mobile-open' : ''}`} aria-label="Menu điều hướng hệ thống">
+      <aside
+        className={`app-sidebar ${isOpen ? 'mobile-open' : ''} ${isCollapsed ? 'is-collapsed' : ''}`}
+        aria-label="Menu điều hướng hệ thống"
+      >
         {/* Mobile Header with close button */}
         <div className="sidebar-mobile-header">
           <div className="sidebar-mobile-brand">

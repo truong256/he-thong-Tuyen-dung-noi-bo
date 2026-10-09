@@ -24,6 +24,7 @@ import { useAuth } from '../hooks/useAuth';
 import CompetencyFrameworkModal from '../components/competencyFramework/CompetencyFrameworkModal';
 import CompetencyFrameworkDetailModal from '../components/competencyFramework/CompetencyFrameworkDetailModal';
 import DeleteCompetencyFrameworkModal from '../components/competencyFramework/DeleteCompetencyFrameworkModal';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/competency-framework.css';
 
 export const CompetencyFrameworkPage: React.FC = () => {
@@ -141,41 +142,39 @@ export const CompetencyFrameworkPage: React.FC = () => {
         </div>
       )}
 
-      {/* Header */}
-      <div className="cf-header">
-        <div className="cf-header-info">
-          <h1>
-            <Award size={26} style={{ color: '#2563eb' }} />
-            Quản lý Khung Năng lực
-          </h1>
-          <p>
-            Chuẩn hóa danh mục năng lực, thiết lập tiêu chí đánh giá và trọng số 100% cho từng vị trí công việc.
-          </p>
-        </div>
-
-        <div className="cf-header-actions">
-          <button
-            type="button"
-            className="cf-btn-secondary"
-            onClick={loadFrameworks}
-            title="Tải lại dữ liệu"
-          >
-            <RefreshCw size={15} /> Làm mới
-          </button>
-          {canManage && (
+      {/* Standardized Enterprise Page Header */}
+      <PageHeader
+        title="Quản lý Khung Năng lực"
+        subtitle="Chuẩn hóa danh mục năng lực, thiết lập tiêu chí đánh giá và trọng số 100% cho từng vị trí công việc."
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Khung năng lực' },
+        ]}
+        actions={
+          <div className="cf-header-actions">
             <button
               type="button"
-              className="cf-btn-primary"
-              onClick={() => {
-                setEditingFramework(null);
-                setIsModalOpen(true);
-              }}
+              className="cf-btn-secondary"
+              onClick={loadFrameworks}
+              title="Tải lại dữ liệu"
             >
-              <Plus size={16} /> Thêm khung năng lực
+              <RefreshCw size={15} /> Làm mới
             </button>
-          )}
-        </div>
-      </div>
+            {canManage && (
+              <button
+                type="button"
+                className="cf-btn-primary"
+                onClick={() => {
+                  setEditingFramework(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                <Plus size={16} /> Thêm khung năng lực
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="cf-stats-grid">
