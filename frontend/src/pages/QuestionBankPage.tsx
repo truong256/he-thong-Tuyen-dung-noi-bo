@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   HelpCircle,
   Search,
@@ -16,9 +16,12 @@ import {
   ChevronRight,
   Lightbulb,
   X,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import questionBankApi from '../api/questionBank';
+import jobTitleApi from '../api/jobTitle';
+import { JobTitle } from '../types/jobTitle';
 import {
   InterviewQuestion,
   CompetencyCriterion,
@@ -35,6 +38,7 @@ export const QuestionBankPage: React.FC = () => {
   // Data states
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [criteria, setCriteria] = useState<CompetencyCriterion[]>([]);
+  const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(0);
@@ -45,8 +49,12 @@ export const QuestionBankPage: React.FC = () => {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState<string>('ALL');
+  const [jobTitleFilter, setJobTitleFilter] = useState<string>('ALL');
   const [criterionFilter, setCriterionFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  // Race condition ref
+  const reqIdRef = useRef(0);
 
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -71,8 +79,60 @@ export const QuestionBankPage: React.FC = () => {
     }
   }, []);
 
-  // Fetch questions
+  // Fetch job titles once
+  const loadJobTitles = useCallback(async () => {
+    try {
+      const data = await jobTitleApi.getJobTitles();
+      setJobTitles(data);
+    } catch {
+      // Job titles could be unavailable
+    }
+  }, []);
+
+  // Filter criteria options based on selected job title
+  const filteredCriteria = useMemo(() => {
+    if (jobTitleFilter === 'ALL') {
+      return criteria;
+    }
+    const titleIdNum = Number(jobTitleFilter);
+    return criteria.filter((c) => c.jobTitleId === titleIdNum);
+  }, [criteria, jobTitleFilter]);
+
+  // Handle job title change and adjust selected criterion if mismatched
+  const handleJobTitleChange = (newTitleId: string) => {
+    setJobTitleFilter(newTitleId);
+    setCurrentPage(0);
+    if (newTitleId !== 'ALL' && criterionFilter !== 'ALL') {
+      const titleIdNum = Number(newTitleId);
+      const currentCriterion = criteria.find((c) => String(c.id) === criterionFilter);
+      if (currentCriterion && currentCriterion.jobTitleId && currentCriterion.jobTitleId !== titleIdNum) {
+        setCriterionFilter('ALL');
+      }
+    }
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+    difficultyFilter !== 'ALL' ||
+    jobTitleFilter !== 'ALL' ||
+    criterionFilter !== 'ALL' ||
+    statusFilter !== 'ALL'
+  );
+
+  // Reset all filters to default
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setDifficultyFilter('ALL');
+    setJobTitleFilter('ALL');
+    setCriterionFilter('ALL');
+    setStatusFilter('ALL');
+    setCurrentPage(0);
+  };
+
+  // Fetch questions with race condition handling
   const loadQuestions = useCallback(async (page = 0) => {
+    const currentReqId = ++reqIdRef.current;
     setIsLoading(true);
     setErrorMessage(null);
     try {
@@ -82,26 +142,34 @@ export const QuestionBankPage: React.FC = () => {
       const res = await questionBankApi.search({
         search: searchTerm.trim() || undefined,
         difficultyLevel: difficultyFilter !== 'ALL' ? difficultyFilter : undefined,
+        jobTitleId: jobTitleFilter !== 'ALL' ? Number(jobTitleFilter) : undefined,
         criterionId: criterionFilter !== 'ALL' ? Number(criterionFilter) : undefined,
         active: activeParam,
         page,
         size: pageSize,
       });
 
-      setQuestions(res.content || []);
-      setTotalElements(res.totalElements || 0);
-      setTotalPages(Math.max(1, res.totalPages || 1));
-      setCurrentPage(page);
+      if (currentReqId === reqIdRef.current) {
+        setQuestions(res.content || []);
+        setTotalElements(res.totalElements || 0);
+        setTotalPages(Math.max(1, res.totalPages || 1));
+        setCurrentPage(page);
+      }
     } catch (err: any) {
-      setErrorMessage(err.message || 'Không thể kết nối đến máy chủ để tải ngân hàng câu hỏi.');
+      if (currentReqId === reqIdRef.current) {
+        setErrorMessage(err.message || 'Không thể kết nối đến máy chủ để tải ngân hàng câu hỏi.');
+      }
     } finally {
-      setIsLoading(false);
+      if (currentReqId === reqIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [searchTerm, difficultyFilter, criterionFilter, statusFilter, pageSize]);
+  }, [searchTerm, difficultyFilter, jobTitleFilter, criterionFilter, statusFilter, pageSize]);
 
   useEffect(() => {
     loadCriteria();
-  }, [loadCriteria]);
+    loadJobTitles();
+  }, [loadCriteria, loadJobTitles]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -266,11 +334,45 @@ export const QuestionBankPage: React.FC = () => {
         </div>
 
         <div className="qb-filters-group">
+          {/* Lọc theo chức danh */}
+          <select
+            className="qb-select"
+            value={jobTitleFilter}
+            onChange={(e) => handleJobTitleChange(e.target.value)}
+            aria-label="Lọc theo chức danh"
+            id="select-filter-job-title"
+          >
+            <option value="ALL">Tất cả chức danh</option>
+            {jobTitles.map((jt) => (
+              <option key={jt.id} value={jt.id}>
+                {jt.title}
+              </option>
+            ))}
+          </select>
+
+          {/* Lọc theo tiêu chí năng lực */}
+          <select
+            className="qb-select"
+            value={criterionFilter}
+            onChange={(e) => setCriterionFilter(e.target.value)}
+            aria-label="Lọc theo tiêu chí năng lực"
+            id="select-filter-criterion"
+          >
+            <option value="ALL">Tất cả tiêu chí năng lực</option>
+            {filteredCriteria.map((c) => (
+              <option key={c.id} value={c.id}>
+                [{c.criterionCode}] {c.criterionName}
+              </option>
+            ))}
+          </select>
+
+          {/* Lọc theo độ khó */}
           <select
             className="qb-select"
             value={difficultyFilter}
             onChange={(e) => setDifficultyFilter(e.target.value)}
             aria-label="Lọc theo độ khó"
+            id="select-filter-difficulty"
           >
             <option value="ALL">Tất cả độ khó</option>
             <option value="EASY">Dễ (Easy)</option>
@@ -278,30 +380,30 @@ export const QuestionBankPage: React.FC = () => {
             <option value="HARD">Khó (Hard)</option>
           </select>
 
-          <select
-            className="qb-select"
-            value={criterionFilter}
-            onChange={(e) => setCriterionFilter(e.target.value)}
-            aria-label="Lọc theo tiêu chí năng lực"
-          >
-            <option value="ALL">Tất cả tiêu chí năng lực</option>
-            {criteria.map((c) => (
-              <option key={c.id} value={c.id}>
-                [{c.criterionCode}] {c.criterionName}
-              </option>
-            ))}
-          </select>
-
+          {/* Lọc theo trạng thái */}
           <select
             className="qb-select"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             aria-label="Lọc theo trạng thái"
+            id="select-filter-status"
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="ACTIVE">Đang kích hoạt</option>
-            <option value="INACTIVE">Tạm dừng</option>
+            <option value="INACTIVE">Ngừng kích hoạt</option>
           </select>
+
+          {/* Nút Xóa bộ lọc */}
+          <button
+            type="button"
+            className={`btn btn-outline qb-btn-reset-filters ${hasActiveFilters ? 'active' : ''}`}
+            onClick={handleResetFilters}
+            id="btn-reset-filters"
+            title="Khôi phục toàn bộ lựa chọn bộ lọc mặc định"
+          >
+            <RotateCcw size={15} />
+            <span>Xóa bộ lọc</span>
+          </button>
         </div>
       </section>
 
@@ -337,21 +439,34 @@ export const QuestionBankPage: React.FC = () => {
           </div>
           <h3 className="qb-empty-title">Không tìm thấy câu hỏi nào</h3>
           <p className="qb-empty-desc">
-            {searchTerm || difficultyFilter !== 'ALL' || criterionFilter !== 'ALL' || statusFilter !== 'ALL'
-              ? 'Không có câu hỏi phỏng vấn nào phù hợp với bộ lọc hiện tại. Thử xóa bớt điều kiện lọc.'
+            {hasActiveFilters
+              ? 'Không có câu hỏi phỏng vấn nào phù hợp với bộ lọc hiện tại. Thử xóa bớt điều kiện lọc hoặc bấm "Xóa bộ lọc".'
               : 'Hiện chưa có câu hỏi nào trong ngân hàng. Hãy thêm mới câu hỏi để chuẩn hóa quy trình phỏng vấn.'}
           </p>
-          {canManage && (
-            <button
-              type="button"
-              className="btn btn-primary qb-empty-cta"
-              onClick={handleOpenCreate}
-              id="btn-add-question-empty"
-            >
-              <Plus size={16} />
-              <span>Thêm câu hỏi ngay</span>
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleResetFilters}
+                id="btn-empty-reset-filters"
+              >
+                <RotateCcw size={16} />
+                <span>Xóa bộ lọc</span>
+              </button>
+            )}
+            {canManage && (
+              <button
+                type="button"
+                className="btn btn-primary qb-empty-cta"
+                onClick={handleOpenCreate}
+                id="btn-add-question-empty"
+              >
+                <Plus size={16} />
+                <span>Thêm câu hỏi ngay</span>
+              </button>
+            )}
+          </div>
         </div>
       ) : (
         /* Question List */
