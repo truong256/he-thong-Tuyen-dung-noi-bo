@@ -44,6 +44,11 @@ export const categoryApi = {
     return res.data;
   },
 
+  reorder: async (payload: import('../types/category').CategoryReorderPayload): Promise<CommonCategory[]> => {
+    const res = await apiClient.put<CommonCategory[]>('/api/categories/reorder', payload);
+    return res.data;
+  },
+
   delete: async (id: number): Promise<void> => {
     await apiClient.delete(`/api/categories/${id}`);
   },
