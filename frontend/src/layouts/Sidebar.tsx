@@ -1,27 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  Megaphone,
-  Kanban,
-  Calendar,
-  FileCheck,
-  ClipboardCheck,
-  MessageSquare,
-  Star,
-  Briefcase,
-  FileText,
-  User,
-  Building2,
-  Award,
-  HelpCircle,
-  FileSpreadsheet,
-  FolderTree,
-  X,
-  ShieldCheck,
-  Target,
-} from 'lucide-react';
+import { Briefcase, X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface SidebarProps {
@@ -102,7 +81,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   end
                   onClick={handleLinkClick}
                 >
-                  <LayoutDashboard size={18} />
                   <span>Tổng quan</span>
                 </NavLink>
               </li>
@@ -113,36 +91,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   className={({ isActive }) => (isActive ? 'active' : '')}
                   onClick={handleLinkClick}
                 >
-                  <User size={18} />
                   <span>Hồ sơ cá nhân</span>
                 </NavLink>
               </li>
             </ul>
           </div>
 
-          {/* Catalog & Organization Section */}
+          {/* Catalog & Organization Section - "Hồ sơ tổ chức" is removed from Sidebar */}
           {canReadCatalog && (
             <div className="sidebar-section">
               <span className="sidebar-title">CƠ CẤU & DANH MỤC</span>
               <ul className="sidebar-menu">
                 <li>
                   <NavLink
-                    to="/organization"
-                    className={({ isActive }) => (isActive ? 'active' : '')}
-                    onClick={handleLinkClick}
-                  >
-                    <Building2 size={18} />
-                    <span>Hồ sơ tổ chức</span>
-                  </NavLink>
-                </li>
-
-                <li>
-                  <NavLink
                     to="/job-titles"
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <Award size={18} />
                     <span>Quản lý Chức danh</span>
                   </NavLink>
                 </li>
@@ -153,7 +118,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <FolderTree size={18} />
                     <span>Quản lý Danh mục</span>
                   </NavLink>
                 </li>
@@ -164,7 +128,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <Target size={18} />
                     <span>Khung Năng lực</span>
                   </NavLink>
                 </li>
@@ -175,7 +138,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <HelpCircle size={18} />
                     <span>Ngân hàng Câu hỏi</span>
                   </NavLink>
                 </li>
@@ -195,7 +157,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={({ isActive }) => (isActive ? 'active' : '')}
                       onClick={handleLinkClick}
                     >
-                      <Users size={18} />
                       <span>{canManageUsers ? 'Quản lý Tài khoản' : 'Danh sách tài khoản'}</span>
                     </NavLink>
                   </li>
@@ -208,7 +169,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={({ isActive }) => (isActive ? 'active' : '')}
                       onClick={handleLinkClick}
                     >
-                      <FileSpreadsheet size={18} />
                       <span>Nhập nhân sự Excel</span>
                     </NavLink>
                   </li>
@@ -229,7 +189,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={({ isActive }) => (isActive ? 'active' : '')}
                       onClick={handleLinkClick}
                     >
-                      <FileCheck size={18} />
                       <span>Yêu cầu tuyển dụng</span>
                     </NavLink>
                   </li>
@@ -243,7 +202,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         handleUpcomingClick('Yêu cầu tuyển dụng');
                       }}
                     >
-                      <FileCheck size={18} />
                       <span>Yêu cầu tuyển dụng</span>
                     </a>
                   </li>
@@ -260,7 +218,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           handleUpcomingClick('Tin tuyển dụng');
                         }}
                       >
-                        <Megaphone size={18} />
                         <span>Tin tuyển dụng</span>
                       </a>
                     </li>
@@ -273,7 +230,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           handleUpcomingClick('Hồ sơ & Pipeline');
                         }}
                       >
-                        <Kanban size={18} />
                         <span>Hồ sơ & Pipeline</span>
                       </a>
                     </li>
@@ -286,7 +242,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           handleUpcomingClick('Lịch phỏng vấn');
                         }}
                       >
-                        <Calendar size={18} />
                         <span>Lịch phỏng vấn</span>
                       </a>
                     </li>
@@ -303,7 +258,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         handleUpcomingClick('Duyệt ứng viên & Offer');
                       }}
                     >
-                      <ClipboardCheck size={18} />
                       <span>Duyệt ứng viên & Offer</span>
                     </a>
                   </li>
@@ -326,7 +280,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       handleUpcomingClick('Lịch phỏng vấn của tôi');
                     }}
                   >
-                    <MessageSquare size={18} />
                     <span>Lịch phỏng vấn của tôi</span>
                   </a>
                 </li>
@@ -339,7 +292,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       handleUpcomingClick('Phiếu đánh giá ứng viên');
                     }}
                   >
-                    <Star size={18} />
                     <span>Phiếu đánh giá ứng viên</span>
                   </a>
                 </li>
@@ -361,7 +313,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       handleUpcomingClick('Việc làm đang mở');
                     }}
                   >
-                    <Briefcase size={18} />
                     <span>Việc làm đang mở</span>
                   </a>
                 </li>
@@ -374,7 +325,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       handleUpcomingClick('Hồ sơ & CV của tôi');
                     }}
                   >
-                    <FileText size={18} />
                     <span>Hồ sơ & CV của tôi</span>
                   </a>
                 </li>
@@ -396,7 +346,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       handleUpcomingClick('Nhật ký hoạt động');
                     }}
                   >
-                    <ShieldCheck size={18} />
                     <span>Nhật ký hoạt động</span>
                   </a>
                 </li>
@@ -409,7 +358,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Roadmap notification toast */}
       {notice && (
         <div className="sidebar-toast-notice" role="status" aria-live="polite">
-          <HelpCircle size={16} style={{ color: '#60a5fa', flexShrink: 0 }} />
           <span>{notice}</span>
         </div>
       )}

@@ -420,20 +420,23 @@
 }
 
 .app-sidebar.is-collapsed {
-  width: 72px;
-  padding: var(--space-4) var(--space-2);
+  width: 0;
+  padding: 0;
+  border-right: none;
+  overflow: hidden;
+  opacity: 0;
 }
 
 .sidebar-section {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .sidebar-title {
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: #64748b;
   padding: 0 var(--space-3);
   margin-bottom: var(--space-2);
   display: block;
@@ -442,12 +445,6 @@
 
 .app-sidebar.is-collapsed .sidebar-title {
   display: none;
-}
-
-.app-sidebar.is-collapsed .sidebar-section + .sidebar-section {
-  border-top: 1px solid var(--border-color);
-  padding-top: var(--space-2);
-  margin-top: var(--space-2);
 }
 
 .sidebar-menu {
@@ -460,56 +457,34 @@
 .sidebar-menu li a {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  height: 40px;
+  height: 38px;
   padding: 0 var(--space-3);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  color: #1e293b;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
-  transition: all 140ms ease;
+  line-height: 1.4;
+  transition: background-color 140ms ease, color 140ms ease;
   white-space: nowrap;
 }
 
-.sidebar-menu li a svg {
-  color: var(--text-secondary);
-  flex-shrink: 0;
-  transition: color 140ms ease;
-}
-
 .sidebar-menu li a:hover:not(.active) {
-  background-color: var(--bg-subtle);
-  color: var(--text-primary);
-}
-
-.sidebar-menu li a:hover:not(.active) svg {
-  color: var(--primary);
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 .sidebar-menu li a.active {
-  background-color: var(--primary-50);
-  color: var(--primary);
+  background-color: #2563eb;
+  color: #ffffff;
   font-weight: 600;
-  border-left: 3px solid var(--primary);
+  border-left: none;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 
-.sidebar-menu li a.active svg {
-  color: var(--primary);
-}
-
-.app-sidebar.is-collapsed .sidebar-menu li a {
-  justify-content: center;
-  padding: 0;
-  width: 100%;
-}
-
-.app-sidebar.is-collapsed .sidebar-menu li a span:not(.sidebar-badge-soon) {
-  display: none;
-}
-
-.app-sidebar.is-collapsed .sidebar-badge-soon {
-  display: none;
+.sidebar-menu li a.active:hover {
+  background-color: #1d4ed8;
+  color: #ffffff;
 }
 
 .sidebar-badge-soon {
