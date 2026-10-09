@@ -99,13 +99,7 @@ export const RecruitmentRequestPage: React.FC = () => {
   // Ngày hôm nay theo chuẩn ISO YYYY-MM-DD
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Load danh mục khi mount
-  useEffect(() => {
-    loadMetadata();
-    loadRequisitions();
-  }, []);
-
-  const loadMetadata = async () => {
+  const loadMetadata = useCallback(async () => {
     try {
       const [deptRes, jobRes] = await Promise.all([
         apiClient.get<DepartmentItem[]>('/api/departments?active=true'),
@@ -116,7 +110,7 @@ export const RecruitmentRequestPage: React.FC = () => {
     } catch {
       // Giữ danh sách rỗng nếu lỗi
     }
-  };
+  }, []);
 
   const loadRequisitions = useCallback(async () => {
     setIsLoadingList(true);
@@ -129,6 +123,12 @@ export const RecruitmentRequestPage: React.FC = () => {
       setIsLoadingList(false);
     }
   }, []);
+
+  // Load danh mục khi mount
+  useEffect(() => {
+    loadMetadata();
+    loadRequisitions();
+  }, [loadMetadata, loadRequisitions]);
 
   // Chức danh và phòng ban đang chọn
   const selectedJob = jobTitles.find((j) => String(j.id) === form.jobTitleId);

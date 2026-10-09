@@ -1,5 +1,6 @@
 package com.example.auth_service.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,16 +21,51 @@ public class RequisitionDraftRequest {
     private Integer quantity;
     private String recruitmentType;
     private String reason;
+
+    @JsonAlias({"proposedMinSalary", "salaryMin"})
     private Long salaryMin;
+
+    @JsonAlias({"proposedMaxSalary", "salaryMax"})
     private Long salaryMax;
+
     private String currency;
     private String salaryExplanation;
+
+    @JsonAlias({"targetDate", "neededDate"})
     private LocalDate neededDate;
+
     private String jobDescription;
+
+    @JsonAlias({"requirements", "candidateRequirements"})
     private String candidateRequirements;
+
     private String benefits;
     private String workLocation;
     private String workingModel;
+
+    public void setTargetDate(LocalDate targetDate) {
+        if (this.neededDate == null) {
+            this.neededDate = targetDate;
+        }
+    }
+
+    public void setRequirements(String requirements) {
+        if (this.candidateRequirements == null) {
+            this.candidateRequirements = requirements;
+        }
+    }
+
+    public void setProposedMinSalary(Long min) {
+        if (this.salaryMin == null) {
+            this.salaryMin = min;
+        }
+    }
+
+    public void setProposedMaxSalary(Long max) {
+        if (this.salaryMax == null) {
+            this.salaryMax = max;
+        }
+    }
 
     // Fluent accessors for record compatibility
     public String title() { return title; }

@@ -64,6 +64,11 @@ public class RequisitionService {
             if (!dept.isActive()) {
                 throw new BadRequestException("Phòng ban đã ngừng áp dụng");
             }
+            boolean isHrOrAdmin = currentUser.getRoles().stream()
+                    .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
+            if (!isHrOrAdmin && (dept.getManagerUserId() == null || !dept.getManagerUserId().equals(currentUser.getId()))) {
+                throw new AccessDeniedException("Bạn không có quyền tạo yêu cầu tuyển dụng cho phòng ban này.");
+            }
         }
 
         // Kiểm tra chức danh nếu có truyền
@@ -73,6 +78,7 @@ public class RequisitionService {
             if (!Boolean.TRUE.equals(job.getActive())) {
                 throw new BadRequestException("Chức danh đã tạm ngưng");
             }
+            validateSalaryAgainstJobTitle(job, request.salaryMin(), request.salaryMax(), request.salaryExplanation());
         }
 
         // Kiểm tra mức lương không được là số âm
@@ -87,7 +93,7 @@ public class RequisitionService {
 
         // Kiểm tra ngày cần người nếu có truyền
         if (request.neededDate() != null && request.neededDate().isBefore(LocalDate.now())) {
-            throw new BadRequestException("Ngày cần người không được ở trong quá khứ");
+            throw new BadRequestException("Ngày cần người không được ở quá khứ.");
         }
 
         RecruitmentRequisition requisition = new RecruitmentRequisition();
@@ -237,6 +243,12 @@ public class RequisitionService {
             throw new BadRequestException("Phòng ban đã ngừng áp dụng, không thể tạo yêu cầu tuyển dụng");
         }
 
+        boolean isHrOrAdmin = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
+        if (!isHrOrAdmin && (dept.getManagerUserId() == null || !dept.getManagerUserId().equals(currentUser.getId()))) {
+            throw new AccessDeniedException("Bạn không có quyền tạo yêu cầu tuyển dụng cho phòng ban này.");
+        }
+
         JobTitle job = jobTitles.findById(request.jobTitleId())
                 .orElseThrow(() -> new BadRequestException("Chức danh không tồn tại"));
         if (!Boolean.TRUE.equals(job.getActive())) {
@@ -248,7 +260,7 @@ public class RequisitionService {
         }
 
         if (request.neededDate() != null && request.neededDate().isBefore(LocalDate.now())) {
-            throw new BadRequestException("Ngày cần người không được ở trong quá khứ");
+            throw new BadRequestException("Ngày cần người không được ở quá khứ.");
         }
 
         if ((request.salaryMin() != null && request.salaryMin() < 0) || (request.salaryMax() != null && request.salaryMax() < 0)) {
@@ -448,6 +460,7 @@ public class RequisitionService {
             String jobMinStr = job.getMinSalary() != null ? String.format("%,d", job.getMinSalary()) : "Không giới hạn";
             String jobMaxStr = job.getMaxSalary() != null ? String.format("%,d", job.getMaxSalary()) : "Không giới hạn";
             throw new BadRequestException(
+                    "Dải lương đề xuất nằm ngoài khung chuẩn của chức danh, bắt buộc nhập giải trình. " +
                     "Dải lương nằm ngoài khung lương tiêu chuẩn của chức danh (" + jobMinStr + " – " + jobMaxStr + " VND). " +
                     "Vui lòng nhập giải trình dải lương."
             );
