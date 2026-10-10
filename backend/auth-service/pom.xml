@@ -136,6 +136,19 @@
 							<limits><limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.60</minimum></limit></limits>
 						</rule></rules></configuration>
 					</execution>
+					<execution>
+						<id>excel-import-coverage</id><phase>verify</phase><goals><goal>check</goal></goals>
+						<configuration><rules><rule>
+							<element>CLASS</element>
+							<includes>
+								<include>com.example.auth_service.service.ExcelImportService</include>
+							</includes>
+							<limits>
+								<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.60</minimum></limit>
+								<limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>0.60</minimum></limit>
+							</limits>
+						</rule></rules></configuration>
+					</execution>
 				</executions>
 			</plugin>
 			<plugin>

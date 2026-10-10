@@ -60,6 +60,8 @@ public class SecurityConfig {
                 // S1-05 / S1-09: ROLE_READ → ADMIN + HR_MANAGER
                 .requestMatchers(HttpMethod.GET, "/api/admin/roles").hasAuthority("ROLE_READ")
                 // S1-08: USER_READ → ADMIN (F) + HR_MANAGER (R — only view, cannot mutate)
+                .requestMatchers(HttpMethod.GET, "/api/admin/users/import-template", "/api/admin/users/template").hasAnyAuthority("USER_READ", "USER_MANAGE")
+                .requestMatchers(HttpMethod.POST, "/api/admin/users/import-preview", "/api/admin/users/import", "/api/admin/users/import-rows", "/api/admin/users/import-file").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/admin/users", "/api/admin/users/{id}").hasAuthority("USER_READ")
                 // S1-09: ROLE_MANAGE → ADMIN only (assign/revoke roles)
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}/roles").hasAuthority("ROLE_MANAGE")
