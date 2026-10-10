@@ -4,13 +4,14 @@
    ========================================================================== */
 
 .cf-page-container {
-  padding: 24px 32px;
+  padding: 0 0 32px 0;
   max-width: 1440px;
-  margin: 0 auto;
-  min-height: calc(100vh - 70px);
+  margin-inline: auto;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  box-sizing: border-box;
 }
 
 /* Page Header */
