@@ -1,22 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
-  HelpCircle,
   Search,
-  Plus,
   Edit2,
   Trash2,
-  Layers,
-  Sparkles,
-  BookOpen,
-  Award,
   AlertCircle,
   CheckCircle2,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  Lightbulb,
   X,
-  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import questionBankApi from '../api/questionBank';
@@ -29,6 +21,7 @@ import {
   UpdateQuestionPayload,
 } from '../types/questionBank';
 import QuestionModal from '../components/questionBank/QuestionModal';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/question-bank.css';
 
 export const QuestionBankPage: React.FC = () => {
@@ -231,13 +224,20 @@ export const QuestionBankPage: React.FC = () => {
         </div>
       )}
 
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Kho Dữ liệu Câu hỏi Phỏng vấn Chuyên môn"
+        subtitle="Chuẩn hóa bộ câu hỏi đánh giá theo tiêu chí khung năng lực và vị trí chuyên môn"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Ngân hàng câu hỏi' },
+        ]}
+      />
+
       {/* Hero Banner */}
       <section className="qb-hero-card" aria-label="Giới thiệu Ngân hàng Câu hỏi">
         <div className="qb-hero-header">
           <div className="qb-identity-left">
-            <div className="qb-icon-box">
-              <HelpCircle size={32} />
-            </div>
             <div className="qb-title-group">
               <h1>Ngân hàng Câu hỏi Phỏng vấn</h1>
               <div className="qb-title-meta">
@@ -257,7 +257,6 @@ export const QuestionBankPage: React.FC = () => {
               disabled={isLoading}
               title="Làm mới danh sách"
             >
-              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
               <span>Tải lại</span>
             </button>
 
@@ -268,7 +267,6 @@ export const QuestionBankPage: React.FC = () => {
                 onClick={handleOpenCreate}
                 id="btn-add-question"
               >
-                <Plus size={18} />
                 <span>Thêm câu hỏi mới</span>
               </button>
             )}
@@ -278,9 +276,6 @@ export const QuestionBankPage: React.FC = () => {
         {/* Metrics Row */}
         <div className="qb-metrics-row">
           <div className="qb-metric-card">
-            <div className="qb-metric-icon blue">
-              <BookOpen size={20} />
-            </div>
             <div>
               <div className="qb-metric-val">{metrics.total}</div>
               <div className="qb-metric-label">Tổng số câu hỏi</div>
@@ -288,9 +283,6 @@ export const QuestionBankPage: React.FC = () => {
           </div>
 
           <div className="qb-metric-card">
-            <div className="qb-metric-icon green">
-              <Layers size={20} />
-            </div>
             <div>
               <div className="qb-metric-val">{criteria.length}</div>
               <div className="qb-metric-label">Tiêu chí năng lực liên kết</div>
@@ -298,9 +290,6 @@ export const QuestionBankPage: React.FC = () => {
           </div>
 
           <div className="qb-metric-card">
-            <div className="qb-metric-icon amber">
-              <Sparkles size={20} />
-            </div>
             <div>
               <div className="qb-metric-val">{metrics.mediumCount}</div>
               <div className="qb-metric-label">Độ khó Trung bình (Medium)</div>
@@ -308,9 +297,6 @@ export const QuestionBankPage: React.FC = () => {
           </div>
 
           <div className="qb-metric-card">
-            <div className="qb-metric-icon rose">
-              <Award size={20} />
-            </div>
             <div>
               <div className="qb-metric-val">{metrics.hardCount}</div>
               <div className="qb-metric-label">Độ khó Chuyên sâu (Hard)</div>
@@ -401,7 +387,6 @@ export const QuestionBankPage: React.FC = () => {
             id="btn-reset-filters"
             title="Khôi phục toàn bộ lựa chọn bộ lọc mặc định"
           >
-            <RotateCcw size={15} />
             <span>Xóa bộ lọc</span>
           </button>
         </div>
@@ -434,9 +419,6 @@ export const QuestionBankPage: React.FC = () => {
       ) : questions.length === 0 ? (
         /* Empty state */
         <div className="qb-empty-state">
-          <div className="qb-empty-icon">
-            <HelpCircle size={30} />
-          </div>
           <h3 className="qb-empty-title">Không tìm thấy câu hỏi nào</h3>
           <p className="qb-empty-desc">
             {hasActiveFilters
@@ -451,7 +433,6 @@ export const QuestionBankPage: React.FC = () => {
                 onClick={handleResetFilters}
                 id="btn-empty-reset-filters"
               >
-                <RotateCcw size={16} />
                 <span>Xóa bộ lọc</span>
               </button>
             )}
@@ -462,7 +443,6 @@ export const QuestionBankPage: React.FC = () => {
                 onClick={handleOpenCreate}
                 id="btn-add-question-empty"
               >
-                <Plus size={16} />
                 <span>Thêm câu hỏi ngay</span>
               </button>
             )}
@@ -528,7 +508,6 @@ export const QuestionBankPage: React.FC = () => {
                 {q.suggestedAnswer && (
                   <div className="qb-suggested-answer">
                     <div className="qb-suggested-answer-title">
-                      <Lightbulb size={16} />
                       <span>Gợi ý câu trả lời & Tiêu chí chấm điểm:</span>
                     </div>
                     <div>{q.suggestedAnswer}</div>
@@ -538,14 +517,12 @@ export const QuestionBankPage: React.FC = () => {
                 <div className="qb-card-footer">
                   <div className="qb-card-meta">
                     <div className="qb-meta-item">
-                      <Layers size={14} />
                       <span>
                         Tiêu chí: <strong>[{q.criterionCode}] {q.criterionName}</strong>
                       </span>
                     </div>
                     {q.competencyName && (
                       <div className="qb-meta-item">
-                        <Award size={14} />
                         <span>Khung: {q.competencyName}</span>
                       </div>
                     )}

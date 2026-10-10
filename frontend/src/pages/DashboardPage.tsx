@@ -4,16 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { getRoleLabel } from '../constants/rbac';
 import {
   Users,
-  ShieldCheck,
   Lock,
-  Sliders,
-  UserCog,
-  Briefcase,
-  TrendingUp,
-  Video,
   Award,
-  Sparkles,
-  ArrowRight,
   X,
   Clock,
   KeyRound,
@@ -22,7 +14,7 @@ import {
   FolderTree,
   HelpCircle,
   Building2,
-  FileSpreadsheet,
+  CheckCircle2,
 } from 'lucide-react';
 import adminApi from '../api/admin';
 import organizationApi from '../api/organization';
@@ -124,7 +116,6 @@ export const DashboardPage: React.FC = () => {
           </button>
           {hasRole('ADMIN') && (
             <button className="btn btn-primary" onClick={() => navigate('/admin/users')}>
-              <Users size={16} />
               <span>Quản lý Tài khoản</span>
             </button>
           )}
@@ -142,7 +133,6 @@ export const DashboardPage: React.FC = () => {
       {hasRole('ADMIN') && (
         <div className="role-dashboard admin-view">
           <h2 className="section-title">
-            <ShieldCheck size={19} className="section-title-icon" />
             <span>Bảng điều khiển Quản trị viên</span>
           </h2>
           <div className="stats-grid">
@@ -186,47 +176,31 @@ export const DashboardPage: React.FC = () => {
 
           <div className="dashboard-cards-grid">
             <div className="card">
-              <h3>
-                <UserCog size={20} className="text-primary" />
-                <span>Quản lý Tài khoản & Phân quyền</span>
-              </h3>
+              <h3>Quản lý Tài khoản & Phân quyền</h3>
               <p>Thêm mới nhân sự, chỉ định vai trò RBAC, khóa tài khoản hoặc reset mật khẩu tự động.</p>
               <button className="btn btn-outline" onClick={() => navigate('/admin/users')}>
                 <span>Xem danh sách người dùng</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <FileSpreadsheet size={20} className="text-primary" />
-                <span>Nhập nhân sự từ Excel</span>
-              </h3>
+              <h3>Nhập nhân sự từ Excel</h3>
               <p>Tải tệp mẫu chuẩn, kiểm tra hợp lệ trước khi nhập và nhập hàng loạt nhân sự vào hệ thống.</p>
               <button className="btn btn-outline" onClick={() => navigate('/admin/import-excel')}>
                 <span>Nhập tệp Excel</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <FolderTree size={20} className="text-primary" />
-                <span>Quản lý Danh mục dùng chung</span>
-              </h3>
+              <h3>Quản lý Danh mục dùng chung</h3>
               <p>Thiết lập danh mục kỹ năng, địa điểm làm việc, hình thức làm việc và trạng thái tuyển dụng.</p>
               <button className="btn btn-outline" onClick={() => navigate('/categories')}>
                 <span>Quản lý Danh mục ({metrics.categoryCount})</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <Sliders size={20} className="text-primary" />
-                <span>Cấu hình Bảo mật Runtime</span>
-              </h3>
+              <h3>Cấu hình Bảo mật Runtime</h3>
               <p>Xem thời gian hiệu lực JWT Access Token (60m), Refresh Token (7d), và ngưỡng khóa chống brute-force (5 lần / 15m).</p>
               <button className="btn btn-outline" onClick={() => setShowSecurityConfig(true)}>
                 <span>Xem thiết lập bảo mật</span>
-                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -236,7 +210,6 @@ export const DashboardPage: React.FC = () => {
       {hasRole('RECRUITER') && (
         <div className="role-dashboard recruiter-view">
           <h2 className="section-title">
-            <Briefcase size={20} className="text-primary" />
             <span>Bảng điều khiển Chuyên viên tuyển dụng</span>
           </h2>
           <div className="stats-grid">
@@ -280,25 +253,17 @@ export const DashboardPage: React.FC = () => {
 
           <div className="dashboard-cards-grid" style={{ marginTop: '18px' }}>
             <div className="card">
-              <h3>
-                <Award size={20} className="text-primary" />
-                <span>Tiêu chuẩn & Chức danh</span>
-              </h3>
+              <h3>Tiêu chuẩn & Chức danh</h3>
               <p>Tra cứu tiêu chuẩn năng lực, mô tả công việc và định biên chức danh trước khi lên tin tuyển dụng.</p>
               <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
                 <span>Xem chức danh</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <HelpCircle size={20} className="text-primary" />
-                <span>Ngân hàng Câu hỏi Chuyên môn</span>
-              </h3>
+              <h3>Ngân hàng Câu hỏi Chuyên môn</h3>
               <p>Tìm kiếm và chuẩn bị bộ câu hỏi đánh giá ứng viên theo tiêu chí khung năng lực chuẩn.</p>
               <button className="btn btn-outline" onClick={() => navigate('/questions')}>
                 <span>Mở ngân hàng câu hỏi</span>
-                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -308,7 +273,6 @@ export const DashboardPage: React.FC = () => {
       {hasRole('HR_MANAGER') && !hasRole('ADMIN') && (
         <div className="role-dashboard hr-manager-view">
           <h2 className="section-title">
-            <TrendingUp size={20} className="text-primary" />
             <span>Bảng điều khiển Quản lý nhân sự</span>
           </h2>
           <div className="stats-grid">
@@ -343,25 +307,17 @@ export const DashboardPage: React.FC = () => {
 
           <div className="dashboard-cards-grid" style={{ marginTop: '18px' }}>
             <div className="card">
-              <h3>
-                <Building2 size={20} className="text-primary" />
-                <span>Cơ cấu Tổ chức & Phòng ban</span>
-              </h3>
+              <h3>Cơ cấu Tổ chức & Phòng ban</h3>
               <p>Quản lý sơ đồ cây phân cấp phòng ban, chi nhánh và thông tin pháp lý doanh nghiệp.</p>
               <button className="btn btn-outline" onClick={() => navigate('/organization')}>
                 <span>Quản lý phòng ban</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <Award size={20} className="text-primary" />
-                <span>Quản lý Khung Chức danh</span>
-              </h3>
+              <h3>Quản lý Khung Chức danh</h3>
               <p>Cập nhật định biên nhân sự, dải lương và mô tả trách nhiệm cho từng vị trí.</p>
               <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
                 <span>Quản lý chức danh</span>
-                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -371,41 +327,28 @@ export const DashboardPage: React.FC = () => {
       {hasRole('HIRING_MANAGER') && !hasRole('ADMIN') && (
         <div className="role-dashboard hiring-manager-view">
           <h2 className="section-title">
-            <Briefcase size={20} className="text-primary" />
             <span>Bảng điều khiển Quản lý tuyển dụng</span>
           </h2>
           <div className="dashboard-cards-grid">
             <div className="card">
-              <h3>
-                <Award size={20} className="text-primary" />
-                <span>Khung Chức danh Bộ phận</span>
-              </h3>
+              <h3>Khung Chức danh Bộ phận</h3>
               <p>Xem xét yêu cầu chuyên môn, kinh nghiệm và dải lương của các vị trí thuộc bộ phận.</p>
               <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
                 <span>Tra cứu chức danh</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <HelpCircle size={20} className="text-primary" />
-                <span>Ngân hàng Câu hỏi Đánh giá</span>
-              </h3>
+              <h3>Ngân hàng Câu hỏi Đánh giá</h3>
               <p>Tham khảo và bổ sung câu hỏi chuyên môn phục vụ các buổi phỏng vấn ứng viên.</p>
               <button className="btn btn-outline" onClick={() => navigate('/questions')}>
                 <span>Xem ngân hàng câu hỏi</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <Building2 size={20} className="text-primary" />
-                <span>Sơ đồ Tổ chức</span>
-              </h3>
+              <h3>Sơ đồ Tổ chức</h3>
               <p>Theo dõi vị trí phòng ban và các đơn vị trực thuộc trong cấu trúc doanh nghiệp.</p>
               <button className="btn btn-outline" onClick={() => navigate('/organization')}>
                 <span>Xem sơ đồ tổ chức</span>
-                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -415,30 +358,21 @@ export const DashboardPage: React.FC = () => {
       {hasRole('APPROVER') && !hasRole('ADMIN') && (
         <div className="role-dashboard approver-view">
           <h2 className="section-title">
-            <ShieldCheck size={20} className="text-primary" />
             <span>Bảng điều khiển Người phê duyệt</span>
           </h2>
           <div className="dashboard-cards-grid">
             <div className="card">
-              <h3>
-                <Building2 size={20} className="text-primary" />
-                <span>Cơ cấu & Phòng ban</span>
-              </h3>
+              <h3>Cơ cấu & Phòng ban</h3>
               <p>Tra cứu thông tin cơ cấu tổ chức và ban lãnh đạo các khối phòng ban.</p>
               <button className="btn btn-outline" onClick={() => navigate('/organization')}>
                 <span>Xem phòng ban</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <Award size={20} className="text-primary" />
-                <span>Định biên & Khung Chức danh</span>
-              </h3>
+              <h3>Định biên & Khung Chức danh</h3>
               <p>Kiểm tra định biên nhân sự và dải đãi ngộ theo cấp bậc trước khi phê duyệt tuyển chọn.</p>
               <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
                 <span>Xem dải chức danh</span>
-                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -448,30 +382,21 @@ export const DashboardPage: React.FC = () => {
       {hasRole('INTERVIEWER') && (
         <div className="role-dashboard interviewer-view">
           <h2 className="section-title">
-            <Video size={20} className="text-primary" />
             <span>Công cụ Phỏng vấn Chuyên môn</span>
           </h2>
           <div className="dashboard-cards-grid">
             <div className="card">
-              <h3>
-                <HelpCircle size={20} className="text-primary" />
-                <span>Ngân hàng Câu hỏi Phỏng vấn ({metrics.questionCount})</span>
-              </h3>
+              <h3>Ngân hàng Câu hỏi Phỏng vấn ({metrics.questionCount})</h3>
               <p>Tra cứu câu hỏi theo độ khó (Dễ, Trung bình, Khó) và tiêu chí năng lực kỹ thuật.</p>
               <button className="btn btn-outline" onClick={() => navigate('/questions')}>
                 <span>Mở ngân hàng câu hỏi</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <Award size={20} className="text-primary" />
-                <span>Khung Yêu cầu Năng lực Chức danh</span>
-              </h3>
+              <h3>Khung Yêu cầu Năng lực Chức danh</h3>
               <p>Xem chuẩn năng lực và trách nhiệm cốt lõi của vị trí ứng tuyển để đánh giá ứng viên chính xác.</p>
               <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
                 <span>Tra cứu khung năng lực</span>
-                <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -481,35 +406,77 @@ export const DashboardPage: React.FC = () => {
       {hasRole('CANDIDATE') && (
         <div className="role-dashboard candidate-view">
           <h2 className="section-title">
-            <Sparkles size={20} className="text-primary" />
             <span>Cổng thông tin Ứng viên</span>
           </h2>
           <div className="dashboard-cards-grid">
             <div className="card">
-              <h3>
-                <Award size={20} className="text-primary" />
-                <span>Khám phá Vị trí Nghề nghiệp ({metrics.jobTitleCount})</span>
-              </h3>
+              <h3>Khám phá Vị trí Nghề nghiệp ({metrics.jobTitleCount})</h3>
               <p>Tìm hiểu các vị trí tuyển dụng, lộ trình thăng tiến và yêu cầu chuyên môn nội bộ.</p>
               <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
                 <span>Khám phá vị trí</span>
-                <ArrowRight size={15} />
               </button>
             </div>
             <div className="card">
-              <h3>
-                <Building2 size={20} className="text-primary" />
-                <span>Văn hóa & Môi trường Doanh nghiệp</span>
-              </h3>
+              <h3>Văn hóa & Môi trường Doanh nghiệp</h3>
               <p>Xem thông tin giới thiệu công ty, giá trị cốt lõi, sứ mệnh và chính sách đãi ngộ.</p>
               <button className="btn btn-outline" onClick={() => navigate('/organization')}>
                 <span>Xem hồ sơ công ty</span>
-                <ArrowRight size={15} />
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Recruitment Pipeline Overview Widget */}
+      <div className="pipeline-widget">
+        <div className="pipeline-header">
+          <h2 className="pipeline-title">
+            <span>Quy trình Tuyển dụng Nội bộ Tiêu chuẩn</span>
+          </h2>
+          <span className="badge" style={{ background: '#eff6ff', color: '#1d4ed8', fontWeight: 600, fontSize: '0.75rem', padding: '3px 8px', borderRadius: 999 }}>
+            Chuẩn ISO 9001:2015
+          </span>
+        </div>
+        <div className="pipeline-steps">
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">1</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Đề xuất tuyển</span>
+              <span className="pipeline-step-desc">Khởi tạo phiếu & định biên lương</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">2</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Phê duyệt</span>
+              <span className="pipeline-step-desc">Duyệt ngân sách & headcount</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">3</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Đăng tin & Nguồn</span>
+              <span className="pipeline-step-desc">Truyền thông & thu hút hồ sơ</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge">4</div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Đánh giá & Phỏng vấn</span>
+              <span className="pipeline-step-desc">Theo chuẩn khung năng lực</span>
+            </div>
+          </div>
+          <div className="pipeline-step-item">
+            <div className="pipeline-step-badge" style={{ background: '#059669' }}>
+              <CheckCircle2 size={15} />
+            </div>
+            <div className="pipeline-step-content">
+              <span className="pipeline-step-name">Offer & Nhận việc</span>
+              <span className="pipeline-step-desc">Đồng bộ hồ sơ nhân sự</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Security Config Inspection Modal */}
       {showSecurityConfig && (
@@ -517,9 +484,6 @@ export const DashboardPage: React.FC = () => {
           <div className="org-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 580 }}>
             <div className="org-modal-header">
               <div className="org-modal-title-group">
-                <div className="org-modal-icon-badge" style={{ background: '#eff6ff', color: '#2563eb' }}>
-                  <ShieldCheck size={22} />
-                </div>
                 <div>
                   <h3>Thiết lập An toàn & Bảo mật Hệ thống</h3>
                   <p className="org-modal-subtitle">Các thông số bảo mật runtime được áp dụng qua backend configuration</p>

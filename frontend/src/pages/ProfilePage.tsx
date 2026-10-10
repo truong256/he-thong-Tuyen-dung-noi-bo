@@ -7,6 +7,7 @@ import ProfileTabs, { ProfileTabType } from '../components/profile/ProfileTabs';
 import PersonalInfoTab, { ProfileFieldErrors } from '../components/profile/PersonalInfoTab';
 import RolesPermissionsTab from '../components/profile/RolesPermissionsTab';
 import SecuritySessionsTab from '../components/profile/SecuritySessionsTab';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/profile.css';
 
 export const ProfilePage: React.FC = () => {
@@ -176,6 +177,23 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-page-clean-container" data-testid="profile-page">
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Hồ sơ cá nhân"
+        subtitle="Quản lý thông tin định danh, tài khoản khôi phục và thiết lập bảo mật phiên đăng nhập"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Hồ sơ cá nhân' },
+        ]}
+      />
+
+      {/* Floating success toast notification */}
+      {successMsg && (
+        <div className="profile-toast-success" role="status" aria-live="polite">
+          <span>{successMsg}</span>
+        </div>
+      )}
+
       {/* 1. Profile Summary Card (Clean, compact, no huge gradients) */}
       <ProfileHeader
         user={user}

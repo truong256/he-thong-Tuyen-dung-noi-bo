@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Award, AlertCircle, Save, Plus, Trash2 } from 'lucide-react';
+import { X, AlertCircle, Trash2 } from 'lucide-react';
 import { JobTitle, JobTitleLevel, JobFamily, LEVEL_METADATA, JOB_FAMILY_METADATA } from '../../types/jobTitle';
 import { Department } from '../../types/organization';
 import { CompetencyFramework } from '../../types/competencyFramework';
@@ -244,9 +244,6 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
         {/* Header */}
         <div className="jt-modal-header">
           <div className="jt-modal-title-group">
-            <div className="jt-modal-icon-badge">
-              <Award size={22} />
-            </div>
             <div>
               <h2>{isEditing ? 'Cập nhật Chức danh' : 'Thêm Chức danh Mới'}</h2>
               <p className="jt-modal-subtitle">
@@ -499,7 +496,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                     className="jt-btn-secondary"
                     onClick={handleAddResponsibility}
                   >
-                    <Plus size={16} /> Thêm
+                    Thêm
                   </button>
                 </div>
                 <div className="jt-items-list">
@@ -542,7 +539,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                     className="jt-btn-secondary"
                     onClick={handleAddRequirement}
                   >
-                    <Plus size={16} /> Thêm
+                    Thêm
                   </button>
                 </div>
                 <div className="jt-items-list">
@@ -585,7 +582,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                     className="jt-btn-secondary"
                     onClick={handleAddCompetency}
                   >
-                    <Plus size={16} /> Gán
+                    Gán
                   </button>
                 </div>
                 <div className="jt-tags-wrap">
@@ -664,7 +661,6 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
               className="jt-btn-primary"
               disabled={isSubmitting}
             >
-              <Save size={16} />
               <span>{isSubmitting ? 'Đang lưu...' : isEditing ? 'Lưu thay đổi' : 'Tạo chức danh'}</span>
             </button>
           </div>

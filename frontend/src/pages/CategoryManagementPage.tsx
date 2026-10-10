@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  FolderTree,
   SlidersHorizontal,
   Tag,
   Briefcase,
@@ -20,11 +19,6 @@ import {
   Sparkles,
   ToggleLeft,
   ToggleRight,
-  RotateCcw,
-  LayoutGrid,
-  List,
-  FolderKanban,
-  Download,
   Copy,
   Check,
   Eye,
@@ -44,6 +38,7 @@ import {
 } from '../types/category';
 import CategoryModal from '../components/category/CategoryModal';
 import CategoryDetailModal from '../components/category/CategoryDetailModal';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/category-management.css';
 
 type ViewMode = 'table' | 'cards' | 'grouped';
@@ -416,18 +411,24 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
       )}
 
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Hệ thống Danh mục Dữ liệu Master Data"
+        subtitle="Hệ thống danh mục dữ liệu dùng chung (Master Data) đồng bộ cho toàn bộ vòng đời tuyển dụng"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Danh mục dùng chung' },
+        ]}
+      />
+
       {/* Hero Banner Card */}
       <section className="cat-hero-banner" aria-label="Tiêu đề trang quản lý danh mục">
         <div className="cat-hero-header">
           <div className="cat-identity-left">
-            <div className="cat-hero-icon-box">
-              <FolderTree size={34} />
-            </div>
             <div className="cat-identity-info">
               <div className="cat-hero-title-row">
                 <h1 className="cat-hero-title">Quản lý Danh mục Dùng chung</h1>
                 <span className="cat-badge-enterprise">
-                  <Layers size={13} />
                   Master Data & Metadata
                 </span>
                 <span className="cat-badge-subtle hidden sm:inline-flex">
@@ -449,7 +450,6 @@ export const CategoryManagementPage: React.FC = () => {
             onClick={handleExportCSV}
             title="Xuất toàn bộ danh mục ra file CSV (Excel tiếng Việt chuẩn)"
           >
-            <Download size={16} />
             <span>Xuất CSV</span>
           </button>
 
@@ -464,7 +464,6 @@ export const CategoryManagementPage: React.FC = () => {
             }}
             title="Đặt lại bộ lọc về mặc định"
           >
-            <RotateCcw size={16} />
             <span>Đặt lại bộ lọc</span>
           </button>
 
@@ -477,7 +476,6 @@ export const CategoryManagementPage: React.FC = () => {
             }}
             title="Tải lại danh sách"
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
             <span>Làm mới</span>
           </button>
 
@@ -490,7 +488,6 @@ export const CategoryManagementPage: React.FC = () => {
                 setIsModalOpen(true);
               }}
             >
-              <Plus size={18} />
               <span>Thêm danh mục mới</span>
             </button>
           )}
@@ -627,8 +624,7 @@ export const CategoryManagementPage: React.FC = () => {
               onClick={() => setViewMode('table')}
               title="Xem dạng Bảng chi tiết"
             >
-              <List size={15} />
-              <span className="hidden md:inline">Bảng</span>
+              <span>Bảng</span>
             </button>
             <button
               type="button"
@@ -636,8 +632,7 @@ export const CategoryManagementPage: React.FC = () => {
               onClick={() => setViewMode('cards')}
               title="Xem dạng Thẻ trực quan"
             >
-              <LayoutGrid size={15} />
-              <span className="hidden md:inline">Thẻ</span>
+              <span>Thẻ</span>
             </button>
             <button
               type="button"
@@ -645,8 +640,7 @@ export const CategoryManagementPage: React.FC = () => {
               onClick={() => setViewMode('grouped')}
               title="Xem dạng Phân nhóm chuyên sâu"
             >
-              <FolderKanban size={15} />
-              <span className="hidden md:inline">Phân nhóm</span>
+              <span>Phân nhóm</span>
             </button>
           </div>
         </div>
@@ -668,9 +662,6 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
       ) : sortedCategories.length === 0 ? (
         <div className="cat-table-card cat-empty-state">
-          <div className="cat-empty-icon">
-            <FolderTree size={32} />
-          </div>
           <h3 className="text-base font-bold text-slate-800">Không tìm thấy danh mục nào</h3>
           <p className="text-sm text-slate-500 max-w-sm">
             Không có dữ liệu danh mục nào phù hợp với bộ lọc hiện tại. Hãy thử tìm từ khóa khác
@@ -685,7 +676,7 @@ export const CategoryManagementPage: React.FC = () => {
                 setIsModalOpen(true);
               }}
             >
-              + Thêm danh mục đầu tiên
+              Thêm danh mục mới
             </button>
           )}
         </div>
