@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  FileText,
-  Plus,
   Search,
   AlertTriangle,
   Clock,
@@ -10,8 +8,6 @@ import {
   Eye,
   Edit2,
   Trash2,
-  Save,
-  Send,
   X,
   Briefcase,
 } from 'lucide-react';
@@ -22,6 +18,7 @@ import jobTitleApi from '../api/jobTitle';
 import { Requisition, RequisitionPayload } from '../types/requisition';
 import { Department } from '../types/organization';
 import { JobTitle } from '../types/jobTitle';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/requisitions.css';
 
 export const RequisitionManagementPage: React.FC = () => {
@@ -285,12 +282,19 @@ export const RequisitionManagementPage: React.FC = () => {
         </div>
       )}
 
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Quản lý Phiếu Yêu cầu Tuyển dụng"
+        subtitle="Khai báo nhu cầu nhân sự, quản lý và theo dõi trạng thái yêu cầu tuyển dụng nội bộ"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Yêu cầu tuyển dụng' },
+        ]}
+      />
+
       {/* Hero Banner */}
       <div className="req-hero-card">
         <div className="req-hero-info">
-          <div className="req-hero-icon">
-            <FileText size={28} />
-          </div>
           <div className="req-hero-text">
             <h1>Yêu cầu Tuyển dụng (Requisition)</h1>
             <p>Khai báo nhu cầu nhân sự, quản lý và theo dõi trạng thái yêu cầu tuyển dụng</p>
@@ -304,7 +308,6 @@ export const RequisitionManagementPage: React.FC = () => {
               className="req-btn-primary"
               onClick={openCreateModal}
             >
-              <Plus size={18} />
               <span>Tạo yêu cầu mới</span>
             </button>
           </div>
@@ -640,7 +643,6 @@ export const RequisitionManagementPage: React.FC = () => {
                 className="req-btn-secondary"
                 onClick={() => handleSubmit(true)}
               >
-                <Save size={16} />
                 <span>Lưu nháp</span>
               </button>
               <button
@@ -649,7 +651,6 @@ export const RequisitionManagementPage: React.FC = () => {
                 className="req-btn-primary"
                 onClick={() => handleSubmit(false)}
               >
-                <Send size={16} />
                 <span>Gửi yêu cầu</span>
               </button>
             </div>

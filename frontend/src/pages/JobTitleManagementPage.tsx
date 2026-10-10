@@ -1,24 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Award,
-  Plus,
   Search,
-  Download,
-  RotateCcw,
-  LayoutGrid,
-  List,
-  TrendingUp,
-  Building2,
-  Users,
-  Briefcase,
-  Layers,
-  Edit2,
-  Trash2,
-  Eye,
   CheckCircle2,
   AlertCircle,
   X,
-  ShieldCheck,
+  Edit2,
+  Trash2,
+  Eye,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import jobTitleApi from '../api/jobTitle';
@@ -34,6 +22,7 @@ import JobTitleModal from '../components/jobTitle/JobTitleModal';
 import JobTitleDetailModal from '../components/jobTitle/JobTitleDetailModal';
 import DeleteJobTitleModal from '../components/jobTitle/DeleteJobTitleModal';
 import CareerMatrixVisualizer from '../components/jobTitle/CareerMatrixVisualizer';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/job-titles.css';
 
 type ViewMode = 'table' | 'cards' | 'matrix';
@@ -205,32 +194,35 @@ export const JobTitleManagementPage: React.FC = () => {
         </div>
       )}
 
+      {/* Enterprise Breadcrumbs */}
+      <PageHeader
+        title="Danh mục Chức danh & Vị trí Chuẩn hóa"
+        subtitle="Hệ thống danh mục chức danh, khung năng lực và định biên lương toàn doanh nghiệp"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Chức danh & Vị trí' },
+        ]}
+      />
+
       {/* Hero Banner Card */}
       <section className="jt-hero-card" aria-label="Giới thiệu Quản lý Chức danh">
         <div className="jt-hero-header">
           <div className="jt-identity-left">
-            <div className="jt-icon-box">
-              <Award size={34} />
-            </div>
             <div className="jt-identity-info">
               <div className="jt-title-row">
                 <h1>Quản lý Chức danh & Vị trí Công việc</h1>
                 <span className="jt-badge-catalog">
-                  <Layers size={13} />
                   Danh mục Tiêu chuẩn (EP-02)
                 </span>
               </div>
               <div className="jt-meta-row">
                 <span className="jt-meta-item">
-                  <Building2 size={15} />
                   Chuẩn hóa toàn diện phòng ban & khối ngành
                 </span>
                 <span className="jt-meta-item">
-                  <TrendingUp size={15} />
                   8 bậc năng lực chuẩn hóa
                 </span>
                 <span className="jt-meta-item">
-                  <Users size={15} />
                   Kiểm soát định biên headcount
                 </span>
               </div>
@@ -244,7 +236,6 @@ export const JobTitleManagementPage: React.FC = () => {
               onClick={handleExportCSV}
               title="Xuất danh mục chức danh dạng CSV"
             >
-              <Download size={16} />
               <span>Xuất CSV</span>
             </button>
 
@@ -256,7 +247,6 @@ export const JobTitleManagementPage: React.FC = () => {
                   onClick={handleResetToDefault}
                   title="Khôi phục dữ liệu mẫu ban đầu"
                 >
-                  <RotateCcw size={16} />
                   <span>Dữ liệu mẫu</span>
                 </button>
 
@@ -268,7 +258,6 @@ export const JobTitleManagementPage: React.FC = () => {
                     setIsModalOpen(true);
                   }}
                 >
-                  <Plus size={18} />
                   <span>Thêm Chức danh mới</span>
                 </button>
               </>
@@ -281,9 +270,6 @@ export const JobTitleManagementPage: React.FC = () => {
       {statistics && (
         <section className="jt-metrics-grid" aria-label="Thống kê chức danh">
           <div className="jt-metric-card">
-            <div className="jt-metric-icon-wrap primary">
-              <Award size={24} />
-            </div>
             <div className="jt-metric-data">
               <span className="jt-metric-num">{statistics.totalJobTitles}</span>
               <span className="jt-metric-title">Tổng số chức danh chuẩn hóa</span>
@@ -291,9 +277,6 @@ export const JobTitleManagementPage: React.FC = () => {
           </div>
 
           <div className="jt-metric-card">
-            <div className="jt-metric-icon-wrap success">
-              <CheckCircle2 size={24} />
-            </div>
             <div className="jt-metric-data">
               <span className="jt-metric-num">{statistics.activeJobTitles}</span>
               <span className="jt-metric-title">Đang áp dụng thực tế</span>
@@ -301,9 +284,6 @@ export const JobTitleManagementPage: React.FC = () => {
           </div>
 
           <div className="jt-metric-card">
-            <div className="jt-metric-icon-wrap purple">
-              <Users size={24} />
-            </div>
             <div className="jt-metric-data">
               <span className="jt-metric-num">{statistics.totalHeadcount}</span>
               <span className="jt-metric-title">Nhân sự đảm nhiệm chức danh</span>
@@ -311,9 +291,6 @@ export const JobTitleManagementPage: React.FC = () => {
           </div>
 
           <div className="jt-metric-card">
-            <div className="jt-metric-icon-wrap warning">
-              <Briefcase size={24} />
-            </div>
             <div className="jt-metric-data">
               <span className="jt-metric-num">{statistics.openRequisitions}</span>
               <span className="jt-metric-title">Vị trí đang mở tuyển dụng</span>
@@ -356,7 +333,6 @@ export const JobTitleManagementPage: React.FC = () => {
               role="tab"
               aria-selected={viewMode === 'table'}
             >
-              <List size={16} />
               <span>Bảng danh sách</span>
             </button>
             <button
@@ -366,7 +342,6 @@ export const JobTitleManagementPage: React.FC = () => {
               role="tab"
               aria-selected={viewMode === 'cards'}
             >
-              <LayoutGrid size={16} />
               <span>Dạng thẻ</span>
             </button>
             <button
@@ -376,7 +351,6 @@ export const JobTitleManagementPage: React.FC = () => {
               role="tab"
               aria-selected={viewMode === 'matrix'}
             >
-              <TrendingUp size={16} />
               <span>Lộ trình cấp bậc</span>
             </button>
           </div>
@@ -491,7 +465,6 @@ export const JobTitleManagementPage: React.FC = () => {
               className="jt-filter-reset-btn"
               onClick={handleResetFilters}
             >
-              <RotateCcw size={13} />
               <span>Xóa bộ lọc</span>
             </button>
           )}
@@ -521,9 +494,6 @@ export const JobTitleManagementPage: React.FC = () => {
         jobTitles.length === 0 ? (
           <div className="jt-table-card">
             <div className="jt-empty-state">
-              <div className="jt-empty-icon">
-                <Award size={36} />
-              </div>
               <h3 className="jt-empty-title">Không tìm thấy chức danh nào phù hợp</h3>
               <p className="jt-empty-desc">
                 Thử điều chỉnh từ khóa tìm kiếm hoặc xóa các điều kiện lọc để hiển thị nhiều kết quả hơn.
@@ -537,7 +507,7 @@ export const JobTitleManagementPage: React.FC = () => {
                     setIsModalOpen(true);
                   }}
                 >
-                  <Plus size={16} /> Thêm chức danh mới
+                  Thêm chức danh mới
                 </button>
               )}
             </div>
@@ -613,7 +583,7 @@ export const JobTitleManagementPage: React.FC = () => {
                       <span className="jt-card-detail-value">
                         {jt.openRequisitions > 0 ? (
                           <span className="jt-req-badge">
-                            <Briefcase size={12} /> {jt.openRequisitions} đang tuyển
+                            {jt.openRequisitions} đang tuyển
                           </span>
                         ) : (
                           <span className="jt-req-badge zero">Đủ định biên</span>
@@ -697,9 +667,6 @@ export const JobTitleManagementPage: React.FC = () => {
                   <tr>
                     <td colSpan={canViewSalary ? 8 : 7}>
                       <div className="jt-empty-state">
-                        <div className="jt-empty-icon">
-                          <Award size={36} />
-                        </div>
                         <h3 className="jt-empty-title">Không tìm thấy chức danh nào phù hợp</h3>
                         <p className="jt-empty-desc">
                           Thử điều chỉnh từ khóa tìm kiếm hoặc xóa các điều kiện lọc để hiển thị nhiều kết quả hơn.
@@ -713,7 +680,7 @@ export const JobTitleManagementPage: React.FC = () => {
                               setIsModalOpen(true);
                             }}
                           >
-                            <Plus size={16} /> Thêm chức danh mới
+                            Thêm chức danh mới
                           </button>
                         )}
                       </div>
@@ -743,7 +710,6 @@ export const JobTitleManagementPage: React.FC = () => {
                               {jt.title}
                             </span>
                             <span className="jt-dept-sub">
-                              <Building2 size={12} />
                               {jt.departmentName}
                             </span>
                             {jt.competencyFrameworkName && (
@@ -752,7 +718,6 @@ export const JobTitleManagementPage: React.FC = () => {
                                 style={{ color: '#16a34a', fontWeight: 500 }}
                                 title={`Khung năng lực chuẩn hóa: ${jt.competencyFrameworkName}`}
                               >
-                                <ShieldCheck size={12} />
                                 {jt.competencyFrameworkName}
                               </span>
                             )}
@@ -794,7 +759,7 @@ export const JobTitleManagementPage: React.FC = () => {
                         <td>
                           {jt.openRequisitions > 0 ? (
                             <span className="jt-req-badge">
-                              <Briefcase size={13} /> {jt.openRequisitions} đang tuyển
+                              {jt.openRequisitions} đang tuyển
                             </span>
                           ) : (
                             <span className="jt-req-badge zero">Đủ định biên</span>

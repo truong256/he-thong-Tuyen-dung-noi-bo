@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, FormEvent, useMemo } from 'react';
 import {
   FileText,
-  Save,
-  Send,
   Building2,
   Briefcase,
   Users,
@@ -11,14 +9,11 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
-  PlusCircle,
-  Clock,
   Trash2,
   Edit3,
   MapPin,
   Check,
   Search,
-  Sparkles,
   Info,
   ChevronRight,
   ShieldAlert,
@@ -26,6 +21,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/recruitment-request.css';
 
 interface DepartmentItem {
@@ -493,20 +489,27 @@ export const RecruitmentRequestPage: React.FC = () => {
 
   return (
     <div className="rr-page-container">
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Quản lý & Đề xuất Yêu cầu Tuyển dụng"
+        subtitle="Khởi tạo phiếu đề xuất nhân sự, lưu nháp và luân chuyển phê duyệt định biên ngân sách"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Đề xuất tuyển dụng' },
+        ]}
+      />
+
       {/* ====================================================================
           HERO BANNER & HEADER
           ==================================================================== */}
       <div className="rr-hero-card">
         <div className="rr-hero-header">
           <div className="rr-identity-left">
-            <div className="rr-icon-box">
-              <FileText size={30} />
-            </div>
             <div className="rr-identity-info">
               <div className="rr-title-row">
                 <h1>Quản lý & Đề xuất Yêu cầu Tuyển dụng</h1>
                 <span className="rr-badge-catalog">
-                  <Sparkles size={13} /> Quy trình Phê duyệt Chuẩn hóa
+                  Quy trình Phê duyệt Chuẩn hóa
                 </span>
               </div>
               <p className="rr-meta-row">
@@ -522,7 +525,6 @@ export const RecruitmentRequestPage: React.FC = () => {
               onClick={() => setActiveTab('create')}
               className={`rr-tab-btn ${activeTab === 'create' ? 'active' : ''}`}
             >
-              <PlusCircle size={16} />
               {form.id ? 'Chỉnh sửa bản nháp' : 'Tạo yêu cầu mới'}
             </button>
             <button
@@ -533,7 +535,6 @@ export const RecruitmentRequestPage: React.FC = () => {
               }}
               className={`rr-tab-btn ${activeTab === 'list' ? 'active' : ''}`}
             >
-              <Clock size={16} />
               Danh sách yêu cầu
               <span className="rr-tab-count">{stats.total}</span>
             </button>
@@ -1152,7 +1153,6 @@ export const RecruitmentRequestPage: React.FC = () => {
                 disabled={isSubmitting}
                 className="rr-btn-primary"
               >
-                <Send size={16} />
                 {isSubmitting ? 'Đang xử lý...' : 'Gửi yêu cầu phê duyệt'}
               </button>
 
@@ -1162,7 +1162,6 @@ export const RecruitmentRequestPage: React.FC = () => {
                 onClick={handleSaveDraft}
                 className="rr-btn-secondary"
               >
-                <Save size={16} />
                 Lưu bản nháp
               </button>
 
@@ -1259,7 +1258,7 @@ export const RecruitmentRequestPage: React.FC = () => {
                           className="rr-btn-primary"
                           style={{ width: 'auto', padding: '9px 18px', marginTop: '6px' }}
                         >
-                          <PlusCircle size={15} /> Tạo yêu cầu tuyển dụng ngay
+                          Tạo yêu cầu tuyển dụng ngay
                         </button>
                       </div>
                     </td>

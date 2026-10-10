@@ -1,3 +1,5 @@
+@import './styles/design-system.css';
+
 /* ==========================================================================
    HR RECRUIT ATS - MODERN DESIGN SYSTEM & TOKENS
    ========================================================================== */
@@ -1223,50 +1225,33 @@ p {
 .sidebar-menu li a {
   display: flex;
   align-items: center;
-  gap: 11px;
-  height: 42px;
+  height: 38px;
   padding: 0 12px;
-  border-radius: var(--radius-sm);
-  color: #475569;
+  border-radius: var(--radius-md);
+  color: #1e293b;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.4;
-  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, transform var(--motion-fast) var(--ease-subtle), box-shadow var(--motion-fast) ease;
+  transition: background-color 140ms ease, color 140ms ease;
   box-sizing: border-box;
-}
-
-.sidebar-menu li a svg {
-  color: #64748b;
-  flex-shrink: 0;
-  transition: color var(--motion-fast) ease, transform var(--motion-fast) ease;
+  white-space: nowrap;
 }
 
 .sidebar-menu li a:hover:not(.active) {
-  background: rgba(37, 99, 235, 0.06);
+  background-color: #f1f5f9;
   color: #0f172a;
-  transform: translateX(2px);
-}
-
-.sidebar-menu li a:hover:not(.active) svg {
-  color: var(--primary);
-  transform: translateX(1px);
 }
 
 .sidebar-menu li a:active:not(.active) {
-  background: rgba(37, 99, 235, 0.1);
-  transform: translateX(1px);
+  background-color: #e2e8f0;
 }
 
 .sidebar-menu li a.active {
   background: #2563eb;
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.22);
-}
-
-.sidebar-menu li a.active svg {
-  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 
 .sidebar-menu li a:focus-visible {
@@ -3397,6 +3382,11 @@ html, body {
 
   .sidebar-backdrop {
     display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 998;
+    background-color: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
   }
 
   .sidebar-mobile-header {
@@ -3440,10 +3430,11 @@ html, body {
     left: 0;
     width: 280px;
     max-width: 85vw;
-    z-index: 160;
+    z-index: 1000 !important;
+    background-color: #ffffff !important;
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
     display: flex;
     flex-direction: column;
