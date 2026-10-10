@@ -489,7 +489,7 @@ export const RecruitmentRequestPage: React.FC = () => {
 
   return (
     <div className="rr-page-container">
-      {/* Enterprise Breadcrumb and Page Header */}
+      {/* Standardized Enterprise Page Header */}
       <PageHeader
         title="Quản lý & Đề xuất Yêu cầu Tuyển dụng"
         subtitle="Khởi tạo phiếu đề xuất nhân sự, lưu nháp và luân chuyển phê duyệt định biên ngân sách"
@@ -497,29 +497,13 @@ export const RecruitmentRequestPage: React.FC = () => {
           { label: 'Tổng quan', path: '/dashboard' },
           { label: 'Đề xuất tuyển dụng' },
         ]}
-      />
-
-      {/* ====================================================================
-          HERO BANNER & HEADER
-          ==================================================================== */}
-      <div className="rr-hero-card">
-        <div className="rr-hero-header">
-          <div className="rr-identity-left">
-            <div className="rr-identity-info">
-              <div className="rr-title-row">
-                <h1>Quản lý & Đề xuất Yêu cầu Tuyển dụng</h1>
-                <span className="rr-badge-catalog">
-                  Quy trình Phê duyệt Chuẩn hóa
-                </span>
-              </div>
-              <p className="rr-meta-row">
-                Tạo lập, lưu bản nháp và trình duyệt bổ sung nhân sự trực tiếp tới Trưởng bộ phận & HR Manager.
-              </p>
-            </div>
-          </div>
-
-          {/* Segmented Tab Switcher */}
-          <div className="rr-hero-tabs">
+        badge={
+          <span className="rr-badge-catalog">
+            Quy trình Phê duyệt Chuẩn hóa
+          </span>
+        }
+        actions={
+          <div className="rr-hero-tabs" style={{ margin: 0 }}>
             <button
               type="button"
               onClick={() => setActiveTab('create')}
@@ -539,8 +523,8 @@ export const RecruitmentRequestPage: React.FC = () => {
               <span className="rr-tab-count">{stats.total}</span>
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Metrics Summary Pills */}
       <div className="rr-metrics-bar">

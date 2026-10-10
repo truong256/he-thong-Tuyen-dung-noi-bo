@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Briefcase, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface SidebarProps {
@@ -56,7 +56,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Mobile Header with close button */}
         <div className="sidebar-mobile-header">
           <div className="sidebar-mobile-brand">
-            <Briefcase size={20} style={{ color: '#2563eb' }} />
             <span>Menu Hệ thống</span>
           </div>
           <button
@@ -82,16 +81,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onClick={handleLinkClick}
                 >
                   <span>Tổng quan</span>
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="/profile"
-                  className={({ isActive }) => (isActive ? 'active' : '')}
-                  onClick={handleLinkClick}
-                >
-                  <span>Hồ sơ cá nhân</span>
                 </NavLink>
               </li>
             </ul>

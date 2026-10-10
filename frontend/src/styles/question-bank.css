@@ -6,9 +6,11 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 16px 48px;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: 0 0 32px 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Hero Card */
@@ -101,56 +103,44 @@
 /* Metrics Row */
 .qb-metrics-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #e2e8f0;
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .qb-metric-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: var(--radius-md);
-  padding: 16px 20px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 12px);
+  padding: 18px 22px;
   display: flex;
   align-items: center;
   gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  min-height: 92px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .qb-metric-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
-
-.qb-metric-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.qb-metric-icon.blue { background: #eff6ff; color: #2563eb; }
-.qb-metric-icon.green { background: #ecfdf5; color: #059669; }
-.qb-metric-icon.amber { background: #fffbeb; color: #d97706; }
-.qb-metric-icon.rose { background: #fff1f2; color: #e11d48; }
 
 .qb-metric-val {
-  font-size: 1.375rem;
+  font-size: 1.625rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: #0f172a;
   line-height: 1.2;
 }
 
 .qb-metric-label {
   font-size: 0.8125rem;
-  color: var(--text-muted);
-  margin-top: 2px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 4px;
 }
 
 /* Filter Bar */

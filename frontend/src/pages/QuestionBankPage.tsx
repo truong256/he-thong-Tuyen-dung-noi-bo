@@ -224,35 +224,24 @@ export const QuestionBankPage: React.FC = () => {
         </div>
       )}
 
-      {/* Enterprise Breadcrumb and Page Header */}
+      {/* Standardized Enterprise Page Header */}
       <PageHeader
-        title="Kho Dữ liệu Câu hỏi Phỏng vấn Chuyên môn"
-        subtitle="Chuẩn hóa bộ câu hỏi đánh giá theo tiêu chí khung năng lực và vị trí chuyên môn"
+        title="Ngân hàng Câu hỏi Phỏng vấn"
+        subtitle="Chuẩn hóa bộ câu hỏi đánh giá theo tiêu chí khung năng lực (Competency Rubric) và vị trí chuyên môn"
         breadcrumbs={[
           { label: 'Tổng quan', path: '/dashboard' },
           { label: 'Ngân hàng câu hỏi' },
         ]}
-      />
-
-      {/* Hero Banner */}
-      <section className="qb-hero-card" aria-label="Giới thiệu Ngân hàng Câu hỏi">
-        <div className="qb-hero-header">
-          <div className="qb-identity-left">
-            <div className="qb-title-group">
-              <h1>Ngân hàng Câu hỏi Phỏng vấn</h1>
-              <div className="qb-title-meta">
-                <span className="qb-badge-code">ATS-QUESTION-BANK</span>
-                <span className="qb-subtitle">
-                  Chuẩn hóa bộ câu hỏi đánh giá theo tiêu chí năng lực (Competency Rubric)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="qb-actions-right">
+        badge={
+          <span className="qb-badge-code">
+            ATS-QUESTION-BANK
+          </span>
+        }
+        actions={
+          <div className="qb-actions-right" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <button
               type="button"
-              className="btn btn-outline"
+              className="btn btn-secondary"
               onClick={() => loadQuestions(currentPage)}
               disabled={isLoading}
               title="Làm mới danh sách"
@@ -271,36 +260,36 @@ export const QuestionBankPage: React.FC = () => {
               </button>
             )}
           </div>
+        }
+      />
+
+      {/* Metrics Row */}
+      <section className="qb-metrics-row" aria-label="Thống kê ngân hàng câu hỏi">
+        <div className="qb-metric-card">
+          <div>
+            <div className="qb-metric-val">{metrics.total}</div>
+            <div className="qb-metric-label">Tổng số câu hỏi</div>
+          </div>
         </div>
 
-        {/* Metrics Row */}
-        <div className="qb-metrics-row">
-          <div className="qb-metric-card">
-            <div>
-              <div className="qb-metric-val">{metrics.total}</div>
-              <div className="qb-metric-label">Tổng số câu hỏi</div>
-            </div>
+        <div className="qb-metric-card">
+          <div>
+            <div className="qb-metric-val">{criteria.length}</div>
+            <div className="qb-metric-label">Tiêu chí năng lực liên kết</div>
           </div>
+        </div>
 
-          <div className="qb-metric-card">
-            <div>
-              <div className="qb-metric-val">{criteria.length}</div>
-              <div className="qb-metric-label">Tiêu chí năng lực liên kết</div>
-            </div>
+        <div className="qb-metric-card">
+          <div>
+            <div className="qb-metric-val">{metrics.mediumCount}</div>
+            <div className="qb-metric-label">Độ khó Trung bình (Medium)</div>
           </div>
+        </div>
 
-          <div className="qb-metric-card">
-            <div>
-              <div className="qb-metric-val">{metrics.mediumCount}</div>
-              <div className="qb-metric-label">Độ khó Trung bình (Medium)</div>
-            </div>
-          </div>
-
-          <div className="qb-metric-card">
-            <div>
-              <div className="qb-metric-val">{metrics.hardCount}</div>
-              <div className="qb-metric-label">Độ khó Chuyên sâu (Hard)</div>
-            </div>
+        <div className="qb-metric-card">
+          <div>
+            <div className="qb-metric-val">{metrics.hardCount}</div>
+            <div className="qb-metric-label">Độ khó Chuyên sâu (Hard)</div>
           </div>
         </div>
       </section>

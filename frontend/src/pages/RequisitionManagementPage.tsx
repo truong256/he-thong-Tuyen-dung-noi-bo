@@ -282,37 +282,29 @@ export const RequisitionManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Enterprise Breadcrumb and Page Header */}
+      {/* Standardized Enterprise Page Header */}
       <PageHeader
-        title="Quản lý Phiếu Yêu cầu Tuyển dụng"
+        title="Yêu cầu Tuyển dụng (Requisition)"
         subtitle="Khai báo nhu cầu nhân sự, quản lý và theo dõi trạng thái yêu cầu tuyển dụng nội bộ"
         breadcrumbs={[
           { label: 'Tổng quan', path: '/dashboard' },
           { label: 'Yêu cầu tuyển dụng' },
         ]}
+        actions={
+          canCreate ? (
+            <div className="req-hero-actions">
+              <button
+                type="button"
+                id="btn-create-requisition"
+                className="btn btn-primary"
+                onClick={openCreateModal}
+              >
+                <span>Tạo yêu cầu mới</span>
+              </button>
+            </div>
+          ) : undefined
+        }
       />
-
-      {/* Hero Banner */}
-      <div className="req-hero-card">
-        <div className="req-hero-info">
-          <div className="req-hero-text">
-            <h1>Yêu cầu Tuyển dụng (Requisition)</h1>
-            <p>Khai báo nhu cầu nhân sự, quản lý và theo dõi trạng thái yêu cầu tuyển dụng</p>
-          </div>
-        </div>
-        {canCreate && (
-          <div className="req-hero-actions">
-            <button
-              type="button"
-              id="btn-create-requisition"
-              className="req-btn-primary"
-              onClick={openCreateModal}
-            >
-              <span>Tạo yêu cầu mới</span>
-            </button>
-          </div>
-        )}
-      </div>
 
       {/* Filters */}
       <div className="req-filter-card">

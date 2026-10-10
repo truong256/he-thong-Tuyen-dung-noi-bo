@@ -21,7 +21,7 @@
   --accent-light: #38bdf8;
 
   /* Surfaces & Backgrounds */
-  --bg-page: #f4f7fb;
+  --bg-page: #f5f7fb;
   --bg-card: #ffffff;
   --bg-subtle: #f8fafc;
   --bg-hover: #f1f5f9;
@@ -38,7 +38,7 @@
   --border-focus: #94a3b8;
 
   /* Status Colors */
-  --success: #059669;
+  --success: #16a34a;
   --success-bg: #ecfdf5;
   --success-border: #a7f3d0;
   --danger: #dc2626;
@@ -1293,10 +1293,12 @@ p {
 
 .app-content {
   flex: 1;
-  padding: 28px 32px;
+  padding: 24px 32px;
   overflow-y: auto;
   background: var(--bg-page);
-  min-height: calc(100vh - 68px);
+  min-height: calc(100vh - 64px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -1399,19 +1401,23 @@ p {
 
 .stat-card {
   background: #ffffff;
-  padding: 18px 20px;
+  padding: 18px 22px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02);
   display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 88px;
-  transition: border-color var(--motion-normal) ease, box-shadow var(--motion-normal) ease;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-height: 92px;
+  box-sizing: border-box;
+  transition: border-color var(--motion-normal) ease, box-shadow var(--motion-normal) ease, transform var(--motion-fast) ease;
 }
 .stat-card:hover {
+  transform: translateY(-2px);
   border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .stat-icon {
@@ -1437,19 +1443,20 @@ p {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  width: 100%;
 }
 .stat-info h3 {
-  font-size: 1.4rem;
+  font-size: 1.625rem;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 .stat-info p {
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: #475569;
-  margin-top: 2px;
+  color: #64748b;
+  margin-top: 4px;
   line-height: 1.35;
 }
 

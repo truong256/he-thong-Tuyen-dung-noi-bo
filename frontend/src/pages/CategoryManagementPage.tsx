@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Layers,
   Search,
   Plus,
   Edit2,
@@ -9,7 +8,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  SlidersHorizontal,
   Tag,
   Briefcase,
   MapPin,
@@ -411,95 +409,80 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Enterprise Breadcrumb and Page Header */}
+      {/* Standardized Enterprise Page Header */}
       <PageHeader
-        title="Hệ thống Danh mục Dữ liệu Master Data"
+        title="Quản lý Danh mục Dùng chung"
         subtitle="Hệ thống danh mục dữ liệu dùng chung (Master Data) đồng bộ cho toàn bộ vòng đời tuyển dụng"
         breadcrumbs={[
           { label: 'Tổng quan', path: '/dashboard' },
           { label: 'Danh mục dùng chung' },
         ]}
-      />
-
-      {/* Hero Banner Card */}
-      <section className="cat-hero-banner" aria-label="Tiêu đề trang quản lý danh mục">
-        <div className="cat-hero-header">
-          <div className="cat-identity-left">
-            <div className="cat-identity-info">
-              <div className="cat-hero-title-row">
-                <h1 className="cat-hero-title">Quản lý Danh mục Dùng chung</h1>
-                <span className="cat-badge-enterprise">
-                  Master Data & Metadata
-                </span>
-                <span className="cat-badge-subtle hidden sm:inline-flex">
-                  Chuẩn hóa Tuyển dụng ATS
-                </span>
-              </div>
-              <p className="cat-hero-subtitle">
-                Hệ thống danh mục dữ liệu dùng chung (Master Data) đồng bộ cho toàn bộ vòng đời tuyển dụng:
-                Hình thức làm việc, Chi nhánh & Địa điểm, Trình độ học vấn, Kênh nguồn, Quy chuẩn từ chối và Kỹ năng chuyên môn.
-              </p>
-            </div>
+        badge={
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span className="cat-badge-enterprise">
+              Master Data & Metadata
+            </span>
+            <span className="cat-badge-subtle hidden sm:inline-flex">
+              Chuẩn hóa Tuyển dụng ATS
+            </span>
           </div>
-        </div>
-
-        <div className="cat-hero-actions">
-          <button
-            type="button"
-            className="cat-btn-hero"
-            onClick={handleExportCSV}
-            title="Xuất toàn bộ danh mục ra file CSV (Excel tiếng Việt chuẩn)"
-          >
-            <span>Xuất CSV</span>
-          </button>
-
-          <button
-            type="button"
-            className="cat-btn-hero"
-            onClick={() => {
-              setSearchTerm('');
-              setSelectedType('ALL');
-              setStatusFilter('ALL');
-              setSelectedIds([]);
-            }}
-            title="Đặt lại bộ lọc về mặc định"
-          >
-            <span>Đặt lại bộ lọc</span>
-          </button>
-
-          <button
-            type="button"
-            className="cat-btn-hero"
-            onClick={() => {
-              loadCategories();
-              loadTypes();
-            }}
-            title="Tải lại danh sách"
-          >
-            <span>Làm mới</span>
-          </button>
-
-          {canManage && (
+        }
+        actions={
+          <div className="cat-hero-actions">
             <button
               type="button"
-              className="cat-btn-hero-primary"
-              onClick={() => {
-                setEditingCategory(null);
-                setIsModalOpen(true);
-              }}
+              className="btn btn-secondary"
+              onClick={handleExportCSV}
+              title="Xuất toàn bộ danh mục ra file CSV (Excel tiếng Việt chuẩn)"
             >
-              <span>Thêm danh mục mới</span>
+              <span>Xuất CSV</span>
             </button>
-          )}
-        </div>
-      </section>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                setSearchTerm('');
+                setSelectedType('ALL');
+                setStatusFilter('ALL');
+                setSelectedIds([]);
+              }}
+              title="Đặt lại bộ lọc về mặc định"
+            >
+              <span>Đặt lại bộ lọc</span>
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => {
+                loadCategories();
+                loadTypes();
+              }}
+              title="Tải lại danh sách"
+            >
+              <span>Làm mới</span>
+            </button>
+
+            {canManage && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setEditingCategory(null);
+                  setIsModalOpen(true);
+                }}
+              >
+                <span>Thêm danh mục mới</span>
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {/* Metrics Cards */}
       <section className="cat-metrics-grid" aria-label="Thống kê tổng quan danh mục">
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-blue-50 text-blue-600">
-            <Layers size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.total}</span>
@@ -510,9 +493,6 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
 
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-indigo-50 text-indigo-600">
-            <SlidersHorizontal size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.distinctTypes || typesInfo.length}</span>
@@ -523,9 +503,6 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
 
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-emerald-50 text-emerald-600">
-            <CheckCircle2 size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.activeCount}</span>
@@ -544,9 +521,6 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
 
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-rose-50 text-rose-600">
-            <XCircle size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.inactiveCount}</span>

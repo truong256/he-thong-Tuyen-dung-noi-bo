@@ -5,7 +5,6 @@ import {
   Menu,
   ChevronDown,
   ChevronUp,
-  Briefcase,
   Bell,
   PanelLeftClose,
   PanelLeftOpen,
@@ -119,7 +118,6 @@ export const Header: React.FC<HeaderProps> = ({
             onKeyDown={(e) => e.key === 'Enter' && navigate('/dashboard')}
             aria-label="Về trang tổng quan"
           >
-            <Briefcase size={22} className="header-logo-icon" />
             <span className="header-logo-text">HR Recruit ATS</span>
             <span className="header-badge">Enterprise</span>
           </div>

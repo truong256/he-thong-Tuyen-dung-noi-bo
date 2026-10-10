@@ -16,7 +16,7 @@
   --primary-700: #1D4ED8;
 
   /* Surfaces & Backgrounds */
-  --bg-page: #F8FAFC;
+  --bg-page: #F5F7FB;
   --bg-surface: #FFFFFF;
   --bg-subtle: #F1F5F9;
   --bg-hover: #F8FAFC;
@@ -35,7 +35,7 @@
   --border-focus: #2563EB;
 
   /* Semantic Status */
-  --success: #059669;
+  --success: #16A34A;
   --success-bg: #ECFDF5;
   --success-border: #A7F3D0;
 
@@ -407,7 +407,7 @@
 }
 
 .app-sidebar {
-  width: 250px;
+  width: 232px;
   background-color: var(--bg-surface);
   border-right: 1px solid var(--border-color);
   display: flex;
@@ -501,29 +501,36 @@
 /* Main Content Area */
 .app-content {
   flex: 1;
-  padding: var(--space-6) var(--space-8);
+  padding: 24px 32px;
   background-color: var(--bg-page);
   min-height: calc(100vh - 64px);
   width: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
-/* Page Layout Container Modifiers */
-.page-container-wide,
-.page-table-layout {
-  width: 100%;
-  max-width: 100%;
-}
-
-.page-container-dashboard {
+/* Unified Page Container across ALL pages */
+.page-container,
+.page-container-dashboard,
+.page-container-standard,
+.dashboard-content,
+.jt-page-container,
+.cat-page-container,
+.cf-page-container,
+.qb-page-container,
+.org-page-container,
+.admin-page,
+.excel-import-container,
+.rr-page-container,
+.req-container {
   width: 100%;
   max-width: 1440px;
-  margin: 0 auto;
-}
-
-.page-container-standard {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
+  margin-inline: auto;
+  padding: 0 0 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  box-sizing: border-box;
 }
 
 .page-container-form,
@@ -531,7 +538,8 @@
 .profile-page-clean-container {
   width: 100%;
   max-width: 1024px;
-  margin: 0 auto;
+  margin-inline: auto;
+  padding: 0 0 32px 0;
 }
 
 /* ==========================================================================

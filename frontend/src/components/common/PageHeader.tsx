@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Home } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export interface BreadcrumbItem {
@@ -29,16 +29,13 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
       {breadcrumbs && breadcrumbs.length > 0 && (
         <nav className="enterprise-breadcrumbs" aria-label="Breadcrumb">
           <ol className="breadcrumbs-list">
-            <li className="breadcrumb-item">
-              <Link to="/dashboard" className="breadcrumb-link home-link" aria-label="Trang chủ">
-                <Home size={14} />
-              </Link>
-            </li>
             {breadcrumbs.map((crumb, idx) => {
               const isLast = idx === breadcrumbs.length - 1;
               return (
                 <li key={idx} className="breadcrumb-item">
-                  <ChevronRight size={13} className="breadcrumb-separator" aria-hidden="true" />
+                  {idx > 0 && (
+                    <ChevronRight size={13} className="breadcrumb-separator" aria-hidden="true" />
+                  )}
                   {isLast || !crumb.path ? (
                     <span className="breadcrumb-current" aria-current={isLast ? 'page' : undefined}>
                       {crumb.label}

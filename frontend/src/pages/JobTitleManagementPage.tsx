@@ -194,45 +194,24 @@ export const JobTitleManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Enterprise Breadcrumbs */}
+      {/* Standardized Enterprise Page Header */}
       <PageHeader
-        title="Danh mục Chức danh & Vị trí Chuẩn hóa"
-        subtitle="Hệ thống danh mục chức danh, khung năng lực và định biên lương toàn doanh nghiệp"
+        title="Quản lý Chức danh & Vị trí Công việc"
+        subtitle="Hệ thống danh mục chức danh chuẩn hóa, 8 bậc năng lực và kiểm soát định biên headcount toàn doanh nghiệp"
         breadcrumbs={[
           { label: 'Tổng quan', path: '/dashboard' },
           { label: 'Chức danh & Vị trí' },
         ]}
-      />
-
-      {/* Hero Banner Card */}
-      <section className="jt-hero-card" aria-label="Giới thiệu Quản lý Chức danh">
-        <div className="jt-hero-header">
-          <div className="jt-identity-left">
-            <div className="jt-identity-info">
-              <div className="jt-title-row">
-                <h1>Quản lý Chức danh & Vị trí Công việc</h1>
-                <span className="jt-badge-catalog">
-                  Danh mục Tiêu chuẩn (EP-02)
-                </span>
-              </div>
-              <div className="jt-meta-row">
-                <span className="jt-meta-item">
-                  Chuẩn hóa toàn diện phòng ban & khối ngành
-                </span>
-                <span className="jt-meta-item">
-                  8 bậc năng lực chuẩn hóa
-                </span>
-                <span className="jt-meta-item">
-                  Kiểm soát định biên headcount
-                </span>
-              </div>
-            </div>
-          </div>
-
+        badge={
+          <span className="jt-badge-catalog">
+            Danh mục Tiêu chuẩn (EP-02)
+          </span>
+        }
+        actions={
           <div className="jt-hero-actions">
             <button
               type="button"
-              className="jt-btn-secondary"
+              className="btn btn-secondary"
               onClick={handleExportCSV}
               title="Xuất danh mục chức danh dạng CSV"
             >
@@ -243,7 +222,7 @@ export const JobTitleManagementPage: React.FC = () => {
               <>
                 <button
                   type="button"
-                  className="jt-btn-secondary"
+                  className="btn btn-secondary"
                   onClick={handleResetToDefault}
                   title="Khôi phục dữ liệu mẫu ban đầu"
                 >
@@ -252,7 +231,7 @@ export const JobTitleManagementPage: React.FC = () => {
 
                 <button
                   type="button"
-                  className="jt-btn-primary"
+                  className="btn btn-primary"
                   onClick={() => {
                     setSelectedJobTitle(null);
                     setIsModalOpen(true);
@@ -263,8 +242,8 @@ export const JobTitleManagementPage: React.FC = () => {
               </>
             )}
           </div>
-        </div>
-      </section>
+        }
+      />
 
       {/* Metrics & KPIs Cards */}
       {statistics && (

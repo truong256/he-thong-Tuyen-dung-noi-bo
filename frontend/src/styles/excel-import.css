@@ -4,9 +4,11 @@
    ========================================================================== */
 
 .excel-import-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px 16px;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding: 0 0 32px 0;
+  width: 100%;
+  box-sizing: border-box;
   font-family: inherit;
 }
 
