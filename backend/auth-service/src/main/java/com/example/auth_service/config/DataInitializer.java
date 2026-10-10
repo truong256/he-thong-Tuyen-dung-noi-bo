@@ -43,8 +43,17 @@ public class DataInitializer {
                                       InterviewQuestionRepository interviewQuestionRepository,
                                       CommonCategoryRepository commonCategoryRepository,
                                       PasswordEncoder passwordEncoder,
-                                      Environment env) {
+                                      Environment env,
+                                      org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         return args -> {
+            // 0. Ensure department_tree_lock table exists for hierarchy transactions
+            try {
+                jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS department_tree_lock (id INTEGER PRIMARY KEY CHECK (id = 1))");
+                jdbcTemplate.update("INSERT INTO department_tree_lock(id) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM department_tree_lock WHERE id=1)");
+            } catch (Exception ex) {
+                // Ignore if managed by Flyway or already exists
+            }
+
             // 1. Seed 7 roles if not present
             Map<RoleName, Role> roleMap = new HashMap<>();
             for (RoleName rn : RoleName.values()) {
@@ -59,28 +68,28 @@ public class DataInitializer {
             String defaultSeedPassword = System.getenv().getOrDefault("SEED_ACCOUNT_PASSWORD", "Password123@");
 
             User adminUser = createUserIfMissing(userRepository, passwordEncoder, "admin@company.com", defaultSeedPassword,
-                    "Quản trị viên Hệ thống", Set.of(roleMap.get(RoleName.ADMIN), roleMap.get(RoleName.HR_MANAGER)));
+                    "Quản trị viên Hệ thống", "Ban Tổng Giám Đốc (BOD)", Set.of(roleMap.get(RoleName.ADMIN)));
 
             createUserIfMissing(userRepository, passwordEncoder, "recruiter@company.com", defaultSeedPassword,
-                    "Chuyên viên Tuyển dụng", Set.of(roleMap.get(RoleName.RECRUITER)));
+                    "Chuyên viên Tuyển dụng", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.RECRUITER)));
 
             User hrManagerUser = createUserIfMissing(userRepository, passwordEncoder, "hr_manager@company.com", defaultSeedPassword,
-                    "Trưởng phòng Nhân sự", Set.of(roleMap.get(RoleName.HR_MANAGER)));
+                    "Trưởng phòng Nhân sự", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.HR_MANAGER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "interviewer@company.com", defaultSeedPassword,
-                    "Người Phỏng vấn Kỹ thuật", Set.of(roleMap.get(RoleName.INTERVIEWER)));
+                    "Người Phỏng vấn Kỹ thuật", "Khối Công nghệ & Kỹ thuật", Set.of(roleMap.get(RoleName.INTERVIEWER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "hiring_manager@company.com", defaultSeedPassword,
-                    "Quản lý Bộ phận Tuyển dụng", Set.of(roleMap.get(RoleName.HIRING_MANAGER)));
+                    "Quản lý Bộ phận Tuyển dụng", "Phòng Phát triển Phần mềm Backend", Set.of(roleMap.get(RoleName.HIRING_MANAGER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "approver@company.com", defaultSeedPassword,
-                    "Người Phê duyệt Tuyển dụng", Set.of(roleMap.get(RoleName.APPROVER)));
+                    "Người Phê duyệt Tuyển dụng", "Ban Tổng Giám Đốc (BOD)", Set.of(roleMap.get(RoleName.APPROVER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "candidate@company.com", defaultSeedPassword,
-                    "Ứng viên Nguyễn Văn A", Set.of(roleMap.get(RoleName.CANDIDATE)));
+                    "Ứng viên Nguyễn Văn A", null, Set.of(roleMap.get(RoleName.CANDIDATE)));
 
             createUserIfMissing(userRepository, passwordEncoder, "truong256@company.com", "#r7GDs^QRbhF",
-                    "Kiểm thử viên Tự động", Set.of(roleMap.get(RoleName.CANDIDATE)));
+                    "Kiểm thử viên Tự động", null, Set.of(roleMap.get(RoleName.CANDIDATE)));
 
             // 3. Seed default enterprise departments if none exist (only in non-test profiles)
             boolean isTestProfile = Arrays.asList(env.getActiveProfiles()).contains("test");
@@ -105,6 +114,21 @@ public class DataInitializer {
                         "Tìm kiếm, tuyển chọn và điều phối phỏng vấn ứng viên", bod.getId(),
                         hrManagerUser != null ? hrManagerUser.getId() : adminUser.getId(), true, Instant.now());
                 hrDept = departmentRepository.save(hrDept);
+            }
+
+            if (!isTestProfile) {
+                User hmUser = userRepository.findByEmail("hiring_manager@company.com").orElse(null);
+                if (hmUser != null) {
+                    departmentRepository.findAll().stream()
+                            .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()))
+                            .findFirst()
+                            .ifPresent(d -> {
+                                if (d.getManagerUserId() == null || !d.getManagerUserId().equals(hmUser.getId())) {
+                                    d.setManagerUserId(hmUser.getId());
+                                    departmentRepository.save(d);
+                                }
+                            });
+                }
             }
 
             // 4. Seed default job titles linked to departments if none exist
@@ -185,6 +209,10 @@ public class DataInitializer {
                     fwBe.setWeightPercent(100);
                     fwBe.setJobTitle(beSenior);
                     fwBe = competencyFrameworkRepository.save(fwBe);
+                    if (beSenior != null) {
+                        beSenior.setCompetencyFramework(fwBe);
+                        jobTitleRepository.save(beSenior);
+                    }
 
                     CompetencyCriterion critBe01 = new CompetencyCriterion();
                     critBe01.setCompetencyFramework(fwBe);
@@ -221,6 +249,10 @@ public class DataInitializer {
                     fwFe.setWeightPercent(100);
                     fwFe.setJobTitle(feMid);
                     fwFe = competencyFrameworkRepository.save(fwFe);
+                    if (feMid != null) {
+                        feMid.setCompetencyFramework(fwFe);
+                        jobTitleRepository.save(feMid);
+                    }
 
                     CompetencyCriterion critFe01 = new CompetencyCriterion();
                     critFe01.setCompetencyFramework(fwFe);
@@ -248,6 +280,10 @@ public class DataInitializer {
                     fwHr.setWeightPercent(100);
                     fwHr.setJobTitle(recSpecialist);
                     fwHr = competencyFrameworkRepository.save(fwHr);
+                    if (recSpecialist != null) {
+                        recSpecialist.setCompetencyFramework(fwHr);
+                        jobTitleRepository.save(recSpecialist);
+                    }
 
                     CompetencyCriterion critHr01 = new CompetencyCriterion();
                     critHr01.setCompetencyFramework(fwHr);
@@ -337,16 +373,29 @@ public class DataInitializer {
                                      String email,
                                      String rawPassword,
                                      String fullName,
+                                     String department,
                                      Set<Role> roles) {
         var existing = userRepository.findByEmail(email);
         if (existing.isEmpty()) {
             User user = new User(email, passwordEncoder.encode(rawPassword));
             user.setFullName(fullName);
+            user.setDepartment(department);
             user.setRoles(roles);
             user.setStatus("ACTIVE");
             return userRepository.save(user);
+        } else {
+            User user = existing.get();
+            boolean changed = false;
+            if (!user.getRoles().equals(roles)) {
+                user.setRoles(roles);
+                changed = true;
+            }
+            if (department != null && (user.getDepartment() == null || !department.equals(user.getDepartment()))) {
+                user.setDepartment(department);
+                changed = true;
+            }
+            return changed ? userRepository.save(user) : user;
         }
-        return existing.get();
     }
 
     private void seedCategories(CommonCategoryRepository repo) {

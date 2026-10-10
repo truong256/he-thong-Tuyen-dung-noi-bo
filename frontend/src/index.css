@@ -1,3 +1,5 @@
+@import './styles/design-system.css';
+
 /* ==========================================================================
    HR RECRUIT ATS - MODERN DESIGN SYSTEM & TOKENS
    ========================================================================== */
@@ -19,7 +21,7 @@
   --accent-light: #38bdf8;
 
   /* Surfaces & Backgrounds */
-  --bg-page: #f4f7fb;
+  --bg-page: #f5f7fb;
   --bg-card: #ffffff;
   --bg-subtle: #f8fafc;
   --bg-hover: #f1f5f9;
@@ -33,10 +35,10 @@
   /* Borders */
   --border-color: #e2e8f0;
   --border-subtle: #edf2f7;
-  --border-focus: #3b82f6;
+  --border-focus: #94a3b8;
 
   /* Status Colors */
-  --success: #059669;
+  --success: #16a34a;
   --success-bg: #ecfdf5;
   --success-border: #a7f3d0;
   --danger: #dc2626;
@@ -148,6 +150,49 @@ select::placeholder {
   font-family: var(--font-sans);
   font-weight: 400;
   opacity: 1;
+}
+
+/* ==========================================================================
+   GLOBAL FORM CONTROLS FOCUS & ACCESSIBILITY (NEUTRAL, NO BLUE FOCUS RINGS)
+   ========================================================================== */
+input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+textarea,
+select {
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="reset"]):focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
+}
+
+/* Maintain error validation state precedence over neutral focus */
+input.is-invalid:focus,
+input.is-invalid:focus-visible,
+input.has-error:focus,
+input.has-error:focus-visible,
+textarea.is-invalid:focus,
+textarea.is-invalid:focus-visible,
+textarea.has-error:focus,
+textarea.has-error:focus-visible,
+select.is-invalid:focus,
+select.is-invalid:focus-visible,
+select.has-error:focus,
+select.has-error:focus-visible {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
 /* Base Headings Hierarchy */
@@ -694,9 +739,16 @@ p {
 
 .clean-input:focus {
   outline: none;
-  border-color: var(--primary-600);
+  border-color: #94a3b8;
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.10);
+  box-shadow: none;
+}
+
+.clean-input:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .clean-input:disabled {
@@ -1012,6 +1064,15 @@ p {
   font-size: 0.95rem;
   color: #2563eb;
   box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);
+  overflow: hidden;
+}
+
+.user-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .user-details {
@@ -1164,50 +1225,33 @@ p {
 .sidebar-menu li a {
   display: flex;
   align-items: center;
-  gap: 11px;
-  height: 42px;
+  height: 38px;
   padding: 0 12px;
-  border-radius: var(--radius-sm);
-  color: #475569;
+  border-radius: var(--radius-md);
+  color: #1e293b;
   text-decoration: none;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.4;
   transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, transform var(--motion-fast) var(--ease-subtle), box-shadow var(--motion-fast) ease;
   box-sizing: border-box;
-}
-
-.sidebar-menu li a svg {
-  color: #64748b;
-  flex-shrink: 0;
-  transition: color var(--motion-fast) ease, transform var(--motion-fast) ease;
+  white-space: nowrap;
 }
 
 .sidebar-menu li a:hover:not(.active) {
-  background: rgba(37, 99, 235, 0.06);
+  background-color: #f1f5f9;
   color: #0f172a;
-  transform: translateX(2px);
-}
-
-.sidebar-menu li a:hover:not(.active) svg {
-  color: var(--primary);
-  transform: translateX(1px);
 }
 
 .sidebar-menu li a:active:not(.active) {
-  background: rgba(37, 99, 235, 0.1);
-  transform: translateX(1px);
+  background-color: #e2e8f0;
 }
 
 .sidebar-menu li a.active {
   background: #2563eb;
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.22);
-}
-
-.sidebar-menu li a.active svg {
-  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
 }
 
 .sidebar-menu li a:focus-visible {
@@ -1249,10 +1293,12 @@ p {
 
 .app-content {
   flex: 1;
-  padding: 28px 32px;
+  padding: 24px 32px;
   overflow-y: auto;
   background: var(--bg-page);
-  min-height: calc(100vh - 68px);
+  min-height: calc(100vh - 64px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================
@@ -1355,19 +1401,23 @@ p {
 
 .stat-card {
   background: #ffffff;
-  padding: 18px 20px;
+  padding: 18px 22px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02);
   display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 88px;
-  transition: border-color var(--motion-normal) ease, box-shadow var(--motion-normal) ease;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-height: 92px;
+  box-sizing: border-box;
+  transition: border-color var(--motion-normal) ease, box-shadow var(--motion-normal) ease, transform var(--motion-fast) ease;
 }
 .stat-card:hover {
+  transform: translateY(-2px);
   border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
 }
 
 .stat-icon {
@@ -1393,19 +1443,20 @@ p {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  width: 100%;
 }
 .stat-info h3 {
-  font-size: 1.4rem;
+  font-size: 1.625rem;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
 .stat-info p {
-  font-size: 0.82rem;
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: #475569;
-  margin-top: 2px;
+  color: #64748b;
+  margin-top: 4px;
   line-height: 1.35;
 }
 
@@ -1544,8 +1595,16 @@ p {
 }
 .search-wrap input:focus {
   background: #ffffff;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.15);
+  border-color: #94a3b8;
+  outline: none;
+  box-shadow: none;
+}
+
+.search-wrap input:focus-visible {
+  background: #ffffff;
+  border-color: #94a3b8;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .search-clear-btn {
@@ -1607,8 +1666,15 @@ p {
   border-color: #94a3b8;
 }
 .filter-select select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  border-color: #94a3b8;
+  outline: none;
+  box-shadow: none;
+}
+
+.filter-select select:focus-visible {
+  border-color: #94a3b8;
+  outline: none;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .btn-icon-only {
@@ -2013,8 +2079,17 @@ p {
 .form-group select:focus,
 .form-group input:not([type="checkbox"]):not([type="radio"]):focus,
 .form-group textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+.form-group select:focus-visible,
+.form-group input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+.form-group textarea:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .form-group select:disabled,
@@ -2187,6 +2262,9 @@ input[type="checkbox"] {
 .auth-card .card-header {
   text-align: center;
   margin-bottom: 26px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .auth-card-icon-wrap {
@@ -2213,6 +2291,9 @@ input[type="checkbox"] {
   margin: 0 0 8px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .auth-card .card-header p {
@@ -2221,6 +2302,9 @@ input[type="checkbox"] {
   line-height: 1.5;
   margin: 0 auto;
   max-width: 320px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 /* Input Wrappers with Leading and Trailing Icons */
@@ -2277,9 +2361,18 @@ input[type="checkbox"] {
 
 .input-wrap input:focus,
 .input-with-eye input:focus {
-  border-color: #2563eb;
+  outline: none;
+  border-color: #94a3b8;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  box-shadow: none;
+}
+
+.input-wrap input:focus-visible,
+.input-with-eye input:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .input-wrap input.has-error,
@@ -2422,12 +2515,18 @@ input[type="checkbox"] {
   color: #334155;
   line-height: 1.5;
   margin: 0 0 8px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 .forgot-hint-text {
   font-size: 0.82rem;
   color: #64748b;
   margin: 0 0 20px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
 }
 
 /* Password meter & criteria */
@@ -2664,8 +2763,14 @@ input[type="checkbox"] {
 }
 .input-with-eye input:focus {
   outline: none;
-  border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+.input-with-eye input:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 .input-icon-left {
   position: absolute;
@@ -2971,8 +3076,14 @@ input[type="checkbox"] {
   border-color: #94a3b8;
 }
 .page-size-selector select:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2.5px rgba(37, 99, 235, 0.15);
+  border-color: #94a3b8;
+  box-shadow: none;
+  outline: none;
+}
+
+.page-size-selector select:focus-visible {
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
   outline: none;
 }
 
@@ -3278,6 +3389,11 @@ html, body {
 
   .sidebar-backdrop {
     display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 998;
+    background-color: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
   }
 
   .sidebar-mobile-header {
@@ -3321,10 +3437,11 @@ html, body {
     left: 0;
     width: 280px;
     max-width: 85vw;
-    z-index: 160;
+    z-index: 1000 !important;
+    background-color: #ffffff !important;
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
     overflow-y: auto;
     display: flex;
     flex-direction: column;

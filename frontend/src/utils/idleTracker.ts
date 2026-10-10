@@ -11,7 +11,12 @@
  * - If user remains active (e.g. actions every 15-20s), the idle timer resets and user stays logged in.
  */
 
-export const DEFAULT_IDLE_TIMEOUT_MS = 30 * 1000; // 30 seconds
+const configuredTimeout = Number(import.meta.env.VITE_IDLE_TIMEOUT_MS);
+
+export const DEFAULT_IDLE_TIMEOUT_MS =
+  Number.isFinite(configuredTimeout) && configuredTimeout > 0
+    ? configuredTimeout
+    : 5 * 60 * 1000; // 5 phút (300,000 ms)
 
 const LAST_ACTIVITY_KEY = 'ats:last_activity_time';
 const SESSION_EXPIRED_KEY = 'ats:session_expired';

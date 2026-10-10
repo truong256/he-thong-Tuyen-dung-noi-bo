@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, Award, AlertCircle, Save, Plus, Trash2 } from 'lucide-react';
+import { X, AlertCircle, Trash2 } from 'lucide-react';
 import { JobTitle, JobTitleLevel, JobFamily, LEVEL_METADATA, JOB_FAMILY_METADATA } from '../../types/jobTitle';
 import { Department } from '../../types/organization';
+import { CompetencyFramework } from '../../types/competencyFramework';
+import competencyFrameworkApi from '../../api/competencyFramework';
 
 interface JobTitleModalProps {
   isOpen: boolean;
@@ -9,6 +11,7 @@ interface JobTitleModalProps {
   onSave: (data: Omit<JobTitle, 'id' | 'createdAt'> | Partial<JobTitle>) => Promise<void>;
   jobTitle: JobTitle | null;
   departments: Department[];
+  frameworks?: CompetencyFramework[];
 }
 
 export const JobTitleModal: React.FC<JobTitleModalProps> = ({
@@ -17,12 +20,15 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
   onSave,
   jobTitle,
   departments,
+  frameworks: initialFrameworks,
 }) => {
   const isEditing = Boolean(jobTitle);
 
   const [title, setTitle] = useState('');
   const [code, setCode] = useState('');
   const [departmentId, setDepartmentId] = useState<number>(departments[0]?.id || 1);
+  const [competencyFrameworkId, setCompetencyFrameworkId] = useState<number | ''>('');
+  const [availableFrameworks, setAvailableFrameworks] = useState<CompetencyFramework[]>(initialFrameworks || []);
   const [level, setLevel] = useState<JobTitleLevel>('MIDDLE');
   const [jobFamily, setJobFamily] = useState<JobFamily>('TECH');
   const [minSalary, setMinSalary] = useState<number | ''>('');
@@ -46,10 +52,18 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    if (isOpen && (!initialFrameworks || initialFrameworks.length === 0)) {
+      competencyFrameworkApi
+        .getFrameworks()
+        .then((data) => setAvailableFrameworks(data))
+        .catch((err) => console.error('Failed to load frameworks', err));
+    }
+
     if (jobTitle) {
       setTitle(jobTitle.title || '');
       setCode(jobTitle.code || '');
       setDepartmentId(jobTitle.departmentId || departments[0]?.id || 1);
+      setCompetencyFrameworkId(jobTitle.competencyFrameworkId || '');
       setLevel(jobTitle.level || 'MIDDLE');
       setJobFamily(jobTitle.jobFamily || 'TECH');
       setMinSalary(jobTitle.minSalary !== undefined ? jobTitle.minSalary : '');
@@ -67,6 +81,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
       setTitle('');
       setCode('');
       setDepartmentId(departments[0]?.id || 1);
+      setCompetencyFrameworkId('');
       setLevel('MIDDLE');
       setJobFamily('TECH');
       setMinSalary('');
@@ -91,7 +106,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
     setNewRespInput('');
     setNewCompInput('');
     setNewReqInput('');
-  }, [jobTitle, departments, isOpen]);
+  }, [jobTitle, departments, isOpen, initialFrameworks]);
 
   if (!isOpen) return null;
 
@@ -174,7 +189,17 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
       return;
     }
 
-    if (minSalary && maxSalary && Number(minSalary) > Number(maxSalary)) {
+    if (minSalary !== '' && Number(minSalary) < 0) {
+      setValidationError('Mức lương tối thiểu không được âm.');
+      return;
+    }
+
+    if (maxSalary !== '' && Number(maxSalary) < 0) {
+      setValidationError('Mức lương tối đa không được âm.');
+      return;
+    }
+
+    if (minSalary !== '' && maxSalary !== '' && Number(minSalary) > Number(maxSalary)) {
       setValidationError('Mức lương tối thiểu không được lớn hơn mức lương tối đa.');
       return;
     }
@@ -197,6 +222,8 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
         keyResponsibilities: responsibilities.length > 0 ? responsibilities : ['Thực hiện công việc theo phân công'],
         requirements: requirements.length > 0 ? requirements : ['Tốt nghiệp các ngành liên quan'],
         competencies: competencies.length > 0 ? competencies : undefined,
+        competencyFrameworkId: competencyFrameworkId !== '' ? Number(competencyFrameworkId) : undefined,
+        competencyFrameworkName: availableFrameworks.find((f) => f.id === Number(competencyFrameworkId))?.competencyName,
         standardHeadcount: standardHeadcount !== '' ? Number(standardHeadcount) : undefined,
         currentHeadcount: Number(currentHeadcount) || 0,
         openRequisitions: Number(openRequisitions) || 0,
@@ -204,7 +231,8 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
       });
       onClose();
     } catch (err: any) {
-      setValidationError(err.message || 'Đã có lỗi xảy ra khi lưu thông tin chức danh.');
+      const msg = err.response?.data?.message || err.message || 'Đã có lỗi xảy ra khi lưu thông tin chức danh.';
+      setValidationError(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -216,9 +244,6 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
         {/* Header */}
         <div className="jt-modal-header">
           <div className="jt-modal-title-group">
-            <div className="jt-modal-icon-badge">
-              <Award size={22} />
-            </div>
             <div>
               <h2>{isEditing ? 'Cập nhật Chức danh' : 'Thêm Chức danh Mới'}</h2>
               <p className="jt-modal-subtitle">
@@ -471,7 +496,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                     className="jt-btn-secondary"
                     onClick={handleAddResponsibility}
                   >
-                    <Plus size={16} /> Thêm
+                    Thêm
                   </button>
                 </div>
                 <div className="jt-items-list">
@@ -514,7 +539,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                     className="jt-btn-secondary"
                     onClick={handleAddRequirement}
                   >
-                    <Plus size={16} /> Thêm
+                    Thêm
                   </button>
                 </div>
                 <div className="jt-items-list">
@@ -557,7 +582,7 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                     className="jt-btn-secondary"
                     onClick={handleAddCompetency}
                   >
-                    <Plus size={16} /> Gán
+                    Gán
                   </button>
                 </div>
                 <div className="jt-tags-wrap">
@@ -574,6 +599,31 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                     </span>
                   ))}
                 </div>
+              </div>
+
+              {/* Standard Competency Framework (S2-06) */}
+              <div className="jt-form-group">
+                <label htmlFor="jt-framework">
+                  Khung năng lực chuẩn hóa (S2-06)
+                </label>
+                <select
+                  id="jt-framework"
+                  className="jt-select"
+                  value={competencyFrameworkId}
+                  onChange={(e) =>
+                    setCompetencyFrameworkId(e.target.value ? Number(e.target.value) : '')
+                  }
+                >
+                  <option value="">-- Chưa gán khung năng lực chuẩn --</option>
+                  {availableFrameworks.map((fw) => (
+                    <option key={fw.id} value={fw.id}>
+                      {fw.competencyName} {fw.category ? `(${fw.category})` : ''} - {fw.weightPercent}% ({fw.criteria?.length || fw.criteriaCount || 0} tiêu chí)
+                    </option>
+                  ))}
+                </select>
+                <span className="jt-hint">
+                  Gắn khung năng lực giúp đồng bộ câu hỏi phỏng vấn chuẩn hóa (S2-07) và kiểm soát ma trận đánh giá ứng viên.
+                </span>
               </div>
             </div>
 
@@ -611,7 +661,6 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
               className="jt-btn-primary"
               disabled={isSubmitting}
             >
-              <Save size={16} />
               <span>{isSubmitting ? 'Đang lưu...' : isEditing ? 'Lưu thay đổi' : 'Tạo chức danh'}</span>
             </button>
           </div>

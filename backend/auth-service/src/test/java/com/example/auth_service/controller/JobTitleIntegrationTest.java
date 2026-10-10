@@ -26,7 +26,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -47,6 +46,7 @@ class JobTitleIntegrationTest {
     @Autowired private JobTitleRepository jobTitles;
 
     private User admin;
+    private User adminOnly;
     private User recruiter;
     private User candidate;
     private Department dept;
@@ -54,6 +54,7 @@ class JobTitleIntegrationTest {
     @BeforeEach
     void fixtures() {
         admin = createUser("jt-admin@test.com", RoleName.ADMIN, RoleName.HR_MANAGER);
+        adminOnly = createUser("jt-admin-only@test.com", RoleName.ADMIN);
         recruiter = createUser("jt-recruiter@test.com", RoleName.RECRUITER);
         candidate = createUser("jt-candidate@test.com", RoleName.CANDIDATE);
 
@@ -103,13 +104,25 @@ class JobTitleIntegrationTest {
                         .header("Authorization", token(recruiter)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
-                .andExpect(jsonPath("$.title").value("Kỹ sư DevOps"));
+                .andExpect(jsonPath("$.title").value("Kỹ sư DevOps"))
+                .andExpect(jsonPath("$.minSalary").value((Object) null))
+                .andExpect(jsonPath("$.maxSalary").value((Object) null))
+                .andExpect(jsonPath("$.salaryRangeDisplay").value((Object) null));
+
+        // HR managers can view salary data.
+        mvc.perform(get("/api/job-titles/" + id)
+                        .header("Authorization", token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.minSalary").value(30000000L))
+                .andExpect(jsonPath("$.maxSalary").value(45000000L))
+                .andExpect(jsonPath("$.salaryRangeDisplay").value("30 - 45 triệu VNĐ"));
 
         // List
         mvc.perform(get("/api/job-titles?search=DevOps")
                         .header("Authorization", token(recruiter)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].code").value("DEVOPS-01"));
+                .andExpect(jsonPath("$[0].code").value("DEVOPS-01"))
+                .andExpect(jsonPath("$[0].minSalary").value((Object) null));
 
         // Update
         JobTitleRequest updateReq = new JobTitleRequest(
@@ -145,7 +158,23 @@ class JobTitleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
 
-        // Delete
+        // Status toggle without body (inverts to true)
+        mvc.perform(patch("/api/job-titles/" + id + "/status")
+                        .header("Authorization", token(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+
+        // Delete fails with 409 Conflict when headcount > 0
+        mvc.perform(delete("/api/job-titles/" + id)
+                        .header("Authorization", token(admin)))
+                .andExpect(status().isConflict());
+
+        // Transfer/reset headcount to 0 before delete
+        JobTitle existingJt = jobTitles.findById(id).orElseThrow();
+        existingJt.setCurrentHeadcount(0);
+        jobTitles.save(existingJt);
+
+        // Delete succeeds when headcount is 0 and no dependencies
         mvc.perform(delete("/api/job-titles/" + id)
                         .header("Authorization", token(admin)))
                 .andExpect(status().isNoContent());
@@ -177,6 +206,89 @@ class JobTitleIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(req)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void recruiterCannotCreateOrChangeSalaryRange() throws Exception {
+        JobTitleRequest req = new JobTitleRequest(
+                "Kỹ sư Bảo mật",
+                "SEC-01",
+                dept.getId(),
+                "SENIOR",
+                "TECH",
+                35000000L,
+                50000000L,
+                null,
+                null,
+                null,
+                null,
+                1,
+                0,
+                true
+        );
+
+        mvc.perform(post("/api/job-titles")
+                        .header("Authorization", token(recruiter))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminWithoutHrManagerRoleCannotManageSalaryRanges() throws Exception {
+        JobTitleRequest req = new JobTitleRequest(
+                "Kỹ sư Dữ liệu",
+                "DATA-01",
+                dept.getId(),
+                "SENIOR",
+                "TECH",
+                40000000L,
+                60000000L,
+                null,
+                null,
+                null,
+                null,
+                1,
+                0,
+                true
+        );
+
+        mvc.perform(post("/api/job-titles")
+                        .header("Authorization", token(adminOnly))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(req)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void candidateCannotListJobTitles() throws Exception {
+        mvc.perform(get("/api/job-titles")
+                        .header("Authorization", token(candidate)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void recruiterCanSearchByDepartmentNameWithoutSalaryLeak() throws Exception {
+        JobTitle jt = new JobTitle();
+        jt.setTitle("Kỹ sư Kiểm thử Tích Hợp");
+        jt.setCode("QA-INT-01");
+        jt.setDepartment(dept);
+        jt.setLevel("JUNIOR");
+        jt.setJobFamily("TECH");
+        jt.setMinSalary(15000000L);
+        jt.setMaxSalary(22000000L);
+        jt.setStandardHeadcount(2);
+        jt.setCurrentHeadcount(0);
+        jt.setActive(true);
+        jobTitles.save(jt);
+
+        mvc.perform(get("/api/job-titles?search=Tích Hợp")
+                        .header("Authorization", token(recruiter)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].code").value("QA-INT-01"))
+                .andExpect(jsonPath("$[0].minSalary").value((Object) null))
+                .andExpect(jsonPath("$[0].maxSalary").value((Object) null))
+                .andExpect(jsonPath("$[0].salaryRangeDisplay").value((Object) null));
     }
 
     @Test

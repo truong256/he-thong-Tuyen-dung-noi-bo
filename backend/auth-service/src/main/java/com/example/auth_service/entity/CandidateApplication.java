@@ -21,4 +21,12 @@ public class CandidateApplication {
     private String fullName;
     @Column(nullable = false, length = 100)
     private String email;
+    @Column(length = 50)
+    private String stage = "APPLIED";
+
+    @Column(name = "candidate_source_id")
+    private Long candidateSourceId;
+
+    @Column(name = "rejection_reason_id")
+    private Long rejectionReasonId;
 }

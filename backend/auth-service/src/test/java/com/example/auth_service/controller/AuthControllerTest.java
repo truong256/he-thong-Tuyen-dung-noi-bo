@@ -128,7 +128,7 @@ class AuthControllerTest {
     @DisplayName("API: POST /api/auth/forgot-password trả về 200 generic message")
     void testApiForgotPassword() throws Exception {
         when(authService.forgotPassword(any(ForgotPasswordRequest.class)))
-                .thenReturn(Map.of("message", "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi."));
+                .thenReturn(Map.of("message", "Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký."));
 
         ForgotPasswordRequest request = new ForgotPasswordRequest("user@company.com");
 
@@ -136,14 +136,14 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi."));
+                .andExpect(jsonPath("$.message").value("Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký."));
     }
 
     @Test
     @DisplayName("API: POST /api/auth/reset-password trả về 200 khi thành công")
     void testApiResetPassword() throws Exception {
         when(authService.resetPassword(any(ResetPasswordRequest.class)))
-                .thenReturn(Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới."));
+                .thenReturn(Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới."));
 
         ResetPasswordRequest request = new ResetPasswordRequest("token-123", "NewPassword123@", "NewPassword123@");
 

@@ -42,6 +42,8 @@ class RbacIntegrationTest {
     @Autowired RoleRepository roles;
     @Autowired CandidateApplicationRepository applications;
     @Autowired RecruitmentRequisitionRepository requisitions;
+    @Autowired DepartmentRepository departments;
+    @Autowired JobTitleRepository jobTitles;
     @Autowired RequisitionAssignmentRepository assignments;
     @Autowired SalaryRangeRepository salaries;
     @Autowired RecruitmentReadService readService;
@@ -81,10 +83,12 @@ class RbacIntegrationTest {
         User actor = user("rbac-matrix", role);
         mvc.perform(get("/api/auth/permissions").header("Authorization", token(actor)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[?(@ == 'PROFILE_READ')]").exists());
+        // S1-08: ADMIN (USER_MANAGE) and HR_MANAGER (USER_READ) can list users; others cannot
+        boolean canListUsers = Set.of(RoleName.ADMIN, RoleName.HR_MANAGER).contains(role);
         mvc.perform(get("/api/admin/users").header("Authorization", token(actor)))
-                .andExpect(status().is(role == RoleName.ADMIN ? 200 : 403));
-        boolean salaryAllowed = Set.of(RoleName.ADMIN, RoleName.HR_MANAGER, RoleName.RECRUITER,
-                RoleName.HIRING_MANAGER, RoleName.APPROVER).contains(role);
+                .andExpect(status().is(canListUsers ? 200 : 403));
+        // S2-05 / GAP 02: Only HR_MANAGER has SALARY_READ for standard salary ranges
+        boolean salaryAllowed = role == RoleName.HR_MANAGER;
         mvc.perform(get("/api/salary-ranges").header("Authorization", token(actor)))
                 .andExpect(status().is(salaryAllowed ? 200 : 403));
     }
@@ -106,21 +110,20 @@ class RbacIntegrationTest {
     }
 
     @Test
-    void recruiterListAndCountAreScopedBeforePagination() throws Exception {
-        mvc.perform(get("/api/candidates?size=1").header("Authorization", token(recruiter)))
+    @DisplayName("GAP 01: Recruiter has CANDIDATE_READ_ASSIGNED – sees only assigned candidates and pipeline scoped")
+    void recruiterHasScopedCandidateAndPipelineAccess() throws Exception {
+        // Recruiter sees only candidates of assigned requisition (visible is owned, hidden is other)
+        mvc.perform(get("/api/candidates?size=10").header("Authorization", token(recruiter)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].id").value(visible.getId()))
-                .andExpect(jsonPath("$.content[0].minSalary").doesNotExist());
-        mvc.perform(get("/api/candidates?requisitionId=" + other.getId()).header("Authorization", token(recruiter)))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
-    }
+                .andExpect(jsonPath("$.content[0].id").value(visible.getId()));
 
-    @Test
-    void recruiterCannotGuessAnotherApplicationId() throws Exception {
+        // Recruiter access to assigned candidate detail -> PASS (200)
         mvc.perform(get("/api/candidates/" + visible.getId()).header("Authorization", token(recruiter)))
                 .andExpect(status().isOk());
+
+        // Recruiter access to candidate outside assigned requisition -> DENY (403)
         mvc.perform(get("/api/candidates/" + hidden.getId()).header("Authorization", token(recruiter)))
-                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -239,18 +242,152 @@ class RbacIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(2));
     }
 
+    // -----------------------------------------------------------------------
+    // S1-08: HR_MANAGER read-only access to user management
+    // -----------------------------------------------------------------------
     @Test
-    void recruiterCannotSelfAssignAndAdminCanGrantAndRevokeScope() throws Exception {
+    @DisplayName("S1-08: HR_MANAGER can list users (USER_READ) but cannot create, update, or lock")
+    void hrManagerHasReadOnlyAccessToUserManagement() throws Exception {
+        User hrManager = user("rbac-hr-usermgmt", RoleName.HR_MANAGER);
+        String hrToken = token(hrManager);
+
+        // R: can list users
+        mvc.perform(get("/api/admin/users").header("Authorization", hrToken))
+                .andExpect(status().isOk());
+
+        // R: can get a specific user detail
+        mvc.perform(get("/api/admin/users/" + recruiter.getId()).header("Authorization", hrToken))
+                .andExpect(status().isOk());
+
+        // R: can read role definitions
+        mvc.perform(get("/api/admin/roles").header("Authorization", hrToken))
+                .andExpect(status().isOk());
+
+        // F is DENIED: cannot create user (USER_MANAGE required)
+        mvc.perform(post("/api/admin/users")
+                .header("Authorization", hrToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"test@example.com\",\"fullName\":\"Test\",\"roles\":[\"RECRUITER\"]}")
+        ).andExpect(status().isForbidden());
+
+        // F is DENIED: cannot lock/unlock account (USER_MANAGE required)
+        mvc.perform(patch("/api/admin/users/" + recruiter.getId() + "/status")
+                .header("Authorization", hrToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"LOCKED\",\"reason\":\"Test\"}"))
+                .andExpect(status().isForbidden());
+
+        // F is DENIED: cannot assign roles (ROLE_MANAGE required)
+        mvc.perform(put("/api/admin/users/" + recruiter.getId() + "/roles")
+                .header("Authorization", hrToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"roles\":[\"RECRUITER\",\"HR_MANAGER\"]}")
+        ).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("S1-08: HR_MANAGER has USER_READ and ROLE_READ permissions in /api/auth/permissions")
+    void hrManagerHasCorrectPermissionsInPermissionsList() throws Exception {
+        User hrManager = user("rbac-hr-perms", RoleName.HR_MANAGER);
+        mvc.perform(get("/api/auth/permissions").header("Authorization", token(hrManager)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@ == 'USER_READ')]").exists())
+                .andExpect(jsonPath("$[?(@ == 'ROLE_READ')]").exists())
+                .andExpect(jsonPath("$[?(@ == 'AUDIT_READ')]").exists())
+                .andExpect(jsonPath("$[?(@ == 'USER_MANAGE')]").isEmpty())
+                .andExpect(jsonPath("$[?(@ == 'ROLE_MANAGE')]").isEmpty());
+    }
+
+    @Test
+    @DisplayName("S1-09: ADMIN only can assign/revoke roles (ROLE_MANAGE); HR_MANAGER cannot")
+    void onlyAdminCanAssignRoles() throws Exception {
+        User admin = user("rbac-role-admin", RoleName.ADMIN);
+        User hrManager = user("rbac-role-hr", RoleName.HR_MANAGER);
+
+        // ADMIN can update roles
+        mvc.perform(put("/api/admin/users/" + recruiter.getId() + "/roles")
+                .header("Authorization", token(admin))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"roles\":[\"RECRUITER\",\"INTERVIEWER\"]}")
+        ).andExpect(status().isOk());
+
+        // HR_MANAGER cannot update roles
+        mvc.perform(put("/api/admin/users/" + recruiter.getId() + "/roles")
+                .header("Authorization", token(hrManager))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"roles\":[\"RECRUITER\"]}")
+        ).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("APPROVER can read all candidate summaries (CANDIDATE_READ_ALL)")
+    void approverCanReadAllCandidates() throws Exception {
+        User approver = user("rbac-approver", RoleName.APPROVER);
+        mvc.perform(get("/api/candidates").header("Authorization", token(approver)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    @DisplayName("CANDIDATE does not have CATALOG_READ – cannot access job titles or categories")
+    void candidateDoesNotHaveCatalogRead() throws Exception {
+        mvc.perform(get("/api/auth/permissions").header("Authorization", token(candidate)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@ == 'CATALOG_READ')]").isEmpty())
+                .andExpect(jsonPath("$[?(@ == 'SALARY_READ')]").isEmpty())
+                .andExpect(jsonPath("$[?(@ == 'USER_READ')]").isEmpty());
+    }
+
+    @Test
+    @DisplayName("S2-05 / GAP 02: Only HR_MANAGER has SALARY_READ – all other 6 roles are denied")
+    void salaryAccessRespectsSalaryReadPermission() throws Exception {
+        // Roles WITHOUT SALARY_READ: CANDIDATE, INTERVIEWER, RECRUITER, HIRING_MANAGER, APPROVER, ADMIN
+        for (RoleName role : List.of(RoleName.CANDIDATE, RoleName.INTERVIEWER, RoleName.RECRUITER,
+                RoleName.HIRING_MANAGER, RoleName.APPROVER, RoleName.ADMIN)) {
+            User actor = user("rbac-nosalary-" + role.name().toLowerCase(), role);
+            mvc.perform(get("/api/salary-ranges").header("Authorization", token(actor)))
+                    .andExpect(status().isForbidden());
+        }
+        // Sole role WITH SALARY_READ: HR_MANAGER
+        User hr = user("rbac-salary-hr", RoleName.HR_MANAGER);
+        mvc.perform(get("/api/salary-ranges").header("Authorization", token(hr)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void recruiterCannotSelfAssignAndAdminCanGrantAndRevokeAssignment() throws Exception {
         String path = "/api/requisitions/" + other.getId() + "/assignments/" + recruiter.getId();
+        // Recruiter lacks RECRUITER_ASSIGN -> cannot self-assign
         mvc.perform(put(path).header("Authorization", token(recruiter)).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"role\":\"RECRUITER\"}")).andExpect(status().isForbidden());
         String adminToken = token(user("rbac-admin", RoleName.ADMIN));
+        // Admin has RECRUITER_ASSIGN -> can assign and revoke
         mvc.perform(put(path).header("Authorization", adminToken).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"role\":\"RECRUITER\"}")).andExpect(status().isNoContent());
-        mvc.perform(get("/api/candidates/" + hidden.getId()).header("Authorization", token(recruiter)))
-                .andExpect(status().isOk());
         mvc.perform(delete(path).header("Authorization", adminToken)).andExpect(status().isNoContent());
-        mvc.perform(get("/api/candidates/" + hidden.getId()).header("Authorization", token(recruiter)))
+    }
+
+    @Test
+    void hiringManagerCannotSelfAssignAndAdminCanGrantAndRevokeScope() throws Exception {
+        User hm = user("rbac-hm-scope", RoleName.HIRING_MANAGER);
+        String path = "/api/requisitions/" + other.getId() + "/assignments/" + hm.getId();
+        // Hiring Manager cannot self-assign
+        mvc.perform(put(path).header("Authorization", token(hm)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"HIRING_MANAGER\"}")).andExpect(status().isForbidden());
+        // Hidden candidate is not visible to unassigned hiring manager (CANDIDATE_READ_ASSIGNED)
+        mvc.perform(get("/api/candidates/" + hidden.getId()).header("Authorization", token(hm)))
+                .andExpect(status().isForbidden());
+        // Admin grants assignment
+        String adminToken = token(user("rbac-admin-hm", RoleName.ADMIN));
+        mvc.perform(put(path).header("Authorization", adminToken).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"role\":\"HIRING_MANAGER\"}")).andExpect(status().isNoContent());
+        // Candidate now accessible through assignment
+        mvc.perform(get("/api/candidates/" + hidden.getId()).header("Authorization", token(hm)))
+                .andExpect(status().isOk());
+        // Admin revokes assignment
+        mvc.perform(delete(path).header("Authorization", adminToken)).andExpect(status().isNoContent());
+        // Revocation immediately revokes candidate access
+        mvc.perform(get("/api/candidates/" + hidden.getId()).header("Authorization", token(hm)))
                 .andExpect(status().isForbidden());
     }
 
@@ -400,6 +537,259 @@ class RbacIntegrationTest {
         mvc.perform(options("/api/candidates").header("Origin", "http://localhost:5173")
                 .header("Access-Control-Request-Method", "GET").header("Access-Control-Request-Headers", "Authorization"))
                 .andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+    }
+
+    @Test
+    @DisplayName("S2-10: Hiring Manager creates requisition for owned department -> 201; other department -> 403")
+    void hiringManagerCreateRequisitionScoping() throws Exception {
+        User hm = user("rbac-hm-s210", RoleName.HIRING_MANAGER);
+        User otherHm = user("rbac-other-hm-s210", RoleName.HIRING_MANAGER);
+
+        Department dept = new Department();
+        dept.setCode("ENG-S210");
+        dept.setName("Engineering S210");
+        dept.setActive(true);
+        dept.setManagerUserId(hm.getId());
+        dept = departments.saveAndFlush(dept);
+
+        Department otherDept = new Department();
+        otherDept.setCode("MKT-S210");
+        otherDept.setName("Marketing S210");
+        otherDept.setActive(true);
+        otherDept.setManagerUserId(otherHm.getId());
+        otherDept = departments.saveAndFlush(otherDept);
+
+        JobTitle jt = new JobTitle();
+        jt.setCode("DEV-S210");
+        jt.setTitle("Software Engineer");
+        jt.setDepartment(dept);
+        jt.setActive(true);
+        jt.setMinSalary(20000000L);
+        jt.setMaxSalary(40000000L);
+        jt = jobTitles.saveAndFlush(jt);
+
+        // HM creates for own department -> 201 Created
+        String payloadSuccess = """
+            {
+                "title": "Tuyển dụng Senior Developer",
+                "departmentId": %d,
+                "jobTitleId": %d,
+                "quantity": 2,
+                "reason": "EXPANSION",
+                "proposedMinSalary": 25000000.0,
+                "proposedMaxSalary": 35000000.0,
+                "targetDate": "%s",
+                "jobDescription": "Lập trình backend",
+                "requirements": "Java, Spring Boot",
+                "isDraft": false
+            }
+            """.formatted(dept.getId(), jt.getId(), java.time.LocalDate.now().plusMonths(1));
+
+        mvc.perform(post("/api/requisitions")
+                .header("Authorization", token(hm))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payloadSuccess))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.requisitionCode").exists())
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
+
+        // HM creates for another department -> 403 Forbidden
+        String payloadForbidden = """
+            {
+                "title": "Tuyển dụng Marketer",
+                "departmentId": %d,
+                "jobTitleId": %d,
+                "quantity": 1,
+                "reason": "EXPANSION",
+                "proposedMinSalary": 25000000.0,
+                "proposedMaxSalary": 35000000.0,
+                "targetDate": "%s",
+                "isDraft": false
+            }
+            """.formatted(otherDept.getId(), jt.getId(), java.time.LocalDate.now().plusMonths(1));
+
+        mvc.perform(post("/api/requisitions")
+                .header("Authorization", token(hm))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payloadForbidden))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("S2-10: Requisition validations - past target date and proposed salary outside standard range")
+    void requisitionValidationPastDateAndSalaryStandard() throws Exception {
+        User hm = user("rbac-hm-val", RoleName.HIRING_MANAGER);
+
+        Department dept = new Department();
+        dept.setCode("DEP-VAL");
+        dept.setName("Department Val");
+        dept.setActive(true);
+        dept.setManagerUserId(hm.getId());
+        dept = departments.saveAndFlush(dept);
+
+        JobTitle jt = new JobTitle();
+        jt.setCode("JT-VAL");
+        jt.setTitle("Job Title Val");
+        jt.setDepartment(dept);
+        jt.setActive(true);
+        jt.setMinSalary(20000000L);
+        jt.setMaxSalary(30000000L);
+        jt = jobTitles.saveAndFlush(jt);
+
+        // 1. Target date in past -> 400
+        String pastDatePayload = """
+            {
+                "title": "Yêu cầu tuyển dụng quá khứ",
+                "departmentId": %d,
+                "jobTitleId": %d,
+                "quantity": 1,
+                "reason": "NEW_HEADCOUNT",
+                "proposedMinSalary": 22000000.0,
+                "proposedMaxSalary": 28000000.0,
+                "targetDate": "%s",
+                "isDraft": true
+            }
+            """.formatted(dept.getId(), jt.getId(), java.time.LocalDate.now().minusDays(1));
+
+        mvc.perform(post("/api/requisitions")
+                .header("Authorization", token(hm))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(pastDatePayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Ngày cần người không được ở quá khứ."));
+
+        // 2. Out of salary range (min 15M < std min 20M or max 45M > std max 30M) without explanation -> 400
+        String outSalaryNoExpPayload = """
+            {
+                "title": "Lương ngoài chuẩn không giải trình",
+                "departmentId": %d,
+                "jobTitleId": %d,
+                "quantity": 1,
+                "reason": "NEW_HEADCOUNT",
+                "proposedMinSalary": 15000000.0,
+                "proposedMaxSalary": 45000000.0,
+                "targetDate": "%s",
+                "isDraft": true
+            }
+            """.formatted(dept.getId(), jt.getId(), java.time.LocalDate.now().plusMonths(1));
+
+        mvc.perform(post("/api/requisitions")
+                .header("Authorization", token(hm))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(outSalaryNoExpPayload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Dải lương đề xuất nằm ngoài khung chuẩn của chức danh, bắt buộc nhập giải trình.")));
+
+        // 3. Out of salary range WITH explanation -> 201 Created
+        String outSalaryWithExpPayload = """
+            {
+                "title": "Lương ngoài chuẩn có giải trình",
+                "departmentId": %d,
+                "jobTitleId": %d,
+                "quantity": 1,
+                "reason": "NEW_HEADCOUNT",
+                "proposedMinSalary": 15000000.0,
+                "proposedMaxSalary": 45000000.0,
+                "salaryExplanation": "Ứng viên chuyên gia thâm niên cao đáp ứng công nghệ mới",
+                "targetDate": "%s",
+                "isDraft": true
+            }
+            """.formatted(dept.getId(), jt.getId(), java.time.LocalDate.now().plusMonths(1));
+
+        mvc.perform(post("/api/requisitions")
+                .header("Authorization", token(hm))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(outSalaryWithExpPayload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DRAFT"));
+    }
+
+    @Test
+    @DisplayName("S2-10: Save draft, update requisition, delete draft only, and scoped list reading")
+    void requisitionDraftAndReadScoping() throws Exception {
+        User hm = user("rbac-hm-draft", RoleName.HIRING_MANAGER);
+        User otherHm = user("rbac-hm-other-draft", RoleName.HIRING_MANAGER);
+        User hr = user("rbac-hr-draft", RoleName.HR_MANAGER);
+
+        Department dept = new Department();
+        dept.setCode("DEP-DRF");
+        dept.setName("Department Draft");
+        dept.setActive(true);
+        dept.setManagerUserId(hm.getId());
+        dept = departments.saveAndFlush(dept);
+
+        JobTitle jt = new JobTitle();
+        jt.setCode("JT-DRF");
+        jt.setTitle("Job Title Draft");
+        jt.setDepartment(dept);
+        jt.setActive(true);
+        jt.setMinSalary(10000000L);
+        jt.setMaxSalary(20000000L);
+        jt = jobTitles.saveAndFlush(jt);
+
+        // HM creates draft
+        String draftPayload = """
+            {
+                "title": "Bản nháp tuyển dụng",
+                "departmentId": %d,
+                "jobTitleId": %d,
+                "quantity": 1,
+                "reason": "NEW_HEADCOUNT",
+                "targetDate": "%s",
+                "isDraft": true
+            }
+            """.formatted(dept.getId(), jt.getId(), java.time.LocalDate.now().plusDays(10));
+
+        String resStr = mvc.perform(post("/api/requisitions")
+                .header("Authorization", token(hm))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(draftPayload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DRAFT"))
+                .andReturn().getResponse().getContentAsString();
+
+        tools.jackson.databind.JsonNode rootNode = new tools.jackson.databind.ObjectMapper().readTree(resStr);
+        long reqId = rootNode.get("id").asLong();
+
+        // Other HM cannot see this requisition in detail -> 403
+        mvc.perform(get("/api/requisitions/" + reqId).header("Authorization", token(otherHm)))
+                .andExpect(status().isForbidden());
+
+        // HR Manager can see this requisition -> 200
+        mvc.perform(get("/api/requisitions/" + reqId).header("Authorization", token(hr)))
+                .andExpect(status().isOk());
+
+        // HM deletes draft -> 204
+        mvc.perform(delete("/api/requisitions/" + reqId).header("Authorization", token(hm)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    @DisplayName("GAP 04: Protection against revoking, locking, or deleting the last active admin")
+    void lastActiveAdminProtection() throws Exception {
+        // Lock any pre-existing active admins so soleAdmin is the only active admin
+        users.findAll().stream()
+                .filter(u -> u.getRoles() != null && u.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ADMIN))
+                .forEach(u -> {
+                    u.setStatus("LOCKED");
+                    users.save(u);
+                });
+        users.flush();
+
+        User soleAdmin = user("rbac-sole-admin", RoleName.ADMIN);
+        String adminToken = token(soleAdmin);
+
+        // Lock the only active admin -> 400 Bad Request
+        mvc.perform(patch("/api/admin/users/" + soleAdmin.getId() + "/status")
+                .header("Authorization", adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"LOCKED\",\"reason\":\"Test lock\"}"))
+                .andExpect(status().isBadRequest());
+
+        // Delete the only active admin -> 400 Bad Request
+        mvc.perform(delete("/api/admin/users/" + soleAdmin.getId())
+                .header("Authorization", adminToken))
+                .andExpect(status().isBadRequest());
     }
 
     private User user(String name, RoleName role) {

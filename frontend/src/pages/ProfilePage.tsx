@@ -4,9 +4,10 @@ import authApi from '../api/auth';
 import ChangePasswordModal from '../components/auth/ChangePasswordModal';
 import ProfileHeader from '../components/profile/ProfileHeader';
 import ProfileTabs, { ProfileTabType } from '../components/profile/ProfileTabs';
-import PersonalInfoTab from '../components/profile/PersonalInfoTab';
+import PersonalInfoTab, { ProfileFieldErrors } from '../components/profile/PersonalInfoTab';
 import RolesPermissionsTab from '../components/profile/RolesPermissionsTab';
 import SecuritySessionsTab from '../components/profile/SecuritySessionsTab';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/profile.css';
 
 export const ProfilePage: React.FC = () => {
@@ -16,12 +17,16 @@ export const ProfilePage: React.FC = () => {
 
   // Form states
   const [fullName, setFullName] = useState(user?.fullName || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
   const [department, setDepartment] = useState(user?.department || '');
+  const [recoveryEmail, setRecoveryEmail] = useState(user?.recoveryEmail || '');
 
   // UI status states
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<ProfileFieldErrors>({});
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // Password Modal
@@ -31,59 +36,113 @@ export const ProfilePage: React.FC = () => {
   useEffect(() => {
     if (user) {
       setFullName(user.fullName || '');
+      setPhone(user.phone || '');
+      setDisplayName(user.displayName || '');
       setDepartment(user.department || '');
+      setRecoveryEmail(user.recoveryEmail || '');
     }
   }, [user]);
 
   const handleReset = () => {
     setFullName(user?.fullName || '');
+    setPhone(user?.phone || '');
+    setDisplayName(user?.displayName || '');
     setDepartment(user?.department || '');
+    setRecoveryEmail(user?.recoveryEmail || '');
+    setFieldErrors({});
     setValidationError(null);
     setErrorMsg(null);
   };
 
-  const handleDepartmentChange = (dept: string) => {
-    setDepartment(dept);
+  const handlePhoneChange = (value: string) => {
+    setPhone(value);
+    setFieldErrors((prev) => ({ ...prev, phone: undefined }));
+    if (validationError) setValidationError(null);
+    if (errorMsg) setErrorMsg(null);
+  };
+
+  const handleDisplayNameChange = (value: string) => {
+    setDisplayName(value);
+    setFieldErrors((prev) => ({ ...prev, displayName: undefined }));
     if (validationError) setValidationError(null);
     if (errorMsg) setErrorMsg(null);
   };
 
   const handleFullNameChange = (name: string) => {
     setFullName(name);
+    setFieldErrors((prev) => ({ ...prev, fullName: undefined }));
+    if (validationError) setValidationError(null);
+    if (errorMsg) setErrorMsg(null);
+  };
+
+  const handleRecoveryEmailChange = (emailVal: string) => {
+    setRecoveryEmail(emailVal);
+    setFieldErrors((prev) => ({ ...prev, recoveryEmail: undefined }));
     if (validationError) setValidationError(null);
     if (errorMsg) setErrorMsg(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFieldErrors({});
     setValidationError(null);
     setErrorMsg(null);
     setSuccessMsg(null);
 
     const trimmedName = fullName.trim();
-    const trimmedDept = department.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedDisplayName = displayName.trim();
+    const trimmedRecovery = recoveryEmail.trim();
+
+    const errors: ProfileFieldErrors = {};
 
     if (!trimmedName || trimmedName.length < 2) {
-      setValidationError('Họ và tên phải có tối thiểu 2 ký tự.');
-      return;
+      errors.fullName = 'Họ và tên phải có tối thiểu 2 ký tự.';
+    } else if (trimmedName.length > 100) {
+      errors.fullName = 'Họ và tên không được vượt quá 100 ký tự.';
     }
 
-    if (trimmedName.length > 100) {
-      setValidationError('Họ và tên không được vượt quá 100 ký tự.');
-      return;
+    if (trimmedPhone && !/^(0|\+84)[35789]\d{8}$/.test(trimmedPhone)) {
+      errors.phone = 'Số điện thoại không đúng định dạng Việt Nam.';
     }
 
-    if (trimmedDept.length > 100) {
-      setValidationError('Tên phòng ban không được vượt quá 100 ký tự.');
+    if (trimmedDisplayName.length > 150) {
+      errors.displayName = 'Chức danh hiển thị tối đa 150 ký tự.';
+    }
+
+    if (trimmedRecovery) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedRecovery)) {
+        errors.recoveryEmail = 'Email khôi phục không đúng định dạng.';
+      }
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstError = errors.fullName || errors.phone || errors.displayName || errors.recoveryEmail || null;
+      setValidationError(firstError);
       return;
     }
 
     setIsSaving(true);
     try {
-      await authApi.updateProfile({
+      const payload: {
+        fullName: string;
+        phone?: string;
+        displayName?: string;
+        recoveryEmail?: string;
+      } = {
         fullName: trimmedName,
-        department: trimmedDept || undefined,
-      });
+      };
+      if (trimmedPhone) payload.phone = trimmedPhone;
+      if (trimmedDisplayName) payload.displayName = trimmedDisplayName;
+      if (trimmedRecovery) {
+        payload.recoveryEmail = trimmedRecovery;
+      } else if (user?.recoveryEmail) {
+        payload.recoveryEmail = '';
+      }
+
+      await authApi.updateProfile(payload);
 
       // Refresh current user data across context and localStorage
       await refreshUser();
@@ -91,9 +150,22 @@ export const ProfilePage: React.FC = () => {
       setSuccessMsg('Thông tin hồ sơ cá nhân đã được cập nhật thành công!');
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
+      const apiValidation = err.response?.data?.validationErrors;
+      if (apiValidation && typeof apiValidation === 'object') {
+        const mappedErrors: ProfileFieldErrors = {};
+        if (apiValidation.fullName) mappedErrors.fullName = apiValidation.fullName;
+        if (apiValidation.phone) mappedErrors.phone = apiValidation.phone;
+        if (apiValidation.displayName) mappedErrors.displayName = apiValidation.displayName;
+        if (apiValidation.recoveryEmail) mappedErrors.recoveryEmail = apiValidation.recoveryEmail;
+        setFieldErrors(mappedErrors);
+      }
+
       const msg =
         err.response?.data?.message ||
-        err.response?.data?.validationErrors?.fullName ||
+        apiValidation?.fullName ||
+        apiValidation?.phone ||
+        apiValidation?.displayName ||
+        apiValidation?.recoveryEmail ||
         'Không thể cập nhật hồ sơ cá nhân. Vui lòng thử lại sau.';
       setErrorMsg(msg);
     } finally {
@@ -105,6 +177,23 @@ export const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-page-clean-container" data-testid="profile-page">
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Hồ sơ cá nhân"
+        subtitle="Quản lý thông tin định danh, tài khoản khôi phục và thiết lập bảo mật phiên đăng nhập"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Hồ sơ cá nhân' },
+        ]}
+      />
+
+      {/* Floating success toast notification */}
+      {successMsg && (
+        <div className="profile-toast-success" role="status" aria-live="polite">
+          <span>{successMsg}</span>
+        </div>
+      )}
+
       {/* 1. Profile Summary Card (Clean, compact, no huge gradients) */}
       <ProfileHeader
         user={user}
@@ -123,12 +212,18 @@ export const ProfilePage: React.FC = () => {
             user={user}
             fullName={fullName}
             department={department}
+            phone={phone}
+            displayName={displayName}
+            recoveryEmail={recoveryEmail}
             isSaving={isSaving}
+            fieldErrors={fieldErrors}
             validationError={validationError}
             errorMsg={errorMsg}
             successMsg={successMsg}
             onFullNameChange={handleFullNameChange}
-            onDepartmentChange={handleDepartmentChange}
+            onPhoneChange={handlePhoneChange}
+            onDisplayNameChange={handleDisplayNameChange}
+            onRecoveryEmailChange={handleRecoveryEmailChange}
             onSubmit={handleSubmit}
             onReset={handleReset}
           />

@@ -5,7 +5,7 @@ import apiClient from '../api/client';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
 
-const genericMessage = 'Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi.';
+const genericMessage = 'Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký.';
 
 function renderReset(path = '/reset-password?token=test-only-token') {
   return render(
@@ -59,7 +59,7 @@ describe('S1-03 password reset API flows', () => {
     render(<MemoryRouter><ForgotPasswordPage /></MemoryRouter>);
     fireEvent.change(screen.getByLabelText(/^Email công ty/), { target: { value: 'existing@company.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu khôi phục' }));
-    expect(await screen.findByRole('status')).toHaveTextContent('Nếu email tồn tại trong hệ thống');
+    expect(await screen.findByRole('status')).toHaveTextContent(genericMessage);
     expect(screen.queryByText(/SMTP diagnostic/)).not.toBeInTheDocument();
   });
 

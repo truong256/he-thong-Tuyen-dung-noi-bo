@@ -33,7 +33,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
-@PreAuthorize("hasAuthority('USER_MANAGE')")
 public class AdminUserService {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminUserService.class);
@@ -45,6 +44,7 @@ public class AdminUserService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final RequisitionAssignmentRepository requisitionAssignmentRepository;
     private final RecruitmentRequisitionRepository recruitmentRequisitionRepository;
+    private final DepartmentRepository departmentRepository;
 
     public AdminUserService(UserRepository userRepository,
                             RoleRepository roleRepository,
@@ -52,7 +52,8 @@ public class AdminUserService {
                             MailService mailService,
                             RefreshTokenRepository refreshTokenRepository,
                             RequisitionAssignmentRepository requisitionAssignmentRepository,
-                            RecruitmentRequisitionRepository recruitmentRequisitionRepository) {
+                            RecruitmentRequisitionRepository recruitmentRequisitionRepository,
+                            DepartmentRepository departmentRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -60,6 +61,7 @@ public class AdminUserService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.requisitionAssignmentRepository = requisitionAssignmentRepository;
         this.recruitmentRequisitionRepository = recruitmentRequisitionRepository;
+        this.departmentRepository = departmentRepository;
     }
 
     @Transactional(readOnly = true)
@@ -119,6 +121,7 @@ public class AdminUserService {
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public UserSummaryDto createUser(CreateUserRequest request) {
         if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
             throw new BadRequestException("Email không được để trống.");
@@ -133,6 +136,9 @@ public class AdminUserService {
 
         User user = new User(email, passwordEncoder.encode(rawPassword));
         user.setFullName(request.getFullName() != null ? request.getFullName().trim() : "");
+        if (request.getRecoveryEmail() != null && !request.getRecoveryEmail().isBlank()) {
+            user.setRecoveryEmail(request.getRecoveryEmail().trim().toLowerCase());
+        }
         user.setDepartment(request.getDepartment() != null ? request.getDepartment().trim() : null);
         user.setStatus(request.getStatus() != null ? request.getStatus().toUpperCase() : "ACTIVE");
         user.setMustChangePassword(true);
@@ -157,6 +163,7 @@ public class AdminUserService {
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public UserSummaryDto updateUser(Long id, UpdateUserRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
@@ -174,6 +181,11 @@ public class AdminUserService {
             user.setFullName(request.getFullName().trim());
         }
 
+        if (request.getRecoveryEmail() != null) {
+            String rec = request.getRecoveryEmail().trim();
+            user.setRecoveryEmail(rec.isEmpty() ? null : rec.toLowerCase());
+        }
+
         if (request.getDepartment() != null) {
             user.setDepartment(request.getDepartment().trim().isEmpty() ? null : request.getDepartment().trim());
         }
@@ -184,6 +196,7 @@ public class AdminUserService {
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public UserSummaryDto updateStatus(Long id, UpdateStatusRequest request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
@@ -194,6 +207,12 @@ public class AdminUserService {
         }
 
         List<String> handoverWarnings = new ArrayList<>();
+
+        if ("LOCKED".equals(newStatus) || "INACTIVE".equals(newStatus)) {
+            if (isLastActiveAdmin(user)) {
+                throw new BadRequestException("Không thể khóa hoặc vô hiệu hóa quản trị viên đang hoạt động duy nhất trong hệ thống.");
+            }
+        }
 
         if ("LOCKED".equals(newStatus)) {
             if (request.getReason() == null || request.getReason().trim().isBlank()) {
@@ -258,6 +277,11 @@ public class AdminUserService {
 
         Set<Role> roles = resolveRoles(request.getRoles());
 
+        boolean hadAdmin = user.getRoles() != null && user.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.ADMIN);
+        boolean retainsAdmin = roles.stream()
+                .anyMatch(r -> r.getName() == RoleName.ADMIN);
+
         // Self-protection: Admin cannot revoke their own ADMIN role
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
@@ -271,15 +295,14 @@ public class AdminUserService {
                 }
             }
 
-            boolean hadAdmin = user.getRoles() != null && user.getRoles().stream()
-                    .anyMatch(r -> r.getName() == RoleName.ADMIN);
-            boolean retainsAdmin = roles.stream()
-                    .anyMatch(r -> r.getName() == RoleName.ADMIN);
-
             if (isSelf && hadAdmin && !retainsAdmin) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Quản trị viên không thể tự thu hồi vai trò ADMIN của chính mình.");
             }
+        }
+
+        if (hadAdmin && !retainsAdmin && isLastActiveAdmin(user)) {
+            throw new BadRequestException("Không thể thu hồi vai trò ADMIN của quản trị viên đang hoạt động duy nhất trong hệ thống.");
         }
 
         user.setRoles(roles);
@@ -290,10 +313,49 @@ public class AdminUserService {
     }
 
     @Transactional
+    @PreAuthorize("hasAuthority('USER_MANAGE')")
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+        if (isLastActiveAdmin(user)) {
+            throw new BadRequestException("Không thể xóa quản trị viên đang hoạt động duy nhất trong hệ thống.");
+        }
+
+        // Clean up refresh tokens
+        refreshTokenRepository.deleteByUser(user);
+
+        // Clean up requisition assignments if any
+        List<RequisitionAssignment> assignments = requisitionAssignmentRepository.findByUserId(user.getId());
+        if (assignments != null && !assignments.isEmpty()) {
+            requisitionAssignmentRepository.deleteAll(assignments);
+        }
+
+        // Clear department manager reference if this user is a manager
+        departmentRepository.findAll().stream()
+                .filter(d -> user.getId().equals(d.getManagerUserId()))
+                .forEach(d -> {
+                    d.setManagerUserId(null);
+                    departmentRepository.save(d);
+                });
+
         userRepository.delete(user);
+    }
+
+    private boolean isLastActiveAdmin(User targetUser) {
+        boolean isTargetAdmin = targetUser.getRoles() != null && targetUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.ADMIN);
+        if (!isTargetAdmin) {
+            return false;
+        }
+        List<User> allUsers = userRepository.findAll();
+        if (allUsers == null || allUsers.isEmpty()) {
+            return false;
+        }
+        long activeAdminCount = allUsers.stream()
+                .filter(u -> "ACTIVE".equalsIgnoreCase(u.getStatus()))
+                .filter(u -> u.getRoles() != null && u.getRoles().stream().anyMatch(r -> r.getName() == RoleName.ADMIN))
+                .count();
+        return activeAdminCount <= 1;
     }
 
     private String getAuthenticatedUsername() {
@@ -369,6 +431,7 @@ public class AdminUserService {
         dto.setLockedAt(user.getLockedAt());
         dto.setLockedBy(user.getLockedBy());
         dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setRecoveryEmail(user.getRecoveryEmail());
         dto.setAvatarUrl(user.getAvatarUrl());
         dto.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
         return dto;

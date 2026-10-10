@@ -55,10 +55,10 @@ export const ResetPasswordPage: React.FC = () => {
         newPassword,
         confirmPassword,
       });
-      setMessage({ text: res.message || 'Đặt lại mật khẩu thành công! Đang chuyển hướng...', isError: false });
+      setMessage({ text: res.message || 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.', isError: false });
       setTimeout(() => navigate('/login', { replace: true }), 2000);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.';
+      const msg = err.response?.data?.message || 'Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng.';
       setMessage({ text: msg, isError: true });
     } finally {
       setIsSubmitting(false);

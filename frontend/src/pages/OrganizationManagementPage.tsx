@@ -6,16 +6,13 @@ import {
   MapPin,
   Award,
   Users,
-  Briefcase,
   ShieldCheck,
   Search,
   Plus,
   Edit2,
   Trash2,
   Power,
-  RotateCcw,
   Download,
-  Save,
   CheckCircle2,
   AlertCircle,
   Layers,
@@ -25,7 +22,6 @@ import {
   Globe,
   Clock,
   Check,
-  FileSpreadsheet,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -39,14 +35,16 @@ import {
 import OrgChartVisualizer from '../components/organization/OrgChartVisualizer';
 import DepartmentModal from '../components/organization/DepartmentModal';
 import LocationModal from '../components/organization/LocationModal';
+import CompanyProfileEditor from '../components/organization/CompanyProfileEditor';
+import { PageHeader } from '../components/common/PageHeader';
 import '../styles/organization.css';
 
 type ActiveTab = 'overview' | 'departments' | 'locations' | 'branding';
 type DepartmentViewMode = 'chart' | 'table';
 
 export const OrganizationManagementPage: React.FC = () => {
-  const { user, hasAnyRole } = useAuth();
-  const canEdit = hasAnyRole(['ADMIN', 'HR_MANAGER']);
+  const { user, hasPermission } = useAuth();
+  const canEdit = Boolean(hasPermission && hasPermission('DEPARTMENT_MANAGE'));
 
   // Tabs & Views
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview');
@@ -59,10 +57,8 @@ export const OrganizationManagementPage: React.FC = () => {
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Edit Profile Form state
+  // Edit Profile state
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editProfileForm, setEditProfileForm] = useState<Partial<CompanyProfile>>({});
-  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
 
   // Modals state
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -96,7 +92,6 @@ export const OrganizationManagementPage: React.FC = () => {
         organizationApi.getOrgStatistics(),
       ]);
       setProfile(profData);
-      setEditProfileForm(profData);
       setDepartments(deptData);
       setLocations(locData);
       setStatistics(statsData);
@@ -112,20 +107,15 @@ export const OrganizationManagementPage: React.FC = () => {
   }, [loadData]);
 
   // --- Profile Actions ---
-  const handleSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfileSaveError(null);
-    try {
-      const updated = await organizationApi.updateCompanyProfile({
-        ...editProfileForm,
-        updatedBy: user?.fullName || 'Quản trị viên',
-      });
-      setProfile(updated);
-      setIsEditingProfile(false);
-      showToast('Cập nhật thông tin tổ chức thành công!');
-    } catch (err: any) {
-      setProfileSaveError(err.message || 'Lỗi khi lưu thông tin tổ chức.');
-    }
+  const handleSaveProfile = async (data: CompanyProfile) => {
+    const updated = await organizationApi.updateCompanyProfile({
+      ...data,
+      updatedBy: user?.fullName || 'Quản trị viên',
+    });
+    setProfile(updated);
+    setIsEditingProfile(false);
+    showToast('Cập nhật hồ sơ giới thiệu công ty thành công!');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleResetSeedData = async () => {
@@ -150,19 +140,29 @@ export const OrganizationManagementPage: React.FC = () => {
   };
 
   const handleSaveDept = async (deptData: any) => {
-    if (selectedDept) {
-      await organizationApi.updateDepartment(selectedDept.id, deptData);
-      showToast(`Đã cập nhật phòng ban "${deptData.name}"!`);
-    } else {
-      await organizationApi.createDepartment(deptData);
-      showToast(`Đã thêm mới phòng ban "${deptData.name}"!`);
+    try {
+      if (selectedDept) {
+        await organizationApi.updateDepartment(selectedDept.id, deptData);
+        if (deptData.active !== undefined && deptData.active !== selectedDept.active) {
+          await organizationApi.toggleDepartmentStatus(selectedDept.id, selectedDept.active);
+        }
+        showToast(`Đã cập nhật phòng ban "${deptData.name}"!`);
+      } else {
+        await organizationApi.createDepartment(deptData);
+        showToast(`Đã thêm mới phòng ban "${deptData.name}"!`);
+      }
+      await loadData();
+    } catch (err: any) {
+      showToast(err.message || 'Lỗi khi lưu phòng ban.', 'error');
+      throw err;
     }
-    await loadData();
   };
 
-  const handleToggleDeptStatus = async (id: number) => {
+  const handleToggleDeptStatus = async (id: number, currentActive?: boolean) => {
     try {
-      const updated = await organizationApi.toggleDepartmentStatus(id);
+      const targetDept = departments.find((d) => d.id === id);
+      const isCurrentlyActive = currentActive !== undefined ? currentActive : (targetDept?.active ?? true);
+      const updated = await organizationApi.toggleDepartmentStatus(id, isCurrentlyActive);
       showToast(
         `Đã ${updated.active ? 'kích hoạt lại' : 'tạm ngưng'} phòng ban "${updated.name}"!`
       );
@@ -291,6 +291,16 @@ export const OrganizationManagementPage: React.FC = () => {
         </div>
       )}
 
+      {/* Enterprise Breadcrumb and Page Header */}
+      <PageHeader
+        title="Cơ cấu Tổ chức & Hồ sơ Doanh nghiệp"
+        subtitle="Quản lý pháp lý công ty, cây phân cấp phòng ban và mạng lưới chi nhánh hoạt động"
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Hồ sơ tổ chức & Cơ cấu' },
+        ]}
+      />
+
       {/* ====================================================================
           HERO BANNER: COMPANY IDENTITY
           ==================================================================== */}
@@ -298,7 +308,15 @@ export const OrganizationManagementPage: React.FC = () => {
         <div className="org-hero-header">
           <div className="org-identity-left">
             <div className="org-logo-box" aria-label="Logo tổ chức">
-              <Building2 size={38} />
+              {profile?.logoUrl ? (
+                <img
+                  src={profile.logoUrl}
+                  alt={`Logo ${profile.shortName || profile.companyName}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#fff', borderRadius: 'inherit' }}
+                />
+              ) : (
+                <Building2 size={38} />
+              )}
             </div>
             <div className="org-identity-info">
               <div className="org-title-row">
@@ -324,7 +342,7 @@ export const OrganizationManagementPage: React.FC = () => {
                 <span className="org-meta-item">
                   <Globe size={14} />
                   <a href={profile?.website} target="_blank" rel="noreferrer">
-                    {profile?.website.replace('https://', '')}
+                    {profile?.website?.replace(/^https?:\/\//, '')}
                   </a>
                 </span>
               </div>
@@ -348,7 +366,6 @@ export const OrganizationManagementPage: React.FC = () => {
                   onClick={handleResetSeedData}
                   title="Đặt lại dữ liệu mẫu"
                 >
-                  <RotateCcw size={15} />
                   <span>Dữ liệu mẫu</span>
                 </button>
                 <button
@@ -357,7 +374,6 @@ export const OrganizationManagementPage: React.FC = () => {
                   onClick={handleExportDeptCsv}
                   title="Xuất cơ cấu tổ chức ra CSV"
                 >
-                  <FileSpreadsheet size={15} />
                   <span>Xuất CSV</span>
                 </button>
                 <button
@@ -368,7 +384,6 @@ export const OrganizationManagementPage: React.FC = () => {
                     setIsEditingProfile(!isEditingProfile);
                   }}
                 >
-                  <Edit2 size={15} />
                   <span>{isEditingProfile ? 'Xem tổng quan' : 'Chỉnh sửa hồ sơ'}</span>
                 </button>
               </>
@@ -382,9 +397,6 @@ export const OrganizationManagementPage: React.FC = () => {
           ==================================================================== */}
       <section className="org-stats-grid" aria-label="Chỉ số cơ cấu tổ chức">
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper blue">
-            <Building2 size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Tổng số phòng ban / đơn vị</span>
             <span className="stat-value">{statistics?.totalDepartments || 0}</span>
@@ -395,9 +407,6 @@ export const OrganizationManagementPage: React.FC = () => {
         </div>
 
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper emerald">
-            <Users size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Tổng nhân sự trực thuộc</span>
             <span className="stat-value">{statistics?.totalEmployees || 0}</span>
@@ -406,9 +415,6 @@ export const OrganizationManagementPage: React.FC = () => {
         </div>
 
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper amber">
-            <MapPin size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Chi nhánh & Địa điểm</span>
             <span className="stat-value">{statistics?.totalLocations || 0}</span>
@@ -417,9 +423,6 @@ export const OrganizationManagementPage: React.FC = () => {
         </div>
 
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper purple">
-            <Briefcase size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Vị trí tuyển dụng đang mở</span>
             <span className="stat-value">{statistics?.openRequisitionsCount || 0}</span>
@@ -440,7 +443,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('overview')}
             aria-selected={activeTab === 'overview'}
           >
-            <Building2 size={17} />
             <span>Thông tin chung & Pháp lý</span>
           </button>
 
@@ -450,7 +452,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('departments')}
             aria-selected={activeTab === 'departments'}
           >
-            <Network size={17} />
             <span>Cơ cấu tổ chức & Phòng ban</span>
             <span className="tab-badge">{departments.length}</span>
           </button>
@@ -461,7 +462,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('locations')}
             aria-selected={activeTab === 'locations'}
           >
-            <MapPin size={17} />
             <span>Chi nhánh & Địa điểm</span>
             <span className="tab-badge">{locations.length}</span>
           </button>
@@ -472,7 +472,6 @@ export const OrganizationManagementPage: React.FC = () => {
             onClick={() => setActiveTab('branding')}
             aria-selected={activeTab === 'branding'}
           >
-            <Award size={17} />
             <span>Chính sách & Đãi ngộ</span>
           </button>
         </nav>
@@ -663,209 +662,13 @@ export const OrganizationManagementPage: React.FC = () => {
                 </div>
               ) : (
                 /* EDIT PROFILE FORM */
-                <div className="edit-form-wrapper" data-testid="edit-profile-form">
-                  <div className="card-title-row">
-                    <h3>
-                      <Edit2 size={18} className="card-title-icon" />
-                      <span>Cập nhật Hồ sơ Tổ chức & Doanh nghiệp</span>
-                    </h3>
-                    <button
-                      type="button"
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setIsEditingProfile(false)}
-                    >
-                      <X size={15} />
-                      <span>Hủy chỉnh sửa</span>
-                    </button>
-                  </div>
-
-                  {profileSaveError && (
-                    <div className="modal-alert-error" role="alert">
-                      <AlertCircle size={16} />
-                      <span>{profileSaveError}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleSaveProfile}>
-                    <div className="form-grid-2">
-                      <div className="form-group span-2">
-                        <label htmlFor="company-name">Tên tổ chức / Công ty *</label>
-                        <input
-                          id="company-name"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.companyName || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, companyName: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="short-name">Tên thương mại / Viết tắt *</label>
-                        <input
-                          id="short-name"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.shortName || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, shortName: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="tax-code">Mã số thuế *</label>
-                        <input
-                          id="tax-code"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.taxCode || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, taxCode: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="industry">Lĩnh vực hoạt động</label>
-                        <input
-                          id="industry"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.industry || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, industry: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="company-size">Quy mô nhân sự</label>
-                        <input
-                          id="company-size"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.companySize || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, companySize: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="email">Email liên hệ chính *</label>
-                        <input
-                          id="email"
-                          type="email"
-                          className="form-control"
-                          value={editProfileForm.email || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, email: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="phone">Hotline / Điện thoại *</label>
-                        <input
-                          id="phone"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.phone || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, phone: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group span-2">
-                        <label htmlFor="website">Địa chỉ Website</label>
-                        <input
-                          id="website"
-                          type="url"
-                          className="form-control"
-                          value={editProfileForm.website || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, website: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group span-2">
-                        <label htmlFor="address">Địa chỉ trụ sở chính *</label>
-                        <input
-                          id="address"
-                          type="text"
-                          className="form-control"
-                          value={editProfileForm.address || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, address: e.target.value })
-                          }
-                          required
-                        />
-                      </div>
-
-                      <div className="form-group span-2">
-                        <label htmlFor="desc">Giới thiệu tổng quan</label>
-                        <textarea
-                          id="desc"
-                          rows={3}
-                          className="form-control"
-                          value={editProfileForm.description || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, description: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="mission">Sứ mệnh</label>
-                        <textarea
-                          id="mission"
-                          rows={2}
-                          className="form-control"
-                          value={editProfileForm.mission || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, mission: e.target.value })
-                          }
-                        />
-                      </div>
-
-                      <div className="form-group">
-                        <label htmlFor="vision">Tầm nhìn</label>
-                        <textarea
-                          id="vision"
-                          rows={2}
-                          className="form-control"
-                          value={editProfileForm.vision || ''}
-                          onChange={(e) =>
-                            setEditProfileForm({ ...editProfileForm, vision: e.target.value })
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="modal-footer mt-4" style={{ padding: '16px 0 0', border: 'none' }}>
-                      <button
-                        type="button"
-                        className="btn btn-secondary"
-                        onClick={() => setIsEditingProfile(false)}
-                      >
-                        Hủy bỏ
-                      </button>
-                      <button type="submit" className="btn btn-primary">
-                        <Save size={16} />
-                        <span>Lưu thay đổi hồ sơ</span>
-                      </button>
-                    </div>
-                  </form>
-                </div>
+                profile && (
+                  <CompanyProfileEditor
+                    profile={profile}
+                    onSave={handleSaveProfile}
+                    onCancel={() => setIsEditingProfile(false)}
+                  />
+                )
               )}
             </div>
           )}
@@ -925,7 +728,8 @@ export const OrganizationManagementPage: React.FC = () => {
                   departments={departments}
                   onAddSubDepartment={(parentId) => handleOpenAddDept(parentId)}
                   onEditDepartment={(dept) => handleOpenEditDept(dept)}
-                  onToggleStatus={(id) => handleToggleDeptStatus(id)}
+                  onToggleStatus={(id, currentActive) => handleToggleDeptStatus(id, currentActive)}
+                  onDeleteDepartment={(dept) => handleDeleteDept(dept)}
                   canEdit={canEdit}
                 />
               ) : (
@@ -1104,7 +908,7 @@ export const OrganizationManagementPage: React.FC = () => {
                                     <button
                                       type="button"
                                       className="btn btn-outline btn-sm btn-icon-only"
-                                      onClick={() => handleToggleDeptStatus(dept.id)}
+                                      onClick={() => handleToggleDeptStatus(dept.id, dept.active)}
                                       title={dept.active ? 'Tạm ngưng' : 'Kích hoạt lại'}
                                       aria-label={dept.active ? 'Tạm ngưng' : 'Kích hoạt lại'}
                                     >
@@ -1337,6 +1141,7 @@ export const OrganizationManagementPage: React.FC = () => {
         isOpen={isDeptModalOpen}
         onClose={() => setIsDeptModalOpen(false)}
         onSave={handleSaveDept}
+        onDelete={(dept) => handleDeleteDept(dept)}
         department={selectedDept}
         parentDepartmentId={presetParentDeptId}
         allDepartments={departments}

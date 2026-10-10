@@ -17,6 +17,9 @@ public class UpdateUserRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
 
+    @Email(message = "Email khôi phục không hợp lệ")
+    private String recoveryEmail;
+
     private String department;
 
     public UpdateUserRequest(String fullName, String email) {

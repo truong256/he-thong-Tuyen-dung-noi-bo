@@ -16,6 +16,7 @@ import java.util.Set;
 public class UserSummaryDto {
     private Long id;
     private String email;
+    private String recoveryEmail;
     private String fullName;
     private String phone;
     private String displayName;

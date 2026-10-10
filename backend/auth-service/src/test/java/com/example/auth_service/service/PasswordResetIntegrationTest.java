@@ -26,7 +26,6 @@ import java.net.ServerSocket;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -64,13 +63,15 @@ class PasswordResetIntegrationTest {
     @Autowired private MailService mailService;
 
     private User user;
-    private final String genericExpectedMessage = "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi.";
+    private final String genericExpectedMessage = "Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký.";
 
     @BeforeEach
     void fixtures() {
         assertThat(mailService).isInstanceOf(SmtpMailService.class);
-        user = users.saveAndFlush(new User("s1-reset-" + UUID.randomUUID() + "@company.com",
-                encoder.encode("OldSecret123@")));
+        User newUser = new User("s1-reset-" + UUID.randomUUID() + "@company.com",
+                encoder.encode("OldSecret123@"));
+        newUser.setRecoveryEmail("recovery-" + UUID.randomUUID() + "@personal.test");
+        user = users.saveAndFlush(newUser);
     }
 
     private String forgot(String email) throws Exception {
@@ -90,7 +91,8 @@ class PasswordResetIntegrationTest {
 
             assertThat(payload).contains("https://ats.example.test/reset-password?token=");
             assertThat(payload).contains("30 phút");
-            assertThat(server.getReceivedCommands()).contains("RCPT TO:<" + targetUser.getEmail() + ">");
+            assertThat(server.getReceivedCommands()).contains("RCPT TO:<" + targetUser.getRecoveryEmail() + ">");
+            assertThat(server.getReceivedCommands()).doesNotContain("RCPT TO:<" + targetUser.getEmail() + ">");
 
             var matcher = Pattern.compile("[?]token=([a-zA-Z0-9-]+)").matcher(payload);
             assertThat(matcher.find()).isTrue();
@@ -155,9 +157,11 @@ class PasswordResetIntegrationTest {
     }
 
     @Test
-    @DisplayName("CASE 1 — Email tồn tại: POST /api/auth/forgot-password admin@company.com trả HTTP 200, generic message, lưu token hash, expiry ~30 phút, gọi MailService")
+    @DisplayName("CASE 1 — Email tồn tại: POST /api/auth/forgot-password admin@company.com trả HTTP 200, generic message, lưu token hash, expiry ~30 phút, gửi tới recovery_email")
     void case1_existingEmail_adminCompanyCom_generatesHashedTokenAndDispatchesMail() throws Exception {
         User admin = users.findByEmail("admin@company.com").orElseThrow();
+        admin.setRecoveryEmail("admin-recovery@personal.test");
+        users.saveAndFlush(admin);
 
         try (SmtpMailServiceTest.FakeSmtpServer server = new SmtpMailServiceTest.FakeSmtpServer()) {
             ReflectionTestUtils.setField(mailService, "port", server.getPort());
@@ -168,9 +172,10 @@ class PasswordResetIntegrationTest {
 
             assertThat(response).contains(genericExpectedMessage);
 
-            // Verify email was received by FakeSmtpServer
+            // Verify email was received by FakeSmtpServer at recovery_email, NOT company email
             String payload = server.getReceivedDataPayload(3000);
-            assertThat(server.getReceivedCommands()).contains("RCPT TO:<admin@company.com>");
+            assertThat(server.getReceivedCommands()).contains("RCPT TO:<admin-recovery@personal.test>");
+            assertThat(server.getReceivedCommands()).doesNotContain("RCPT TO:<admin@company.com>");
 
             // Extract raw token from reset link
             var matcher = Pattern.compile("[?]token=([a-zA-Z0-9-]+)").matcher(payload);
@@ -204,7 +209,24 @@ class PasswordResetIntegrationTest {
     }
 
     @Test
-    @DisplayName("CASE 3 — Email được gửi qua SMTP: RCPT TO đúng email, body chứa link và thông tin 30 phút, API không lộ token")
+    @DisplayName("CASE 2b — User không có recovery_email: trả generic response, không crash, không gửi vào company email")
+    void case2b_userWithoutRecoveryEmail_returnsGenericResponseAndSendsNoMail() throws Exception {
+        User noRecoveryUser = users.saveAndFlush(new User("norecovery-" + UUID.randomUUID() + "@company.com",
+                encoder.encode("Secret123@")));
+
+        try (SmtpMailServiceTest.FakeSmtpServer server = new SmtpMailServiceTest.FakeSmtpServer()) {
+            ReflectionTestUtils.setField(mailService, "port", server.getPort());
+
+            String response = forgot(noRecoveryUser.getEmail());
+            assertThat(response).contains(genericExpectedMessage);
+
+            // Verify FakeSmtpServer did not receive any email
+            assertThat(server.getReceivedCommands()).noneMatch(c -> c.startsWith("RCPT TO:"));
+        }
+    }
+
+    @Test
+    @DisplayName("CASE 3 — Email được gửi qua SMTP: RCPT TO tới recovery_email, KHÔNG tới company email")
     void case3_emailSentViaSmtp_verifiesProtocolAndBodyStructure() throws Exception {
         try (SmtpMailServiceTest.FakeSmtpServer server = new SmtpMailServiceTest.FakeSmtpServer()) {
             ReflectionTestUtils.setField(mailService, "port", server.getPort());
@@ -213,17 +235,31 @@ class PasswordResetIntegrationTest {
             String payload = server.getReceivedDataPayload(3000);
             List<String> commands = server.getReceivedCommands();
 
-            assertThat(commands).contains("RCPT TO:<" + user.getEmail() + ">");
+            assertThat(commands).contains("RCPT TO:<" + user.getRecoveryEmail() + ">");
+            assertThat(commands).doesNotContain("RCPT TO:<" + user.getEmail() + ">");
             assertThat(payload).contains("https://ats.example.test/reset-password?token=");
             assertThat(payload).contains("30 phút");
             assertThat(payload).contains("Hệ thống Tuyển dụng Nội bộ");
-            assertThat(payload).contains("Nếu bạn không gửi yêu cầu này, vui lòng bỏ qua email.");
+            assertThat(payload).contains("Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.");
 
             var matcher = Pattern.compile("[?]token=([a-zA-Z0-9-]+)").matcher(payload);
             assertThat(matcher.find()).isTrue();
             String rawToken = matcher.group(1);
             assertThat(response).doesNotContain(rawToken);
         }
+    }
+
+    @Test
+    @DisplayName("CASE 3b — Regression: recovery_email KHÔNG được dùng để đăng nhập (chỉ company email)")
+    void case3b_recoveryEmailCannotBeUsedAsLoginIdentifier() throws Exception {
+        // Login with recovery email must fail (HTTP 401)
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + user.getRecoveryEmail() + "\",\"password\":\"OldSecret123@\"}"))
+                .andExpect(status().isUnauthorized());
+
+        // Login with company email must succeed (HTTP 200)
+        String refreshToken = login(user.getEmail(), "OldSecret123@");
+        assertThat(refreshToken).isNotBlank();
     }
 
     @Test
@@ -234,7 +270,7 @@ class PasswordResetIntegrationTest {
         mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
                         .content(resetBody(rawToken, "NewSecret123@")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới."));
+                .andExpect(jsonPath("$.message").value("Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới."));
 
         // 1. Password in DB is BCrypt hashed and matches new password
         User updated = users.findById(user.getId()).orElseThrow();
@@ -252,6 +288,15 @@ class PasswordResetIntegrationTest {
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"" + user.getEmail() + "\",\"password\":\"OldSecret123@\"}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("CASE 4b — Invalid token: token không tồn tại trả lỗi 400 rõ ràng")
+    void case4b_invalidToken_rejected() throws Exception {
+        mvc.perform(post("/api/auth/reset-password").contentType(MediaType.APPLICATION_JSON)
+                        .content(resetBody("invalid-token-" + UUID.randomUUID(), "NewSecret123@")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Liên kết đặt lại mật khẩu đã hết hạn hoặc đã được sử dụng."));
     }
 
     @Test

@@ -15,6 +15,9 @@ public class CreateUserRequest {
     @Email(message = "Email không hợp lệ")
     private String email;
 
+    @Email(message = "Email khôi phục không hợp lệ")
+    private String recoveryEmail;
+
     /**
      * @deprecated Password cannot be specified by the client. The system strictly generates
      * a secure 12-character temporary password server-side and dispatches it via activation email.

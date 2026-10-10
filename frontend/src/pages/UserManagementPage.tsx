@@ -2,19 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search,
-  UserPlus,
-  FileSpreadsheet,
-  ShieldCheck,
   Lock,
   Unlock,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
+  CheckCircle2,
+  ShieldCheck,
+  Trash2,
   X,
-  UserCheck,
   Mail,
-  Upload,
+  Pencil,
 } from 'lucide-react';
 import adminApi from '../api/admin';
 import { UserSummary } from '../types/user';
@@ -23,10 +21,15 @@ import RoleAssignmentModal from '../components/admin/RoleAssignmentModal';
 import LockAccountModal from '../components/admin/LockAccountModal';
 import RbacMatrixModal from '../components/admin/RbacMatrixModal';
 import { ATS_ROLES_INFO, getRoleLabel } from '../constants/rbac';
+import { PageHeader } from '../components/common/PageHeader';
 
 export const UserManagementPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, hasPermission } = useAuth();
+
+  // Permission-based access control (S1-08, S1-09, S1-10)
+  const canManageUsers = typeof hasPermission === 'function' ? hasPermission('USER_MANAGE') : false;  // ADMIN only
+  const canManageRoles = typeof hasPermission === 'function' ? hasPermission('ROLE_MANAGE') : false;  // ADMIN only
 
   // Data states (S1-08: Default pageSize = 20)
   const [users, setUsers] = useState<UserSummary[]>([]);
@@ -55,11 +58,46 @@ export const UserManagementPage: React.FC = () => {
 
   // Add User Form states (S1-08: Admin does not manually input temporary password)
   const [newEmail, setNewEmail] = useState('');
+  const [newRecoveryEmail, setNewRecoveryEmail] = useState('');
   const [newFullName, setNewFullName] = useState('');
   const [newDepartment, setNewDepartment] = useState('');
   const [newRoles, setNewRoles] = useState<string[]>(['RECRUITER']);
   const [newStatus, setNewStatus] = useState('ACTIVE');
   const [isSubmittingAdd, setIsSubmittingAdd] = useState(false);
+
+  // Edit User Form states (Section 27)
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editFullName, setEditFullName] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editRecoveryEmail, setEditRecoveryEmail] = useState('');
+  const [editDepartment, setEditDepartment] = useState('');
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+
+  // Delete User Form states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<UserSummary | null>(null);
+  const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
+
+  const handleOpenDelete = (u: UserSummary) => {
+    setDeletingUser(u);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+    setIsSubmittingDelete(true);
+    try {
+      await adminApi.deleteUser(deletingUser.id);
+      showToast(`Đã xóa vĩnh viễn tài khoản "${deletingUser.email}" thành công!`);
+      setShowDeleteModal(false);
+      setDeletingUser(null);
+      await fetchUsers();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || err.message || 'Không thể xóa tài khoản người dùng.', 'error');
+    } finally {
+      setIsSubmittingDelete(false);
+    }
+  };
 
   // Debounce search input
   useEffect(() => {
@@ -124,6 +162,7 @@ export const UserManagementPage: React.FC = () => {
     try {
       await adminApi.createUser({
         email: newEmail.trim(),
+        recoveryEmail: newRecoveryEmail.trim() || undefined,
         fullName: newFullName.trim(),
         department: newDepartment.trim() || undefined,
         roles: newRoles,
@@ -132,6 +171,7 @@ export const UserManagementPage: React.FC = () => {
       showToast(`Tạo thành công tài khoản cho ${newEmail.trim()}! Mật khẩu tạm thời đã được gửi qua email kích hoạt.`);
       setShowAddModal(false);
       setNewEmail('');
+      setNewRecoveryEmail('');
       setNewFullName('');
       setNewDepartment('');
       setNewRoles(['RECRUITER']);
@@ -150,6 +190,46 @@ export const UserManagementPage: React.FC = () => {
       showToast(msg || 'Tạo tài khoản thất bại. Vui lòng thử lại.', 'error');
     } finally {
       setIsSubmittingAdd(false);
+    }
+  };
+
+  const handleOpenEdit = (u: UserSummary) => {
+    setSelectedUser(u);
+    setEditFullName(u.fullName || '');
+    setEditEmail(u.email || '');
+    setEditRecoveryEmail(u.recoveryEmail || '');
+    setEditDepartment(u.department || '');
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUser) return;
+    if (!editFullName.trim() || !editEmail.trim()) {
+      showToast('Vui lòng nhập họ tên và email công ty.', 'error');
+      return;
+    }
+    setIsSubmittingEdit(true);
+    try {
+      await adminApi.updateUser(selectedUser.id, {
+        fullName: editFullName.trim(),
+        email: editEmail.trim(),
+        recoveryEmail: editRecoveryEmail.trim() || undefined,
+        department: editDepartment.trim() || undefined,
+      });
+      showToast(`Cập nhật thông tin tài khoản ${editEmail.trim()} thành công!`);
+      setShowEditModal(false);
+      fetchUsers();
+    } catch (err: any) {
+      const apiErrors = err.response?.data?.validationErrors;
+      let msg = err.response?.data?.message;
+      if (apiErrors && typeof apiErrors === 'object') {
+        const firstErr = Object.values(apiErrors)[0];
+        if (firstErr) msg = String(firstErr);
+      }
+      showToast(msg || 'Cập nhật tài khoản thất bại.', 'error');
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -180,58 +260,68 @@ export const UserManagementPage: React.FC = () => {
 
   return (
     <div className="admin-page" data-testid="user-management-page">
-      {/* Page Header */}
-      <div className="page-header">
-        <div className="page-header-text">
-          <h2>Quản lý Tài khoản & Phân quyền</h2>
-          <p>Quản lý người dùng nội bộ, phân quyền RBAC và kiểm soát truy cập hệ thống</p>
-        </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setShowRbacMatrixModal(true)}
-            aria-label="Xem ma trận phân quyền RBAC"
-          >
-            <ShieldCheck size={16} />
-            <span>Ma trận RBAC</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={handleExportCsv}
-            aria-label="Xuất file CSV danh sách người dùng"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Xuất CSV</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-outline"
-            onClick={() => navigate('/admin/import-excel')}
-            aria-label="Nhập danh sách người dùng từ file Excel"
-            data-testid="btn-import-excel"
-          >
-            <Upload size={16} />
-            <span>Nhập từ Excel</span>
-          </button>
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={() => setShowAddModal(true)}
-            aria-label="Thêm người dùng mới"
-          >
-            <UserPlus size={16} />
-            <span>Thêm tài khoản</span>
-          </button>
-        </div>
-      </div>
+      {/* Standardized Enterprise Page Header */}
+      <PageHeader
+        title={canManageUsers ? 'Quản lý Tài khoản & Phân quyền' : 'Danh sách tài khoản'}
+        subtitle={
+          canManageUsers
+            ? 'Quản lý người dùng nội bộ, phân quyền RBAC và kiểm soát truy cập hệ thống'
+            : 'Xem danh sách người dùng nội bộ và thông tin vai trò (chỉ xem)'
+        }
+        breadcrumbs={[
+          { label: 'Tổng quan', path: '/dashboard' },
+          { label: 'Quản lý tài khoản' },
+        ]}
+        actions={
+          <div className="header-actions">
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setShowRbacMatrixModal(true)}
+              aria-label="Xem ma trận phân quyền RBAC"
+            >
+              <span>Ma trận RBAC</span>
+            </button>
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={handleExportCsv}
+              aria-label="Xuất file CSV danh sách người dùng"
+            >
+              <span>Xuất CSV</span>
+            </button>
+            {/* S1-08: Only ADMIN (USER_MANAGE) can import Excel */}
+            {canManageUsers && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => navigate('/admin/import-excel')}
+                aria-label="Nhập danh sách người dùng từ file Excel"
+                data-testid="btn-import-excel"
+              >
+                <span>Nhập từ Excel</span>
+              </button>
+            )}
+            {/* S1-08: Only ADMIN (USER_MANAGE) can add user */}
+            {canManageUsers && (
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => setShowAddModal(true)}
+                aria-label="Thêm người dùng mới"
+              >
+                <span>Thêm tài khoản</span>
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {/* Toast Notification */}
       {toast && (
         <div className={`toast-notification ${toast.type}`} role="status" aria-live="polite">
           {toast.type === 'success' ? (
-            <UserCheck size={18} className="text-green" />
+            <CheckCircle2 size={18} className="text-green" />
           ) : (
             <AlertCircle size={18} className="text-red" />
           )}
@@ -306,13 +396,13 @@ export const UserManagementPage: React.FC = () => {
           {/* Refresh Button */}
           <button
             type="button"
-            className="btn btn-outline btn-icon-only"
+            className="btn btn-outline"
             onClick={() => fetchUsers()}
             title="Làm mới danh sách"
             aria-label="Làm mới danh sách"
             disabled={isLoading}
           >
-            <RefreshCw size={16} className={isLoading ? 'spinning' : ''} />
+            <span>Làm mới</span>
           </button>
         </div>
       </div>
@@ -399,6 +489,11 @@ export const UserManagementPage: React.FC = () => {
                     </td>
                     <td>
                       <span className="user-email-text">{u.email}</span>
+                      {u.recoveryEmail && (
+                        <span className="user-recovery-email-hint" style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginTop: '2px' }} title="Email khôi phục nhận liên kết reset mật khẩu">
+                          ✉ {u.recoveryEmail}
+                        </span>
+                      )}
                     </td>
                     <td>
                       <span className="user-department-text">{u.department || '—'}</span>
@@ -440,32 +535,72 @@ export const UserManagementPage: React.FC = () => {
                     </td>
                     <td style={{ textAlign: 'right' }}>
                       <div className="row-actions">
-                        <button
-                          type="button"
-                          className="btn-icon"
-                          title="Phân vai trò RBAC"
-                          aria-label={`Phân quyền cho ${u.email}`}
-                          onClick={() => {
-                            setSelectedUser(u);
-                            setShowRoleModal(true);
-                          }}
-                        >
-                          <ShieldCheck size={18} />
-                        </button>
+                        {/* S1-08: Edit user – ADMIN only (USER_MANAGE) */}
+                        {canManageUsers && (
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            title="Chỉnh sửa thông tin tài khoản"
+                            aria-label={`Chỉnh sửa ${u.email}`}
+                            onClick={() => handleOpenEdit(u)}
+                          >
+                            <Pencil size={18} />
+                          </button>
+                        )}
 
-                        <button
-                          type="button"
-                          className={`btn-icon ${isLocked ? 'unlock-btn' : 'lock-btn'}`}
-                          title={isSelf ? 'Không thể tự khóa tài khoản của chính mình' : isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                          aria-label={isLocked ? `Mở khóa cho ${u.email}` : `Khóa ${u.email}`}
-                          disabled={!!isSelf}
-                          onClick={() => {
-                            setSelectedUser(u);
-                            setShowLockModal(true);
-                          }}
-                        >
-                          {isLocked ? <Unlock size={18} /> : <Lock size={18} />}
-                        </button>
+                        {/* S1-09: Assign roles – ADMIN only (ROLE_MANAGE) */}
+                        {canManageRoles && (
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            title="Phân vai trò RBAC"
+                            aria-label={`Phân quyền cho ${u.email}`}
+                            onClick={() => {
+                              setSelectedUser(u);
+                              setShowRoleModal(true);
+                            }}
+                          >
+                            <ShieldCheck size={18} />
+                          </button>
+                        )}
+
+                        {/* S1-10: Lock/unlock – ADMIN only (USER_MANAGE) */}
+                        {canManageUsers && (
+                          <button
+                            type="button"
+                            className={`btn-icon ${isLocked ? 'unlock-btn' : 'lock-btn'}`}
+                            title={isSelf ? 'Không thể tự khóa tài khoản của chính mình' : isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                            aria-label={isLocked ? `Mở khóa cho ${u.email}` : `Khóa ${u.email}`}
+                            disabled={!!isSelf}
+                            onClick={() => {
+                              setSelectedUser(u);
+                              setShowLockModal(true);
+                            }}
+                          >
+                            {isLocked ? <Unlock size={18} /> : <Lock size={18} />}
+                          </button>
+                        )}
+
+                        {/* Delete user – ADMIN only (USER_MANAGE) */}
+                        {canManageUsers && (
+                          <button
+                            type="button"
+                            className="btn-icon delete-btn"
+                            title={isSelf ? 'Không thể tự xóa tài khoản của chính mình' : `Xóa tài khoản ${u.email}`}
+                            aria-label={`Xóa tài khoản ${u.email}`}
+                            disabled={!!isSelf}
+                            onClick={() => handleOpenDelete(u)}
+                            style={{ color: isSelf ? '#9ca3af' : '#dc2626' }}
+                            data-testid={`delete-user-btn-${u.id}`}
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+
+                        {/* HR_MANAGER: read-only indicator when no actions available */}
+                        {!canManageUsers && !canManageRoles && (
+                          <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Chỉ xem</span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -541,29 +676,46 @@ export const UserManagementPage: React.FC = () => {
                 </div>
 
                 <div className="mobile-card-actions">
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    onClick={() => {
-                      setSelectedUser(u);
-                      setShowRoleModal(true);
-                    }}
-                  >
-                    <ShieldCheck size={14} />
-                    <span>Phân vai trò</span>
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn btn-sm ${isLocked ? 'btn-success' : 'btn-secondary'}`}
-                    disabled={!!isSelf}
-                    onClick={() => {
-                      setSelectedUser(u);
-                      setShowLockModal(true);
-                    }}
-                  >
-                    {isLocked ? <Unlock size={14} /> : <Lock size={14} />}
-                    <span>{isLocked ? 'Mở khóa' : 'Khóa'}</span>
-                  </button>
+                  {canManageUsers && (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => handleOpenEdit(u)}
+                    >
+                      <Pencil size={14} />
+                      <span>Sửa</span>
+                    </button>
+                  )}
+                  {canManageRoles && (
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => {
+                        setSelectedUser(u);
+                        setShowRoleModal(true);
+                      }}
+                    >
+                      <ShieldCheck size={14} />
+                      <span>Phân vai trò</span>
+                    </button>
+                  )}
+                  {canManageUsers && (
+                    <button
+                      type="button"
+                      className={`btn btn-sm ${isLocked ? 'btn-success' : 'btn-secondary'}`}
+                      disabled={!!isSelf}
+                      onClick={() => {
+                        setSelectedUser(u);
+                        setShowLockModal(true);
+                      }}
+                    >
+                      {isLocked ? <Unlock size={14} /> : <Lock size={14} />}
+                      <span>{isLocked ? 'Mở khóa' : 'Khóa'}</span>
+                    </button>
+                  )}
+                  {!canManageUsers && !canManageRoles && (
+                    <span style={{ fontSize: '12px', color: '#9ca3af', fontStyle: 'italic' }}>Chỉ xem</span>
+                  )}
                 </div>
               </div>
             );
@@ -627,9 +779,6 @@ export const UserManagementPage: React.FC = () => {
           <div className="modal-box user-form-modal-box">
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div className="modal-title-icon">
-                  <UserPlus size={20} />
-                </div>
                 <h3 id="add-user-modal-title">Thêm tài khoản nhân viên nội bộ</h3>
               </div>
               <button
@@ -672,6 +821,21 @@ export const UserManagementPage: React.FC = () => {
                   placeholder="nhanvien@company.com"
                   disabled={isSubmittingAdd}
                 />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="newRecoveryEmail">Email khôi phục (tùy chọn)</label>
+                <input
+                  id="newRecoveryEmail"
+                  type="email"
+                  value={newRecoveryEmail}
+                  onChange={(e) => setNewRecoveryEmail(e.target.value)}
+                  placeholder="canhan@gmail.com"
+                  disabled={isSubmittingAdd}
+                />
+                <span className="field-hint" style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                  Email khôi phục chỉ dùng để nhận liên kết đặt lại mật khẩu và không dùng để đăng nhập.
+                </span>
               </div>
 
               <div className="form-group">
@@ -764,6 +928,117 @@ export const UserManagementPage: React.FC = () => {
         </div>
       )}
 
+      {/* Modal Chỉnh sửa người dùng (Section 27) */}
+      {showEditModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="edit-user-modal-title">
+          <div className="modal-box user-form-modal-box">
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div className="modal-title-icon">
+                  <Pencil size={20} />
+                </div>
+                <h3 id="edit-user-modal-title">Chỉnh sửa thông tin tài khoản</h3>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setShowEditModal(false)}
+                aria-label="Đóng cửa sổ"
+                disabled={isSubmittingEdit}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateUser}>
+              <div className="form-group">
+                <label htmlFor="editFullName">
+                  Họ và tên <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="editFullName"
+                  type="text"
+                  required
+                  value={editFullName}
+                  onChange={(e) => setEditFullName(e.target.value)}
+                  placeholder="Ví dụ: Nguyễn Văn A"
+                  disabled={isSubmittingEdit}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editEmail">
+                  Email công ty <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="editEmail"
+                  type="email"
+                  required
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="nhanvien@company.com"
+                  disabled={isSubmittingEdit}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editRecoveryEmail">
+                  Email khôi phục (tùy chọn)
+                </label>
+                <input
+                  id="editRecoveryEmail"
+                  type="email"
+                  value={editRecoveryEmail}
+                  onChange={(e) => setEditRecoveryEmail(e.target.value)}
+                  placeholder="canhan@gmail.com"
+                  disabled={isSubmittingEdit}
+                />
+                <span className="field-hint" style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px', display: 'block' }}>
+                  Email khôi phục chỉ dùng để nhận liên kết đặt lại mật khẩu và không dùng để đăng nhập.
+                </span>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editDepartment">Phòng ban (tùy chọn)</label>
+                <input
+                  id="editDepartment"
+                  type="text"
+                  value={editDepartment}
+                  onChange={(e) => setEditDepartment(e.target.value)}
+                  placeholder="Ví dụ: Nhân sự, Công nghệ thông tin..."
+                  disabled={isSubmittingEdit}
+                />
+              </div>
+
+              <div className="modal-actions" style={{ marginTop: '20px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEditModal(false)}
+                  disabled={isSubmittingEdit}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={isSubmittingEdit}
+                >
+                  {isSubmittingEdit ? (
+                    <>
+                      <span className="auth-spinner" style={{ width: 14, height: 14, borderTopColor: '#fff' }} />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <span>Lưu thay đổi</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Role Assignment Modal (S1-09) */}
       <RoleAssignmentModal
         isOpen={showRoleModal}
@@ -803,6 +1078,86 @@ export const UserManagementPage: React.FC = () => {
         isOpen={showRbacMatrixModal}
         onClose={() => setShowRbacMatrixModal(false)}
       />
+
+      {/* Delete User Confirmation Modal */}
+      {showDeleteModal && deletingUser && (
+        <div
+          className="modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-user-modal-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !isSubmittingDelete) setShowDeleteModal(false);
+          }}
+        >
+          <div className="modal-dialog modal-sm" data-testid="delete-user-modal">
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <AlertCircle size={20} className="modal-title-icon text-danger" style={{ color: '#dc2626' }} />
+                <h3 id="delete-user-modal-title">Xác nhận xóa tài khoản</h3>
+              </div>
+              <button
+                type="button"
+                className="modal-close-btn"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isSubmittingDelete}
+                aria-label="Đóng"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ marginBottom: '12px', fontSize: '0.92rem', lineHeight: '1.5' }}>
+                Bạn có chắc chắn muốn xóa vĩnh viễn tài khoản sau khỏi hệ thống?
+              </p>
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fee2e2',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  marginBottom: '16px',
+                }}
+              >
+                <div style={{ fontWeight: 600, color: '#991b1b', marginBottom: '4px' }}>
+                  {deletingUser.fullName || deletingUser.email}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#b91c1c' }}>Email: {deletingUser.email}</div>
+                {deletingUser.department && (
+                  <div style={{ fontSize: '0.82rem', color: '#7f1d1d', marginTop: '2px' }}>
+                    Phòng ban: {deletingUser.department}
+                  </div>
+                )}
+              </div>
+              <p style={{ fontSize: '0.82rem', color: '#6b7280', margin: 0 }}>
+                ⚠️ Lưu ý: Hành động này sẽ xoá hoàn toàn dữ liệu tài khoản và không thể hoàn tác.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isSubmittingDelete}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                style={{ background: '#dc2626', color: '#fff', borderColor: '#dc2626' }}
+                onClick={handleConfirmDelete}
+                disabled={isSubmittingDelete}
+                data-testid="confirm-delete-user-btn"
+              >
+                <span>{isSubmittingDelete ? 'Đang xóa...' : 'Xóa vĩnh viễn'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -72,7 +72,7 @@ public class UserExcelImportService {
 
             // Create Header Row
             Row headerRow = sheet.createRow(0);
-            String[] headers = {"Họ và tên *", "Email *", "Phòng ban", "Vai trò"};
+            String[] headers = {"Mã nhân sự", "Họ và tên *", "Email *", "Số điện thoại", "Phòng ban", "Vai trò"};
             for (int i = 0; i < headers.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(headers[i]);
@@ -81,16 +81,28 @@ public class UserExcelImportService {
 
             // Add realistic enterprise sample rows
             Row sample1 = sheet.createRow(1);
-            sample1.createCell(0).setCellValue("Nguyễn Văn An");
-            sample1.createCell(1).setCellValue("an.nguyen@company.com");
-            sample1.createCell(2).setCellValue("Khối Công nghệ & Kỹ thuật");
-            sample1.createCell(3).setCellValue("INTERVIEWER");
+            sample1.createCell(0).setCellValue("NV001");
+            sample1.createCell(1).setCellValue("Nguyễn Văn An");
+            sample1.createCell(2).setCellValue("an.nguyen@company.com");
+            sample1.createCell(3).setCellValue("0901234567");
+            sample1.createCell(4).setCellValue("Khối Công nghệ & Kỹ thuật");
+            sample1.createCell(5).setCellValue("INTERVIEWER");
 
             Row sample2 = sheet.createRow(2);
-            sample2.createCell(0).setCellValue("Trần Thị Bình");
-            sample2.createCell(1).setCellValue("binh.tran@company.com");
-            sample2.createCell(2).setCellValue("Phòng Tuyển dụng & Thu hút Nhân tài");
-            sample2.createCell(3).setCellValue("RECRUITER");
+            sample2.createCell(0).setCellValue("NV002");
+            sample2.createCell(1).setCellValue("Trần Thị Bình");
+            sample2.createCell(2).setCellValue("binh.tran@company.com");
+            sample2.createCell(3).setCellValue("0912345678");
+            sample2.createCell(4).setCellValue("Phòng Tuyển dụng & Thu hút Nhân tài");
+            sample2.createCell(5).setCellValue("RECRUITER");
+
+            Row sample3 = sheet.createRow(3);
+            sample3.createCell(0).setCellValue("NV003");
+            sample3.createCell(1).setCellValue("Lê Hoàng Cường");
+            sample3.createCell(2).setCellValue("cuong.le@company.com");
+            sample3.createCell(3).setCellValue("+84987654321");
+            sample3.createCell(4).setCellValue("Ban Giám đốc");
+            sample3.createCell(5).setCellValue("RECRUITER;INTERVIEWER");
 
             // Auto-size columns
             for (int i = 0; i < headers.length; i++) {
@@ -114,7 +126,7 @@ public class UserExcelImportService {
         List<ExcelImportRowData> rawRows = parseWorkbook(file);
         List<ExcelImportRowPreview> previewRows = validateRows(rawRows);
 
-        int validCount = (int) previewRows.stream().filter(ExcelImportRowPreview::isValid).count();
+        int validCount = (int) previewRows.stream().filter(r -> r.isValid()).count();
         int invalidCount = previewRows.size() - validCount;
 
         return ExcelImportPreviewResponse.builder()
@@ -189,11 +201,14 @@ public class UserExcelImportService {
         User user = new User(email, passwordEncoder.encode(rawPassword));
         user.setFullName(data.getFullName() != null ? data.getFullName().trim() : "");
         user.setDepartment(data.getDepartment() != null && !data.getDepartment().trim().isBlank() ? data.getDepartment().trim() : null);
+        if (data.getPhone() != null && !data.getPhone().trim().isBlank()) {
+            user.setPhone(data.getPhone().trim().replaceAll("\\s+", ""));
+        }
         user.setStatus("ACTIVE");
         user.setMustChangePassword(true);
 
-        Role role = resolveRole(data.getRole());
-        user.setRoles(Set.of(role));
+        Set<Role> roles = resolveRoles(data.getRole());
+        user.setRoles(roles);
 
         User savedUser = userRepository.save(user);
 
@@ -206,13 +221,16 @@ public class UserExcelImportService {
             emailStatus = "ACCOUNT_CREATED_EMAIL_FAILED";
         }
 
+        List<String> roleNamesList = roles.stream().map(r -> r.getName().name()).toList();
         return ExcelImportSuccessRow.builder()
                 .rowNumber(data.getRowNumber())
                 .userId(savedUser.getId())
                 .email(savedUser.getEmail())
                 .fullName(savedUser.getFullName())
                 .department(savedUser.getDepartment())
-                .role(role.getName().name())
+                .phone(savedUser.getPhone())
+                .role(String.join(", ", roleNamesList))
+                .roles(roleNamesList)
                 .emailStatus(emailStatus)
                 .build();
     }
@@ -223,6 +241,10 @@ public class UserExcelImportService {
     public List<ExcelImportRowData> parseWorkbook(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("File Excel không được để trống.");
+        }
+
+        if (file.getSize() > 10 * 1024 * 1024) {
+            throw new BadRequestException("Dung lượng file vượt quá giới hạn tối đa 10 MB.");
         }
 
         String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
@@ -248,6 +270,8 @@ public class UserExcelImportService {
             int emailCol = -1;
             int deptCol = -1;
             int roleCol = -1;
+            int phoneCol = -1;
+            int codeCol = -1;
 
             DataFormatter formatter = new DataFormatter();
 
@@ -256,15 +280,18 @@ public class UserExcelImportService {
                     String val = formatter.formatCellValue(cell).trim().toLowerCase();
                     if (val.contains("họ và tên") || val.contains("họ tên") || val.equals("tên") || val.equals("fullname") || val.equals("name")) {
                         nameCol = cell.getColumnIndex();
-                    }
-                    if (val.contains("email") || val.contains("thư điện tử")) {
+                    } else if (val.contains("email") || val.contains("thư điện tử")) {
                         emailCol = cell.getColumnIndex();
-                    }
-                    if (val.contains("phòng ban") || val.contains("bộ phận") || val.equals("department")) {
+                    } else if (val.contains("số điện thoại") || val.contains("sđt") || val.contains("sdt") || val.contains("phone") || val.contains("telephone")) {
+                        phoneCol = cell.getColumnIndex();
+                    } else if (val.contains("phòng ban") || val.contains("bộ phận") || val.equals("department")) {
                         deptCol = cell.getColumnIndex();
-                    }
-                    if (val.contains("vai trò") || val.contains("role") || val.contains("chức danh")) {
+                    } else if (val.contains("vai trò") || val.equals("role")) {
                         roleCol = cell.getColumnIndex();
+                    } else if (val.contains("chức danh") && roleCol == -1) {
+                        roleCol = cell.getColumnIndex();
+                    } else if (val.contains("mã nhân sự") || val.contains("mã nv") || val.contains("manhansu") || val.equals("code") || val.equals("employee_id")) {
+                        codeCol = cell.getColumnIndex();
                     }
                 }
                 if (nameCol != -1 && emailCol != -1) {
@@ -282,20 +309,24 @@ public class UserExcelImportService {
                 Row row = sheet.getRow(r);
                 if (row == null) continue;
 
+                String code = getCellValue(row, codeCol, formatter);
                 String fullName = getCellValue(row, nameCol, formatter);
                 String email = getCellValue(row, emailCol, formatter);
+                String phone = getCellValue(row, phoneCol, formatter);
                 String department = getCellValue(row, deptCol, formatter);
                 String role = getCellValue(row, roleCol, formatter);
 
                 // Skip purely blank rows
-                if (fullName.isBlank() && email.isBlank() && department.isBlank() && role.isBlank()) {
+                if (fullName.isBlank() && email.isBlank() && department.isBlank() && role.isBlank() && phone.isBlank()) {
                     continue;
                 }
 
                 rows.add(ExcelImportRowData.builder()
                         .rowNumber(r + 1) // 1-indexed for Excel line numbering
+                        .employeeCode(code)
                         .fullName(fullName)
                         .email(email)
+                        .phone(phone)
                         .department(department)
                         .role(role)
                         .build());
@@ -317,12 +348,13 @@ public class UserExcelImportService {
 
     /**
      * Xác thực toàn bộ các dòng theo từng quy tắc:
-     * - Field bắt buộc
+     * - Field bắt buộc: Họ tên, Email
      * - Định dạng email
-     * - Trùng lặp trong cùng file
+     * - Trùng lặp trong cùng file: TẤT CẢ các dòng có email lặp đều đánh dấu lỗi
      * - Trùng lặp với DB
-     * - Độ dài trường
-     * - Vai trò hợp lệ
+     * - Số điện thoại: 9-15 số, cho phép '+' đầu số
+     * - Độ dài trường: Họ tên <= 150, Phòng ban <= 100
+     * - Vai trò hợp lệ: Cho phép nhiều role phân tách bởi ',' hoặc ';', mặc định RECRUITER nếu trống
      */
     public List<ExcelImportRowPreview> validateRows(List<ExcelImportRowData> rows) {
         // Build frequency map to detect duplicate emails within the same uploaded Excel
@@ -340,16 +372,15 @@ public class UserExcelImportService {
             List<String> errors = new ArrayList<>();
             String fullName = row.getFullName() != null ? row.getFullName().trim() : "";
             String email = row.getEmail() != null ? row.getEmail().trim() : "";
+            String phone = row.getPhone() != null ? row.getPhone().trim() : "";
             String dept = row.getDepartment() != null ? row.getDepartment().trim() : "";
             String roleStr = row.getRole() != null ? row.getRole().trim() : "";
 
             // 1. Họ và tên validation
             if (fullName.isBlank()) {
                 errors.add("Họ và tên không được để trống.");
-            } else if (fullName.length() < 2) {
-                errors.add("Họ và tên phải có tối thiểu 2 ký tự.");
-            } else if (fullName.length() > 100) {
-                errors.add("Họ và tên không được vượt quá 100 ký tự.");
+            } else if (fullName.length() > 150) {
+                errors.add("Họ và tên không được vượt quá 150 ký tự.");
             }
 
             // 2. Email validation
@@ -362,23 +393,37 @@ public class UserExcelImportService {
             } else {
                 String cleanEmail = email.toLowerCase();
                 if (emailCountsInFile.getOrDefault(cleanEmail, 0) > 1) {
-                    errors.add("Email bị trùng lặp trong chính file Excel.");
+                    errors.add("Email bị trùng lặp trong tệp Excel.");
                 } else if (userRepository.existsByEmailIgnoreCase(cleanEmail)) {
                     errors.add("Email đã tồn tại trong hệ thống.");
                 }
             }
 
-            // 3. Department validation
+            // 3. Phone validation (nếu có thì 9-15 chữ số, cho phép '+' đầu số)
+            if (!phone.isBlank()) {
+                String cleanPhone = phone.replaceAll("\\s+", "");
+                if (!cleanPhone.matches("^\\+?[0-9]{9,15}$")) {
+                    errors.add("Số điện thoại không đúng định dạng (cho phép dấu + đầu số và từ 9-15 chữ số).");
+                }
+            }
+
+            // 4. Department validation
             if (dept.length() > 100) {
                 errors.add("Tên phòng ban không được vượt quá 100 ký tự.");
             }
 
-            // 4. Role validation
+            // 5. Role validation (cho phép phân tách bởi ',' hoặc ';', mặc định RECRUITER)
             if (!roleStr.isBlank()) {
-                try {
-                    resolveRole(roleStr);
-                } catch (BadRequestException e) {
-                    errors.add(e.getMessage());
+                String[] tokens = roleStr.split("[,;]");
+                for (String rawToken : tokens) {
+                    String token = rawToken.trim();
+                    if (!token.isBlank()) {
+                        try {
+                            resolveSingleRoleName(token);
+                        } catch (BadRequestException e) {
+                            errors.add(e.getMessage());
+                        }
+                    }
                 }
             }
 
@@ -394,63 +439,82 @@ public class UserExcelImportService {
     }
 
     /**
-     * Phân giải chuỗi vai trò từ tiếng Việt hoặc mã code sang Role entity
+     * Phân giải một chuỗi vai trò (có thể chứa nhiều vai trò ngăn cách bởi ',' hoặc ';') thành Set<Role>
+     * Nếu để trống, mặc định là RECRUITER
      */
-    public Role resolveRole(String roleStr) {
+    public Set<Role> resolveRoles(String roleStr) {
         if (roleStr == null || roleStr.trim().isBlank()) {
-            return roleRepository.findByName(RoleName.INTERVIEWER)
-                    .orElseGet(() -> roleRepository.save(new Role(RoleName.INTERVIEWER, "Người phỏng vấn")));
+            return Set.of(getOrCreateRole(RoleName.RECRUITER));
         }
 
-        String normalized = roleStr.trim().toUpperCase();
+        Set<Role> roles = new LinkedHashSet<>();
+        String[] tokens = roleStr.split("[,;]");
+        for (String rawToken : tokens) {
+            String token = rawToken.trim();
+            if (!token.isBlank()) {
+                RoleName roleName = resolveSingleRoleName(token);
+                roles.add(getOrCreateRole(roleName));
+            }
+        }
 
-        RoleName roleName;
+        if (roles.isEmpty()) {
+            roles.add(getOrCreateRole(RoleName.RECRUITER));
+        }
+
+        return roles;
+    }
+
+    /**
+     * Phân giải vai trò đơn lẻ tương thích ngược với resolveRole(String)
+     */
+    public Role resolveRole(String roleStr) {
+        Set<Role> roles = resolveRoles(roleStr);
+        return roles.stream().findFirst().orElseGet(() -> getOrCreateRole(RoleName.RECRUITER));
+    }
+
+    private Role getOrCreateRole(RoleName roleName) {
+        return roleRepository.findByName(roleName)
+                .orElseGet(() -> roleRepository.save(new Role(roleName, "Vai trò " + roleName.name())));
+    }
+
+    private RoleName resolveSingleRoleName(String roleToken) {
+        String normalized = roleToken.trim().toUpperCase();
+
         switch (normalized) {
             case "ADMIN":
             case "QUẢN TRỊ VIÊN":
             case "QUẢN TRỊ":
-                roleName = RoleName.ADMIN;
-                break;
+                return RoleName.ADMIN;
             case "HR_MANAGER":
             case "TRƯỞNG PHÒNG NHÂN SỰ":
             case "QUẢN LÝ NHÂN SỰ":
-                roleName = RoleName.HR_MANAGER;
-                break;
+                return RoleName.HR_MANAGER;
             case "RECRUITER":
             case "CHUYÊN VIÊN TUYỂN DỤNG":
             case "TUYỂN DỤNG":
-                roleName = RoleName.RECRUITER;
-                break;
+                return RoleName.RECRUITER;
             case "INTERVIEWER":
             case "NGƯỜI PHỎNG VẤN":
             case "PHỎNG VẤN VIÊN":
-                roleName = RoleName.INTERVIEWER;
-                break;
+                return RoleName.INTERVIEWER;
             case "HIRING_MANAGER":
             case "QUẢN LÝ BỘ PHẬN TUYỂN DỤNG":
             case "QUẢN LÝ TUYỂN DỤNG":
-                roleName = RoleName.HIRING_MANAGER;
-                break;
+                return RoleName.HIRING_MANAGER;
             case "APPROVER":
             case "NGƯỜI PHÊ DUYỆT":
             case "PHÊ DUYỆT":
-                roleName = RoleName.APPROVER;
-                break;
+                return RoleName.APPROVER;
             case "CANDIDATE":
             case "ỨNG VIÊN":
-                roleName = RoleName.CANDIDATE;
-                break;
+                return RoleName.CANDIDATE;
             default:
                 try {
-                    roleName = RoleName.valueOf(normalized);
+                    return RoleName.valueOf(normalized);
                 } catch (IllegalArgumentException e) {
-                    throw new BadRequestException("Vai trò không hợp lệ: '" + roleStr + "'. Hỗ trợ: ADMIN, HR_MANAGER, RECRUITER, INTERVIEWER, HIRING_MANAGER, APPROVER, CANDIDATE.");
+                    throw new BadRequestException("Vai trò không hợp lệ: '" + roleToken + "'. Hỗ trợ: ADMIN, HR_MANAGER, RECRUITER, INTERVIEWER, HIRING_MANAGER, APPROVER, CANDIDATE.");
                 }
         }
-
-        final RoleName finalRoleName = roleName;
-        return roleRepository.findByName(roleName)
-                .orElseGet(() -> roleRepository.save(new Role(finalRoleName, "Vai trò " + finalRoleName.name())));
     }
 
     private String getCellValue(Row row, int colIdx, DataFormatter formatter) {

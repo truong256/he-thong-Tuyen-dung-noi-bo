@@ -25,6 +25,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,6 +54,8 @@ class UserExcelImportServiceTest {
 
     private Role interviewerRole;
     private Role recruiterRole;
+    private Role adminRole;
+    private Role hrManagerRole;
 
     @BeforeEach
     void setUp() {
@@ -62,8 +65,16 @@ class UserExcelImportServiceTest {
         recruiterRole = new Role(RoleName.RECRUITER, "Chuyên viên tuyển dụng");
         recruiterRole.setId(2L);
 
+        adminRole = new Role(RoleName.ADMIN, "Quản trị viên");
+        adminRole.setId(3L);
+
+        hrManagerRole = new Role(RoleName.HR_MANAGER, "Quản lý nhân sự");
+        hrManagerRole.setId(4L);
+
         lenient().when(roleRepository.findByName(RoleName.INTERVIEWER)).thenReturn(Optional.of(interviewerRole));
         lenient().when(roleRepository.findByName(RoleName.RECRUITER)).thenReturn(Optional.of(recruiterRole));
+        lenient().when(roleRepository.findByName(RoleName.ADMIN)).thenReturn(Optional.of(adminRole));
+        lenient().when(roleRepository.findByName(RoleName.HR_MANAGER)).thenReturn(Optional.of(hrManagerRole));
         lenient().when(roleRepository.save(any(Role.class))).thenAnswer(invocation -> invocation.getArgument(0));
         lenient().when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hashedPassword123");
     }
@@ -83,23 +94,26 @@ class UserExcelImportServiceTest {
     }
 
     @Test
-    @DisplayName("Tạo file Excel mẫu thành công và mở được cấu trúc POI")
+    @DisplayName("1. Tạo file Excel mẫu thành công và mở được cấu trúc POI với đầy đủ cột")
     void generateTemplate_Success() throws IOException {
         byte[] templateBytes = importService.generateTemplate();
         assertThat(templateBytes).isNotEmpty();
 
-        // Verify with POI that workbook opens cleanly
         try (Workbook wb = new XSSFWorkbook(new java.io.ByteArrayInputStream(templateBytes))) {
             assertThat(wb.getNumberOfSheets()).isGreaterThanOrEqualTo(1);
             Sheet sheet = wb.getSheetAt(0);
             Row header = sheet.getRow(0);
-            assertThat(header.getCell(0).getStringCellValue()).contains("Họ và tên");
-            assertThat(header.getCell(1).getStringCellValue()).contains("Email");
+            assertThat(header.getCell(0).getStringCellValue()).contains("Mã nhân sự");
+            assertThat(header.getCell(1).getStringCellValue()).contains("Họ và tên");
+            assertThat(header.getCell(2).getStringCellValue()).contains("Email");
+            assertThat(header.getCell(3).getStringCellValue()).contains("Số điện thoại");
+            assertThat(header.getCell(4).getStringCellValue()).contains("Phòng ban");
+            assertThat(header.getCell(5).getStringCellValue()).contains("Vai trò");
         }
     }
 
     @Test
-    @DisplayName("Parse thất bại khi file null hoặc rỗng")
+    @DisplayName("2. Parse thất bại khi file null hoặc rỗng")
     void parse_EmptyFile_ThrowsException() {
         MockMultipartFile emptyFile = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", new byte[0]);
         assertThatThrownBy(() -> importService.parseWorkbook(emptyFile))
@@ -108,7 +122,7 @@ class UserExcelImportServiceTest {
     }
 
     @Test
-    @DisplayName("Parse thất bại khi file sai định dạng đuôi không phải xlsx/xls")
+    @DisplayName("3. Parse thất bại khi file sai định dạng đuôi không phải xlsx/xls")
     void parse_InvalidExtension_ThrowsException() {
         MockMultipartFile txtFile = new MockMultipartFile("file", "test.txt", "text/plain", "hello".getBytes());
         assertThatThrownBy(() -> importService.parseWorkbook(txtFile))
@@ -117,7 +131,7 @@ class UserExcelImportServiceTest {
     }
 
     @Test
-    @DisplayName("Parse thất bại khi file thiếu cột bắt buộc Họ và tên hoặc Email")
+    @DisplayName("4. Parse thất bại khi file thiếu cột bắt buộc Họ và tên hoặc Email")
     void parse_MissingRequiredHeader_ThrowsException() throws IOException {
         String[][] data = {
                 {"Số điện thoại", "Địa chỉ"},
@@ -130,53 +144,162 @@ class UserExcelImportServiceTest {
     }
 
     @Test
-    @DisplayName("Preview phát hiện dòng lỗi và dòng hợp lệ chính xác")
-    void preview_MixedValidAndInvalidRows() throws IOException {
-        when(userRepository.existsByEmailIgnoreCase("exist@company.com")).thenReturn(true);
-        when(userRepository.existsByEmailIgnoreCase("valid@company.com")).thenReturn(false);
-
-        String[][] data = {
-                {"Họ và tên", "Email", "Phòng ban", "Vai trò"},
-                {"Nguyễn Văn Hợp Lệ", "valid@company.com", "IT", "INTERVIEWER"},
-                {"Trần Đã Tồn Tại", "exist@company.com", "HR", "RECRUITER"},
-                {"", "no-name@company.com", "HR", "INTERVIEWER"}, // thiếu tên
-                {"Lê Sai Email", "invalid-email-format", "Sales", "INTERVIEWER"}, // sai email
-                {"Phạm Trùng 1", "dup@company.com", "Legal", "INTERVIEWER"}, // trùng 1
-                {"Phạm Trùng 2", "dup@company.com", "Legal", "INTERVIEWER"}  // trùng 2
+    @DisplayName("5. Parse thất bại khi dung lượng file vượt quá 10MB")
+    void parse_FileSizeExceeds10MB_ThrowsException() {
+        byte[] largeBytes = new byte[10];
+        MockMultipartFile largeFile = new MockMultipartFile("file", "large.xlsx", "application/vnd.ms-excel", largeBytes) {
+            @Override
+            public long getSize() {
+                return 11 * 1024 * 1024L; // 11MB
+            }
         };
-
-        MockMultipartFile file = new MockMultipartFile("file", "import.xlsx", "application/vnd.ms-excel", createExcelBytes(data));
-        ExcelImportPreviewResponse preview = importService.previewImport(file);
-
-        assertThat(preview.getTotalRows()).isEqualTo(6);
-        assertThat(preview.getValidCount()).isEqualTo(1);
-        assertThat(preview.getInvalidCount()).isEqualTo(5);
-
-        // Row 1 is valid
-        assertThat(preview.getRows().get(0).isValid()).isTrue();
-        assertThat(preview.getRows().get(0).getErrors()).isEmpty();
-
-        // Row 2 has duplicate in DB
-        assertThat(preview.getRows().get(1).isValid()).isFalse();
-        assertThat(preview.getRows().get(1).getErrors()).anyMatch(e -> e.contains("đã tồn tại"));
-
-        // Row 3 has missing name
-        assertThat(preview.getRows().get(2).isValid()).isFalse();
-        assertThat(preview.getRows().get(2).getErrors()).anyMatch(e -> e.contains("Họ và tên không được để trống"));
-
-        // Row 4 has invalid email format
-        assertThat(preview.getRows().get(3).isValid()).isFalse();
-        assertThat(preview.getRows().get(3).getErrors()).anyMatch(e -> e.contains("Email không đúng định dạng"));
-
-        // Rows 5 and 6 have duplicate in file
-        assertThat(preview.getRows().get(4).isValid()).isFalse();
-        assertThat(preview.getRows().get(4).getErrors()).anyMatch(e -> e.contains("trùng lặp trong chính file"));
-        assertThat(preview.getRows().get(5).isValid()).isFalse();
-        assertThat(preview.getRows().get(5).getErrors()).anyMatch(e -> e.contains("trùng lặp trong chính file"));
+        assertThatThrownBy(() -> importService.parseWorkbook(largeFile))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Dung lượng file vượt quá giới hạn tối đa 10 MB");
     }
 
     @Test
-    @DisplayName("Partial Success: Import 2 dòng hợp lệ và bỏ qua 1 dòng lỗi")
+    @DisplayName("6. Parse thất bại khi file hỏng (corrupt file)")
+    void parse_CorruptFile_ThrowsException() {
+        byte[] corrupted = new byte[]{0x50, 0x4B, 0x03, 0x04, 0x00, 0x00, 0x00}; // Invalid ZIP header
+        MockMultipartFile corruptFile = new MockMultipartFile("file", "corrupt.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", corrupted);
+        assertThatThrownBy(() -> importService.parseWorkbook(corruptFile))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Không thể đọc cấu trúc file Excel");
+    }
+
+    @Test
+    @DisplayName("7. Validation phát hiện thiếu Họ tên và Họ tên dài hơn 150 ký tự")
+    void preview_ValidateFullName() throws IOException {
+        String longName = "A".repeat(151);
+        String[][] data = {
+                {"Họ và tên", "Email"},
+                {"", "missing_name@company.com"},
+                {longName, "long_name@company.com"}
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", createExcelBytes(data));
+        ExcelImportPreviewResponse preview = importService.previewImport(file);
+
+        assertThat(preview.getValidCount()).isEqualTo(0);
+        assertThat(preview.getRows().get(0).getErrors()).anyMatch(e -> e.contains("Họ và tên không được để trống"));
+        assertThat(preview.getRows().get(1).getErrors()).anyMatch(e -> e.contains("Họ và tên không được vượt quá 150 ký tự"));
+    }
+
+    @Test
+    @DisplayName("8. Validation phát hiện thiếu Email, sai định dạng Email, và Email trùng DB")
+    void preview_ValidateEmail() throws IOException {
+        when(userRepository.existsByEmailIgnoreCase("exist@company.com")).thenReturn(true);
+
+        String[][] data = {
+                {"Họ và tên", "Email"},
+                {"Nguyễn Văn A", ""},
+                {"Trần Thị B", "invalid-email-format"},
+                {"Lê Văn C", "exist@company.com"}
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", createExcelBytes(data));
+        ExcelImportPreviewResponse preview = importService.previewImport(file);
+
+        assertThat(preview.getValidCount()).isEqualTo(0);
+        assertThat(preview.getRows().get(0).getErrors()).anyMatch(e -> e.contains("Email không được để trống"));
+        assertThat(preview.getRows().get(1).getErrors()).anyMatch(e -> e.contains("Email không đúng định dạng"));
+        assertThat(preview.getRows().get(2).getErrors()).anyMatch(e -> e.contains("Email đã tồn tại trong hệ thống"));
+    }
+
+    @Test
+    @DisplayName("9. Email trùng lặp trong cùng file: TẤT CẢ các dòng có email đó đều bị đánh dấu lỗi")
+    void preview_DuplicateEmailInSameExcel_AllOccurrencesInvalid() throws IOException {
+        String[][] data = {
+                {"Họ và tên", "Email", "Phòng ban", "Vai trò"},
+                {"Vũ Email Trùng 1", "s2s1.duplicate@company.com", "Phòng Công nghệ", "RECRUITER"},
+                {"Đỗ Email Trùng 2", "s2s1.duplicate@company.com", "Phòng Công nghệ", "INTERVIEWER"}
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", createExcelBytes(data));
+        ExcelImportPreviewResponse preview = importService.previewImport(file);
+
+        assertThat(preview.getValidCount()).isEqualTo(0);
+        assertThat(preview.getInvalidCount()).isEqualTo(2);
+
+        // Cả 2 dòng đều phải nhận lỗi trùng lặp
+        assertThat(preview.getRows().get(0).isValid()).isFalse();
+        assertThat(preview.getRows().get(0).getErrors()).anyMatch(e -> e.contains("Email bị trùng lặp trong tệp Excel"));
+
+        assertThat(preview.getRows().get(1).isValid()).isFalse();
+        assertThat(preview.getRows().get(1).getErrors()).anyMatch(e -> e.contains("Email bị trùng lặp trong tệp Excel"));
+    }
+
+    @Test
+    @DisplayName("10. Validation số điện thoại: từ chối ký tự sai, chấp nhận hợp lệ 9-15 số và + đầu số")
+    void preview_ValidatePhone() throws IOException {
+        String[][] data = {
+                {"Họ và tên", "Email", "Số điện thoại"},
+                {"Lê Sai ĐT", "phone_bad@company.com", "abc123"},
+                {"Nguyễn ĐT Chuẩn", "phone_ok1@company.com", "0901234567"},
+                {"Trần ĐT Quốc Tế", "phone_ok2@company.com", "+84987654321"}
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", createExcelBytes(data));
+        ExcelImportPreviewResponse preview = importService.previewImport(file);
+
+        assertThat(preview.getRows().get(0).isValid()).isFalse();
+        assertThat(preview.getRows().get(0).getErrors()).anyMatch(e -> e.contains("Số điện thoại không đúng định dạng"));
+
+        assertThat(preview.getRows().get(1).isValid()).isTrue();
+        assertThat(preview.getRows().get(2).isValid()).isTrue();
+    }
+
+    @Test
+    @DisplayName("11. Validation phòng ban: từ chối phòng ban > 100 ký tự")
+    void preview_ValidateDepartment() throws IOException {
+        String longDept = "P".repeat(101);
+        String[][] data = {
+                {"Họ và tên", "Email", "Phòng ban"},
+                {"Hoàng Phòng Ban Dài", "dept_long@company.com", longDept}
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", createExcelBytes(data));
+        ExcelImportPreviewResponse preview = importService.previewImport(file);
+
+        assertThat(preview.getRows().get(0).isValid()).isFalse();
+        assertThat(preview.getRows().get(0).getErrors()).anyMatch(e -> e.contains("Tên phòng ban không được vượt quá 100 ký tự"));
+    }
+
+    @Test
+    @DisplayName("12. Vai trò: Hỗ trợ phân cách bằng ',' hoặc ';', nhiều role, và mặc định RECRUITER khi trống")
+    void preview_ValidateRoles_MultiAndDefault() throws IOException {
+        String[][] data = {
+                {"Họ và tên", "Email", "Vai trò"},
+                {"User Một Role", "r1@company.com", "INTERVIEWER"},
+                {"User Hai Role Chấm Phẩy", "r2@company.com", "RECRUITER;INTERVIEWER"},
+                {"User Hai Role Phẩy", "r3@company.com", "ADMIN, HR_MANAGER"},
+                {"User Trống Role", "r4@company.com", ""},
+                {"User Sai Role", "r5@company.com", "INVALID_ROLE"}
+        };
+        MockMultipartFile file = new MockMultipartFile("file", "test.xlsx", "application/vnd.ms-excel", createExcelBytes(data));
+        ExcelImportPreviewResponse preview = importService.previewImport(file);
+
+        assertThat(preview.getRows().get(0).isValid()).isTrue();
+        assertThat(preview.getRows().get(1).isValid()).isTrue();
+        assertThat(preview.getRows().get(2).isValid()).isTrue();
+        assertThat(preview.getRows().get(3).isValid()).isTrue(); // Trống role vẫn hợp lệ vì default RECRUITER
+        assertThat(preview.getRows().get(4).isValid()).isFalse();
+        assertThat(preview.getRows().get(4).getErrors()).anyMatch(e -> e.contains("Vai trò không hợp lệ: 'INVALID_ROLE'"));
+    }
+
+    @Test
+    @DisplayName("13. resolveRoles giải quyết chính xác nhiều vai trò và default RECRUITER")
+    void resolveRoles_Accuracy() {
+        Set<Role> roles1 = importService.resolveRoles("RECRUITER;INTERVIEWER");
+        assertThat(roles1).extracting(Role::getName).containsExactlyInAnyOrder(RoleName.RECRUITER, RoleName.INTERVIEWER);
+
+        Set<Role> roles2 = importService.resolveRoles("ADMIN, HR_MANAGER");
+        assertThat(roles2).extracting(Role::getName).containsExactlyInAnyOrder(RoleName.ADMIN, RoleName.HR_MANAGER);
+
+        Set<Role> rolesEmpty = importService.resolveRoles("");
+        assertThat(rolesEmpty).extracting(Role::getName).containsExactly(RoleName.RECRUITER);
+
+        assertThat(importService.resolveRole("").getName()).isEqualTo(RoleName.RECRUITER);
+    }
+
+    @Test
+    @DisplayName("14. Partial Success: Import đúng các dòng hợp lệ và bỏ qua các dòng lỗi")
     void executeImport_PartialSuccess() throws IOException {
         when(userRepository.existsByEmailIgnoreCase("user1@company.com")).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase("user2@company.com")).thenReturn(false);
@@ -198,7 +321,7 @@ class UserExcelImportServiceTest {
 
         String[][] data = {
                 {"Họ và tên", "Email", "Phòng ban", "Vai trò"},
-                {"User One", "user1@company.com", "Tech", "INTERVIEWER"},
+                {"User One", "user1@company.com", "Tech", "RECRUITER;INTERVIEWER"},
                 {"User Bad", "bad@company.com", "Marketing", "INTERVIEWER"}, // Duplicate DB error
                 {"User Two", "user2@company.com", "HR", "Chuyên viên tuyển dụng"} // Valid Vietnamese role
         };
@@ -218,12 +341,11 @@ class UserExcelImportServiceTest {
         assertThat(result.getFailedRows().get(0).getData().getEmail()).isEqualTo("bad@company.com");
         assertThat(result.getFailedRows().get(0).getErrors()).anyMatch(e -> e.contains("đã tồn tại"));
 
-        // Verify activation email dispatched
         verify(mailService, times(2)).sendAccountActivationEmail(anyString(), anyString());
     }
 
     @Test
-    @DisplayName("Email failure không rollback tài khoản và ghi nhận status EMAIL_FAILED")
+    @DisplayName("15. Email failure không rollback tài khoản và ghi nhận status EMAIL_FAILED")
     void executeImport_MailFailure_DoesNotRollbackAccount() throws IOException {
         when(userRepository.existsByEmailIgnoreCase("user1@company.com")).thenReturn(false);
 
@@ -245,20 +367,5 @@ class UserExcelImportServiceTest {
 
         assertThat(result.getSuccessCount()).isEqualTo(1);
         assertThat(result.getSuccessRows().get(0).getEmailStatus()).isEqualTo("ACCOUNT_CREATED_EMAIL_FAILED");
-    }
-
-    @Test
-    @DisplayName("ResolveRole hỗ trợ đầy đủ các vai trò tiếng Việt và mã hệ thống")
-    void resolveRole_VietnameseAndCodes() {
-        assertThat(importService.resolveRole("ADMIN").getName()).isEqualTo(RoleName.ADMIN);
-        assertThat(importService.resolveRole("Quản trị viên").getName()).isEqualTo(RoleName.ADMIN);
-        assertThat(importService.resolveRole("HR_MANAGER").getName()).isEqualTo(RoleName.HR_MANAGER);
-        assertThat(importService.resolveRole("Trưởng phòng nhân sự").getName()).isEqualTo(RoleName.HR_MANAGER);
-        assertThat(importService.resolveRole("Người phỏng vấn").getName()).isEqualTo(RoleName.INTERVIEWER);
-        assertThat(importService.resolveRole("").getName()).isEqualTo(RoleName.INTERVIEWER);
-
-        assertThatThrownBy(() -> importService.resolveRole("INVALID_ROLE_XYZ"))
-                .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("Vai trò không hợp lệ");
     }
 }

@@ -9,7 +9,7 @@ export const apiClient = axios.create({
   },
 });
 
-import { isIdleExpired, clearActivity } from '../utils/idleTracker';
+import { isIdleExpired, clearActivity, recordActivity } from '../utils/idleTracker';
 
 // Request interceptor to attach JWT access token
 apiClient.interceptors.request.use(
@@ -97,7 +97,10 @@ export const triggerIdleSessionExpired = () => {
 
 // Response interceptor to handle token refresh and session expiration
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    recordActivity();
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const status = error.response?.status;

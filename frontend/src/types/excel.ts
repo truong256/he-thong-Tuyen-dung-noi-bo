@@ -1,7 +1,9 @@
 export interface ExcelImportRowData {
   rowNumber: number;
+  employeeCode?: string;
   fullName: string;
   email: string;
+  phone?: string;
   department: string;
   role: string;
 }
@@ -25,7 +27,10 @@ export interface ExcelImportSuccessRow {
   userId: number;
   email: string;
   fullName: string;
-  roles: string[];
+  department?: string;
+  phone?: string;
+  role?: string;
+  roles?: string[];
   emailStatus: string;
 }
 
@@ -41,4 +46,33 @@ export interface ExcelImportResultResponse {
   failedCount: number;
   successRows: ExcelImportSuccessRow[];
   failedRows: ExcelImportFailedRow[];
+}
+
+export const ROLE_VIETNAMESE_MAP: Record<string, string> = {
+  ADMIN: 'Quản trị viên',
+  HR_MANAGER: 'Quản lý nhân sự',
+  RECRUITER: 'Chuyên viên tuyển dụng',
+  INTERVIEWER: 'Người phỏng vấn',
+  HIRING_MANAGER: 'Quản lý tuyển dụng',
+  APPROVER: 'Người phê duyệt',
+  CANDIDATE: 'Ứng viên',
+};
+
+export interface ParsedRoleItem {
+  code: string;
+  label: string;
+}
+
+export function parseAndFormatRoles(roleStr?: string): ParsedRoleItem[] {
+  if (!roleStr || !roleStr.trim()) {
+    return [{ code: 'RECRUITER', label: 'Chuyên viên tuyển dụng' }];
+  }
+  const parts = roleStr.split(/[,;]/).map((s) => s.trim().toUpperCase()).filter(Boolean);
+  if (parts.length === 0) {
+    return [{ code: 'RECRUITER', label: 'Chuyên viên tuyển dụng' }];
+  }
+  return parts.map((code) => ({
+    code,
+    label: ROLE_VIETNAMESE_MAP[code] || code,
+  }));
 }

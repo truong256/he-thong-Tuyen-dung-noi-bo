@@ -16,6 +16,9 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @Column(name = "recovery_email", length = 255)
+    private String recoveryEmail;
+
     @Column(name = "username")
     private String username;
 
@@ -120,6 +123,9 @@ public class User {
             this.username = email;
         }
     }
+
+    public String getRecoveryEmail() { return recoveryEmail; }
+    public void setRecoveryEmail(String recoveryEmail) { this.recoveryEmail = recoveryEmail; }
 
     public String getUsername() {
         return username != null ? username : email;

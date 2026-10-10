@@ -10,7 +10,10 @@ export type RoleName =
 export interface UserSummary {
   id: number;
   email: string;
+  recoveryEmail?: string;
   fullName: string;
+  phone?: string;
+  displayName?: string;
   department?: string;
   role: string;
   roles: string[];
@@ -31,6 +34,14 @@ export interface LoginResponse {
   refreshToken: string;
   user: UserSummary;
   mustChangePassword?: boolean;
+}
+
+export interface AvatarUploadResponse {
+  message: string;
+  avatarUrl: string;
+  thumbnailUrl: string;
+  avatarThumbnailUrl?: string;
+  user?: UserSummary;
 }
 
 export interface ApiError {

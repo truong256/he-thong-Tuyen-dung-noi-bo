@@ -5,4 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 public interface CandidateApplicationRepository extends JpaRepository<CandidateApplication, Long>,
-        JpaSpecificationExecutor<CandidateApplication> {}
+        JpaSpecificationExecutor<CandidateApplication> {
+    boolean existsByCandidateSourceId(Long candidateSourceId);
+
+    boolean existsByRejectionReasonId(Long rejectionReasonId);
+}

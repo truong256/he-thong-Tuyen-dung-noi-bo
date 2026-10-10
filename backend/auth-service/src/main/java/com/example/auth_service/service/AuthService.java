@@ -152,6 +152,7 @@ public class AuthService {
                 user.getStatus()
         );
         userSummary.setMustChangePassword(user.isMustChangePassword());
+        userSummary.setRecoveryEmail(user.getRecoveryEmail());
         userSummary.setAvatarUrl(user.getAvatarUrl());
         userSummary.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
 
@@ -370,16 +371,24 @@ public class AuthService {
 
     @Transactional
     public Map<String, String> forgotPassword(ForgotPasswordRequest request) {
-        String genericMessage = "Nếu email tồn tại, hướng dẫn khôi phục mật khẩu đã được gửi.";
+        String genericMessage = "Nếu tài khoản tồn tại và đã cấu hình email khôi phục, liên kết đặt lại mật khẩu sẽ được gửi đến email đã đăng ký.";
         if (request == null || request.getEmail() == null || request.getEmail().isBlank()) {
             return Map.of("message", genericMessage);
         }
 
-        String email = request.getEmail().trim().toLowerCase();
-        Optional<User> userOpt = userRepository.findByEmail(email);
+        String companyEmail = request.getEmail().trim().toLowerCase();
+        Optional<User> userOpt = userRepository.findByEmail(companyEmail);
 
         if (userOpt.isPresent()) {
             User user = userOpt.get();
+            String recoveryEmail = user.getRecoveryEmail();
+
+            if (recoveryEmail == null || recoveryEmail.trim().isBlank()) {
+                logger.warn("Password reset skipped: recovery email not configured for userId={}", user.getId());
+                return Map.of("message", genericMessage);
+            }
+
+            String trimmedRecoveryEmail = recoveryEmail.trim();
             String rawToken = UUID.randomUUID().toString();
             String tokenHash = hashToken(rawToken);
 
@@ -395,7 +404,7 @@ public class AuthService {
 
             if (mailService != null) {
                 try {
-                    mailService.sendPasswordResetEmail(user.getEmail(), rawToken);
+                    mailService.sendPasswordResetEmail(trimmedRecoveryEmail, rawToken, user.getFullName());
                 } catch (Exception ex) {
                     logger.warn("Could not deliver password reset email ({})", ex.getClass().getSimpleName());
                 }
@@ -445,7 +454,7 @@ public class AuthService {
         // Revoke all existing refresh sessions for this user on password reset
         refreshTokenRepository.revokeAllByUser(user);
 
-        return Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập với mật khẩu mới.");
+        return Map.of("message", "Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.");
     }
 
     @Transactional
@@ -533,6 +542,7 @@ public class AuthService {
                 user.getStatus()
         );
         dto.setMustChangePassword(user.isMustChangePassword());
+        dto.setRecoveryEmail(user.getRecoveryEmail());
         dto.setAvatarUrl(user.getAvatarUrl());
         dto.setAvatarThumbnailUrl(user.getAvatarThumbnailUrl());
         return dto;
@@ -551,6 +561,11 @@ public class AuthService {
         if (request.getDisplayName() != null) {
             user.setDisplayName(request.getDisplayName().trim());
         }
+        // Không cho phép người dùng tự thay đổi phòng ban, email, hoặc vai trò qua hồ sơ cá nhân (S2-02)
+        if (request.getRecoveryEmail() != null) {
+            String trimmedRecovery = request.getRecoveryEmail().trim().toLowerCase();
+            user.setRecoveryEmail(trimmedRecovery.isEmpty() ? null : trimmedRecovery);
+        }
         user.setUpdatedAt(Instant.now());
         User saved = userRepository.saveAndFlush(user);
 
@@ -565,6 +580,7 @@ public class AuthService {
                 saved.getStatus()
         );
         dto.setMustChangePassword(saved.isMustChangePassword());
+        dto.setRecoveryEmail(saved.getRecoveryEmail());
         dto.setAvatarUrl(saved.getAvatarUrl());
         dto.setAvatarThumbnailUrl(saved.getAvatarThumbnailUrl());
         return dto;

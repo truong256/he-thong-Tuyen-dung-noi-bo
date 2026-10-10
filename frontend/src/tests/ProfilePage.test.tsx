@@ -29,6 +29,7 @@ describe('ProfilePage Component (Personal User Profile)', () => {
       login: vi.fn(),
       logout: vi.fn(),
       refreshUser: mockRefreshUser,
+      updateUser: vi.fn(),
       hasRole: (r: string) => r === 'RECRUITER',
       hasAnyRole: (roles: string[]) => roles.includes('RECRUITER'),
     });
@@ -48,12 +49,14 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     expect(screen.getByText('Đang hoạt động')).toBeInTheDocument();
   });
 
-  it('allows editing full name and department, then submits updateProfile', async () => {
+  it('updates name, Vietnamese phone and display title without submitting protected fields', async () => {
     vi.spyOn(authApi, 'updateProfile').mockResolvedValueOnce({
       id: 10,
       email: 'recruiter@company.com',
       fullName: 'Nguyễn Văn Đã Cập Nhật',
-      department: 'Kỹ thuật & Công nghệ',
+      department: 'Tuyển dụng & Nhân sự',
+      phone: '0912345678',
+      displayName: 'Chuyên viên tuyển dụng',
       role: 'RECRUITER',
       roles: ['RECRUITER'],
       status: 'ACTIVE',
@@ -66,7 +69,8 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     );
 
     const nameInput = screen.getByLabelText(/Họ và tên/i);
-    const deptInput = screen.getByLabelText(/Phòng ban/i);
+    const phoneInput = screen.getByLabelText(/Số điện thoại/i);
+    const titleInput = screen.getByLabelText(/Chức danh hiển thị/i);
     const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
 
     // Initially save button is disabled since clean
@@ -76,10 +80,9 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     fireEvent.change(nameInput, { target: { value: 'Nguyễn Văn Đã Cập Nhật' } });
     expect(saveBtn).not.toBeDisabled();
 
-    // Select preset chip
-    const techChip = screen.getByRole('button', { name: 'Kỹ thuật & Công nghệ' });
-    fireEvent.click(techChip);
-    expect(deptInput).toHaveValue('Kỹ thuật & Công nghệ');
+    fireEvent.change(phoneInput, { target: { value: '0912345678' } });
+    fireEvent.change(titleInput, { target: { value: 'Chuyên viên tuyển dụng' } });
+    expect(screen.getByLabelText(/^Phòng ban$/i)).toBeDisabled();
 
     // Submit form
     fireEvent.click(saveBtn);
@@ -87,7 +90,8 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     await waitFor(() => {
       expect(authApi.updateProfile).toHaveBeenCalledWith({
         fullName: 'Nguyễn Văn Đã Cập Nhật',
-        department: 'Kỹ thuật & Công nghệ',
+        phone: '0912345678',
+        displayName: 'Chuyên viên tuyển dụng',
       });
       expect(mockRefreshUser).toHaveBeenCalled();
     });
@@ -95,6 +99,18 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     expect(
       await screen.findByText('Thông tin hồ sơ cá nhân đã được cập nhật thành công!')
     ).toBeInTheDocument();
+  });
+
+  it('rejects invalid Vietnamese phone before sending the profile update', async () => {
+    render(<MemoryRouter><ProfilePage /></MemoryRouter>);
+    const phoneInput = screen.getByLabelText(/Số điện thoại/i);
+    const nameInput = screen.getByLabelText(/Họ và tên/i);
+    fireEvent.change(phoneInput, { target: { value: '098234092839' } });
+    fireEvent.click(screen.getByRole('button', { name: /Lưu thay đổi/i }));
+    expect(await screen.findByText('Số điện thoại không đúng định dạng Việt Nam.')).toBeInTheDocument();
+    expect(phoneInput).toHaveClass('is-invalid');
+    expect(nameInput).not.toHaveClass('is-invalid');
+    expect(authApi.updateProfile).not.toHaveBeenCalled();
   });
 
   it('shows client-side validation error if full name is too short', async () => {
@@ -147,19 +163,57 @@ describe('ProfilePage Component (Personal User Profile)', () => {
     expect(screen.getByText('Khóa tự động chống brute-force:')).toBeInTheDocument();
   });
 
-  it('opens ChangePasswordModal when clicking change password button', () => {
+  it('displays login email as read-only and allows user to update their recovery email', async () => {
+    vi.spyOn(authApi, 'updateProfile').mockResolvedValueOnce({
+      id: 10,
+      email: 'recruiter@company.com',
+      recoveryEmail: 'recruiter.personal@gmail.com',
+      fullName: 'Nguyễn Văn Tuyển Dụng',
+      department: 'Tuyển dụng & Nhân sự',
+      role: 'RECRUITER',
+      roles: ['RECRUITER'],
+      status: 'ACTIVE',
+    });
+
     render(
       <MemoryRouter>
         <ProfilePage />
       </MemoryRouter>
     );
 
-    const changePwdBtns = screen.getAllByRole('button', { name: /Đổi mật khẩu/i });
-    fireEvent.click(changePwdBtns[0]);
+    const loginEmailInput = screen.getByLabelText(/Email đăng nhập/i);
+    expect(loginEmailInput).toBeDisabled();
+    expect(loginEmailInput).toHaveValue('recruiter@company.com');
 
-    // Modal opens
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByLabelText(/Mật khẩu hiện tại/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Mật khẩu mới/i)).toBeInTheDocument();
+    const recoveryEmailInput = screen.getByLabelText(/Email khôi phục/i);
+    expect(recoveryEmailInput).not.toBeDisabled();
+
+    fireEvent.change(recoveryEmailInput, { target: { value: 'recruiter.personal@gmail.com' } });
+    const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
+    expect(saveBtn).not.toBeDisabled();
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(authApi.updateProfile).toHaveBeenCalledWith({
+        fullName: 'Nguyễn Văn Tuyển Dụng',
+        recoveryEmail: 'recruiter.personal@gmail.com',
+      });
+    });
+  });
+
+  it('rejects invalid recovery email format on profile submit', async () => {
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    );
+
+    const recoveryEmailInput = screen.getByLabelText(/Email khôi phục/i);
+    fireEvent.change(recoveryEmailInput, { target: { value: 'invalid-email-format' } });
+    const saveBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
+    fireEvent.click(saveBtn);
+
+    expect(await screen.findByText('Email khôi phục không đúng định dạng.')).toBeInTheDocument();
+    expect(authApi.updateProfile).not.toHaveBeenCalled();
   });
 });

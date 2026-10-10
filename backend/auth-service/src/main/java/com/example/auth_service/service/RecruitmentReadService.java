@@ -44,4 +44,14 @@ public class RecruitmentReadService {
     public SalaryRange salary(Long id) {
         return salaries.findById(id).orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dải lương."));
     }
+
+    @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
+    @Transactional
+    public CandidateSummaryDto updatePipelineStage(Long candidateId, String stage) {
+        var scope = CandidateScope.visibleTo(SecurityContextHolder.getContext().getAuthentication());
+        var app = candidates.findOne(scope.and((root, query, cb) -> cb.equal(root.get("id"), candidateId)))
+                .orElseThrow(() -> new AccessDeniedException("Bạn không có quyền quản lý pipeline của ứng viên này hoặc ứng viên ngoài phạm vi phụ trách."));
+        app.setStage(stage != null ? stage.trim() : "APPLIED");
+        return CandidateSummaryDto.from(candidates.save(app));
+    }
 }

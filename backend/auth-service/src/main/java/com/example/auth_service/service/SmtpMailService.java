@@ -50,19 +50,31 @@ public class SmtpMailService implements MailService {
     @Value("${spring.mail.properties.mail.smtp.timeout:10000}")
     private int timeout;
 
-    @Value("${app.frontend-url:http://localhost:5173}")
+    @Value("${app.frontend-url:${APP_FRONTEND_URL:${FRONTEND_URL:http://localhost:5173}}}")
     private String frontendUrl = "http://localhost:5173";
 
     @Override
     public void sendPasswordResetEmail(String toEmail, String resetToken) {
-        String subject = "[Tuyển dụng nội bộ] Yêu cầu đặt lại mật khẩu";
+        sendPasswordResetEmail(toEmail, resetToken, "Quý người dùng");
+    }
+
+    @Override
+    public void sendPasswordResetEmail(String toEmail, String resetToken, String recipientName) {
+        String greetingName = (recipientName != null && !recipientName.isBlank()) ? recipientName.trim() : "Quý người dùng";
+        String subject = "Đặt lại mật khẩu tài khoản tuyển dụng";
         String resetLink = frontendUrl.replaceAll("/+$", "") + "/reset-password?token=" + resetToken;
-        String body = "<p>Kính gửi Quý nhân viên,</p>"
-                + "<p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản tại Hệ thống Tuyển dụng Nội bộ.</p>"
-                + "<p>Vui lòng truy cập liên kết sau để đặt lại mật khẩu của bạn:</p>"
-                + "<p><a href=\"" + resetLink + "\">" + resetLink + "</a></p>"
-                + "<p>Liên kết này có hiệu lực trong vòng 30 phút. Nếu bạn không gửi yêu cầu này, vui lòng bỏ qua email.</p>"
-                + "<p>Trân trọng,<br>Hệ thống Quản lý Tuyển dụng</p>";
+        String body = "<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;\">"
+                + "<h2 style=\"color: #1e40af; margin-top: 0; font-size: 20px;\">Hệ thống Tuyển dụng Nội bộ</h2>"
+                + "<p>Xin chào <strong>" + greetingName + "</strong>,</p>"
+                + "<p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>"
+                + "<div style=\"margin: 28px 0; text-align: left;\">"
+                + "<a href=\"" + resetLink + "\" style=\"background-color: #2563eb; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;\">Đặt lại mật khẩu</a>"
+                + "</div>"
+                + "<p style=\"color: #475569; font-size: 14px;\">Liên kết có hiệu lực trong <strong>30 phút</strong> và chỉ sử dụng được một lần.</p>"
+                + "<p style=\"color: #64748b; font-size: 13px; margin-top: 16px;\">Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email.</p>"
+                + "<hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;\" />"
+                + "<p style=\"color: #94a3b8; font-size: 12px; word-break: break-all;\">Nếu không bấm được vào nút trên, bạn có thể sao chép và dán liên kết sau vào trình duyệt:<br/><a href=\"" + resetLink + "\" style=\"color: #2563eb;\">" + resetLink + "</a></p>"
+                + "</div>";
         sendEmail(toEmail, subject, body);
         logger.info("Sent password reset email via SMTP to {}", toEmail);
     }
@@ -85,21 +97,23 @@ public class SmtpMailService implements MailService {
         logger.info("Sent account activation email via SMTP to {}", toEmail);
     }
 
+    @SuppressWarnings("resource")
     public void sendEmail(String toEmail, String subject, String bodyHtml) {
         logger.info("Initiating SMTP email transfer to {}:{}", host, port);
         try (Socket rawSocket = new Socket()) {
             rawSocket.connect(new InetSocketAddress(host, port), timeout);
             rawSocket.setSoTimeout(timeout);
 
-            Socket initialSocket = rawSocket;
+            Socket socket = rawSocket;
+            SSLSocket sslSocket = null;
             if (port == 465) {
-                SSLSocket sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
                         .createSocket(rawSocket, host, port, true);
                 sslSocket.startHandshake();
-                initialSocket = sslSocket;
+                socket = sslSocket;
             }
 
-            try (Socket socket = initialSocket) {
+            try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
@@ -123,6 +137,10 @@ public class SmtpMailService implements MailService {
                     }
                 } else {
                     performSmtpTransaction(reader, writer, toEmail, subject, bodyHtml);
+                }
+            } finally {
+                if (sslSocket != null) {
+                    sslSocket.close();
                 }
             }
         } catch (Exception e) {

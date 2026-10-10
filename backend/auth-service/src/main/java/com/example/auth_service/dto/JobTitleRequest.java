@@ -16,7 +16,9 @@ public record JobTitleRequest(
         Long departmentId,
         String level,
         String jobFamily,
+        @PositiveOrZero(message = "Lương tối thiểu không được âm")
         Long minSalary,
+        @PositiveOrZero(message = "Lương tối đa không được âm")
         Long maxSalary,
         String jobDescription,
         List<String> keyResponsibilities,
@@ -24,5 +26,25 @@ public record JobTitleRequest(
         List<String> competencies,
         Integer standardHeadcount,
         Integer currentHeadcount,
-        Boolean active
-) {}
+        Boolean active,
+        Long competencyFrameworkId
+) {
+    public JobTitleRequest(
+            String title,
+            String code,
+            Long departmentId,
+            String level,
+            String jobFamily,
+            Long minSalary,
+            Long maxSalary,
+            String jobDescription,
+            List<String> keyResponsibilities,
+            List<String> requirements,
+            List<String> competencies,
+            Integer standardHeadcount,
+            Integer currentHeadcount,
+            Boolean active
+    ) {
+        this(title, code, departmentId, level, jobFamily, minSalary, maxSalary, jobDescription, keyResponsibilities, requirements, competencies, standardHeadcount, currentHeadcount, active, null);
+    }
+}

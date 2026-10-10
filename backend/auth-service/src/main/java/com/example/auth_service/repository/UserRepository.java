@@ -22,6 +22,21 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     boolean existsByDepartmentIgnoreCase(String department);
 
     @Query("""
+        SELECT COUNT(u) FROM User u 
+        WHERE u.department IS NOT NULL 
+          AND (
+            LOWER(TRIM(u.department)) = LOWER(TRIM(:name)) 
+            OR LOWER(TRIM(u.department)) = LOWER(TRIM(:code))
+            OR (:code = 'DEV-BE' AND (LOWER(u.department) LIKE '%backend%' OR LOWER(u.department) LIKE '%phát triển%'))
+            OR (:code = 'DEV-FE' AND (LOWER(u.department) LIKE '%frontend%' OR LOWER(u.department) LIKE '%giao diện%'))
+            OR (:code = 'TECH' AND (LOWER(u.department) LIKE '%công nghệ%' OR LOWER(u.department) LIKE '%kỹ thuật%'))
+            OR (:code = 'TA-REC' AND (LOWER(u.department) LIKE '%nhân sự%' OR LOWER(u.department) LIKE '%tuyển dụng%'))
+            OR (:code = 'BOD' AND (LOWER(u.department) LIKE '%giám đốc%' OR LOWER(u.department) LIKE '%điều hành%'))
+          )
+    """)
+    long countUsersInDepartment(@Param("name") String name, @Param("code") String code);
+
+    @Query("""
         SELECT u FROM User u
         WHERE
             (

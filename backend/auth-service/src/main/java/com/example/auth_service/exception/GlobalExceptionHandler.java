@@ -167,8 +167,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
             org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
     public ResponseEntity<ApiErrorResponse> handleMalformedRequest(Exception ex, HttpServletRequest request) {
+        logger.warn("Malformed request on {}: {}", request.getRequestURI(), ex.getMessage());
+        String msg = "Dữ liệu gửi lên không hợp lệ: " + ex.getMessage();
         return ResponseEntity.badRequest().body(new ApiErrorResponse(400, "BAD_REQUEST",
-                "Dữ liệu gửi lên không hợp lệ.", request.getRequestURI()));
+                msg, request.getRequestURI()));
     }
 
 }

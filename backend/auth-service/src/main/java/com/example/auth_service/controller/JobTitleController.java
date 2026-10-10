@@ -5,6 +5,7 @@ import com.example.auth_service.dto.JobTitleResponse;
 import com.example.auth_service.service.JobTitleService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -25,14 +26,19 @@ public class JobTitleController {
     public List<JobTitleResponse> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
-            @RequestParam(required = false) Long departmentId
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String jobFamily,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
+            Authentication authentication
     ) {
-        return service.list(search, active, departmentId);
+        return service.list(search, active, departmentId, level, jobFamily, sortBy, sortOrder, canViewSalary(authentication));
     }
 
     @GetMapping("/{id}")
-    public JobTitleResponse get(@PathVariable Long id) {
-        return service.get(id);
+    public JobTitleResponse get(@PathVariable Long id, Authentication authentication) {
+        return service.get(id, canViewSalary(authentication));
     }
 
     @PostMapping
@@ -47,14 +53,24 @@ public class JobTitleController {
     }
 
     @PatchMapping("/{id}/status")
-    public JobTitleResponse setStatus(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-        boolean active = body.getOrDefault("active", true);
-        return service.setActive(id, active);
+    public JobTitleResponse setStatus(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Boolean> body
+    ) {
+        if (body != null && body.containsKey("active")) {
+            return service.setActive(id, Boolean.TRUE.equals(body.get("active")));
+        }
+        return service.toggleStatus(id);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private boolean canViewSalary(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_HR_MANAGER".equals(authority.getAuthority()));
     }
 }

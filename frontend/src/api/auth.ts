@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { LoginResponse, UserSummary } from '../types/auth';
+import { LoginResponse, UserSummary, AvatarUploadResponse } from '../types/auth';
 
 export const authApi = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
@@ -45,15 +45,15 @@ export const authApi = {
     return res.data;
   },
 
-  updateProfile: async (payload: { fullName: string; department?: string; phone?: string; displayName?: string }): Promise<UserSummary> => {
+  updateProfile: async (payload: { fullName: string; department?: string; phone?: string; displayName?: string; recoveryEmail?: string }): Promise<UserSummary> => {
     const res = await apiClient.put<UserSummary>('/api/auth/profile', payload);
     return res.data;
   },
 
-  uploadAvatar: async (file: File): Promise<{ message: string; avatarUrl: string; thumbnailUrl: string; user?: UserSummary }> => {
+  uploadAvatar: async (file: File): Promise<AvatarUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    const res = await apiClient.post<{ message: string; avatarUrl: string; thumbnailUrl: string; user?: UserSummary }>(
+    const res = await apiClient.post<AvatarUploadResponse>(
       '/api/auth/avatar',
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } }
@@ -63,6 +63,12 @@ export const authApi = {
 
   deleteAvatar: async (): Promise<{ message: string }> => {
     const res = await apiClient.delete<{ message: string }>('/api/auth/avatar');
+    return res.data;
+  },
+
+  /** S1-05: Fetch server-authoritative permission list for current user */
+  getPermissions: async (): Promise<string[]> => {
+    const res = await apiClient.get<string[]>('/api/auth/permissions');
     return res.data;
   },
 };

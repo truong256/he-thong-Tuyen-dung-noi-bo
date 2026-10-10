@@ -28,8 +28,8 @@ public class RequisitionAssignmentService {
         catch (IllegalArgumentException | NullPointerException ex) {
             throw new BadRequestException("Vai trò phân công không hợp lệ.");
         }
-        if (role != RoleName.RECRUITER && role != RoleName.HIRING_MANAGER) {
-            throw new BadRequestException("Chỉ phân công recruiter hoặc trưởng bộ phận cho vị trí tuyển dụng.");
+        if (role != RoleName.RECRUITER && role != RoleName.HIRING_MANAGER && role != RoleName.APPROVER) {
+            throw new BadRequestException("Chỉ phân công recruiter, trưởng bộ phận hoặc người phê duyệt cho vị trí tuyển dụng.");
         }
         if (!requisitions.existsById(requisitionId)) {
             throw new ResourceNotFoundException("Không tìm thấy vị trí tuyển dụng.");

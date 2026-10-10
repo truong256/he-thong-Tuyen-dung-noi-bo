@@ -1,20 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { X, Building2, AlertCircle, Save } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import { Department } from '../../types/organization';
+import organizationApi from '../../api/organization';
 
 interface DepartmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (deptData: Omit<Department, 'id' | 'createdAt'> | Partial<Department>) => Promise<void>;
+  onDelete?: (dept: Department) => void;
   department: Department | null;
   parentDepartmentId?: number | null;
   allDepartments: Department[];
+}
+
+interface EligibleManager {
+  id: number;
+  fullName: string;
+  email: string;
+  roles: string[];
 }
 
 export const DepartmentModal: React.FC<DepartmentModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  onDelete,
   department,
   parentDepartmentId,
   allDepartments,
@@ -24,20 +34,42 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [parentId, setParentId] = useState<number | null>(null);
+  const [managerUserId, setManagerUserId] = useState<number | null>(null);
   const [managerName, setManagerName] = useState('');
   const [managerEmail, setManagerEmail] = useState('');
   const [employeeCount, setEmployeeCount] = useState<number>(0);
   const [description, setDescription] = useState('');
   const [active, setActive] = useState(true);
 
+  const [eligibleManagers, setEligibleManagers] = useState<EligibleManager[]>([]);
+  const [isLoadingManagers, setIsLoadingManagers] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Load eligible managers when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setIsLoadingManagers(true);
+      organizationApi
+        .getEligibleManagers()
+        .then((users) => {
+          setEligibleManagers(users);
+        })
+        .catch(() => {
+          setEligibleManagers([]);
+        })
+        .finally(() => {
+          setIsLoadingManagers(false);
+        });
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (department) {
       setName(department.name || '');
       setCode(department.code || '');
       setParentId(department.parentDepartmentId || null);
+      setManagerUserId(department.managerUserId || null);
       setManagerName(department.managerName || '');
       setManagerEmail(department.managerEmail || '');
       setEmployeeCount(department.employeeCount || 0);
@@ -47,6 +79,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
       setName('');
       setCode('');
       setParentId(parentDepartmentId ?? null);
+      setManagerUserId(null);
       setManagerName('');
       setManagerEmail('');
       setEmployeeCount(0);
@@ -55,6 +88,23 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     }
     setValidationError(null);
   }, [department, parentDepartmentId, isOpen]);
+
+  // When managerUserId changes, update managerName and managerEmail
+  const handleManagerSelect = (userIdStr: string) => {
+    if (!userIdStr) {
+      setManagerUserId(null);
+      setManagerName('');
+      setManagerEmail('');
+      return;
+    }
+    const uid = Number(userIdStr);
+    setManagerUserId(uid);
+    const found = eligibleManagers.find((u) => u.id === uid);
+    if (found) {
+      setManagerName(found.fullName);
+      setManagerEmail(found.email);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -83,12 +133,23 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
       return;
     }
 
+    // Department code pattern validation: only letters, numbers, dash, underscore
+    if (!/^[A-Za-z0-9_-]+$/.test(trimmedCode)) {
+      setValidationError('Mã phòng ban chỉ được chứa chữ cái, chữ số, dấu gạch ngang (-) hoặc gạch dưới (_).');
+      return;
+    }
+
+    if (!managerUserId) {
+      setValidationError('Vui lòng chọn nhân sự nội bộ phụ trách phòng ban.');
+      return;
+    }
+
     // Check duplicate code
     const isDuplicateCode = allDepartments.some(
       (d) => d.code.toUpperCase() === trimmedCode && (!department || d.id !== department.id)
     );
     if (isDuplicateCode) {
-      setValidationError(`Mã phòng ban "${trimmedCode}" đã tồn tại. Vui lòng chọn mã khác.`);
+      setValidationError(`Mã phòng ban "${trimmedCode}" đã tồn tại trên hệ thống. Vui lòng chọn mã khác.`);
       return;
     }
 
@@ -98,9 +159,10 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         name: trimmedName,
         code: trimmedCode,
         parentDepartmentId: parentId,
-        managerName: managerName.trim() || undefined,
-        managerEmail: managerEmail.trim() || undefined,
-        employeeCount: Number(employeeCount) || 0,
+        managerUserId,
+        managerName: managerName || undefined,
+        managerEmail: managerEmail || undefined,
+        employeeCount,
         description: description.trim() || undefined,
         active,
       });
@@ -126,7 +188,6 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title-wrap">
-            <Building2 size={20} className="modal-title-icon" />
             <h3 id="dept-modal-title">
               {isEditing ? 'Chỉnh sửa Phòng ban / Đơn vị' : 'Thêm mới Phòng ban / Đơn vị'}
             </h3>
@@ -145,7 +206,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             {validationError && (
-              <div className="modal-alert-error" role="alert">
+              <div className="modal-alert-error" role="alert" data-testid="dept-modal-error">
                 <AlertCircle size={16} />
                 <span>{validationError}</span>
               </div>
@@ -161,7 +222,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                   id="dept-name"
                   type="text"
                   className="form-control"
-                  placeholder="Ví dụ: Phòng Phát triển Phần mềm Backend"
+                  placeholder="Ví dụ: Phòng Tuyển dụng & Đào tạo"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -177,7 +238,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                   id="dept-code"
                   type="text"
                   className="form-control text-uppercase"
-                  placeholder="Ví dụ: DEV-BE"
+                  placeholder="Ví dụ: HR-REC"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   required
@@ -206,43 +267,81 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 </select>
               </div>
 
-              {/* Trưởng đơn vị */}
+              {/* Trưởng đơn vị / Người phụ trách */}
               <div className="form-group">
-                <label htmlFor="dept-manager">Trưởng đơn vị / Phụ trách</label>
-                <input
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label htmlFor="dept-manager" style={{ margin: 0 }}>
+                    Người phụ trách nội bộ <span className="text-danger">*</span>
+                  </label>
+                  {managerUserId && (
+                    <button
+                      type="button"
+                      onClick={() => handleManagerSelect('')}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#dc2626',
+                        fontSize: '0.8rem',
+                        cursor: 'pointer',
+                        padding: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}
+                      title="Bỏ chọn người phụ trách"
+                    >
+                      <X size={12} />
+                      <span>Xóa lựa chọn</span>
+                    </button>
+                  )}
+                </div>
+                <select
                   id="dept-manager"
-                  type="text"
                   className="form-control"
-                  placeholder="Ví dụ: Vũ Minh Đức (Lead BE)"
-                  value={managerName}
-                  onChange={(e) => setManagerName(e.target.value)}
-                />
+                  value={managerUserId || ''}
+                  onChange={(e) => handleManagerSelect(e.target.value)}
+                  disabled={isLoadingManagers}
+                  required
+                >
+                  <option value="">
+                    {isLoadingManagers ? '-- Đang tải danh sách nhân sự... --' : '-- Chọn nhân sự nội bộ phụ trách --'}
+                  </option>
+                  {eligibleManagers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.fullName} ({m.email}) [{m.roles.join(', ')}]
+                    </option>
+                  ))}
+                </select>
+                <span className="field-hint">Chỉ được phân công nhân sự nội bộ đang hoạt động</span>
               </div>
 
-              {/* Email trưởng đơn vị */}
+              {/* Email công vụ */}
               <div className="form-group">
                 <label htmlFor="dept-manager-email">Email công vụ</label>
                 <input
                   id="dept-manager-email"
                   type="email"
                   className="form-control"
-                  placeholder="duc.vm@ats-corp.vn"
+                  placeholder="Chọn nhân sự để tự động điền email"
                   value={managerEmail}
-                  onChange={(e) => setManagerEmail(e.target.value)}
+                  readOnly
+                  disabled
                 />
+                <span className="field-hint">Tự động lấy theo tài khoản người phụ trách</span>
               </div>
 
-              {/* Số lượng nhân sự */}
+              {/* Số lượng nhân sự hiện tại */}
               <div className="form-group">
                 <label htmlFor="dept-employees">Số nhân sự hiện tại</label>
                 <input
                   id="dept-employees"
                   type="number"
-                  min="0"
                   className="form-control"
                   value={employeeCount}
-                  onChange={(e) => setEmployeeCount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                  readOnly
+                  disabled
                 />
+                <span className="field-hint">Hệ thống tự động thống kê từ số tài khoản thuộc đơn vị</span>
               </div>
 
               {/* Trạng thái hoạt động */}
@@ -281,23 +380,42 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Hủy bỏ
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSubmitting}
-            >
-              <Save size={16} />
-              <span>{isSubmitting ? 'Đang lưu...' : isEditing ? 'Cập nhật' : 'Thêm mới'}</span>
-            </button>
+          <div className="modal-footer" style={{ display: 'flex', justifyContent: isEditing && onDelete ? 'space-between' : 'flex-end', width: '100%' }}>
+            {isEditing && onDelete && department && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                onClick={() => {
+                  if (window.confirm(`Bạn có chắc chắn muốn xóa phòng ban "${department.name}" (${department.code})?`)) {
+                    onDelete(department);
+                    onClose();
+                  }
+                }}
+                disabled={isSubmitting}
+                data-testid="dept-modal-delete-btn"
+              >
+                <span>Xóa phòng ban</span>
+              </button>
+            )}
+            <div style={{ display: 'inline-flex', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={onClose}
+                disabled={isSubmitting}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSubmitting}
+                data-testid="dept-modal-submit"
+              >
+                <span>{isSubmitting ? 'Đang lưu...' : isEditing ? 'Cập nhật' : 'Thêm mới'}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>

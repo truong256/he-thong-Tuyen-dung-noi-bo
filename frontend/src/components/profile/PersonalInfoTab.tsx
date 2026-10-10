@@ -1,28 +1,31 @@
-import React, { useState, useEffect } from 'react';
-import { Save, RotateCcw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React from 'react';
+import { AlertCircle } from 'lucide-react';
 import { UserSummary } from '../../types/auth';
 import { getRoleLabel } from '../../constants/rbac';
-import organizationApi from '../../api/organization';
 
-const DEFAULT_DEPARTMENT_PRESETS = [
-  'Kỹ thuật & Công nghệ',
-  'Tuyển dụng & Nhân sự',
-  'Kinh doanh & Tiếp thị',
-  'Tài chính - Kế toán',
-  'Vận hành & Hỗ trợ',
-  'Ban Giám đốc & Quản trị',
-];
+export interface ProfileFieldErrors {
+  fullName?: string;
+  phone?: string;
+  displayName?: string;
+  recoveryEmail?: string;
+}
 
 interface PersonalInfoTabProps {
   user: UserSummary | null;
   fullName: string;
   department: string;
+  phone: string;
+  displayName: string;
+  recoveryEmail?: string;
   isSaving: boolean;
-  validationError: string | null;
+  fieldErrors?: ProfileFieldErrors;
+  validationError?: string | null;
   errorMsg: string | null;
   successMsg: string | null;
   onFullNameChange: (val: string) => void;
-  onDepartmentChange: (val: string) => void;
+  onPhoneChange: (val: string) => void;
+  onDisplayNameChange: (val: string) => void;
+  onRecoveryEmailChange?: (val: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onReset: () => void;
 }
@@ -31,51 +34,62 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
   user,
   fullName,
   department,
+  phone,
+  displayName,
+  recoveryEmail = '',
   isSaving,
+  fieldErrors,
   validationError,
   errorMsg,
-  successMsg,
   onFullNameChange,
-  onDepartmentChange,
+  onPhoneChange,
+  onDisplayNameChange,
+  onRecoveryEmailChange,
   onSubmit,
   onReset,
 }) => {
-  const [departmentsList, setDepartmentsList] = useState<string[]>(DEFAULT_DEPARTMENT_PRESETS);
-  const [loadingDepts, setLoadingDepts] = useState(false);
-
-  // Fetch real departments from backend if available
-  useEffect(() => {
-    let isMounted = true;
-    const loadDepartments = async () => {
-      setLoadingDepts(true);
-      try {
-        const depts = await organizationApi.getDepartments();
-        if (isMounted && Array.isArray(depts) && depts.length > 0) {
-          const names = depts.map((d) => d.name).filter(Boolean);
-          // Merge unique with presets
-          const merged = Array.from(new Set([...names, ...DEFAULT_DEPARTMENT_PRESETS]));
-          setDepartmentsList(merged);
-        }
-      } catch {
-        // Silently keep default presets if API call is unauthenticated or fails
-      } finally {
-        if (isMounted) setLoadingDepts(false);
-      }
-    };
-    loadDepartments();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
   const isDirty =
     fullName.trim() !== (user?.fullName || '').trim() ||
-    department.trim() !== (user?.department || '').trim();
+    phone.trim() !== (user?.phone || '').trim() ||
+    displayName.trim() !== (user?.displayName || '').trim() ||
+    department.trim() !== (user?.department || '').trim() ||
+    recoveryEmail.trim() !== (user?.recoveryEmail || '').trim();
 
   const primaryRole =
     user?.roles && user.roles.length > 0
       ? user.roles[0]
       : user?.role || 'RECRUITER';
+
+  // Field-specific error mapping
+  const fullNameError =
+    fieldErrors?.fullName ||
+    (validationError && validationError.includes('Họ và tên') ? validationError : undefined);
+
+  const phoneError =
+    fieldErrors?.phone ||
+    (validationError && (validationError.includes('Số điện thoại') || validationError.includes('điện thoại'))
+      ? validationError
+      : undefined);
+
+  const displayNameError =
+    fieldErrors?.displayName ||
+    (validationError && validationError.includes('Chức danh') ? validationError : undefined);
+
+  const recoveryEmailError =
+    fieldErrors?.recoveryEmail ||
+    (validationError && (validationError.includes('Email khôi phục') || validationError.includes('khôi phục'))
+      ? validationError
+      : undefined);
+
+  // Unmapped fallback error
+  const unmappedError =
+    validationError &&
+    !fullNameError &&
+    !phoneError &&
+    !displayNameError &&
+    !recoveryEmailError
+      ? validationError
+      : null;
 
   return (
     <div className="profile-personal-info-card" role="tabpanel" id="panel-info" aria-labelledby="tab-info">
@@ -84,7 +98,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         <div className="profile-card-title-group">
           <h2 className="profile-section-title">Thông tin cá nhân</h2>
           <p className="profile-section-desc">
-            Cập nhật họ tên hiển thị và phòng ban công tác trong hệ thống tuyển dụng nội bộ.
+            Cập nhật họ tên, số điện thoại và chức danh hiển thị.
           </p>
         </div>
         {user?.id && (
@@ -95,13 +109,6 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
       </div>
 
       {/* Alerts */}
-      {successMsg && (
-        <div className="profile-alert success" role="alert">
-          <CheckCircle2 size={16} />
-          <span>{successMsg}</span>
-        </div>
-      )}
-
       {errorMsg && (
         <div className="profile-alert error" role="alert">
           <AlertCircle size={16} />
@@ -109,99 +116,126 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
         </div>
       )}
 
-      {/* Main Form */}
+      {unmappedError && (
+        <div className="profile-alert error" role="alert">
+          <AlertCircle size={16} />
+          <span>{unmappedError}</span>
+        </div>
+      )}
+
+      {/* Main Form with 2-Column Responsive Groups */}
       <form onSubmit={onSubmit} noValidate className="profile-form">
-        {/* Full Name */}
-        <div className="profile-form-group">
-          <label htmlFor="profile-fullName" className="profile-form-label">
-            Họ và tên <span className="profile-required-mark">*</span>
-          </label>
-          <div className="profile-input-wrapper">
-            <input
-              id="profile-fullName"
-              type="text"
-              className={`profile-form-input ${validationError ? 'is-invalid' : ''}`}
-              value={fullName}
-              onChange={(e) => onFullNameChange(e.target.value)}
-              placeholder="Nhập họ và tên đầy đủ..."
-              disabled={isSaving}
-              autoComplete="name"
-              required
-            />
+        {/* Row 1: Họ và tên & Chức danh hiển thị */}
+        <div className="profile-form-row-2col">
+          <div className="profile-form-group">
+            <label htmlFor="profile-fullName" className="profile-form-label">
+              Họ và tên <span className="profile-required-mark">*</span>
+            </label>
+            <div className="profile-input-wrapper">
+              <input
+                id="profile-fullName"
+                type="text"
+                className={`profile-form-input ${fullNameError ? 'is-invalid' : ''}`}
+                value={fullName}
+                onChange={(e) => onFullNameChange(e.target.value)}
+                placeholder="Nhập họ và tên đầy đủ..."
+                disabled={isSaving}
+                autoComplete="name"
+                required
+              />
+            </div>
+            {fullNameError && (
+              <div className="profile-form-error-msg">
+                <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                <span>{fullNameError}</span>
+              </div>
+            )}
+            <div className="profile-form-helper">
+              Họ tên chính thức hiển thị trên danh sách phỏng vấn, hồ sơ tuyển dụng.
+            </div>
           </div>
-          {validationError && (
-            <div className="profile-form-error-msg">{validationError}</div>
-          )}
-          <div className="profile-form-helper">
-            Họ tên chính thức hiển thị trên danh sách phỏng vấn, hồ sơ tuyển dụng và phê duyệt.
+
+          <div className="profile-form-group">
+            <label htmlFor="profile-displayName" className="profile-form-label">
+              Chức danh hiển thị
+            </label>
+            <div className="profile-input-wrapper">
+              <input
+                id="profile-displayName"
+                type="text"
+                className={`profile-form-input ${displayNameError ? 'is-invalid' : ''}`}
+                value={displayName}
+                onChange={(e) => onDisplayNameChange(e.target.value)}
+                disabled={isSaving}
+                maxLength={150}
+                placeholder="Ví dụ: Quản trị viên hệ thống, Chuyên viên tuyển dụng..."
+              />
+            </div>
+            {displayNameError && (
+              <div className="profile-form-error-msg">
+                <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                <span>{displayNameError}</span>
+              </div>
+            )}
+            <div className="profile-form-helper">
+              Chức danh hiển thị trên danh thiếp và hồ sơ nội bộ.
+            </div>
           </div>
         </div>
 
-        {/* Department Selection */}
-        <div className="profile-form-group">
-          <label htmlFor="profile-department" className="profile-form-label">
-            Phòng ban
-          </label>
-          <div className="profile-dept-select-container">
-            <select
-              id="profile-department-select"
-              aria-label="Danh mục cơ cấu tổ chức"
-              className="profile-form-select"
-              value={departmentsList.includes(department) ? department : ''}
-              onChange={(e) => {
-                if (e.target.value) {
-                  onDepartmentChange(e.target.value);
-                }
-              }}
-              disabled={isSaving || loadingDepts}
-            >
-              <option value="">-- Chọn từ danh mục phòng ban --</option>
-              {departmentsList.map((deptName) => (
-                <option key={deptName} value={deptName}>
-                  {deptName}
-                </option>
-              ))}
-            </select>
+        {/* Row 2: Số điện thoại & Phòng ban */}
+        <div className="profile-form-row-2col">
+          <div className="profile-form-group">
+            <label htmlFor="profile-phone" className="profile-form-label">
+              Số điện thoại
+            </label>
+            <div className="profile-input-wrapper">
+              <input
+                id="profile-phone"
+                type="tel"
+                className={`profile-form-input ${phoneError ? 'is-invalid' : ''}`}
+                value={phone}
+                onChange={(e) => onPhoneChange(e.target.value)}
+                placeholder="0912345678"
+                disabled={isSaving}
+                autoComplete="tel"
+                inputMode="tel"
+              />
+            </div>
+            {phoneError && (
+              <div className="profile-form-error-msg">
+                <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                <span>{phoneError}</span>
+              </div>
+            )}
+            <div className="profile-form-helper">
+              Số điện thoại liên hệ cá nhân (10 chữ số, ví dụ: 0912345678).
+            </div>
+          </div>
 
-            {/* Freeform input if custom */}
-            <div className="profile-input-wrapper" style={{ marginTop: '8px' }}>
+          <div className="profile-form-group">
+            <label htmlFor="profile-department" className="profile-form-label">Phòng ban</label>
+            <div className="profile-input-wrapper is-readonly">
               <input
                 id="profile-department"
                 type="text"
-                className="profile-form-input"
+                className="profile-form-input is-readonly"
                 value={department}
-                onChange={(e) => onDepartmentChange(e.target.value)}
-                placeholder="Hoặc nhập tên phòng ban cụ thể nếu không có trong danh sách..."
-                disabled={isSaving}
+                readOnly
+                disabled
               />
             </div>
-          </div>
-
-          {/* Quick preset chips for rapid selection and test compatibility */}
-          <div className="profile-dept-quick-chips">
-            <span className="profile-dept-chips-label">Gợi ý phòng ban:</span>
-            <div className="profile-dept-chips-group">
-              {DEFAULT_DEPARTMENT_PRESETS.map((preset) => (
-                <button
-                  key={preset}
-                  type="button"
-                  className={`profile-dept-chip ${department === preset ? 'selected' : ''}`}
-                  onClick={() => onDepartmentChange(preset)}
-                  disabled={isSaving}
-                >
-                  {preset}
-                </button>
-              ))}
+            <div className="profile-form-helper">
+              Phòng ban được quản lý bởi cơ cấu tổ chức doanh nghiệp.
             </div>
           </div>
         </div>
 
-        {/* 2-Column Read-only Fields: Email and Primary Role */}
+        {/* Row 3: Email đăng nhập & Email khôi phục */}
         <div className="profile-form-row-2col">
-          {/* Email (Read-only) */}
           <div className="profile-form-group">
             <label htmlFor="profile-email" className="profile-form-label">
-              Email
+              Email đăng nhập
             </label>
             <div className="profile-input-wrapper is-readonly">
               <input
@@ -218,28 +252,55 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             </div>
           </div>
 
-          {/* Primary Role (Read-only) */}
           <div className="profile-form-group">
-            <label htmlFor="profile-role" className="profile-form-label">
-              Vai trò chính
+            <label htmlFor="profile-recovery-email" className="profile-form-label">
+              Email khôi phục
             </label>
-            <div className="profile-input-wrapper is-readonly">
+            <div className="profile-input-wrapper">
               <input
-                id="profile-role"
-                type="text"
-                className="profile-form-input is-readonly"
-                value={getRoleLabel(primaryRole)}
-                readOnly
-                disabled
+                id="profile-recovery-email"
+                type="email"
+                className={`profile-form-input ${recoveryEmailError ? 'is-invalid' : ''}`}
+                value={recoveryEmail}
+                onChange={(e) => onRecoveryEmailChange && onRecoveryEmailChange(e.target.value)}
+                placeholder="Ví dụ: myemail@gmail.com"
+                disabled={isSaving}
+                autoComplete="email"
               />
             </div>
+            {recoveryEmailError && (
+              <div className="profile-form-error-msg">
+                <AlertCircle size={13} style={{ flexShrink: 0 }} />
+                <span>{recoveryEmailError}</span>
+              </div>
+            )}
             <div className="profile-form-helper">
-              Vai trò được quản lý trong mục Vai trò & Quyền hạn.
+              Email khôi phục chỉ dùng để nhận liên kết đặt lại mật khẩu và không dùng để đăng nhập.
             </div>
           </div>
         </div>
 
-        {/* Action Bar */}
+        {/* Row 4: Vai trò chính (Read-only) */}
+        <div className="profile-form-group" style={{ marginTop: '4px' }}>
+          <label htmlFor="profile-role" className="profile-form-label">
+            Vai trò chính
+          </label>
+          <div className="profile-input-wrapper is-readonly">
+            <input
+              id="profile-role"
+              type="text"
+              className="profile-form-input is-readonly"
+              value={getRoleLabel(primaryRole)}
+              readOnly
+              disabled
+            />
+          </div>
+          <div className="profile-form-helper">
+            Vai trò được quản lý trong mục Vai trò & Quyền hạn.
+          </div>
+        </div>
+
+        {/* Action Bar - Clean Minimalist Text Buttons */}
         <div className="profile-form-actions-clean">
           <button
             type="button"
@@ -247,8 +308,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             onClick={onReset}
             disabled={!isDirty || isSaving}
           >
-            <RotateCcw size={14} />
-            <span>Hủy thay đổi</span>
+            Hủy thay đổi
           </button>
 
           <button
@@ -256,17 +316,7 @@ export const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({
             className="btn btn-primary profile-btn-action"
             disabled={!isDirty || isSaving}
           >
-            {isSaving ? (
-              <>
-                <span className="auth-spinner" style={{ width: 14, height: 14, borderTopColor: '#fff' }} />
-                <span>Đang lưu...</span>
-              </>
-            ) : (
-              <>
-                <Save size={14} />
-                <span>Lưu thay đổi</span>
-              </>
-            )}
+            {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
           </button>
         </div>
       </form>
