@@ -48,6 +48,7 @@ class RequisitionServiceTest {
     @Mock private DepartmentRepository departments;
     @Mock private JobTitleRepository jobTitles;
     @Mock private UserRepository users;
+    @Mock private RequisitionApprovalWorkflowService approvalWorkflow;
 
     @InjectMocks private RequisitionService service;
 

@@ -11,9 +11,13 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     boolean existsByCodeIgnoreCaseAndIdNot(String code, Long id);
     boolean existsByParentDepartmentId(Long id);
     boolean existsByParentDepartmentIdAndActiveTrue(Long id);
+    java.util.List<Department> findByManagerUserId(Long managerUserId);
+    java.util.Optional<Department> findByNameIgnoreCase(String name);
+    java.util.Optional<Department> findByCodeIgnoreCase(String code);
 
     // One database lock serializes tree writes across every application instance.
     // Acquired before reading nodes, so concurrent moves cannot introduce a cycle.
     @Query(value = "SELECT id FROM department_tree_lock WHERE id = 1 FOR UPDATE", nativeQuery = true)
     Integer lockTree();
 }
+

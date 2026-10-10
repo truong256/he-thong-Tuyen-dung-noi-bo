@@ -37,17 +37,20 @@ public class RequisitionService {
     private final DepartmentRepository departments;
     private final JobTitleRepository jobTitles;
     private final UserRepository users;
+    private final RequisitionApprovalWorkflowService approvalWorkflow;
 
     public RequisitionService(
             RecruitmentRequisitionRepository requisitions,
             DepartmentRepository departments,
             JobTitleRepository jobTitles,
-            UserRepository users
+            UserRepository users,
+            RequisitionApprovalWorkflowService approvalWorkflow
     ) {
         this.requisitions = requisitions;
         this.departments = departments;
         this.jobTitles = jobTitles;
         this.users = users;
+        this.approvalWorkflow = approvalWorkflow;
     }
 
     /**
@@ -301,6 +304,7 @@ public class RequisitionService {
         requisition.setUpdatedAt(Instant.now());
 
         RecruitmentRequisition saved = requisitions.save(requisition);
+        approvalWorkflow.snapshotForSubmission(saved);
         return toResponse(saved);
     }
 
@@ -385,6 +389,7 @@ public class RequisitionService {
         req.setUpdatedAt(Instant.now());
 
         RecruitmentRequisition saved = requisitions.save(req);
+        approvalWorkflow.snapshotForSubmission(saved);
         return toResponse(saved);
     }
 
