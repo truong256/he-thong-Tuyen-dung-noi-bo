@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Layers,
   Search,
   Plus,
   Edit2,
@@ -9,7 +8,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  SlidersHorizontal,
   Tag,
   Briefcase,
   MapPin,
@@ -497,9 +495,6 @@ export const CategoryManagementPage: React.FC = () => {
       {/* Metrics Cards */}
       <section className="cat-metrics-grid" aria-label="Thống kê tổng quan danh mục">
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-blue-50 text-blue-600">
-            <Layers size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.total}</span>
@@ -510,9 +505,6 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
 
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-indigo-50 text-indigo-600">
-            <SlidersHorizontal size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.distinctTypes || typesInfo.length}</span>
@@ -523,9 +515,6 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
 
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-emerald-50 text-emerald-600">
-            <CheckCircle2 size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.activeCount}</span>
@@ -544,9 +533,6 @@ export const CategoryManagementPage: React.FC = () => {
         </div>
 
         <div className="cat-metric-card">
-          <div className="cat-metric-icon-wrap bg-rose-50 text-rose-600">
-            <XCircle size={26} />
-          </div>
           <div className="cat-metric-info">
             <div className="cat-metric-value-row">
               <span className="cat-metric-value">{metrics.inactiveCount}</span>

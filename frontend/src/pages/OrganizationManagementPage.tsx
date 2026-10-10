@@ -6,7 +6,6 @@ import {
   MapPin,
   Award,
   Users,
-  Briefcase,
   ShieldCheck,
   Search,
   Plus,
@@ -398,9 +397,6 @@ export const OrganizationManagementPage: React.FC = () => {
           ==================================================================== */}
       <section className="org-stats-grid" aria-label="Chỉ số cơ cấu tổ chức">
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper blue">
-            <Building2 size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Tổng số phòng ban / đơn vị</span>
             <span className="stat-value">{statistics?.totalDepartments || 0}</span>
@@ -411,9 +407,6 @@ export const OrganizationManagementPage: React.FC = () => {
         </div>
 
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper emerald">
-            <Users size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Tổng nhân sự trực thuộc</span>
             <span className="stat-value">{statistics?.totalEmployees || 0}</span>
@@ -422,9 +415,6 @@ export const OrganizationManagementPage: React.FC = () => {
         </div>
 
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper amber">
-            <MapPin size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Chi nhánh & Địa điểm</span>
             <span className="stat-value">{statistics?.totalLocations || 0}</span>
@@ -433,9 +423,6 @@ export const OrganizationManagementPage: React.FC = () => {
         </div>
 
         <div className="org-stat-card">
-          <div className="stat-icon-wrapper purple">
-            <Briefcase size={24} />
-          </div>
           <div className="stat-content">
             <span className="stat-label">Vị trí tuyển dụng đang mở</span>
             <span className="stat-value">{statistics?.openRequisitionsCount || 0}</span>

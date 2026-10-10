@@ -3,17 +3,12 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { getRoleLabel } from '../constants/rbac';
 import {
-  Users,
   Lock,
-  Award,
   X,
   Clock,
   KeyRound,
   ShieldAlert,
   RefreshCw,
-  FolderTree,
-  HelpCircle,
-  Building2,
   CheckCircle2,
 } from 'lucide-react';
 import adminApi from '../api/admin';
@@ -137,36 +132,24 @@ export const DashboardPage: React.FC = () => {
           </h2>
           <div className="stats-grid">
             <div className="stat-card" onClick={() => navigate('/admin/users')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/admin/users')}>
-              <div className="stat-icon blue">
-                <Users size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.userCount || 7}</h3>
                 <p>Tài khoản Hệ thống</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => navigate('/organization')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/organization')}>
-              <div className="stat-icon green">
-                <Building2 size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.departmentCount || 11}</h3>
                 <p>Phòng ban Doanh nghiệp</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => navigate('/job-titles')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/job-titles')}>
-              <div className="stat-icon purple">
-                <Award size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.jobTitleCount || 12}</h3>
                 <p>Chức danh Định biên</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => setShowSecurityConfig(true)} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setShowSecurityConfig(true)}>
-              <div className="stat-icon orange">
-                <Lock size={22} />
-              </div>
               <div className="stat-info">
                 <h3>ISO 27001</h3>
                 <p>Chuẩn BCrypt & Token JWT</p>
@@ -214,36 +197,24 @@ export const DashboardPage: React.FC = () => {
           </h2>
           <div className="stats-grid">
             <div className="stat-card" onClick={() => navigate('/job-titles')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/job-titles')}>
-              <div className="stat-icon blue">
-                <Award size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.jobTitleCount}</h3>
                 <p>Chức danh Tuyển dụng</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => navigate('/organization')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/organization')}>
-              <div className="stat-icon green">
-                <Building2 size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.departmentCount}</h3>
                 <p>Phòng ban Tiếp nhận</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => navigate('/questions')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/questions')}>
-              <div className="stat-icon orange">
-                <HelpCircle size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.questionCount}</h3>
                 <p>Câu hỏi Phỏng vấn</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => navigate('/categories')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/categories')}>
-              <div className="stat-icon purple">
-                <FolderTree size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.categoryCount}</h3>
                 <p>Danh mục Tuyển dụng</p>
@@ -277,27 +248,18 @@ export const DashboardPage: React.FC = () => {
           </h2>
           <div className="stats-grid">
             <div className="stat-card" onClick={() => navigate('/organization')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/organization')}>
-              <div className="stat-icon green">
-                <Building2 size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.departmentCount}</h3>
                 <p>Phòng ban Trực thuộc</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => navigate('/job-titles')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/job-titles')}>
-              <div className="stat-icon blue">
-                <Award size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.jobTitleCount}</h3>
                 <p>Chức danh trong hệ thống</p>
               </div>
             </div>
             <div className="stat-card" onClick={() => navigate('/categories')} style={{ cursor: 'pointer' }} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && navigate('/categories')}>
-              <div className="stat-icon purple">
-                <FolderTree size={22} />
-              </div>
               <div className="stat-info">
                 <h3>{isLoading ? '...' : metrics.categoryCount}</h3>
                 <p>Danh mục chuẩn hóa</p>

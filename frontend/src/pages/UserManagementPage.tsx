@@ -4,7 +4,6 @@ import {
   Search,
   Lock,
   Unlock,
-  RefreshCw,
   ChevronLeft,
   ChevronRight,
   AlertCircle,
@@ -397,13 +396,13 @@ export const UserManagementPage: React.FC = () => {
           {/* Refresh Button */}
           <button
             type="button"
-            className="btn btn-outline btn-icon-only"
+            className="btn btn-outline"
             onClick={() => fetchUsers()}
             title="Làm mới danh sách"
             aria-label="Làm mới danh sách"
             disabled={isLoading}
           >
-            <RefreshCw size={16} className={isLoading ? 'spinning' : ''} />
+            <span>Làm mới</span>
           </button>
         </div>
       </div>
