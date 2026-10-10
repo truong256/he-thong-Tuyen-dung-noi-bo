@@ -196,6 +196,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </li>
                 )}
 
+                {hasRole('HR_MANAGER') && (
+                  <li>
+                    <NavLink
+                      to="/recruitment/approval-configurations"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Cấu hình luồng phê duyệt</span>
+                    </NavLink>
+                  </li>
+                )}
+
                 {hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN']) && (
                   <>
                     <li>

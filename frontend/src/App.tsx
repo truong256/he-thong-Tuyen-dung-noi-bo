@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PermissionGuard from './components/PermissionGuard';
+import RoleGuard from './components/RoleGuard';
 import AppLayout from './layouts/AppLayout';
 import LoginPage from './pages/LoginPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
@@ -21,6 +22,7 @@ import CategoryManagementPage from './pages/CategoryManagementPage';
 import RequisitionManagementPage from './pages/RequisitionManagementPage';
 import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
+import ApprovalConfigurationPage from './pages/ApprovalConfigurationPage';
 
 export const App: React.FC = () => {
   return (
@@ -192,6 +194,14 @@ export const App: React.FC = () => {
                 >
                   <RecruitmentRequestPage />
                 </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/approval-configurations"
+              element={
+                <RoleGuard allowedRoles={['HR_MANAGER']}>
+                  <ApprovalConfigurationPage />
+                </RoleGuard>
               }
             />
             <Route
