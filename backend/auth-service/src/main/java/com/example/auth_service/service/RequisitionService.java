@@ -39,6 +39,9 @@ public class RequisitionService {
     private final UserRepository users;
     private final RequisitionApprovalWorkflowService approvalWorkflow;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RequisitionApprovalService approvalService;
+
     public RequisitionService(
             RecruitmentRequisitionRepository requisitions,
             DepartmentRepository departments,
@@ -305,6 +308,12 @@ public class RequisitionService {
 
         RecruitmentRequisition saved = requisitions.save(requisition);
         approvalWorkflow.snapshotForSubmission(saved);
+        if (approvalService != null) {
+            try {
+                approvalService.initializeApprovalChainOnSubmit(saved, currentUser);
+            } catch (Exception ignored) {
+            }
+        }
         return toResponse(saved);
     }
 
@@ -390,6 +399,12 @@ public class RequisitionService {
 
         RecruitmentRequisition saved = requisitions.save(req);
         approvalWorkflow.snapshotForSubmission(saved);
+        if (approvalService != null) {
+            try {
+                approvalService.initializeApprovalChainOnSubmit(saved, currentUser);
+            } catch (Exception ignored) {
+            }
+        }
         return toResponse(saved);
     }
 

@@ -20,16 +20,19 @@ import { Requisition, RequisitionPayload } from '../types/requisition';
 import { Department } from '../types/organization';
 import { JobTitle } from '../types/jobTitle';
 import { PageHeader } from '../components/common/PageHeader';
+import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import '../styles/requisitions.css';
 
 export const RequisitionManagementPage: React.FC = () => {
   const { user, hasPermission, hasAnyRole } = useAuth();
   const canCreate = hasPermission ? hasPermission('REQUISITION_CREATE') : hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']);
+  const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['APPROVER', 'HR_MANAGER', 'ADMIN']);
 
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [timelineReqId, setTimelineReqId] = useState<number | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -416,6 +419,15 @@ export const RequisitionManagementPage: React.FC = () => {
                       >
                         <Eye size={16} />
                       </button>
+                      <button
+                        type="button"
+                        className="req-action-btn"
+                        title="Theo dõi tiến độ & lịch sử phê duyệt"
+                        onClick={() => setTimelineReqId(req.id)}
+                        style={{ color: '#d97706' }}
+                      >
+                        <Clock size={16} />
+                      </button>
                       {(req.status === 'DRAFT' || req.status === 'PENDING_APPROVAL') && (
                         <button
                           type="button"
@@ -756,7 +768,20 @@ export const RequisitionManagementPage: React.FC = () => {
               )}
             </div>
 
-            <div className="req-modal-footer">
+            <div className="req-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="req-btn-secondary"
+                onClick={() => {
+                  const id = detailReq.id;
+                  setDetailReq(null);
+                  setTimelineReqId(id);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Clock size={15} color="#d97706" />
+                Tiến độ & Lịch sử phê duyệt
+              </button>
               <button
                 type="button"
                 className="req-btn-primary"
@@ -767,6 +792,17 @@ export const RequisitionManagementPage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Theo dõi trạng thái & Lịch sử phê duyệt (S3-03) */}
+      {timelineReqId !== null && (
+        <ApprovalTimelineModal
+          requisitionId={timelineReqId}
+          isOpen={true}
+          onClose={() => setTimelineReqId(null)}
+          canApprove={canApprove}
+          onStatusChange={loadData}
+        />
       )}
     </div>
   );

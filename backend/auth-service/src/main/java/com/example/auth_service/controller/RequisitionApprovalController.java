@@ -2,14 +2,19 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.dto.ApprovalActionRequest;
+import com.example.auth_service.dto.ApproveRequisitionRequest;
+import com.example.auth_service.dto.RejectRequisitionRequest;
 import com.example.auth_service.dto.RequisitionApprovalLogResponse;
+import com.example.auth_service.dto.RequisitionApprovalTimelineResponse;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.RequisitionAssignmentRepository;
 import com.example.auth_service.security.UserPrincipal;
+import com.example.auth_service.service.RequisitionApprovalService;
 import com.example.auth_service.service.RequisitionApprovalWorkflowService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -20,8 +25,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
+/**
+ * Controller xử lý theo dõi tiến độ, lịch sử phê duyệt và các thao tác duyệt/từ chối/yêu cầu bổ sung (S3-02 & S3-03).
+ */
 @RestController
 @RequestMapping("/api/requisitions/{id}")
 public class RequisitionApprovalController {
@@ -29,35 +38,70 @@ public class RequisitionApprovalController {
     private final RecruitmentRequisitionRepository requisitions;
     private final RequisitionAssignmentRepository assignments;
     private final RequisitionApprovalWorkflowService approvalWorkflow;
+    private final RequisitionApprovalService approvalService;
 
     public RequisitionApprovalController(
             RecruitmentRequisitionRepository requisitions,
             RequisitionAssignmentRepository assignments,
-            RequisitionApprovalWorkflowService approvalWorkflow
+            RequisitionApprovalWorkflowService approvalWorkflow,
+            RequisitionApprovalService approvalService
     ) {
         this.requisitions = requisitions;
         this.assignments = assignments;
         this.approvalWorkflow = approvalWorkflow;
+        this.approvalService = approvalService;
     }
 
     /**
      * PUT /api/requisitions/{id}/approve
-     * Giữ nguyên tính tương thích ngược cho endpoint cũ, hỗ trợ kèm request body tùy chọn.
+     * Phê duyệt yêu cầu tuyển dụng (hỗ trợ cả luồng snapshot tuần tự S3-02 và luồng timeline S3-03).
      */
     @PutMapping("/approve")
     @Transactional
     @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")
-    public ResponseEntity<RecruitmentRequisition> approveRequisition(
+    public ResponseEntity<?> approveRequisition(
             @PathVariable Long id,
-            @RequestBody(required = false) ApprovalActionRequest request
+            @RequestBody(required = false) Map<String, Object> body
     ) {
-        String comment = request != null ? request.effectiveComment() : null;
-        return executeApprovalAction(id, "APPROVE", comment);
+        String comment = null;
+        if (body != null) {
+            if (body.get("comments") != null) {
+                comment = body.get("comments").toString();
+            } else if (body.get("comment") != null) {
+                comment = body.get("comment").toString();
+            }
+        }
+        if (approvalWorkflow.hasWorkflowSnapshot(id)) {
+            return executeApprovalAction(id, "APPROVE", comment);
+        }
+        return ResponseEntity.ok(approvalService.approveRequisition(id, comment));
+    }
+
+    /**
+     * PUT /api/requisitions/{id}/reject
+     * Từ chối yêu cầu tuyển dụng với lý do bắt buộc (S3-03).
+     */
+    @PutMapping("/reject")
+    @Transactional
+    @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")
+    public ResponseEntity<?> rejectRequisition(
+            @PathVariable Long id,
+            @Valid @RequestBody RejectRequisitionRequest request
+    ) {
+        if (approvalWorkflow.hasWorkflowSnapshot(id)) {
+            return executeApprovalAction(id, "REJECT", request.rejectionReason());
+        }
+        RequisitionApprovalTimelineResponse updated = approvalService.rejectRequisition(
+                id,
+                request.rejectionReason(),
+                request.comments()
+        );
+        return ResponseEntity.ok(updated);
     }
 
     /**
      * POST /api/requisitions/{id}/approve
-     * Phê duyệt yêu cầu tuyển dụng.
+     * Phê duyệt yêu cầu tuyển dụng (S3-02).
      */
     @PostMapping("/approve")
     @Transactional
@@ -72,7 +116,7 @@ public class RequisitionApprovalController {
 
     /**
      * POST /api/requisitions/{id}/reject
-     * Từ chối yêu cầu tuyển dụng (bắt buộc có ý kiến).
+     * Từ chối yêu cầu tuyển dụng (bắt buộc có ý kiến, S3-02).
      */
     @PostMapping("/reject")
     @Transactional
@@ -87,7 +131,7 @@ public class RequisitionApprovalController {
 
     /**
      * POST /api/requisitions/{id}/request-changes
-     * Yêu cầu bổ sung thông tin (bắt buộc có ý kiến, trả hồ sơ về người tạo nhưng giữ lịch sử).
+     * Yêu cầu bổ sung thông tin (bắt buộc có ý kiến, trả hồ sơ về người tạo nhưng giữ lịch sử, S3-02).
      */
     @PostMapping("/request-changes")
     @Transactional
@@ -102,7 +146,7 @@ public class RequisitionApprovalController {
 
     /**
      * POST /api/requisitions/{id}/approval-actions hoặc /api/requisitions/{id}/approval-action
-     * API chung cho cả 3 hành động: APPROVE, REJECT, REQUEST_CHANGES.
+     * API chung cho cả 3 hành động: APPROVE, REJECT, REQUEST_CHANGES (S3-02).
      */
     @PostMapping({"/approval-actions", "/approval-action"})
     @Transactional
@@ -120,12 +164,27 @@ public class RequisitionApprovalController {
     }
 
     /**
-     * GET /api/requisitions/{id}/approval-logs hoặc /api/requisitions/{id}/approval-history
-     * Đọc nhật ký quyết định phê duyệt bất biến.
+     * GET /api/requisitions/{id}/approval-history
+     * Đọc nhật ký quyết định phê duyệt (S3-02 và S3-03 timeline).
      */
-    @GetMapping({"/approval-logs", "/approval-history", "/approve/logs", "/approve/history"})
+    @GetMapping("/approval-history")
+    @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE')")
+    public ResponseEntity<?> getApprovalHistory(@PathVariable Long id) {
+        List<RequisitionApprovalLogResponse> logs = approvalWorkflow.getApprovalLogs(id);
+        if (logs != null && !logs.isEmpty()) {
+            return ResponseEntity.ok(logs);
+        }
+        return ResponseEntity.ok(approvalService.getApprovalTimeline(id));
+    }
+
+    /**
+     * GET /api/requisitions/{id}/approval-logs, /approve/logs, /approve/history
+     * Đọc nhật ký quyết định phê duyệt bất biến (S3-02).
+     */
+    @GetMapping({"/approval-logs", "/approve/logs", "/approve/history"})
     @Transactional(readOnly = true)
-    public ResponseEntity<List<RequisitionApprovalLogResponse>> getApprovalHistory(@PathVariable Long id) {
+    @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE')")
+    public ResponseEntity<List<RequisitionApprovalLogResponse>> getApprovalLogs(@PathVariable Long id) {
         List<RequisitionApprovalLogResponse> history = approvalWorkflow.getApprovalLogs(id);
         return ResponseEntity.ok(history);
     }

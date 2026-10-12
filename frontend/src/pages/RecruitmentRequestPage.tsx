@@ -19,10 +19,12 @@ import {
   ShieldAlert,
   Zap,
   Copy,
+  Clock,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
 import { PageHeader } from '../components/common/PageHeader';
+import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import '../styles/recruitment-request.css';
 
 interface DepartmentItem {
@@ -92,6 +94,7 @@ export const RecruitmentRequestPage: React.FC = () => {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [timelineReqId, setTimelineReqId] = useState<number | null>(null);
 
   // Ngày hôm nay theo chuẩn ISO YYYY-MM-DD
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -1338,6 +1341,27 @@ export const RecruitmentRequestPage: React.FC = () => {
                                 <Trash2 size={15} />
                               </button>
                             </>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setTimelineReqId(item.id)}
+                              className="rr-btn-table-edit"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                color: '#b45309',
+                                background: '#fef3c7',
+                                borderColor: '#fde68a',
+                                padding: '4px 8px',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                              }}
+                              title="Theo dõi tiến độ & lịch sử phê duyệt"
+                            >
+                              <Clock size={13} />
+                              Tiến độ duyệt
+                            </button>
                           )}
                           <button
                             type="button"
@@ -1358,6 +1382,16 @@ export const RecruitmentRequestPage: React.FC = () => {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Modal Theo dõi trạng thái & Lịch sử phê duyệt (S3-03) */}
+      {timelineReqId !== null && (
+        <ApprovalTimelineModal
+          requisitionId={timelineReqId}
+          isOpen={true}
+          onClose={() => setTimelineReqId(null)}
+          onStatusChange={loadRequisitions}
+        />
       )}
     </div>
   );

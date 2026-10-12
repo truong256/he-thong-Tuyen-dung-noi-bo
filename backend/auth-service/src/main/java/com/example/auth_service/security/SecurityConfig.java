@@ -139,7 +139,9 @@ public class SecurityConfig {
                         .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}/assignments/{userId}")
                         .hasAuthority("RECRUITER_ASSIGN")
-                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/approve")
+                .requestMatchers(HttpMethod.PUT,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/reject")
                         .hasAuthority("REQUISITION_APPROVE")
                 .requestMatchers(HttpMethod.POST,
                         "/api/requisitions/{id}/approve",
@@ -153,7 +155,7 @@ public class SecurityConfig {
                         "/api/requisitions/{id}/approval-history",
                         "/api/requisitions/{id}/approve/logs",
                         "/api/requisitions/{id}/approve/history")
-                        .hasAnyAuthority("REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
                         .hasAnyAuthority("REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_CREATE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions", "/api/requisitions/{id}/submit")
