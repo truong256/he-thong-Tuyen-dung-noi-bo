@@ -15,6 +15,8 @@ public interface RequisitionApprovalSnapshotRepository extends JpaRepository<Req
 
     boolean existsByRequisitionId(Long requisitionId);
 
+    void deleteAllByRequisitionId(Long requisitionId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT step FROM RequisitionApprovalSnapshot step
