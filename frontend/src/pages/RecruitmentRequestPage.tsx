@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ShieldAlert,
   Zap,
+  Copy,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
@@ -446,6 +447,47 @@ export const RecruitmentRequestPage: React.FC = () => {
       }
     } catch {
       setMessage({ text: 'Không thể xóa bản nháp này.', type: 'error' });
+    }
+  };
+
+  // Thao tác sao chép yêu cầu tuyển dụng (SCRUM-129)
+  const handleClone = async (id: number) => {
+    try {
+      setIsLoadingList(true);
+      const cloned = await requisitionApi.clone(id);
+
+      setForm({
+        id: cloned.id,
+        requisitionCode: cloned.requisitionCode,
+        title: cloned.title || '',
+        departmentId: cloned.departmentId ? String(cloned.departmentId) : '',
+        jobTitleId: cloned.jobTitleId ? String(cloned.jobTitleId) : '',
+        quantity: String(cloned.quantity || 1),
+        recruitmentType: cloned.recruitmentType || 'NEW',
+        reason: cloned.reason || '',
+        salaryMin: cloned.salaryMin ? String(cloned.salaryMin) : '',
+        salaryMax: cloned.salaryMax ? String(cloned.salaryMax) : '',
+        salaryExplanation: cloned.salaryExplanation || '',
+        neededDate: cloned.neededDate || cloned.targetDate || '',
+        jobDescription: cloned.jobDescription || '',
+        candidateRequirements: cloned.candidateRequirements || '',
+        benefits: cloned.benefits || '',
+        workLocation: cloned.workLocation || 'Trụ sở chính',
+        workingModel: cloned.workingModel || 'ONSITE',
+      });
+      setErrors({});
+      setMessage({
+        text: `Đã sao chép thành công bản nháp mới (Mã: ${cloned.requisitionCode}). Đang mở form để chỉnh sửa...`,
+        type: 'success',
+      });
+      setActiveTab('create');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await loadRequisitions();
+    } catch (err: any) {
+      const errText = err.response?.data?.message || 'Có lỗi xảy ra khi sao chép yêu cầu tuyển dụng.';
+      setMessage({ text: errText, type: 'error' });
+    } finally {
+      setIsLoadingList(false);
     }
   };
 
@@ -1276,7 +1318,7 @@ export const RecruitmentRequestPage: React.FC = () => {
                       <td>{getStatusBadge(item.status)}</td>
                       <td>
                         <div className="rr-actions-cell">
-                          {item.status === 'DRAFT' ? (
+                          {item.status === 'DRAFT' && (
                             <>
                               <button
                                 type="button"
@@ -1296,11 +1338,17 @@ export const RecruitmentRequestPage: React.FC = () => {
                                 <Trash2 size={15} />
                               </button>
                             </>
-                          ) : (
-                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                              Đang xử lý
-                            </span>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleClone(item.id)}
+                            className="rr-btn-table-edit"
+                            style={{ color: '#0284c7', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
+                            title="Sao chép yêu cầu này"
+                          >
+                            <Copy size={13} />
+                            Sao chép
+                          </button>
                         </div>
                       </td>
                     </tr>

@@ -200,6 +200,11 @@ export const requisitionApi = {
   deleteDraft: async (id: number): Promise<void> => {
     await client.delete(`/api/requisitions/${id}`);
   },
+
+  clone: async (id: number): Promise<RequisitionResponse> => {
+    const res = await client.post<RequisitionResponse>(`/api/recruitment-requests/${id}/clone`);
+    return res.data;
+  },
 };
 
 export default requisitionApi;

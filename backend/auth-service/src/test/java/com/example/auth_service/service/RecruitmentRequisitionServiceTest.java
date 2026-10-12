@@ -421,4 +421,42 @@ class RecruitmentRequisitionServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasMessage("Chỉ được xóa yêu cầu tuyển dụng ở trạng thái bản nháp (DRAFT).");
     }
+
+    @Test
+    @DisplayName("SCRUM-128: clone sao chép đầy đủ mô tả công việc (JD), yêu cầu ứng viên và gán trạng thái DRAFT")
+    void clone_success_copiesJobDescriptionAndRequirements_setsDraft() {
+        RecruitmentRequisition original = new RecruitmentRequisition();
+        original.setId(50L);
+        original.setRequisitionCode("REQ-ORIGINAL-001");
+        original.setTitle("Kỹ sư phần mềm Java");
+        original.setDepartmentId(itDept.getId());
+        original.setJobTitleId(devJob.getId());
+        original.setQuantity(2);
+        original.setRecruitmentType("NEW");
+        original.setReason("Phát triển module mới");
+        original.setSalaryMin(18_000_000L);
+        original.setSalaryMax(28_000_000L);
+        original.setTargetDate(LocalDate.now().plusMonths(1));
+        original.setJobDescription("Lập trình RESTful API, thiết kế cơ sở dữ liệu");
+        original.setCandidateRequirements("Có kinh nghiệm Spring Boot 2 năm trở lên");
+        original.setStatus("APPROVED");
+        original.setCreatedByUserId(hiringManager.getId());
+
+        when(requisitionRepository.findById(50L)).thenReturn(Optional.of(original));
+        when(departmentRepository.findById(itDept.getId())).thenReturn(Optional.of(itDept));
+        when(jobTitleRepository.findById(devJob.getId())).thenReturn(Optional.of(devJob));
+        when(requisitionRepository.save(any(RecruitmentRequisition.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RequisitionResponse cloned = service.clone(50L, hiringManager);
+
+        assertThat(cloned).isNotNull();
+        assertThat(cloned.status()).isEqualTo("DRAFT");
+        assertThat(cloned.jobDescription()).isEqualTo("Lập trình RESTful API, thiết kế cơ sở dữ liệu");
+        assertThat(cloned.candidateRequirements()).isEqualTo("Có kinh nghiệm Spring Boot 2 năm trở lên");
+        assertThat(cloned.quantity()).isEqualTo(2);
+        assertThat(cloned.title()).isEqualTo("Kỹ sư phần mềm Java");
+        assertThat(cloned.departmentId()).isEqualTo(itDept.getId());
+        assertThat(cloned.jobTitleId()).isEqualTo(devJob.getId());
+        assertThat(cloned.requisitionCode()).isNotEqualTo("REQ-ORIGINAL-001");
+    }
 }

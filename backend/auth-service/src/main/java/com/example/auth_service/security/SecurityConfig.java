@@ -125,7 +125,7 @@ public class SecurityConfig {
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
-                .requestMatchers(HttpMethod.POST, "/api/recruitment-requests")
+                .requestMatchers(HttpMethod.POST, "/api/recruitment-requests", "/api/recruitment-requests/{id}/clone")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
                 .requestMatchers(HttpMethod.PUT, "/api/recruitment-requests/{id}")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
