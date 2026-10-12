@@ -6,6 +6,7 @@ import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.RequisitionAssignmentRepository;
+import com.example.auth_service.service.RequisitionApprovalWorkflowService;
 import com.example.auth_service.security.UserPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -15,18 +16,22 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/requisitions/{id}/approve")
-@org.springframework.context.annotation.Profile("sprint3-preview")
 public class RequisitionApprovalController {
 
     private final RecruitmentRequisitionRepository requisitions;
     private final RequisitionAssignmentRepository assignments;
+    private final RequisitionApprovalWorkflowService approvalWorkflow;
 
     public RequisitionApprovalController(RecruitmentRequisitionRepository requisitions,
-                                         RequisitionAssignmentRepository assignments) {
+                                         RequisitionAssignmentRepository assignments,
+                                         RequisitionApprovalWorkflowService approvalWorkflow) {
         this.requisitions = requisitions;
         this.assignments = assignments;
+        this.approvalWorkflow = approvalWorkflow;
     }
 
     @PutMapping
@@ -39,6 +44,11 @@ public class RequisitionApprovalController {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
             throw new AccessDeniedException("Vui lòng đăng nhập.");
+        }
+
+        Optional<RecruitmentRequisition> workflowResult = approvalWorkflow.approveCurrentStep(id, principal.getId());
+        if (workflowResult.isPresent()) {
+            return ResponseEntity.ok(workflowResult.get());
         }
 
         boolean isFullAuthority = auth.getAuthorities().stream().anyMatch(a ->

@@ -46,6 +46,8 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
 
     boolean existsByRequisitionCode(String requisitionCode);
 
+    boolean existsByRequisitionCodeAndIdNot(String requisitionCode, Long id);
+
     boolean existsByRequisitionCodeIgnoreCase(String requisitionCode);
 
     Optional<RecruitmentRequisition> findByRequisitionCode(String requisitionCode);
@@ -84,4 +86,60 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
     Page<RecruitmentRequisition> findByDepartmentIdIn(Collection<Long> departmentIds, Pageable pageable);
 
     Page<RecruitmentRequisition> findByCreatedByUserId(Long createdByUserId, Pageable pageable);
+
+        @Query("""
+                SELECT r FROM RecruitmentRequisition r
+                WHERE (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))
+                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :search, '%')))
+                    AND (:departmentId IS NULL OR r.departmentId = :departmentId)
+                    AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
+                    AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+                ORDER BY r.createdAt DESC
+                """)
+        Page<RecruitmentRequisition> findAllWithFilters(
+                        @Param("search") String search,
+                        @Param("departmentId") Long departmentId,
+                        @Param("jobTitleId") Long jobTitleId,
+                        @Param("status") String status,
+                        Pageable pageable
+        );
+
+        @Query("""
+                SELECT r FROM RecruitmentRequisition r
+                WHERE r.createdByUserId = :createdByUserId
+                    AND (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))
+                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :search, '%')))
+                    AND (:departmentId IS NULL OR r.departmentId = :departmentId)
+                    AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
+                    AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+                ORDER BY r.createdAt DESC
+                """)
+        Page<RecruitmentRequisition> findScopedCreatedByWithFilters(
+                        @Param("search") String search,
+                        @Param("departmentId") Long departmentId,
+                        @Param("jobTitleId") Long jobTitleId,
+                        @Param("status") String status,
+                        @Param("createdByUserId") Long createdByUserId,
+                        Pageable pageable
+        );
+
+        @Query("""
+                SELECT r FROM RecruitmentRequisition r
+                WHERE (r.departmentId IN :managedDepartmentIds OR r.createdByUserId = :createdByUserId)
+                    AND (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))
+                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :search, '%')))
+                    AND (:departmentId IS NULL OR r.departmentId = :departmentId)
+                    AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
+                    AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+                ORDER BY r.createdAt DESC
+                """)
+        Page<RecruitmentRequisition> findScopedWithFilters(
+                        @Param("search") String search,
+                        @Param("departmentId") Long departmentId,
+                        @Param("jobTitleId") Long jobTitleId,
+                        @Param("status") String status,
+                        @Param("managedDepartmentIds") List<Long> managedDepartmentIds,
+                        @Param("createdByUserId") Long createdByUserId,
+                        Pageable pageable
+        );
 }
