@@ -200,6 +200,21 @@ export const requisitionApi = {
   deleteDraft: async (id: number): Promise<void> => {
     await client.delete(`/api/requisitions/${id}`);
   },
+
+  getApprovalTimeline: async (id: number) => {
+    const res = await client.get<any>(`/api/requisitions/${id}/approval-history`);
+    return res.data;
+  },
+
+  approve: async (id: number, comments?: string) => {
+    const res = await client.put<any>(`/api/requisitions/${id}/approve`, { comments });
+    return res.data;
+  },
+
+  reject: async (id: number, rejectionReason: string, comments?: string) => {
+    const res = await client.put<any>(`/api/requisitions/${id}/reject`, { rejectionReason, comments });
+    return res.data;
+  },
 };
 
 export default requisitionApi;

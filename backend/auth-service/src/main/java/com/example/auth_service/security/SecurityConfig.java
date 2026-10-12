@@ -126,6 +126,13 @@ public class SecurityConfig {
                         .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}/assignments/{userId}")
                         .hasAuthority("RECRUITER_ASSIGN")
+                // S3-03: Theo dõi trạng thái & lịch sử phê duyệt
+                .requestMatchers(HttpMethod.GET, "/api/requisitions/{id}/approval-history")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE")
+                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/approve")
+                        .hasAuthority("REQUISITION_APPROVE")
+                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/reject")
+                        .hasAuthority("REQUISITION_APPROVE")
                 .requestMatchers(HttpMethod.GET, "/api/departments", "/api/departments/tree", "/api/departments/{id}")
                         .hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.POST, "/api/departments").hasAuthority("DEPARTMENT_MANAGE")
