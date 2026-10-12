@@ -1321,7 +1321,7 @@ export const RecruitmentRequestPage: React.FC = () => {
                       <td>{getStatusBadge(item.status)}</td>
                       <td>
                         <div className="rr-actions-cell">
-                          {item.status === 'DRAFT' && (
+                          {item.status === 'DRAFT' ? (
                             <>
                               <button
                                 type="button"

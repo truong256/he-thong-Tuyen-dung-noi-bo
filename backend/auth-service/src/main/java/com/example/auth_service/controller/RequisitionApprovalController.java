@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -71,10 +72,7 @@ public class RequisitionApprovalController {
                 comment = body.get("comment").toString();
             }
         }
-        if (approvalWorkflow.hasWorkflowSnapshot(id)) {
-            return executeApprovalAction(id, "APPROVE", comment);
-        }
-        return ResponseEntity.ok(approvalService.approveRequisition(id, comment));
+        return executeApprovalAction(id, "APPROVE", comment);
     }
 
     /**
@@ -88,15 +86,10 @@ public class RequisitionApprovalController {
             @PathVariable Long id,
             @Valid @RequestBody RejectRequisitionRequest request
     ) {
-        if (approvalWorkflow.hasWorkflowSnapshot(id)) {
-            return executeApprovalAction(id, "REJECT", request.rejectionReason());
+        if (request == null || request.rejectionReason() == null || request.rejectionReason().trim().isEmpty()) {
+            throw new BadRequestException("Lý do từ chối không được để trống.");
         }
-        RequisitionApprovalTimelineResponse updated = approvalService.rejectRequisition(
-                id,
-                request.rejectionReason(),
-                request.comments()
-        );
-        return ResponseEntity.ok(updated);
+        return executeApprovalAction(id, "REJECT", request.rejectionReason());
     }
 
     /**
@@ -106,7 +99,7 @@ public class RequisitionApprovalController {
     @PostMapping("/approve")
     @Transactional
     @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")
-    public ResponseEntity<RecruitmentRequisition> approvePost(
+    public ResponseEntity<?> approvePost(
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalActionRequest request
     ) {
@@ -121,7 +114,7 @@ public class RequisitionApprovalController {
     @PostMapping("/reject")
     @Transactional
     @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")
-    public ResponseEntity<RecruitmentRequisition> rejectPost(
+    public ResponseEntity<?> rejectPost(
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalActionRequest request
     ) {
@@ -136,7 +129,7 @@ public class RequisitionApprovalController {
     @PostMapping("/request-changes")
     @Transactional
     @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")
-    public ResponseEntity<RecruitmentRequisition> requestChangesPost(
+    public ResponseEntity<?> requestChangesPost(
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalActionRequest request
     ) {
@@ -151,7 +144,7 @@ public class RequisitionApprovalController {
     @PostMapping({"/approval-actions", "/approval-action"})
     @Transactional
     @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")
-    public ResponseEntity<RecruitmentRequisition> performApprovalAction(
+    public ResponseEntity<?> performApprovalAction(
             @PathVariable Long id,
             @RequestBody ApprovalActionRequest request
     ) {
@@ -189,7 +182,7 @@ public class RequisitionApprovalController {
         return ResponseEntity.ok(history);
     }
 
-    private ResponseEntity<RecruitmentRequisition> executeApprovalAction(
+    private ResponseEntity<?> executeApprovalAction(
             Long id,
             String requestedAction,
             String comment
@@ -210,7 +203,8 @@ public class RequisitionApprovalController {
                 id, principal.getId(), action, comment
         );
         if (workflowResult.isPresent()) {
-            return ResponseEntity.ok(workflowResult.get());
+            RecruitmentRequisition wReq = workflowResult.get();
+            return ResponseEntity.ok(buildApprovalResponseMap(wReq, id));
         }
 
         // Trường hợp 2: Dự phòng cho yêu cầu chưa gắn luồng snapshot
@@ -219,8 +213,8 @@ public class RequisitionApprovalController {
         }
 
         boolean isAssigned = assignments.findByRequisitionIdAndUserId(id, principal.getId())
-            .filter(a -> a.getRole() == RoleName.APPROVER || a.getRole() == RoleName.HIRING_MANAGER)
-            .isPresent();
+                .filter(a -> a.getRole() == RoleName.APPROVER || a.getRole() == RoleName.HIRING_MANAGER)
+                .isPresent();
         if (!isAssigned) {
             throw new AccessDeniedException("Bạn không được phân công phê duyệt yêu cầu tuyển dụng này.");
         }
@@ -245,6 +239,31 @@ public class RequisitionApprovalController {
         // Ghi nhật ký quyết định phê duyệt bất biến trong cùng giao dịch
         approvalWorkflow.recordFallbackApprovalLog(id, principal.getId(), action, trimmedComment);
 
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(buildApprovalResponseMap(updated, id));
+    }
+
+    private Map<String, Object> buildApprovalResponseMap(RecruitmentRequisition r, Long id) {
+        Map<String, Object> resp = new LinkedHashMap<>();
+        resp.put("id", r.getId());
+        resp.put("requisitionId", r.getId());
+        resp.put("requisitionCode", r.getRequisitionCode());
+        resp.put("title", r.getTitle());
+        resp.put("status", r.getStatus());
+        resp.put("rejectionReason", r.getRejectionReason());
+        resp.put("isRejected", "REJECTED".equalsIgnoreCase(r.getStatus()));
+        resp.put("isCompleted", "APPROVED".equalsIgnoreCase(r.getStatus()));
+        try {
+            RequisitionApprovalTimelineResponse timeline = approvalService.getApprovalTimeline(id);
+            resp.put("steps", timeline.steps());
+            resp.put("totalSteps", timeline.totalSteps());
+            resp.put("completedSteps", timeline.completedSteps());
+            resp.put("currentStepOrder", timeline.currentStepOrder());
+            resp.put("currentWaitingOn", timeline.currentWaitingOn());
+        } catch (Exception e) {
+            resp.put("steps", List.of());
+            resp.put("totalSteps", 1);
+            resp.put("completedSteps", "APPROVED".equalsIgnoreCase(r.getStatus()) ? 1 : 0);
+        }
+        return resp;
     }
 }
