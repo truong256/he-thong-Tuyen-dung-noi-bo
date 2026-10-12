@@ -15,7 +15,7 @@ public class PermissionController {
 
     /** Pre-compute the set of valid permission names for fast lookup */
     private static final Set<String> PERMISSION_NAMES = Arrays.stream(Permission.values())
-            .map(Enum::name)
+            .map(p -> p.name())
             .collect(Collectors.toUnmodifiableSet());
 
     @GetMapping("/api/admin/roles")

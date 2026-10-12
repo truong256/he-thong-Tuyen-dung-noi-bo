@@ -1,7 +1,6 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
-import com.example.auth_service.entity.RequisitionAssignment;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;

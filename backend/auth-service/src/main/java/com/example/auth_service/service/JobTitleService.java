@@ -101,10 +101,10 @@ public class JobTitleService {
         if (sortBy != null && !sortBy.trim().isEmpty()) {
             boolean desc = "desc".equalsIgnoreCase(sortOrder);
             Comparator<JobTitleResponse> comparator = switch (sortBy.toLowerCase().trim()) {
-                case "title" -> Comparator.comparing(JobTitleResponse::title, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
+                case "title" -> Comparator.comparing(r -> r.title(), Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER));
                 case "level" -> Comparator.comparingInt(this::getLevelOrder);
                 case "headcount" -> Comparator.comparingInt(r -> r.currentHeadcount() != null ? r.currentHeadcount() : 0);
-                case "createdat" -> Comparator.comparing(JobTitleResponse::createdAt, Comparator.nullsLast(Comparator.naturalOrder()));
+                case "createdat" -> Comparator.comparing(r -> r.createdAt(), Comparator.nullsLast(Comparator.naturalOrder()));
                 default -> null;
             };
 

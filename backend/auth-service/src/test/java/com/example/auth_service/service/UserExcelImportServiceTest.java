@@ -287,13 +287,13 @@ class UserExcelImportServiceTest {
     @DisplayName("13. resolveRoles giải quyết chính xác nhiều vai trò và default RECRUITER")
     void resolveRoles_Accuracy() {
         Set<Role> roles1 = importService.resolveRoles("RECRUITER;INTERVIEWER");
-        assertThat(roles1).extracting(Role::getName).containsExactlyInAnyOrder(RoleName.RECRUITER, RoleName.INTERVIEWER);
+        assertThat(roles1).extracting(r -> r.getName()).containsExactlyInAnyOrder(RoleName.RECRUITER, RoleName.INTERVIEWER);
 
         Set<Role> roles2 = importService.resolveRoles("ADMIN, HR_MANAGER");
-        assertThat(roles2).extracting(Role::getName).containsExactlyInAnyOrder(RoleName.ADMIN, RoleName.HR_MANAGER);
+        assertThat(roles2).extracting(r -> r.getName()).containsExactlyInAnyOrder(RoleName.ADMIN, RoleName.HR_MANAGER);
 
         Set<Role> rolesEmpty = importService.resolveRoles("");
-        assertThat(rolesEmpty).extracting(Role::getName).containsExactly(RoleName.RECRUITER);
+        assertThat(rolesEmpty).extracting(r -> r.getName()).containsExactly(RoleName.RECRUITER);
 
         assertThat(importService.resolveRole("").getName()).isEqualTo(RoleName.RECRUITER);
     }
