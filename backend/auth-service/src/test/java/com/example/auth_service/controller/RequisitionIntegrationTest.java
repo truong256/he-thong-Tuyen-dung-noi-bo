@@ -2,7 +2,6 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.JobTitle;
-import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionDraftRequest;
 import com.example.auth_service.entity.Role;
@@ -47,7 +46,6 @@ class RequisitionIntegrationTest {
     @Autowired private RecruitmentRequisitionRepository requisitions;
 
     private User hiringManager;
-    private User hrManager;
     private User candidate;
     private Department dept;
     private JobTitle job;
@@ -55,7 +53,6 @@ class RequisitionIntegrationTest {
     @BeforeEach
     void setUp() {
         hiringManager = createUser("hm-req-test@example.com", RoleName.HIRING_MANAGER);
-        hrManager = createUser("hr-req-test@example.com", RoleName.HR_MANAGER);
         candidate = createUser("candidate-req-test@example.com", RoleName.CANDIDATE);
 
         dept = new Department(null, "Phòng Kỹ thuật Phần mềm", "SE-DEPT", "Mô tả", null, hiringManager.getId(), true, Instant.now());

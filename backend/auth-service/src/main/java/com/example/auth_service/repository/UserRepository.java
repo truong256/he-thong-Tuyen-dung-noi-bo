@@ -60,4 +60,11 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName")
     List<User> findByRoleName(@Param("roleName") com.example.auth_service.entity.RoleName roleName);
+
+    @Query("""
+        SELECT DISTINCT u FROM User u JOIN u.roles r
+        WHERE r.name = :roleName AND u.status = 'ACTIVE'
+        ORDER BY u.fullName ASC
+    """)
+    List<User> findActiveUsersByRoleName(@Param("roleName") com.example.auth_service.entity.RoleName roleName);
 }

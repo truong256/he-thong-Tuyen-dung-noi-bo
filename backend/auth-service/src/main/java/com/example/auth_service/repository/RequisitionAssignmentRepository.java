@@ -9,5 +9,7 @@ public interface RequisitionAssignmentRepository extends JpaRepository<Requisiti
     java.util.List<RequisitionAssignment> findByUserId(Long userId);
     java.util.List<RequisitionAssignment> findByRequisitionId(Long requisitionId);
     java.util.List<RequisitionAssignment> findByRequisitionIdAndRole(Long requisitionId, com.example.auth_service.entity.RoleName role);
+    Optional<RequisitionAssignment> findByRequisitionIdAndRoleAndIsPrimaryTrue(Long requisitionId, com.example.auth_service.entity.RoleName role);
     void deleteByRequisitionIdAndUserId(Long requisitionId, Long userId);
+    boolean existsByRequisitionIdAndUserId(Long requisitionId, Long userId);
 }
