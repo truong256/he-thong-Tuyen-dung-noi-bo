@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
   Briefcase,
+  Copy,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import requisitionApi from '../api/requisition';
@@ -239,6 +240,21 @@ export const RequisitionManagementPage: React.FC = () => {
     }
   };
 
+  const handleClone = async (req: Requisition) => {
+    try {
+      setIsLoading(true);
+      const cloned = await requisitionApi.clone(req.id);
+      showToast(`Đã sao chép thành công bản nháp mới: ${cloned.requisitionCode}`);
+      // Mở ngay modal form nháp để người dùng chỉnh sửa
+      openEditModal(cloned as any);
+      await loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Không thể sao chép yêu cầu tuyển dụng.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatCurrency = (val?: number) => {
     if (!val) return '—';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -420,6 +436,14 @@ export const RequisitionManagementPage: React.FC = () => {
                           <Trash2 size={16} />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        className="req-action-btn"
+                        title="Sao chép yêu cầu tuyển dụng"
+                        onClick={() => handleClone(req)}
+                      >
+                        <Copy size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
