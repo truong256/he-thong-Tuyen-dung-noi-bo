@@ -25,9 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -37,17 +35,23 @@ public class RequisitionService {
     private final DepartmentRepository departments;
     private final JobTitleRepository jobTitles;
     private final UserRepository users;
+    private final RequisitionApprovalWorkflowService approvalWorkflow;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private RequisitionApprovalService approvalService;
 
     public RequisitionService(
             RecruitmentRequisitionRepository requisitions,
             DepartmentRepository departments,
             JobTitleRepository jobTitles,
-            UserRepository users
+            UserRepository users,
+            RequisitionApprovalWorkflowService approvalWorkflow
     ) {
         this.requisitions = requisitions;
         this.departments = departments;
         this.jobTitles = jobTitles;
         this.users = users;
+        this.approvalWorkflow = approvalWorkflow;
     }
 
     /**
@@ -301,6 +305,13 @@ public class RequisitionService {
         requisition.setUpdatedAt(Instant.now());
 
         RecruitmentRequisition saved = requisitions.save(requisition);
+        approvalWorkflow.snapshotForSubmission(saved);
+        if (approvalService != null) {
+            try {
+                approvalService.initializeApprovalChainOnSubmit(saved, currentUser);
+            } catch (Exception ignored) {
+            }
+        }
         return toResponse(saved);
     }
 
@@ -385,6 +396,13 @@ public class RequisitionService {
         req.setUpdatedAt(Instant.now());
 
         RecruitmentRequisition saved = requisitions.save(req);
+        approvalWorkflow.snapshotForSubmission(saved);
+        if (approvalService != null) {
+            try {
+                approvalService.initializeApprovalChainOnSubmit(saved, currentUser);
+            } catch (Exception ignored) {
+            }
+        }
         return toResponse(saved);
     }
 

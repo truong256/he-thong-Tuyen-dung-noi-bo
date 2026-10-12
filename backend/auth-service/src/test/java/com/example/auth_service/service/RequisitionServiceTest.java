@@ -10,7 +10,6 @@ import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
-import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
@@ -48,6 +47,7 @@ class RequisitionServiceTest {
     @Mock private DepartmentRepository departments;
     @Mock private JobTitleRepository jobTitles;
     @Mock private UserRepository users;
+    @Mock private RequisitionApprovalWorkflowService approvalWorkflow;
 
     @InjectMocks private RequisitionService service;
 
