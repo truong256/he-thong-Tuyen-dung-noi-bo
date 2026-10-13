@@ -23,6 +23,7 @@ import JobTitleDetailModal from '../components/jobTitle/JobTitleDetailModal';
 import DeleteJobTitleModal from '../components/jobTitle/DeleteJobTitleModal';
 import CareerMatrixVisualizer from '../components/jobTitle/CareerMatrixVisualizer';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common/Pagination';
 import '../styles/job-titles.css';
 
 type ViewMode = 'table' | 'cards' | 'matrix';
@@ -51,6 +52,12 @@ export const JobTitleManagementPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<'title' | 'level' | 'headcount' | 'createdAt'>('level');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalElements, setTotalElements] = useState(0);
+
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJobTitle, setSelectedJobTitle] = useState<JobTitle | null>(null);
@@ -73,6 +80,7 @@ export const JobTitleManagementPage: React.FC = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch((prev) => (prev !== search ? search : prev));
+      setCurrentPage(0);
     }, 250);
     return () => clearTimeout(timer);
   }, [search]);
@@ -81,8 +89,8 @@ export const JobTitleManagementPage: React.FC = () => {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [titlesData, deptsData] = await Promise.all([
-        jobTitleApi.getJobTitles({
+      const [pagedRes, allTitles, deptsData] = await Promise.all([
+        jobTitleApi.getJobTitlesPaged({
           search: debouncedSearch,
           departmentId: departmentFilter,
           level: levelFilter,
@@ -90,19 +98,28 @@ export const JobTitleManagementPage: React.FC = () => {
           status: statusFilter,
           sortBy,
           sortOrder,
+          page: currentPage,
+          size: pageSize,
         }),
+        jobTitleApi.getJobTitles(),
         organizationApi.getDepartments(),
       ]);
-      const statsData = await jobTitleApi.getJobTitleStatistics(titlesData);
-      setJobTitles(titlesData);
+      const statsData = await jobTitleApi.getJobTitleStatistics(allTitles);
+      setJobTitles(pagedRes.content);
+      setTotalPages(pagedRes.totalPages || 1);
+      setTotalElements(pagedRes.totalElements || pagedRes.content.length);
       setDepartments(deptsData);
       setStatistics(statsData);
+
+      if (pagedRes.totalPages > 0 && currentPage >= pagedRes.totalPages) {
+        setCurrentPage(Math.max(0, pagedRes.totalPages - 1));
+      }
     } catch {
       showToast('Không thể tải danh sách chức danh.', 'error');
     } finally {
       setIsLoading(false);
     }
-  }, [debouncedSearch, departmentFilter, levelFilter, jobFamilyFilter, statusFilter, sortBy, sortOrder]);
+  }, [debouncedSearch, departmentFilter, levelFilter, jobFamilyFilter, statusFilter, sortBy, sortOrder, currentPage, pageSize]);
 
   useEffect(() => {
     loadData();
@@ -811,6 +828,23 @@ export const JobTitleManagementPage: React.FC = () => {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Standardized Enterprise Pagination */}
+      {viewMode !== 'matrix' && (
+        <Pagination
+          currentPage={currentPage + 1}
+          totalPages={totalPages}
+          totalItems={totalElements}
+          pageSize={pageSize}
+          pageSizeOptions={[10, 20, 50]}
+          itemLabel="chức danh"
+          onPageChange={(p) => setCurrentPage(Math.max(0, p - 1))}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(0);
+          }}
+        />
       )}
 
       {/* Add / Edit Job Title Modal */}

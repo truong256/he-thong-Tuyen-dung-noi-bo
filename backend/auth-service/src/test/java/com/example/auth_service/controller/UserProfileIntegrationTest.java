@@ -46,6 +46,7 @@ class UserProfileIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        users.deleteAll();
         Role recruiterRole = roles.findByName(RoleName.RECRUITER)
                 .orElseGet(() -> roles.save(new Role(RoleName.RECRUITER, "Recruiter")));
         Role interviewerRole = roles.findByName(RoleName.INTERVIEWER)
@@ -72,6 +73,7 @@ class UserProfileIntegrationTest {
 
     @AfterEach
     void tearDown() {
+        users.deleteAll();
         SecurityContextHolder.clearContext();
     }
 

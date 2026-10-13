@@ -68,6 +68,10 @@ public class CreateRequisitionRequest {
 
     private String workingModel;
 
+    private Long workLocationId;
+
+    private Long employmentTypeId;
+
     @JsonAlias({"isDraft"})
     private Boolean isDraft;
 
@@ -164,10 +168,12 @@ public class CreateRequisitionRequest {
     public String benefits() { return benefits; }
     public String workLocation() { return workLocation; }
     public String workingModel() { return workingModel; }
+    public Long workLocationId() { return workLocationId; }
+    public Long employmentTypeId() { return employmentTypeId; }
     public Boolean isDraft() { return isDraft; }
 
     public RequisitionDraftRequest toDraftRequest() {
-        return new RequisitionDraftRequest(
+        RequisitionDraftRequest draft = new RequisitionDraftRequest(
                 title,
                 departmentId,
                 jobTitleId,
@@ -183,7 +189,10 @@ public class CreateRequisitionRequest {
                 candidateRequirements,
                 benefits,
                 workLocation,
-                workingModel != null ? workingModel : "ONSITE"
+                workingModel != null ? workingModel : "ONSITE",
+                workLocationId,
+                employmentTypeId
         );
+        return draft;
     }
 }

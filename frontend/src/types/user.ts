@@ -12,6 +12,7 @@ export interface CreateUserPayload {
   email: string;
   recoveryEmail?: string;
   fullName: string;
+  phone: string;
   department?: string;
   roles: string[];
   status?: string;
@@ -21,6 +22,7 @@ export interface CreateUserPayload {
 export interface UpdateUserPayload {
   fullName: string;
   email: string;
+  phone?: string;
   recoveryEmail?: string;
   department?: string;
 }

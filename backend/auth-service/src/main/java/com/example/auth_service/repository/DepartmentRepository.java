@@ -15,6 +15,20 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     java.util.Optional<Department> findByNameIgnoreCase(String name);
     java.util.Optional<Department> findByCodeIgnoreCase(String code);
 
+    @Query(value = "SELECT d FROM Department d WHERE " +
+           "(:active IS NULL OR d.active = :active) AND " +
+           "(:search IS NULL OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "   OR LOWER(d.code) LIKE LOWER(CONCAT('%', :search, '%')))",
+           countQuery = "SELECT count(d) FROM Department d WHERE " +
+           "(:active IS NULL OR d.active = :active) AND " +
+           "(:search IS NULL OR LOWER(d.name) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "   OR LOWER(d.code) LIKE LOWER(CONCAT('%', :search, '%')))")
+    org.springframework.data.domain.Page<Department> searchDepartments(
+            @org.springframework.data.repository.query.Param("search") String search,
+            @org.springframework.data.repository.query.Param("active") Boolean active,
+            org.springframework.data.domain.Pageable pageable
+    );
+
     // One database lock serializes tree writes across every application instance.
     // Acquired before reading nodes, so concurrent moves cannot introduce a cycle.
     @Query(value = "SELECT id FROM department_tree_lock WHERE id = 1 FOR UPDATE", nativeQuery = true)

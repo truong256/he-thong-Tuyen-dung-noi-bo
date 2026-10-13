@@ -53,7 +53,8 @@ if (Test-Path $envFile) {
         }
     }
 }
-$backendCmd += "& '$javaHome\bin\java.exe' -jar target\auth-service-0.0.1-SNAPSHOT.jar --spring.profiles.active=$activeProfiles }"
+$javaBin = if ($javaHome -and (Test-Path "$javaHome\bin\java.exe")) { "$javaHome\bin\java.exe" } else { "java" }
+$backendCmd += "& '$javaBin' -jar target\auth-service-0.0.1-SNAPSHOT.jar --spring.profiles.active=$activeProfiles }"
 Start-Process powershell -WorkingDirectory "$projectRoot\backend\auth-service" -ArgumentList "-NoExit", "-Command", $backendCmd
 
 Write-Host "[2/2] Khởi động Frontend (React Vite: http://localhost:5173)..." -ForegroundColor Green

@@ -89,6 +89,7 @@ public class FirstLoginPasswordChangeIntegrationTest {
         createReq.setFullName("Nhân sự Mới First Login");
         createReq.setDepartment("TECH");
         createReq.setRoles(Set.of("RECRUITER"));
+        createReq.setPhone("0988112233");
         createReq.setStatus("ACTIVE");
 
         mockMvc.perform(post("/api/admin/users")

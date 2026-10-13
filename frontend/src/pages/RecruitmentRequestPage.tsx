@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
+import categoryApi from '../api/category';
+import { CommonCategory } from '../types/category';
 import { PageHeader } from '../components/common/PageHeader';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import '../styles/recruitment-request.css';
@@ -58,6 +60,8 @@ interface FormState {
   jobDescription: string;
   candidateRequirements: string;
   benefits: string;
+  workLocationId?: string;
+  employmentTypeId?: string;
   workLocation: string;
   workingModel: string;
 }
@@ -76,8 +80,10 @@ const EMPTY_FORM: FormState = {
   jobDescription: '',
   candidateRequirements: '',
   benefits: '',
-  workLocation: 'Trụ sở chính',
-  workingModel: 'ONSITE',
+  workLocationId: '',
+  employmentTypeId: '',
+  workLocation: '',
+  workingModel: '',
 };
 
 export const RecruitmentRequestPage: React.FC = () => {
@@ -90,6 +96,8 @@ export const RecruitmentRequestPage: React.FC = () => {
   // Danh mục dữ liệu thật từ Backend
   const [departments, setDepartments] = useState<DepartmentItem[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitleItem[]>([]);
+  const [workLocations, setWorkLocations] = useState<CommonCategory[]>([]);
+  const [employmentTypes, setEmploymentTypes] = useState<CommonCategory[]>([]);
   const [requisitions, setRequisitions] = useState<RequisitionResponse[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -101,12 +109,16 @@ export const RecruitmentRequestPage: React.FC = () => {
 
   const loadMetadata = useCallback(async () => {
     try {
-      const [deptRes, jobRes] = await Promise.all([
+      const [deptRes, jobRes, locRes, empRes] = await Promise.all([
         apiClient.get<DepartmentItem[]>('/api/departments?active=true'),
         apiClient.get<JobTitleItem[]>('/api/job-titles?active=true'),
+        categoryApi.list({ type: 'WORK_LOCATION', active: true }).catch(() => []),
+        categoryApi.list({ type: 'EMPLOYMENT_TYPE', active: true }).catch(() => []),
       ]);
       setDepartments(deptRes.data || []);
       setJobTitles(jobRes.data || []);
+      setWorkLocations(locRes || []);
+      setEmploymentTypes(empRes || []);
     } catch {
       // Giữ danh sách rỗng nếu lỗi
     }
@@ -291,8 +303,10 @@ export const RecruitmentRequestPage: React.FC = () => {
       jobDescription: form.jobDescription || undefined,
       candidateRequirements: form.candidateRequirements || undefined,
       benefits: form.benefits || undefined,
-      workLocation: form.workLocation || undefined,
-      workingModel: form.workingModel || 'ONSITE',
+      workLocationId: form.workLocationId ? Number(form.workLocationId) : undefined,
+      employmentTypeId: form.employmentTypeId ? Number(form.employmentTypeId) : undefined,
+      workLocation: (workLocations.find((w) => String(w.id) === form.workLocationId)?.name || form.workLocation) || undefined,
+      workingModel: (employmentTypes.find((e) => String(e.id) === form.employmentTypeId)?.name || form.workingModel) || undefined,
     };
 
     try {
@@ -382,8 +396,10 @@ export const RecruitmentRequestPage: React.FC = () => {
       jobDescription: form.jobDescription.trim(),
       candidateRequirements: form.candidateRequirements.trim(),
       benefits: form.benefits.trim() || undefined,
-      workLocation: form.workLocation.trim() || undefined,
-      workingModel: form.workingModel || 'ONSITE',
+      workLocationId: form.workLocationId ? Number(form.workLocationId) : undefined,
+      employmentTypeId: form.employmentTypeId ? Number(form.employmentTypeId) : undefined,
+      workLocation: (workLocations.find((w) => String(w.id) === form.workLocationId)?.name || form.workLocation.trim()) || undefined,
+      workingModel: (employmentTypes.find((e) => String(e.id) === form.employmentTypeId)?.name || form.workingModel) || 'ONSITE',
     };
 
     try {
@@ -430,8 +446,10 @@ export const RecruitmentRequestPage: React.FC = () => {
       jobDescription: item.jobDescription || '',
       candidateRequirements: item.candidateRequirements || '',
       benefits: item.benefits || '',
-      workLocation: item.workLocation || 'Trụ sở chính',
-      workingModel: item.workingModel || 'ONSITE',
+      workLocationId: item.workLocationId ? String(item.workLocationId) : '',
+      employmentTypeId: item.employmentTypeId ? String(item.employmentTypeId) : '',
+      workLocation: item.workLocation || '',
+      workingModel: item.workingModel || '',
     });
     setErrors({});
     setMessage(null);
@@ -475,8 +493,10 @@ export const RecruitmentRequestPage: React.FC = () => {
         jobDescription: cloned.jobDescription || '',
         candidateRequirements: cloned.candidateRequirements || '',
         benefits: cloned.benefits || '',
-        workLocation: cloned.workLocation || 'Trụ sở chính',
-        workingModel: cloned.workingModel || 'ONSITE',
+        workLocationId: cloned.workLocationId ? String(cloned.workLocationId) : '',
+        employmentTypeId: cloned.employmentTypeId ? String(cloned.employmentTypeId) : '',
+        workLocation: cloned.workLocation || '',
+        workingModel: cloned.workingModel || '',
       });
       setErrors({});
       setMessage({
@@ -1000,30 +1020,76 @@ export const RecruitmentRequestPage: React.FC = () => {
                     <span>Hình thức làm việc</span>
                   </label>
                   <select
-                    value={form.workingModel}
-                    onChange={(e) => updateField('workingModel', e.target.value)}
+                    value={form.employmentTypeId || form.workingModel}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const empObj = employmentTypes.find((item) => String(item.id) === val);
+                      if (empObj) {
+                        setForm((prev) => ({
+                          ...prev,
+                          employmentTypeId: String(empObj.id),
+                          workingModel: empObj.name,
+                        }));
+                      } else {
+                        updateField('workingModel', val);
+                      }
+                    }}
                     className="rr-select"
                   >
-                    <option value="ONSITE">Toàn thời gian tại văn phòng (Onsite)</option>
-                    <option value="HYBRID">Linh hoạt kết hợp (Hybrid)</option>
-                    <option value="REMOTE">Làm việc từ xa (Remote 100%)</option>
+                    <option value="">-- Chọn hình thức làm việc --</option>
+                    {employmentTypes.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                    {employmentTypes.length === 0 && (
+                      <>
+                        <option value="ONSITE">Toàn thời gian tại văn phòng (Onsite)</option>
+                        <option value="HYBRID">Linh hoạt kết hợp (Hybrid)</option>
+                        <option value="REMOTE">Làm việc từ xa (Remote 100%)</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
-                {/* Địa điểm */}
+                {/* Địa điểm làm việc */}
                 <div className="rr-field">
                   <label className="rr-label">
                     <span>Địa điểm làm việc</span>
                   </label>
                   <div className="rr-input-wrapper">
                     <MapPin className="rr-input-icon" />
-                    <input
-                      type="text"
-                      placeholder="Ví dụ: Tòa nhà FPT Tower, Cầu Giấy, Hà Nội"
-                      value={form.workLocation}
-                      onChange={(e) => updateField('workLocation', e.target.value)}
-                      className="rr-input rr-input-with-icon"
-                    />
+                    {workLocations.length > 0 ? (
+                      <select
+                        value={form.workLocationId}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const locObj = workLocations.find((item) => String(item.id) === val);
+                          setForm((prev) => ({
+                            ...prev,
+                            workLocationId: val,
+                            workLocation: locObj?.name || '',
+                          }));
+                        }}
+                        className="rr-select rr-select-with-icon"
+                        style={{ paddingLeft: '38px' }}
+                      >
+                        <option value="">-- Chọn địa điểm làm việc --</option>
+                        {workLocations.map((loc) => (
+                          <option key={loc.id} value={loc.id}>
+                            {loc.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Ví dụ: Tòa nhà FPT Tower, Cầu Giấy, Hà Nội"
+                        value={form.workLocation}
+                        onChange={(e) => updateField('workLocation', e.target.value)}
+                        className="rr-input rr-input-with-icon"
+                      />
+                    )}
                   </div>
                 </div>
 

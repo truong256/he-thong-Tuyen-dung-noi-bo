@@ -17,7 +17,7 @@ public class UpdateProfileRequest {
     @Size(max = 150, message = "Họ và tên tối đa 150 ký tự")
     private String fullName;
 
-    @Pattern(regexp = "^(0|\\+84)[35789]\\d{8}$", message = "Số điện thoại không đúng định dạng")
+    @Pattern(regexp = "^$|^(\\+?84|0)[35789]\\d{8}$", message = "Số điện thoại không đúng định dạng")
     private String phone;
 
     @Size(max = 150, message = "Chức danh hiển thị tối đa 150 ký tự")

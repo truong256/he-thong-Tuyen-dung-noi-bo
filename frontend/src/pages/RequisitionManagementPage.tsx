@@ -17,10 +17,13 @@ import { useAuth } from '../hooks/useAuth';
 import requisitionApi from '../api/requisition';
 import organizationApi from '../api/organization';
 import jobTitleApi from '../api/jobTitle';
+import categoryApi from '../api/category';
+import { CommonCategory } from '../types/category';
 import { Requisition, RequisitionPayload, RequisitionAssignments } from '../types/requisition';
 import { Department } from '../types/organization';
 import { JobTitle } from '../types/jobTitle';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common/Pagination';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import { AssignRecruiterModal } from '../components/requisition/AssignRecruiterModal';
 import '../styles/requisitions.css';
@@ -36,6 +39,12 @@ export const RequisitionManagementPage: React.FC = () => {
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timelineReqId, setTimelineReqId] = useState<number | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -58,6 +67,10 @@ export const RequisitionManagementPage: React.FC = () => {
   const [targetDate, setTargetDate] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [requirements, setRequirements] = useState('');
+  const [workLocations, setWorkLocations] = useState<CommonCategory[]>([]);
+  const [employmentTypes, setEmploymentTypes] = useState<CommonCategory[]>([]);
+  const [workLocationId, setWorkLocationId] = useState<number | ''>('');
+  const [employmentTypeId, setEmploymentTypeId] = useState<number | ''>('');
 
   // Form validation errors & toast
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -76,22 +89,31 @@ export const RequisitionManagementPage: React.FC = () => {
   };
 
   // Load requisitions & reference catalogs
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (pageToLoad = currentPage, sizeToLoad = pageSize) => {
     setIsLoading(true);
     try {
-      const [reqRes, deptRes, jtRes] = await Promise.all([
+      const [reqRes, deptRes, jtRes, locRes, empRes] = await Promise.all([
         requisitionApi.list({
           search: search.trim() || undefined,
           status: statusFilter !== 'ALL' ? statusFilter : undefined,
           departmentId: deptFilter,
+          page: pageToLoad,
+          size: sizeToLoad,
         }),
         organizationApi.getDepartments(),
         jobTitleApi.getJobTitles(),
+        categoryApi.list({ type: 'WORK_LOCATION', active: true }).catch(() => []),
+        categoryApi.list({ type: 'EMPLOYMENT_TYPE', active: true }).catch(() => []),
       ]);
       const items = reqRes.content || [];
       setRequisitions(items);
+      setTotalElements(reqRes.totalElements || 0);
+      setTotalPages(Math.max(1, reqRes.totalPages || 1));
+      setCurrentPage(pageToLoad);
       setDepartments(deptRes || []);
       setJobTitles(jtRes || []);
+      setWorkLocations(locRes || []);
+      setEmploymentTypes(empRes || []);
 
       // Load assignments for visible requisitions
       if (items.length > 0) {
@@ -113,11 +135,15 @@ export const RequisitionManagementPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [search, statusFilter, deptFilter, currentPage, pageSize]);
+
+  useEffect(() => {
+    setCurrentPage(0);
   }, [search, statusFilter, deptFilter]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadData(currentPage, pageSize);
+  }, [loadData, currentPage, pageSize]);
 
   // Selected Job Title for standard salary validation
   const selectedJobTitleObj = useMemo(() => {
@@ -161,6 +187,8 @@ export const RequisitionManagementPage: React.FC = () => {
     setTargetDate(nextMonth.toISOString().split('T')[0]);
     setJobDescription('');
     setRequirements('');
+    setWorkLocationId('');
+    setEmploymentTypeId('');
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -178,6 +206,8 @@ export const RequisitionManagementPage: React.FC = () => {
     setTargetDate(req.targetDate || '');
     setJobDescription(req.jobDescription || '');
     setRequirements(req.requirements || '');
+    setWorkLocationId(req.workLocationId || '');
+    setEmploymentTypeId(req.employmentTypeId || '');
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -219,6 +249,9 @@ export const RequisitionManagementPage: React.FC = () => {
   const handleSubmit = async (isDraft: boolean) => {
     if (!validateForm()) return;
 
+    const selectedLoc = workLocations.find((w) => w.id === Number(workLocationId));
+    const selectedEmp = employmentTypes.find((e) => e.id === Number(employmentTypeId));
+
     const payload: RequisitionPayload = {
       title: title.trim(),
       departmentId: Number(departmentId),
@@ -231,6 +264,10 @@ export const RequisitionManagementPage: React.FC = () => {
       targetDate: targetDate || undefined,
       jobDescription: jobDescription.trim() || undefined,
       requirements: requirements.trim() || undefined,
+      workLocationId: workLocationId ? Number(workLocationId) : undefined,
+      employmentTypeId: employmentTypeId ? Number(employmentTypeId) : undefined,
+      workLocation: selectedLoc?.name,
+      workingModel: selectedEmp?.name || selectedEmp?.code,
       isDraft,
     };
 
@@ -517,6 +554,24 @@ export const RequisitionManagementPage: React.FC = () => {
             </tbody>
           </table>
         )}
+
+        {totalElements > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <Pagination
+              currentPage={currentPage + 1}
+              totalPages={totalPages}
+              totalItems={totalElements}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              onPageChange={(p) => setCurrentPage(p - 1)}
+              onPageSizeChange={(sz) => {
+                setPageSize(sz);
+                setCurrentPage(0);
+              }}
+              itemLabel="yêu cầu tuyển dụng"
+            />
+          </div>
+        )}
       </div>
 
       {/* Modal Tạo / Sửa Yêu cầu Tuyển dụng */}
@@ -641,6 +696,44 @@ export const RequisitionManagementPage: React.FC = () => {
                     value={proposedMaxSalary}
                     onChange={(e) => setProposedMaxSalary(e.target.value)}
                   />
+                </div>
+
+                <div className="req-form-group">
+                  <label className="req-label" htmlFor="req-work-location">
+                    Địa điểm làm việc
+                  </label>
+                  <select
+                    id="req-work-location"
+                    className="req-input"
+                    value={workLocationId}
+                    onChange={(e) => setWorkLocationId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">-- Chọn địa điểm làm việc --</option>
+                    {workLocations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="req-form-group">
+                  <label className="req-label" htmlFor="req-employment-type">
+                    Hình thức làm việc
+                  </label>
+                  <select
+                    id="req-employment-type"
+                    className="req-input"
+                    value={employmentTypeId}
+                    onChange={(e) => setEmploymentTypeId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">-- Chọn hình thức làm việc --</option>
+                    {employmentTypes.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -789,6 +882,18 @@ export const RequisitionManagementPage: React.FC = () => {
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Ngày cần người:</span>
                   <div style={{ fontWeight: 600 }}>{detailReq.targetDate || '—'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Địa điểm làm việc:</span>
+                  <div style={{ fontWeight: 600 }}>
+                    {detailReq.workLocation || workLocations.find((w) => w.id === detailReq.workLocationId)?.name || '—'}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Hình thức làm việc:</span>
+                  <div style={{ fontWeight: 600 }}>
+                    {detailReq.workingModel || employmentTypes.find((e) => e.id === detailReq.employmentTypeId)?.name || '—'}
+                  </div>
                 </div>
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Người tạo yêu cầu:</span>

@@ -45,6 +45,18 @@ public class RequisitionController {
     }
 
     /**
+     * API cập nhật yêu cầu tuyển dụng.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<RequisitionResponse> update(
+            @PathVariable Long id,
+            @RequestBody CreateRequisitionRequest request
+    ) {
+        RequisitionResponse updated = service.updateDraft(id, request.toDraftRequest());
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
      * API tạo và gửi phê duyệt yêu cầu tuyển dụng chính thức.
      * Hỗ trợ lưu nháp nếu payload truyền isDraft = true.
      */
@@ -79,6 +91,10 @@ public class RequisitionController {
         return ResponseEntity.ok(requisition);
     }
 
+    private static final java.util.Set<String> ALLOWED_REQUISITION_SORT_FIELDS = java.util.Set.of(
+            "createdAt", "title", "requisitionCode", "status", "quantity", "neededDate", "targetDate", "id"
+    );
+
     /**
      * API danh sách yêu cầu tuyển dụng có phân trang, lọc theo trạng thái, phòng ban và từ khóa.
      */
@@ -87,15 +103,17 @@ public class RequisitionController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder
     ) {
-        Pageable pageable = PageRequest.of(
-                Math.max(0, page),
-                Math.clamp(size, 1, 100),
-                Sort.by(Sort.Direction.DESC, "createdAt")
+        String effectiveKeyword = (search != null && !search.isBlank()) ? search : keyword;
+        Pageable pageable = com.example.auth_service.util.PaginationUtils.createPageable(
+                page, size, sortBy, sortOrder, "createdAt", Sort.Direction.DESC, ALLOWED_REQUISITION_SORT_FIELDS
         );
-        Page<RequisitionResponse> result = service.list(status, departmentId, keyword, pageable);
+        Page<RequisitionResponse> result = service.list(status, departmentId, effectiveKeyword, pageable);
         return ResponseEntity.ok(result);
     }
 

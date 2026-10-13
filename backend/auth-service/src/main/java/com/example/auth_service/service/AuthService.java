@@ -4,9 +4,11 @@ import com.example.auth_service.dto.*;
 import com.example.auth_service.entity.*;
 import com.example.auth_service.exception.AccountLockedException;
 import com.example.auth_service.exception.BadRequestException;
+import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.InvalidCredentialsException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.PasswordResetTokenRepository;
+import com.example.auth_service.util.PhoneNumberUtils;
 import com.example.auth_service.repository.RefreshTokenRepository;
 import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
@@ -556,7 +558,19 @@ public class AuthService {
 
         user.setFullName(request.getFullName().trim());
         if (request.getPhone() != null) {
-            user.setPhone(request.getPhone().trim());
+            String rawPhone = request.getPhone().trim();
+            if (rawPhone.isEmpty()) {
+                user.setPhone(null);
+            } else {
+                String normalizedPhone = PhoneNumberUtils.normalize(rawPhone);
+                if (!PhoneNumberUtils.isValidVietnamesePhone(normalizedPhone)) {
+                    throw new BadRequestException("Số điện thoại không đúng định dạng.");
+                }
+                if (userRepository.existsByPhoneAndIdNot(normalizedPhone, user.getId())) {
+                    throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+                }
+                user.setPhone(normalizedPhone);
+            }
         }
         if (request.getDisplayName() != null) {
             user.setDisplayName(request.getDisplayName().trim());
@@ -567,7 +581,12 @@ public class AuthService {
             user.setRecoveryEmail(trimmedRecovery.isEmpty() ? null : trimmedRecovery);
         }
         user.setUpdatedAt(Instant.now());
-        User saved = userRepository.saveAndFlush(user);
+        User saved;
+        try {
+            saved = userRepository.saveAndFlush(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+        }
 
         UserSummaryDto dto = new UserSummaryDto(
                 saved.getId(),

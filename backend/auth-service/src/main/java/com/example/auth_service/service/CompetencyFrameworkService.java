@@ -10,5 +10,6 @@ public interface CompetencyFrameworkService {
     CompetencyFrameworkResponse updateFramework(Long id, CompetencyFrameworkRequest request);
     CompetencyFrameworkResponse getFrameworkById(Long id);
     List<CompetencyFrameworkResponse> getAllFrameworks(String search);
+    org.springframework.data.domain.Page<CompetencyFrameworkResponse> getAllFrameworksPaged(String search, org.springframework.data.domain.Pageable pageable);
     void deleteFramework(Long id);
 }

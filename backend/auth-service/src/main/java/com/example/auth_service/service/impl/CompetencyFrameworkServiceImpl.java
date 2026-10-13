@@ -13,6 +13,8 @@ import com.example.auth_service.repository.InterviewQuestionRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.service.CompetencyFrameworkService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -161,6 +163,14 @@ public class CompetencyFrameworkServiceImpl implements CompetencyFrameworkServic
                 })
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CompetencyFrameworkResponse> getAllFrameworksPaged(String search, Pageable pageable) {
+        String searchTrimmed = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        Page<CompetencyFramework> page = competencyFrameworkRepository.searchFrameworks(searchTrimmed, pageable);
+        return page.map(this::mapToResponse);
     }
 
     @Override

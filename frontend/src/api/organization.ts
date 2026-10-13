@@ -442,6 +442,68 @@ export const organizationApi = {
     }));
   },
 
+  getDepartmentsPaged: async (params?: {
+    search?: string;
+    active?: boolean;
+    page?: number;
+    size?: number;
+    sortBy?: string;
+    sortOrder?: string;
+  }): Promise<{ content: Department[]; totalElements: number; totalPages: number; size: number; number: number }> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.active !== undefined) query.append('active', String(params.active));
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
+    query.append('page', String(params?.page !== undefined ? params.page : 0));
+    query.append('size', String(params?.size !== undefined ? params.size : 10));
+
+    if (token && !token.startsWith('mock-')) {
+      try {
+        const res = await apiClient.get<any>(`/api/departments?${query.toString()}`);
+        const data = res.data;
+        if (data && Array.isArray(data.content)) {
+          const mapped: Department[] = data.content.map((d: any) => ({
+            id: Number(d.id),
+            name: d.name,
+            code: d.code,
+            description: d.description || '',
+            parentDepartmentId: d.parentDepartmentId ? Number(d.parentDepartmentId) : null,
+            managerUserId: d.managerUserId ? Number(d.managerUserId) : undefined,
+            managerName: d.managerName || (d.managerUserId ? `Quản lý #${d.managerUserId}` : undefined),
+            managerEmail: d.managerEmail || undefined,
+            employeeCount: Number(d.employeeCount) || 0,
+            openRequisitionsCount: Number(d.openRequisitionsCount) || 0,
+            active: d.active !== false,
+            createdAt: d.createdAt ? String(d.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          }));
+          return {
+            content: mapped,
+            totalElements: data.totalElements ?? mapped.length,
+            totalPages: data.totalPages ?? 1,
+            size: data.size ?? 10,
+            number: data.number ?? 0,
+          };
+        }
+      } catch (err: any) {
+        throw new Error(extractErrorMessage(err, 'Không thể tải danh sách phòng ban từ máy chủ.'));
+      }
+    }
+
+    const all = await organizationApi.getDepartments();
+    const page = params?.page || 0;
+    const size = params?.size || 10;
+    const start = page * size;
+    return {
+      content: all.slice(start, start + size),
+      totalElements: all.length,
+      totalPages: Math.ceil(all.length / size) || 1,
+      size,
+      number: page,
+    };
+  },
+
   getEligibleManagers: async (): Promise<Array<{ id: number; fullName: string; email: string; roles: string[] }>> => {
     try {
       const res = await apiClient.get<any>('/api/admin/users?status=ACTIVE&size=100');

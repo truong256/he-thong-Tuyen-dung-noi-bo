@@ -369,4 +369,83 @@ describe('CompetencyFrameworkPage (S2-06 Quản lý khung năng lực - SCRUM-54
       expect(screen.getByText('25%')).toBeInTheDocument();
     });
   });
+
+  it('TC15 - Hiển thị thông báo chi tiết khi người dùng còn điền thiếu thông tin bắt buộc', async () => {
+    render(
+      <MemoryRouter>
+        <CompetencyFrameworkPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Thêm khung năng lực')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Thêm khung năng lực'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Tạo mới Khung Năng lực')).toBeInTheDocument();
+    });
+
+    // Khi vừa mở modal, chưa nhập tên khung năng lực và tên tiêu chí
+    expect(screen.getByText('Thông tin cần hoàn tất trước khi lưu khung năng lực:')).toBeInTheDocument();
+    expect(screen.getByText(/Chưa nhập Tên khung năng lực/i)).toBeInTheDocument();
+    expect(screen.getByText(/Chưa nhập Tên tiêu chí/i)).toBeInTheDocument();
+    expect(screen.getByText(/Còn thiếu tên khung năng lực/i)).toBeInTheDocument();
+
+    // Nhập tên khung năng lực
+    const nameInput = screen.getByLabelText(/Tên khung năng lực/i);
+    fireEvent.change(nameInput, { target: { value: 'Năng lực Kiểm thử phần mềm QA' } });
+
+    // Mục thiếu Tên khung năng lực biến mất, footer chuyển sang cảnh báo tiêu chí
+    await waitFor(() => {
+      expect(screen.queryByText(/Chưa nhập Tên khung năng lực/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/Còn tiêu chí chưa có tên/i)).toBeInTheDocument();
+    });
+  });
+
+  it('TC16 - Hiển thị thông báo khi người dùng điền sai trọng số (< 100%, > 100%, hoặc <= 0%)', async () => {
+    render(
+      <MemoryRouter>
+        <CompetencyFrameworkPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Thêm khung năng lực')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('Thêm khung năng lực'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Tạo mới Khung Năng lực')).toBeInTheDocument();
+    });
+
+    // Thay đổi trọng số tiêu chí 1 thành 0 (không hợp lệ)
+    const weightInputs = screen.getAllByPlaceholderText('%');
+    fireEvent.change(weightInputs[0], { target: { value: '0' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Trọng số của các tiêu chí.*chưa hợp lệ/i)).toBeInTheDocument();
+    });
+
+    // Thay đổi trọng số thành 70% và 20% (tổng 90% < 100%)
+    fireEvent.change(weightInputs[0], { target: { value: '70' } });
+    fireEvent.change(weightInputs[1], { target: { value: '20' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tổng trọng số hiện tại mới đạt 90%/i)).toBeInTheDocument();
+      expect(screen.getByText(/cần phân bổ thêm 10% để đạt đúng 100%/i)).toBeInTheDocument();
+      expect(screen.getByText(/Còn thiếu 10%/i)).toBeInTheDocument();
+    });
+
+    // Thay đổi trọng số thành 70% và 40% (tổng 110% > 100%)
+    fireEvent.change(weightInputs[1], { target: { value: '40' } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Tổng trọng số hiện tại là 110%/i)).toBeInTheDocument();
+      expect(screen.getByText(/đang dư 10% so với chuẩn 100%/i)).toBeInTheDocument();
+      expect(screen.getByText(/Vượt quá 10%/i)).toBeInTheDocument();
+    });
+  });
 });

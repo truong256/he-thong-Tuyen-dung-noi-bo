@@ -85,24 +85,30 @@ public class RecruitmentRequisitionController {
         return ResponseEntity.ok(response);
     }
 
+    private static final java.util.Set<String> ALLOWED_REQUISITION_SORT_FIELDS = java.util.Set.of(
+            "createdAt", "title", "requisitionCode", "status", "quantity", "neededDate", "targetDate", "id"
+    );
+
     @GetMapping
     public ResponseEntity<Page<RequisitionResponse>> list(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) Long jobTitleId,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
             Authentication authentication
     ) {
         User currentUser = getCurrentUser(authentication);
-        Pageable pageable = PageRequest.of(
-                Math.max(0, page),
-                Math.clamp(size, 1, 100),
-                Sort.by(Sort.Direction.DESC, "createdAt")
+        String effectiveSearch = (search != null && !search.isBlank()) ? search : keyword;
+        Pageable pageable = com.example.auth_service.util.PaginationUtils.createPageable(
+                page, size, sortBy, sortOrder, "createdAt", Sort.Direction.DESC, ALLOWED_REQUISITION_SORT_FIELDS
         );
         Page<RequisitionResponse> response = service.list(
-                search, departmentId, jobTitleId, status, currentUser, pageable
+                effectiveSearch, departmentId, jobTitleId, status, currentUser, pageable
         );
         return ResponseEntity.ok(response);
     }

@@ -83,6 +83,7 @@ class AdminUserServiceTest {
         CreateUserRequest req = new CreateUserRequest();
         req.setEmail("new_user@company.com");
         req.setFullName("Nguyễn Văn Nhân Viên");
+        req.setPhone("0912345678");
         req.setDepartment("Công nghệ thông tin");
         req.setRoles(Set.of("RECRUITER"));
         req.setStatus("ACTIVE");
@@ -128,6 +129,7 @@ class AdminUserServiceTest {
         CreateUserRequest req = new CreateUserRequest();
         req.setEmail("custom_pass@company.com");
         req.setFullName("User Client Pass Attempt");
+        req.setPhone("0987654321");
         req.setRoles(Set.of("RECRUITER"));
         req.setPassword("ClientHackPass123!@#");
 
@@ -160,6 +162,7 @@ class AdminUserServiceTest {
         req.setEmail("staff@company.com");
         req.setRecoveryEmail("staff.personal@gmail.com");
         req.setFullName("Lê Văn Staff");
+        req.setPhone("0901234567");
         req.setRoles(Set.of("RECRUITER"));
 
         when(userRepository.existsByEmailIgnoreCase("staff@company.com")).thenReturn(false);

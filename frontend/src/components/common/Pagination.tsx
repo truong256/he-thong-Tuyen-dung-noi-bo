@@ -7,9 +7,11 @@ export interface PaginationProps {
   totalItems: number;
   pageSize: number;
   pageSizeOptions?: number[];
+  itemLabel?: string;
   onPageChange: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
   className?: string;
+  showFirstLast?: boolean;
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -18,48 +20,50 @@ export const Pagination: React.FC<PaginationProps> = ({
   totalItems,
   pageSize,
   pageSizeOptions = [10, 20, 50],
+  itemLabel = 'bản ghi',
   onPageChange,
   onPageSizeChange,
   className = '',
+  showFirstLast = true,
 }) => {
-  if (totalItems === 0) return null;
+  const effectiveTotalPages = Math.max(1, totalPages);
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = totalItems === 0 ? 0 : Math.min(currentPage * pageSize, totalItems);
 
-  const startItem = (currentPage - 1) * pageSize + 1;
-  const endItem = Math.min(currentPage * pageSize, totalItems);
-
-  // Generate page numbers with ellipsis
+  // Generate page numbers with ellipsis according to modern Enterprise design
   const getPageNumbers = () => {
+    if (totalItems === 0) return [1];
     const pages: (number | string)[] = [];
     const maxVisible = 5;
 
-    if (totalPages <= maxVisible + 2) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    if (effectiveTotalPages <= maxVisible + 2) {
+      for (let i = 1; i <= effectiveTotalPages; i++) pages.push(i);
     } else {
       pages.push(1);
       if (currentPage > 3) pages.push('...');
 
       const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
+      const end = Math.min(effectiveTotalPages - 1, currentPage + 1);
 
       for (let i = start; i <= end; i++) pages.push(i);
 
-      if (currentPage < totalPages - 2) pages.push('...');
-      pages.push(totalPages);
+      if (currentPage < effectiveTotalPages - 2) pages.push('...');
+      pages.push(effectiveTotalPages);
     }
     return pages;
   };
 
   return (
-    <div className={`enterprise-pagination ${className}`}>
+    <div className={`enterprise-pagination ${className}`} data-testid="enterprise-pagination">
       <div className="pagination-info">
-        <span>
-          Hiển thị <strong>{startItem}</strong> - <strong>{endItem}</strong> trong tổng số{' '}
-          <strong>{totalItems.toLocaleString('vi-VN')}</strong> bản ghi
+        <span className="pagination-record-range">
+          Hiển thị <strong>{startItem}</strong>–<strong>{endItem}</strong> trong tổng số{' '}
+          <strong>{totalItems.toLocaleString('vi-VN')}</strong> {itemLabel}
         </span>
 
         {onPageSizeChange && (
           <div className="pagination-page-size">
-            <span className="page-size-label">Hiển thị</span>
+            <span className="page-size-label">Số dòng/trang</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
@@ -72,27 +76,28 @@ export const Pagination: React.FC<PaginationProps> = ({
                 </option>
               ))}
             </select>
-            <span className="page-size-suffix">/ trang</span>
           </div>
         )}
       </div>
 
       <div className="pagination-controls" aria-label="Phân trang">
-        <button
-          type="button"
-          onClick={() => onPageChange(1)}
-          disabled={currentPage <= 1}
-          className="pagination-btn pagination-first"
-          title="Trang đầu"
-          aria-label="Trang đầu"
-        >
-          <ChevronsLeft size={16} />
-        </button>
+        {showFirstLast && effectiveTotalPages > 3 && (
+          <button
+            type="button"
+            onClick={() => onPageChange(1)}
+            disabled={currentPage <= 1 || totalItems === 0}
+            className="pagination-btn pagination-first"
+            title="Trang đầu"
+            aria-label="Trang đầu"
+          >
+            <ChevronsLeft size={16} />
+          </button>
+        )}
 
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage <= 1}
+          disabled={currentPage <= 1 || totalItems === 0}
           className="pagination-btn pagination-prev"
           title="Trang trước"
           aria-label="Trang trước"
@@ -107,6 +112,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                 key={idx}
                 type="button"
                 onClick={() => onPageChange(p)}
+                disabled={totalItems === 0}
                 className={`pagination-number ${currentPage === p ? 'is-active' : ''}`}
                 aria-current={currentPage === p ? 'page' : undefined}
                 aria-label={`Trang ${p}`}
@@ -124,7 +130,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage >= totalPages}
+          disabled={currentPage >= effectiveTotalPages || totalItems === 0}
           className="pagination-btn pagination-next"
           title="Trang sau"
           aria-label="Trang sau"
@@ -132,16 +138,18 @@ export const Pagination: React.FC<PaginationProps> = ({
           <ChevronRight size={16} />
         </button>
 
-        <button
-          type="button"
-          onClick={() => onPageChange(totalPages)}
-          disabled={currentPage >= totalPages}
-          className="pagination-btn pagination-last"
-          title="Trang cuối"
-          aria-label="Trang cuối"
-        >
-          <ChevronsRight size={16} />
-        </button>
+        {showFirstLast && effectiveTotalPages > 3 && (
+          <button
+            type="button"
+            onClick={() => onPageChange(effectiveTotalPages)}
+            disabled={currentPage >= effectiveTotalPages || totalItems === 0}
+            className="pagination-btn pagination-last"
+            title="Trang cuối"
+            aria-label="Trang cuối"
+          >
+            <ChevronsRight size={16} />
+          </button>
+        )}
       </div>
     </div>
   );

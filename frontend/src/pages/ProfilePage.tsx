@@ -151,21 +151,32 @@ export const ProfilePage: React.FC = () => {
       setTimeout(() => setSuccessMsg(null), 5000);
     } catch (err: any) {
       const apiValidation = err.response?.data?.validationErrors;
+      const status = err.response?.status;
+      const backendMsg = err.response?.data?.message;
+      const mappedErrors: ProfileFieldErrors = {};
+
       if (apiValidation && typeof apiValidation === 'object') {
-        const mappedErrors: ProfileFieldErrors = {};
         if (apiValidation.fullName) mappedErrors.fullName = apiValidation.fullName;
         if (apiValidation.phone) mappedErrors.phone = apiValidation.phone;
         if (apiValidation.displayName) mappedErrors.displayName = apiValidation.displayName;
         if (apiValidation.recoveryEmail) mappedErrors.recoveryEmail = apiValidation.recoveryEmail;
+      }
+
+      // Xử lý khi backend trả HTTP 409 do trùng số điện thoại
+      if (status === 409 || (backendMsg && (backendMsg.includes('Số điện thoại') || backendMsg.includes('điện thoại')))) {
+        mappedErrors.phone = apiValidation?.phone || backendMsg || 'Số điện thoại này đã được sử dụng bởi tài khoản khác.';
+      }
+
+      if (Object.keys(mappedErrors).length > 0) {
         setFieldErrors(mappedErrors);
       }
 
       const msg =
-        err.response?.data?.message ||
-        apiValidation?.fullName ||
-        apiValidation?.phone ||
-        apiValidation?.displayName ||
-        apiValidation?.recoveryEmail ||
+        backendMsg ||
+        mappedErrors.phone ||
+        mappedErrors.fullName ||
+        mappedErrors.displayName ||
+        mappedErrors.recoveryEmail ||
         'Không thể cập nhật hồ sơ cá nhân. Vui lòng thử lại sau.';
       setErrorMsg(msg);
     } finally {

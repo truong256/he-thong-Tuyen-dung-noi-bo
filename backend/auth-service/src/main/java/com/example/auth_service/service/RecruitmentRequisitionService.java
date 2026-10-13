@@ -90,6 +90,8 @@ public class RecruitmentRequisitionService {
         requisition.setTargetDate(targetDate);
         requisition.setJobDescription(request.jobDescription());
         requisition.setCandidateRequirements(request.candidateRequirements());
+        requisition.setWorkLocationId(request.workLocationId());
+        requisition.setEmploymentTypeId(request.employmentTypeId());
         requisition.setStatus(isDraft ? "DRAFT" : "SUBMITTED");
         requisition.setCreatedByUserId(currentUser.getId());
         requisition.setCreatedAt(Instant.now());
@@ -177,6 +179,8 @@ public class RecruitmentRequisitionService {
         requisition.setTargetDate(targetDate);
         if (request.jobDescription() != null) requisition.setJobDescription(request.jobDescription());
         if (request.candidateRequirements() != null) requisition.setCandidateRequirements(request.candidateRequirements());
+        if (request.workLocationId() != null) requisition.setWorkLocationId(request.workLocationId());
+        if (request.employmentTypeId() != null) requisition.setEmploymentTypeId(request.employmentTypeId());
 
         if (request.status() != null && !request.status().isBlank()) {
             String newStatus = request.status().trim().toUpperCase();
@@ -615,7 +619,9 @@ public class RecruitmentRequisitionService {
                 creator != null ? creator.getFullName() : null,
                 creator != null ? creator.getEmail() : null,
                 req.getCreatedAt(),
-                req.getUpdatedAt()
+                req.getUpdatedAt(),
+                req.getWorkLocationId(),
+                req.getEmploymentTypeId()
         );
     }
 }

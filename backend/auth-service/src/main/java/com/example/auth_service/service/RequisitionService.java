@@ -124,6 +124,8 @@ public class RequisitionService {
         requisition.setBenefits(request.benefits());
         requisition.setWorkLocation(request.workLocation());
         requisition.setWorkingModel(request.workingModel() != null ? request.workingModel() : "ONSITE");
+        requisition.setWorkLocationId(request.workLocationId());
+        requisition.setEmploymentTypeId(request.employmentTypeId());
 
         requisition.setStatus("DRAFT");
         requisition.setCreatedByUserId(currentUser.getId());
@@ -215,6 +217,12 @@ public class RequisitionService {
         if (request.workingModel() != null) {
             requisition.setWorkingModel(request.workingModel());
         }
+        if (request.workLocationId() != null) {
+            requisition.setWorkLocationId(request.workLocationId());
+        }
+        if (request.employmentTypeId() != null) {
+            requisition.setEmploymentTypeId(request.employmentTypeId());
+        }
 
         if ((requisition.getSalaryMin() != null && requisition.getSalaryMin() < 0) ||
             (requisition.getSalaryMax() != null && requisition.getSalaryMax() < 0)) {
@@ -297,6 +305,8 @@ public class RequisitionService {
         requisition.setBenefits(request.benefits());
         requisition.setWorkLocation(request.workLocation());
         requisition.setWorkingModel(request.workingModel() != null ? request.workingModel() : "ONSITE");
+        requisition.setWorkLocationId(request.workLocationId());
+        requisition.setEmploymentTypeId(request.employmentTypeId());
 
         requisition.setStatus("PENDING_APPROVAL");
         requisition.setSubmittedAt(Instant.now());
@@ -563,7 +573,9 @@ public class RequisitionService {
                 req.getApprovedByUserId(),
                 req.getApprovedAt(),
                 req.getCreatedAt(),
-                req.getUpdatedAt()
+                req.getUpdatedAt(),
+                req.getWorkLocationId(),
+                req.getEmploymentTypeId()
         );
     }
 }

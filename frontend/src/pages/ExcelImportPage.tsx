@@ -9,8 +9,6 @@ import {
   RefreshCw,
   FileCheck,
   AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
   X,
 } from 'lucide-react';
 import adminApi from '../api/admin';
@@ -23,6 +21,7 @@ import {
 import '../styles/excel-import.css';
 import { resetActivity } from '../utils/idleTracker';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common/Pagination';
 
 export const ExcelImportPage: React.FC = () => {
   const navigate = useNavigate();
@@ -46,7 +45,7 @@ export const ExcelImportPage: React.FC = () => {
   // Table filter & pagination
   const [filterMode, setFilterMode] = useState<'ALL' | 'VALID' | 'INVALID'>('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 15;
+  const [pageSize, setPageSize] = useState(10);
 
   const showToast = (text: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setToastMessage({ text, type });
@@ -539,6 +538,7 @@ export const ExcelImportPage: React.FC = () => {
                   <th scope="col" className="center" style={{ width: 60 }}>Dòng</th>
                   <th scope="col" style={{ minWidth: 150 }}>Họ và tên</th>
                   <th scope="col" style={{ minWidth: 190 }}>Email</th>
+                  <th scope="col" style={{ minWidth: 140 }}>Số điện thoại</th>
                   <th scope="col" style={{ minWidth: 130 }}>Phòng ban</th>
                   <th scope="col" style={{ minWidth: 170 }}>Vai trò</th>
                   <th scope="col" className="center" style={{ width: 110 }}>Trạng thái</th>
@@ -548,7 +548,7 @@ export const ExcelImportPage: React.FC = () => {
               <tbody>
                 {paginatedRows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
+                    <td colSpan={8} style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
                       Không có dòng dữ liệu nào khớp với bộ lọc hiện tại.
                     </td>
                   </tr>
@@ -569,6 +569,9 @@ export const ExcelImportPage: React.FC = () => {
                         </td>
                         <td style={{ color: '#334155' }}>
                           {row.data.email || <span style={{ color: '#dc2626', fontStyle: 'italic' }}>Trống</span>}
+                        </td>
+                        <td style={{ color: '#334155' }}>
+                          {row.data.phone || '—'}
                         </td>
                         <td style={{ color: '#334155' }}>
                           {row.data.department || '—'}
@@ -613,37 +616,21 @@ export const ExcelImportPage: React.FC = () => {
           </div>
 
           {/* Table Pagination */}
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
-              <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Hiển thị dòng {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, displayedRows.length)} trong tổng số {displayedRows.length} dòng
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                  aria-label="Trang trước"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <span style={{ fontSize: '0.85rem', padding: '0 8px' }}>
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  style={{ padding: '4px 8px', fontSize: '0.8rem' }}
-                  aria-label="Trang sau"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
+          {displayedRows.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={displayedRows.length}
+                pageSize={pageSize}
+                pageSizeOptions={[10, 20, 50]}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(sz) => {
+                  setPageSize(sz);
+                  setCurrentPage(1);
+                }}
+                itemLabel="dòng"
+              />
             </div>
           )}
 

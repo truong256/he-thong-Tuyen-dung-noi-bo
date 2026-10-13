@@ -469,6 +469,7 @@ class RbacIntegrationTest {
                 "email": "integration-activation-target@example.com",
                 "fullName": "Nguyen Van Test",
                 "department": "IT DevOps",
+                "phone": "0911223344",
                 "roles": ["RECRUITER"]
             }
             """;
@@ -509,6 +510,7 @@ class RbacIntegrationTest {
                 "password": "ClientHackPassword123!",
                 "fullName": "Override Attempt User",
                 "department": "Security",
+                "phone": "0922334455",
                 "roles": ["RECRUITER"]
             }
             """;

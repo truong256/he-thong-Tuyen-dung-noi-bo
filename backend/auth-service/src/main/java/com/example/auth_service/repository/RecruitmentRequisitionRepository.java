@@ -94,7 +94,6 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
                     AND (:departmentId IS NULL OR r.departmentId = :departmentId)
                     AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
                     AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
-                ORDER BY r.createdAt DESC
                 """)
         Page<RecruitmentRequisition> findAllWithFilters(
                         @Param("search") String search,
@@ -112,7 +111,6 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
                     AND (:departmentId IS NULL OR r.departmentId = :departmentId)
                     AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
                     AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
-                ORDER BY r.createdAt DESC
                 """)
         Page<RecruitmentRequisition> findScopedCreatedByWithFilters(
                         @Param("search") String search,
@@ -131,7 +129,6 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
                     AND (:departmentId IS NULL OR r.departmentId = :departmentId)
                     AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
                     AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
-                ORDER BY r.createdAt DESC
                 """)
         Page<RecruitmentRequisition> findScopedWithFilters(
                         @Param("search") String search,

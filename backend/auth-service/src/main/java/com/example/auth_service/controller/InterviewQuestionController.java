@@ -27,6 +27,8 @@ public class InterviewQuestionController {
         this.interviewQuestionService = interviewQuestionService;
     }
 
+    private static final java.util.Set<String> ALLOWED_QUESTION_SORT_FIELDS = java.util.Set.of("createdAt", "difficultyLevel", "category", "id");
+
     @GetMapping
     @PreAuthorize("hasAuthority('CATALOG_READ')")
     public ResponseEntity<Page<InterviewQuestionResponse>> search(
@@ -36,12 +38,12 @@ public class InterviewQuestionController {
             @RequestParam(required = false) Long criterionId,
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder
     ) {
-        Pageable pageable = PageRequest.of(
-                Math.max(0, page),
-                Math.clamp(size, 1, 100),
-                Sort.by(Sort.Direction.DESC, "createdAt")
+        Pageable pageable = com.example.auth_service.util.PaginationUtils.createPageable(
+                page, size, sortBy, sortOrder, "createdAt", Sort.Direction.DESC, ALLOWED_QUESTION_SORT_FIELDS
         );
 
         return ResponseEntity.ok(

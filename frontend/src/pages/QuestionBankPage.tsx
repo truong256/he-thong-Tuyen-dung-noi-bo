@@ -6,8 +6,6 @@ import {
   AlertCircle,
   CheckCircle2,
   RefreshCw,
-  ChevronLeft,
-  ChevronRight,
   X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
@@ -22,6 +20,7 @@ import {
 } from '../types/questionBank';
 import QuestionModal from '../components/questionBank/QuestionModal';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common/Pagination';
 import '../styles/question-bank.css';
 
 export const QuestionBankPage: React.FC = () => {
@@ -35,7 +34,7 @@ export const QuestionBankPage: React.FC = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -533,40 +532,21 @@ export const QuestionBankPage: React.FC = () => {
           })}
 
           {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '16px 0',
-                marginTop: 8,
-              }}
-            >
-              <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                Hiển thị trang <strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong> ({totalElements} câu hỏi)
-              </div>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  disabled={currentPage === 0}
-                  onClick={() => loadQuestions(currentPage - 1)}
-                >
-                  <ChevronLeft size={16} />
-                  <span>Trang trước</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  disabled={currentPage >= totalPages - 1}
-                  onClick={() => loadQuestions(currentPage + 1)}
-                >
-                  <span>Trang sau</span>
-                  <ChevronRight size={16} />
-                </button>
-              </div>
+          {totalElements > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <Pagination
+                currentPage={currentPage + 1}
+                totalPages={totalPages}
+                totalItems={totalElements}
+                pageSize={pageSize}
+                pageSizeOptions={[10, 20, 50]}
+                onPageChange={(page) => loadQuestions(page - 1)}
+                onPageSizeChange={(newSize) => {
+                  setPageSize(newSize);
+                  setCurrentPage(0);
+                }}
+                itemLabel="câu hỏi"
+              />
             </div>
           )}
         </div>

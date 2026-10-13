@@ -26,7 +26,6 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
         AND (:jobTitleId IS NULL OR j.id = :jobTitleId)
         AND (:criterionId IS NULL OR c.id = :criterionId)
         AND (:active IS NULL OR q.active = :active)
-        ORDER BY q.createdAt DESC
         """,
         countQuery = """
         SELECT COUNT(DISTINCT q)

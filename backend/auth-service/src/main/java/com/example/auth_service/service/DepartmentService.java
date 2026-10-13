@@ -35,6 +35,16 @@ public class DepartmentService {
     }
 
     @PreAuthorize("hasAuthority('CATALOG_READ')")
+    public org.springframework.data.domain.Page<DepartmentResponse> listPaged(
+            String search,
+            Boolean active,
+            org.springframework.data.domain.Pageable pageable
+    ) {
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        return departments.searchDepartments(cleanSearch, active, pageable).map(this::toResponse);
+    }
+
+    @PreAuthorize("hasAuthority('CATALOG_READ')")
     public DepartmentResponse get(Long id) { return toResponse(requireDepartment(id)); }
 
     @PreAuthorize("hasAuthority('CATALOG_READ')")

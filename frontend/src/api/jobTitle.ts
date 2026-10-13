@@ -447,9 +447,10 @@ export const jobTitleApi = {
           params.append('sortOrder', filters.sortOrder);
         }
 
-        const res = await apiClient.get<any[]>(`/api/job-titles?${params.toString()}`);
-        if (res.data && Array.isArray(res.data)) {
-          const mapped: JobTitle[] = res.data.map((j: any) => ({
+        const res = await apiClient.get<any>(`/api/job-titles?${params.toString()}`);
+        const rawItems = Array.isArray(res.data) ? res.data : (res.data?.content || []);
+        if (rawItems && Array.isArray(rawItems)) {
+          const mapped: JobTitle[] = rawItems.map((j: any) => ({
             id: j.id,
             title: j.title,
             code: j.code,
@@ -544,6 +545,89 @@ export const jobTitleApi = {
     }
 
     return list;
+  },
+
+  getJobTitlesPaged: async (params?: {
+    search?: string;
+    status?: string;
+    departmentId?: string | number;
+    level?: string;
+    jobFamily?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    page?: number;
+    size?: number;
+  }): Promise<{ content: JobTitle[]; totalElements: number; totalPages: number; size: number; number: number }> => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    const query = new URLSearchParams();
+    if (params?.search) query.append('search', params.search);
+    if (params?.status && params.status !== 'ALL') {
+      query.append('active', String(params.status === 'ACTIVE'));
+    }
+    if (params?.departmentId && params.departmentId !== 'ALL') {
+      query.append('departmentId', String(params.departmentId));
+    }
+    if (params?.level && params.level !== 'ALL') {
+      query.append('level', params.level);
+    }
+    if (params?.jobFamily && params.jobFamily !== 'ALL') {
+      query.append('jobFamily', params.jobFamily);
+    }
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
+    query.append('page', String(params?.page !== undefined ? params.page : 0));
+    query.append('size', String(params?.size !== undefined ? params.size : 10));
+
+    if (token && !token.startsWith('mock-')) {
+      const res = await apiClient.get<any>(`/api/job-titles?${query.toString()}`);
+      const data = res.data;
+      if (data && Array.isArray(data.content)) {
+        const mapped: JobTitle[] = data.content.map((j: any) => ({
+          id: j.id,
+          title: j.title,
+          code: j.code,
+          departmentId: j.departmentId || 0,
+          departmentName: j.departmentName || 'Chưa phân bổ',
+          level: j.level || 'MIDDLE',
+          jobFamily: j.jobFamily || 'TECH',
+          minSalary: j.minSalary ?? undefined,
+          maxSalary: j.maxSalary ?? undefined,
+          salaryRangeDisplay: j.salaryRangeDisplay ?? undefined,
+          jobDescription: j.jobDescription || '',
+          keyResponsibilities: j.keyResponsibilities || [],
+          requirements: j.requirements || [],
+          competencies: j.competencies || [],
+          standardHeadcount: j.standardHeadcount || 1,
+          currentHeadcount: j.currentHeadcount || 0,
+          openRequisitions: j.openRequisitions || 0,
+          active: j.active !== false,
+          competencyFrameworkId: j.competencyFrameworkId,
+          competencyFrameworkName: j.competencyFrameworkName,
+          createdAt: j.createdAt ? String(j.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+          updatedAt: j.updatedAt ? String(j.updatedAt).slice(0, 10) : undefined,
+        }));
+        return {
+          content: mapped,
+          totalElements: data.totalElements ?? mapped.length,
+          totalPages: data.totalPages ?? 1,
+          size: data.size ?? 10,
+          number: data.number ?? 0,
+        };
+      }
+    }
+
+    // Fallback in-memory
+    const all = await jobTitleApi.getJobTitles(params as any);
+    const page = params?.page || 0;
+    const size = params?.size || 10;
+    const start = page * size;
+    return {
+      content: all.slice(start, start + size),
+      totalElements: all.length,
+      totalPages: Math.ceil(all.length / size) || 1,
+      size,
+      number: page,
+    };
   },
 
   getJobTitleById: async (id: number): Promise<JobTitle | null> => {

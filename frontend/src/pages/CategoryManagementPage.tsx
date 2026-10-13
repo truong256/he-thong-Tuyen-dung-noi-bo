@@ -283,7 +283,10 @@ export const CategoryManagementPage: React.FC = () => {
       await loadCategories();
       await loadTypes();
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Không thể xóa danh mục này';
+      let msg = err.response?.data?.message || err.message || 'Không thể xóa danh mục này';
+      if (err.response?.status === 409 || msg.includes('đang được sử dụng') || msg.includes('Foreign key') || msg.includes('tham chiếu') || msg.includes('constraint')) {
+        msg = 'Không thể xóa danh mục vì đang được sử dụng.';
+      }
       setDeleteError(msg);
       showToast(msg, 'error');
     } finally {

@@ -42,8 +42,56 @@ public record RequisitionResponse(
         Long jobTitleMinSalary,
         Long jobTitleMaxSalary,
         boolean outsideSalaryRange,
-        String createdByEmail
+        String createdByEmail,
+        Long workLocationId,
+        Long employmentTypeId
 ) {
+    public RequisitionResponse(
+            Long id,
+            String requisitionCode,
+            String title,
+            Long departmentId,
+            String departmentName,
+            String departmentCode,
+            Long jobTitleId,
+            String jobTitleName,
+            Integer quantity,
+            String recruitmentType,
+            Long salaryMin,
+            Long salaryMax,
+            String currency,
+            String salaryExplanation,
+            LocalDate neededDate,
+            LocalDate targetDate,
+            String jobDescription,
+            String candidateRequirements,
+            String benefits,
+            String workLocation,
+            String workingModel,
+            String status,
+            String reason,
+            String rejectionReason,
+            Long createdByUserId,
+            String createdByName,
+            Instant submittedAt,
+            Long approvedByUserId,
+            Instant approvedAt,
+            Instant createdAt,
+            Instant updatedAt,
+            String jobTitleCode,
+            Long jobTitleMinSalary,
+            Long jobTitleMaxSalary,
+            boolean outsideSalaryRange,
+            String createdByEmail
+    ) {
+        this(id, requisitionCode, title, departmentId, departmentName, departmentCode, jobTitleId,
+                jobTitleName, quantity, recruitmentType, salaryMin, salaryMax, currency, salaryExplanation,
+                neededDate, targetDate, jobDescription, candidateRequirements, benefits, workLocation,
+                workingModel, status, reason, rejectionReason, createdByUserId, createdByName, submittedAt,
+                approvedByUserId, approvedAt, createdAt, updatedAt, jobTitleCode, jobTitleMinSalary,
+                jobTitleMaxSalary, outsideSalaryRange, createdByEmail, null, null);
+    }
+
     public RequisitionResponse(
             Long id,
             String requisitionCode,
@@ -81,7 +129,50 @@ public record RequisitionResponse(
                 jobTitleName, quantity, recruitmentType, salaryMin, salaryMax, currency, salaryExplanation,
                 neededDate, targetDate, jobDescription, candidateRequirements, benefits, workLocation,
                 workingModel, status, reason, rejectionReason, createdByUserId, createdByName, submittedAt,
-                approvedByUserId, approvedAt, createdAt, updatedAt, null, null, null, false, null);
+                approvedByUserId, approvedAt, createdAt, updatedAt, null, null, null, false, null, null, null);
+    }
+
+    public RequisitionResponse(
+            Long id,
+            String requisitionCode,
+            String title,
+            Long departmentId,
+            String departmentName,
+            String departmentCode,
+            Long jobTitleId,
+            String jobTitleName,
+            Integer quantity,
+            String recruitmentType,
+            Long salaryMin,
+            Long salaryMax,
+            String currency,
+            String salaryExplanation,
+            LocalDate neededDate,
+            LocalDate targetDate,
+            String jobDescription,
+            String candidateRequirements,
+            String benefits,
+            String workLocation,
+            String workingModel,
+            String status,
+            String reason,
+            String rejectionReason,
+            Long createdByUserId,
+            String createdByName,
+            Instant submittedAt,
+            Long approvedByUserId,
+            Instant approvedAt,
+            Instant createdAt,
+            Instant updatedAt,
+            Long workLocationId,
+            Long employmentTypeId
+    ) {
+        this(id, requisitionCode, title, departmentId, departmentName, departmentCode, jobTitleId,
+                jobTitleName, quantity, recruitmentType, salaryMin, salaryMax, currency, salaryExplanation,
+                neededDate, targetDate, jobDescription, candidateRequirements, benefits, workLocation,
+                workingModel, status, reason, rejectionReason, createdByUserId, createdByName, submittedAt,
+                approvedByUserId, approvedAt, createdAt, updatedAt, null, null, null, false, null,
+                workLocationId, employmentTypeId);
     }
 
     public RequisitionResponse(
@@ -115,10 +206,50 @@ public record RequisitionResponse(
             Instant updatedAt
     ) {
         this(id, requisitionCode, title, departmentId, departmentName, departmentCode, jobTitleId,
+                jobTitleName, jobTitleCode, jobTitleMinSalary, jobTitleMaxSalary, quantity,
+                recruitmentType, reason, salaryMin, salaryMax, salaryExplanation, targetDate,
+                neededDate, outsideSalaryRange, jobDescription, candidateRequirements, status,
+                createdByUserId, createdByName, createdByEmail, createdAt, updatedAt, null, null);
+    }
+
+    public RequisitionResponse(
+            Long id,
+            String requisitionCode,
+            String title,
+            Long departmentId,
+            String departmentName,
+            String departmentCode,
+            Long jobTitleId,
+            String jobTitleName,
+            String jobTitleCode,
+            Long jobTitleMinSalary,
+            Long jobTitleMaxSalary,
+            Integer quantity,
+            String recruitmentType,
+            String reason,
+            Long salaryMin,
+            Long salaryMax,
+            String salaryExplanation,
+            LocalDate targetDate,
+            LocalDate neededDate,
+            boolean outsideSalaryRange,
+            String jobDescription,
+            String candidateRequirements,
+            String status,
+            Long createdByUserId,
+            String createdByName,
+            String createdByEmail,
+            Instant createdAt,
+            Instant updatedAt,
+            Long workLocationId,
+            Long employmentTypeId
+    ) {
+        this(id, requisitionCode, title, departmentId, departmentName, departmentCode, jobTitleId,
                 jobTitleName, quantity, recruitmentType, salaryMin, salaryMax, "VND", salaryExplanation,
                 neededDate, targetDate, jobDescription, candidateRequirements, null, null, null, status,
                 reason, null, createdByUserId, createdByName, null, null, null, createdAt, updatedAt,
-                jobTitleCode, jobTitleMinSalary, jobTitleMaxSalary, outsideSalaryRange, createdByEmail);
+                jobTitleCode, jobTitleMinSalary, jobTitleMaxSalary, outsideSalaryRange, createdByEmail,
+                workLocationId, employmentTypeId);
     }
 
     // Overload for backward compatibility with 19-parameter constructor

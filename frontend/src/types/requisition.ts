@@ -17,6 +17,10 @@ export interface Requisition {
   requirements?: string;
   createdByUserId?: number;
   createdByName?: string;
+  workLocationId?: number;
+  employmentTypeId?: number;
+  workLocation?: string;
+  workingModel?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -33,6 +37,10 @@ export interface RequisitionPayload {
   targetDate?: string;
   jobDescription?: string;
   requirements?: string;
+  workLocationId?: number;
+  employmentTypeId?: number;
+  workLocation?: string;
+  workingModel?: string;
   isDraft?: boolean;
 }
 

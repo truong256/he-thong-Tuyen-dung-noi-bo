@@ -37,6 +37,7 @@ import DepartmentModal from '../components/organization/DepartmentModal';
 import LocationModal from '../components/organization/LocationModal';
 import CompanyProfileEditor from '../components/organization/CompanyProfileEditor';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common/Pagination';
 import '../styles/organization.css';
 
 type ActiveTab = 'overview' | 'departments' | 'locations' | 'branding';
@@ -68,10 +69,12 @@ export const OrganizationManagementPage: React.FC = () => {
   const [isLocModalOpen, setIsLocModalOpen] = useState(false);
   const [selectedLoc, setSelectedLoc] = useState<BranchLocation | null>(null);
 
-  // Department Filters (for table view)
+  // Department Filters & Pagination (for table view)
   const [deptSearch, setDeptSearch] = useState('');
   const [deptStatusFilter, setDeptStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
   const [deptParentFilter, setDeptParentFilter] = useState<string>('ALL');
+  const [deptPage, setDeptPage] = useState(0);
+  const [deptPageSize, setDeptPageSize] = useState(10);
 
   // Toast notification
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -206,6 +209,11 @@ export const OrganizationManagementPage: React.FC = () => {
       return matchesSearch && matchesStatus && matchesParent;
     });
   }, [departments, deptSearch, deptStatusFilter, deptParentFilter]);
+
+  const paginatedDepartments = useMemo(() => {
+    const start = deptPage * deptPageSize;
+    return filteredDepartments.slice(start, start + deptPageSize);
+  }, [filteredDepartments, deptPage, deptPageSize]);
 
   // Export departments CSV
   const handleExportDeptCsv = () => {
@@ -815,7 +823,7 @@ export const OrganizationManagementPage: React.FC = () => {
                             </td>
                           </tr>
                         ) : (
-                          filteredDepartments.map((dept) => (
+                          paginatedDepartments.map((dept) => (
                             <tr key={dept.id} className={!dept.active ? 'row-locked' : ''}>
                               <td>
                                 <span className="node-code-badge">{dept.code}</span>
@@ -932,6 +940,21 @@ export const OrganizationManagementPage: React.FC = () => {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Standardized Enterprise Pagination */}
+                  <Pagination
+                    currentPage={deptPage + 1}
+                    totalPages={Math.ceil(filteredDepartments.length / deptPageSize) || 1}
+                    totalItems={filteredDepartments.length}
+                    pageSize={deptPageSize}
+                    pageSizeOptions={[10, 20, 50]}
+                    itemLabel="phòng ban"
+                    onPageChange={(p) => setDeptPage(Math.max(0, p - 1))}
+                    onPageSizeChange={(newSize) => {
+                      setDeptPageSize(newSize);
+                      setDeptPage(0);
+                    }}
+                  />
                 </div>
               )}
             </div>

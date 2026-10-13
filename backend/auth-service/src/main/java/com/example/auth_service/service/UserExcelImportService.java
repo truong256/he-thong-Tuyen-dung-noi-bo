@@ -5,8 +5,10 @@ import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
+import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.util.PhoneNumberUtils;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
@@ -202,7 +204,14 @@ public class UserExcelImportService {
         user.setFullName(data.getFullName() != null ? data.getFullName().trim() : "");
         user.setDepartment(data.getDepartment() != null && !data.getDepartment().trim().isBlank() ? data.getDepartment().trim() : null);
         if (data.getPhone() != null && !data.getPhone().trim().isBlank()) {
-            user.setPhone(data.getPhone().trim().replaceAll("\\s+", ""));
+            String normalizedPhone = PhoneNumberUtils.normalize(data.getPhone());
+            if (!PhoneNumberUtils.isValidVietnamesePhone(normalizedPhone)) {
+                throw new BadRequestException("Số điện thoại không đúng định dạng: " + data.getPhone());
+            }
+            if (userRepository.existsByPhone(normalizedPhone)) {
+                throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+            }
+            user.setPhone(normalizedPhone);
         }
         user.setStatus("ACTIVE");
         user.setMustChangePassword(true);
@@ -210,7 +219,12 @@ public class UserExcelImportService {
         Set<Role> roles = resolveRoles(data.getRole());
         user.setRoles(roles);
 
-        User savedUser = userRepository.save(user);
+        User savedUser;
+        try {
+            savedUser = userRepository.save(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+        }
 
         // Gửi email kích hoạt tài khoản
         String emailStatus = "ACCOUNT_CREATED_EMAIL_SENT";
@@ -366,6 +380,17 @@ public class UserExcelImportService {
             }
         }
 
+        // Build frequency map to detect duplicate phone numbers within the same uploaded Excel (chuẩn hóa trước khi so khớp)
+        Map<String, Integer> phoneCountsInFile = new HashMap<>();
+        for (ExcelImportRowData row : rows) {
+            if (row.getPhone() != null && !row.getPhone().trim().isBlank()) {
+                String normalized = PhoneNumberUtils.normalize(row.getPhone());
+                if (normalized != null && !normalized.isBlank()) {
+                    phoneCountsInFile.put(normalized, phoneCountsInFile.getOrDefault(normalized, 0) + 1);
+                }
+            }
+        }
+
         List<ExcelImportRowPreview> previews = new ArrayList<>();
 
         for (ExcelImportRowData row : rows) {
@@ -399,11 +424,17 @@ public class UserExcelImportService {
                 }
             }
 
-            // 3. Phone validation (nếu có thì 9-15 chữ số, cho phép '+' đầu số)
+            // 3. Phone validation
             if (!phone.isBlank()) {
-                String cleanPhone = phone.replaceAll("\\s+", "");
-                if (!cleanPhone.matches("^\\+?[0-9]{9,15}$")) {
-                    errors.add("Số điện thoại không đúng định dạng (cho phép dấu + đầu số và từ 9-15 chữ số).");
+                String normalizedPhone = PhoneNumberUtils.normalize(phone);
+                if (!PhoneNumberUtils.isValidVietnamesePhone(normalizedPhone)) {
+                    errors.add("Số điện thoại không đúng định dạng (yêu cầu số điện thoại di động Việt Nam hợp lệ: 10 chữ số).");
+                } else {
+                    if (phoneCountsInFile.getOrDefault(normalizedPhone, 0) > 1) {
+                        errors.add("Số điện thoại bị trùng lặp trong tệp Excel.");
+                    } else if (userRepository.existsByPhone(normalizedPhone)) {
+                        errors.add("Số điện thoại này đã được sử dụng bởi tài khoản khác trong hệ thống.");
+                    }
                 }
             }
 

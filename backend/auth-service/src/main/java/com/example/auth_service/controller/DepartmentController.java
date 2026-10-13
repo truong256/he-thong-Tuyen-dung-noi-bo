@@ -14,8 +14,25 @@ public class DepartmentController {
     private final DepartmentService service;
     public DepartmentController(DepartmentService service) { this.service = service; }
 
+    private static final java.util.Set<String> ALLOWED_DEPARTMENT_SORT_FIELDS = java.util.Set.of("name", "code", "createdAt", "id");
+
     @GetMapping
-    public List<DepartmentResponse> list(@RequestParam(required = false) Boolean active) { return service.list(active); }
+    public ResponseEntity<?> list(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
+    ) {
+        if (page != null) {
+            org.springframework.data.domain.Pageable pageable = com.example.auth_service.util.PaginationUtils.createPageable(
+                    page, size != null ? size : 10, sortBy, sortOrder, "name", org.springframework.data.domain.Sort.Direction.ASC, ALLOWED_DEPARTMENT_SORT_FIELDS
+            );
+            return ResponseEntity.ok(service.listPaged(search, active, pageable));
+        }
+        return ResponseEntity.ok(service.list(active));
+    }
     @GetMapping("/tree")
     public List<DepartmentTreeNode> tree() { return service.tree(); }
     @GetMapping("/{id}")

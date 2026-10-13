@@ -7,9 +7,11 @@ import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
+import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.*;
 import com.example.auth_service.security.UserPrincipal;
+import com.example.auth_service.util.PhoneNumberUtils;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -131,11 +133,24 @@ public class AdminUserService {
             throw new BadRequestException("Email này đã tồn tại trong hệ thống.");
         }
 
+        // Validation và chuẩn hóa số điện thoại
+        if (request.getPhone() == null || request.getPhone().isBlank()) {
+            throw new BadRequestException("Số điện thoại không được để trống.");
+        }
+        String normalizedPhone = PhoneNumberUtils.normalize(request.getPhone());
+        if (!PhoneNumberUtils.isValidVietnamesePhone(normalizedPhone)) {
+            throw new BadRequestException("Số điện thoại không đúng định dạng.");
+        }
+        if (userRepository.existsByPhone(normalizedPhone)) {
+            throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+        }
+
         // S1-08 Hardening: Client cannot supply or override password. Server strictly generates a 12-char temporary password.
         String rawPassword = generateTemporaryPassword();
 
         User user = new User(email, passwordEncoder.encode(rawPassword));
         user.setFullName(request.getFullName() != null ? request.getFullName().trim() : "");
+        user.setPhone(normalizedPhone);
         if (request.getRecoveryEmail() != null && !request.getRecoveryEmail().isBlank()) {
             user.setRecoveryEmail(request.getRecoveryEmail().trim().toLowerCase());
         }
@@ -146,7 +161,12 @@ public class AdminUserService {
         Set<Role> roles = resolveRoles(request.getRoles());
         user.setRoles(roles);
 
-        User saved = userRepository.save(user);
+        User saved;
+        try {
+            saved = userRepository.save(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+        }
 
         // Dispatch activation email with temporary credentials
         try {
@@ -181,6 +201,17 @@ public class AdminUserService {
             user.setFullName(request.getFullName().trim());
         }
 
+        if (request.getPhone() != null && !request.getPhone().isBlank()) {
+            String normalizedPhone = PhoneNumberUtils.normalize(request.getPhone());
+            if (!PhoneNumberUtils.isValidVietnamesePhone(normalizedPhone)) {
+                throw new BadRequestException("Số điện thoại không đúng định dạng.");
+            }
+            if (userRepository.existsByPhoneAndIdNot(normalizedPhone, id)) {
+                throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+            }
+            user.setPhone(normalizedPhone);
+        }
+
         if (request.getRecoveryEmail() != null) {
             String rec = request.getRecoveryEmail().trim();
             user.setRecoveryEmail(rec.isEmpty() ? null : rec.toLowerCase());
@@ -191,7 +222,12 @@ public class AdminUserService {
         }
 
         user.setUpdatedAt(Instant.now());
-        User updated = userRepository.save(user);
+        User updated;
+        try {
+            updated = userRepository.save(user);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ConflictException("Số điện thoại này đã được sử dụng bởi tài khoản khác.", "phone");
+        }
         return mapToSummary(updated);
     }
 

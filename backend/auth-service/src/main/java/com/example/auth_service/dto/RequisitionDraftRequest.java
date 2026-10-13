@@ -42,6 +42,33 @@ public class RequisitionDraftRequest {
     private String benefits;
     private String workLocation;
     private String workingModel;
+    private Long workLocationId;
+    private Long employmentTypeId;
+
+    public RequisitionDraftRequest(String title, Long departmentId, Long jobTitleId, Integer quantity,
+                                 String recruitmentType, String reason, Long salaryMin, Long salaryMax,
+                                 String currency, String salaryExplanation, LocalDate neededDate,
+                                 String jobDescription, String candidateRequirements, String benefits,
+                                 String workLocation, String workingModel) {
+        this.title = title;
+        this.departmentId = departmentId;
+        this.jobTitleId = jobTitleId;
+        this.quantity = quantity;
+        this.recruitmentType = recruitmentType;
+        this.reason = reason;
+        this.salaryMin = salaryMin;
+        this.salaryMax = salaryMax;
+        this.currency = currency;
+        this.salaryExplanation = salaryExplanation;
+        this.neededDate = neededDate;
+        this.jobDescription = jobDescription;
+        this.candidateRequirements = candidateRequirements;
+        this.benefits = benefits;
+        this.workLocation = workLocation;
+        this.workingModel = workingModel;
+        this.workLocationId = null;
+        this.employmentTypeId = null;
+    }
 
     public void setTargetDate(LocalDate targetDate) {
         if (this.neededDate == null) {
@@ -84,4 +111,6 @@ public class RequisitionDraftRequest {
     public String benefits() { return benefits; }
     public String workLocation() { return workLocation; }
     public String workingModel() { return workingModel; }
+    public Long workLocationId() { return workLocationId; }
+    public Long employmentTypeId() { return employmentTypeId; }
 }

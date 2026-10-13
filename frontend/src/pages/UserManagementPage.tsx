@@ -4,8 +4,6 @@ import {
   Search,
   Lock,
   Unlock,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   CheckCircle2,
   ShieldCheck,
@@ -22,6 +20,7 @@ import LockAccountModal from '../components/admin/LockAccountModal';
 import RbacMatrixModal from '../components/admin/RbacMatrixModal';
 import { ATS_ROLES_INFO, getRoleLabel } from '../constants/rbac';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common/Pagination';
 
 export const UserManagementPage: React.FC = () => {
   const navigate = useNavigate();
@@ -60,6 +59,8 @@ export const UserManagementPage: React.FC = () => {
   const [newEmail, setNewEmail] = useState('');
   const [newRecoveryEmail, setNewRecoveryEmail] = useState('');
   const [newFullName, setNewFullName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newPhoneError, setNewPhoneError] = useState<string | null>(null);
   const [newDepartment, setNewDepartment] = useState('');
   const [newRoles, setNewRoles] = useState<string[]>(['RECRUITER']);
   const [newStatus, setNewStatus] = useState('ACTIVE');
@@ -69,6 +70,8 @@ export const UserManagementPage: React.FC = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editFullName, setEditFullName] = useState('');
   const [editEmail, setEditEmail] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editPhoneError, setEditPhoneError] = useState<string | null>(null);
   const [editRecoveryEmail, setEditRecoveryEmail] = useState('');
   const [editDepartment, setEditDepartment] = useState('');
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
@@ -153,8 +156,19 @@ export const UserManagementPage: React.FC = () => {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail.trim() || !newFullName.trim() || newRoles.length === 0) {
+    setNewPhoneError(null);
+    if (!newEmail.trim() || !newFullName.trim() || !newPhone.trim() || newRoles.length === 0) {
+      if (!newPhone.trim()) {
+        setNewPhoneError('Số điện thoại không được để trống.');
+      }
       showToast('Vui lòng điền đầy đủ các thông tin bắt buộc.', 'error');
+      return;
+    }
+
+    const cleanPhone = newPhone.trim().replace(/[\s\-().]+/g, '');
+    const phoneRegex = /^(\+?84|0)[35789]\d{8}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+      setNewPhoneError('Số điện thoại không đúng định dạng Việt Nam (10 chữ số).');
       return;
     }
 
@@ -164,6 +178,7 @@ export const UserManagementPage: React.FC = () => {
         email: newEmail.trim(),
         recoveryEmail: newRecoveryEmail.trim() || undefined,
         fullName: newFullName.trim(),
+        phone: cleanPhone,
         department: newDepartment.trim() || undefined,
         roles: newRoles,
         status: newStatus,
@@ -173,6 +188,8 @@ export const UserManagementPage: React.FC = () => {
       setNewEmail('');
       setNewRecoveryEmail('');
       setNewFullName('');
+      setNewPhone('');
+      setNewPhoneError(null);
       setNewDepartment('');
       setNewRoles(['RECRUITER']);
       setNewStatus('ACTIVE');
@@ -180,6 +197,10 @@ export const UserManagementPage: React.FC = () => {
     } catch (err: any) {
       const apiErrors = err.response?.data?.validationErrors;
       let msg = err.response?.data?.message;
+      if (err.response?.status === 409 || apiErrors?.phone || (msg && (msg.includes('Số điện thoại') || msg.includes('điện thoại')))) {
+        const pErr = apiErrors?.phone || msg || 'Số điện thoại này đã được sử dụng bởi tài khoản khác.';
+        setNewPhoneError(pErr);
+      }
       if (apiErrors && typeof apiErrors === 'object') {
         const firstErr = Object.values(apiErrors)[0];
         if (firstErr) msg = String(firstErr);
@@ -197,6 +218,8 @@ export const UserManagementPage: React.FC = () => {
     setSelectedUser(u);
     setEditFullName(u.fullName || '');
     setEditEmail(u.email || '');
+    setEditPhone(u.phone || '');
+    setEditPhoneError(null);
     setEditRecoveryEmail(u.recoveryEmail || '');
     setEditDepartment(u.department || '');
     setShowEditModal(true);
@@ -205,27 +228,48 @@ export const UserManagementPage: React.FC = () => {
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUser) return;
+    setEditPhoneError(null);
     if (!editFullName.trim() || !editEmail.trim()) {
       showToast('Vui lòng nhập họ tên và email công ty.', 'error');
       return;
     }
+
+    let cleanPhone: string | undefined = undefined;
+    if (editPhone.trim()) {
+      cleanPhone = editPhone.trim().replace(/[\s\-().]+/g, '');
+      const phoneRegex = /^(\+?84|0)[35789]\d{8}$/;
+      if (!phoneRegex.test(cleanPhone)) {
+        setEditPhoneError('Số điện thoại không đúng định dạng Việt Nam (10 chữ số).');
+        return;
+      }
+    }
+
     setIsSubmittingEdit(true);
     try {
       await adminApi.updateUser(selectedUser.id, {
         fullName: editFullName.trim(),
         email: editEmail.trim(),
+        phone: cleanPhone,
         recoveryEmail: editRecoveryEmail.trim() || undefined,
         department: editDepartment.trim() || undefined,
       });
       showToast(`Cập nhật thông tin tài khoản ${editEmail.trim()} thành công!`);
       setShowEditModal(false);
+      setEditPhoneError(null);
       fetchUsers();
     } catch (err: any) {
       const apiErrors = err.response?.data?.validationErrors;
       let msg = err.response?.data?.message;
+      if (err.response?.status === 409 || apiErrors?.phone || (msg && (msg.includes('Số điện thoại') || msg.includes('điện thoại')))) {
+        const pErr = apiErrors?.phone || msg || 'Số điện thoại này đã được sử dụng bởi tài khoản khác.';
+        setEditPhoneError(pErr);
+      }
       if (apiErrors && typeof apiErrors === 'object') {
         const firstErr = Object.values(apiErrors)[0];
         if (firstErr) msg = String(firstErr);
+      }
+      if (!err.response) {
+        msg = 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.';
       }
       showToast(msg || 'Cập nhật tài khoản thất bại.', 'error');
     } finally {
@@ -238,10 +282,10 @@ export const UserManagementPage: React.FC = () => {
       showToast('Không có dữ liệu để xuất file CSV.', 'error');
       return;
     }
-    const headers = ['ID,Họ và tên,Email,Phòng ban,Vai trò,Trạng thái\n'];
+    const headers = ['ID,Họ và tên,Email,Số điện thoại,Phòng ban,Vai trò,Trạng thái\n'];
     const rows = displayedUsers.map((u) => {
       const rolesStr = (u.roles || [u.role]).join('; ');
-      return `"${u.id}","${u.fullName || ''}","${u.email}","${u.department || ''}","${rolesStr}","${u.status}"\n`;
+      return `"${u.id}","${u.fullName || ''}","${u.email}","${u.phone || ''}","${u.department || ''}","${rolesStr}","${u.status}"\n`;
     });
     const blob = new Blob(['\uFEFF' + headers.concat(rows).join('')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -423,18 +467,19 @@ export const UserManagementPage: React.FC = () => {
         <table className="custom-table" aria-label="Bảng danh sách người dùng">
           <thead>
             <tr>
-              <th scope="col" style={{ width: '22%' }}>Họ và tên</th>
-              <th scope="col" style={{ width: '22%' }}>Email</th>
-              <th scope="col" style={{ width: '15%' }}>Phòng ban</th>
-              <th scope="col" style={{ width: '20%' }}>Vai trò (RBAC)</th>
-              <th scope="col" style={{ width: '11%' }}>Trạng thái</th>
-              <th scope="col" style={{ width: '10%', textAlign: 'right' }}>Thao tác</th>
+              <th scope="col" style={{ width: '20%' }}>Họ và tên</th>
+              <th scope="col" style={{ width: '18%' }}>Email</th>
+              <th scope="col" style={{ width: '13%' }}>Số điện thoại</th>
+              <th scope="col" style={{ width: '14%' }}>Phòng ban</th>
+              <th scope="col" style={{ width: '16%' }}>Vai trò (RBAC)</th>
+              <th scope="col" style={{ width: '10%' }}>Trạng thái</th>
+              <th scope="col" style={{ width: '9%', textAlign: 'right' }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               <tr>
-                <td colSpan={6} className="table-loading-cell">
+                <td colSpan={7} className="table-loading-cell">
                   <div className="loading-state-wrapper">
                     <span className="auth-spinner" style={{ width: 22, height: 22 }} />
                     <span>Đang tải danh sách người dùng...</span>
@@ -443,7 +488,7 @@ export const UserManagementPage: React.FC = () => {
               </tr>
             ) : displayedUsers.length === 0 ? (
               <tr>
-                <td colSpan={6} className="table-empty-cell">
+                <td colSpan={7} className="table-empty-cell">
                   <div className="empty-state-wrapper">
                     <div className="empty-state-icon">
                       <Search size={32} />
@@ -494,6 +539,11 @@ export const UserManagementPage: React.FC = () => {
                           ✉ {u.recoveryEmail}
                         </span>
                       )}
+                    </td>
+                    <td>
+                      <span className="user-phone-text" style={{ fontSize: '13px', color: '#334155' }}>
+                        {u.phone || '—'}
+                      </span>
                     </td>
                     <td>
                       <span className="user-department-text">{u.department || '—'}</span>
@@ -723,55 +773,20 @@ export const UserManagementPage: React.FC = () => {
         )}
       </div>
 
-      {/* Pagination Controls UI (S1-08: Default 20) */}
-      <div className="pagination-bar">
-        <div className="pagination-info">
-          <span>
-            Hiển thị <strong>{displayedUsers.length}</strong> / <strong>{totalElements}</strong> tài khoản
-          </span>
-          <div className="page-size-selector">
-            <label htmlFor="page-size-select">Số lượng:</label>
-            <select
-              id="page-size-select"
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(0);
-              }}
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="pagination-actions pagination-nav">
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-            disabled={currentPage === 0 || isLoading}
-            aria-label="Trang trước"
-          >
-            <ChevronLeft size={16} />
-            <span>Trang trước</span>
-          </button>
-          <span className="pagination-page-indicator pagination-current-page">
-            Trang <strong>{currentPage + 1}</strong> / <strong>{totalPages || 1}</strong>
-          </span>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
-            disabled={currentPage >= totalPages - 1 || isLoading}
-            aria-label="Trang sau"
-          >
-            <span>Trang sau</span>
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+      {/* Standardized Enterprise Pagination */}
+      <Pagination
+        currentPage={currentPage + 1}
+        totalPages={totalPages}
+        totalItems={totalElements}
+        pageSize={pageSize}
+        pageSizeOptions={[10, 20, 50]}
+        itemLabel="tài khoản"
+        onPageChange={(p) => setCurrentPage(Math.max(0, p - 1))}
+        onPageSizeChange={(newSize) => {
+          setPageSize(newSize);
+          setCurrentPage(0);
+        }}
+      />
 
       {/* Modal Thêm người dùng mới (S1-08: Activation & Temp Password by System) */}
       {showAddModal && (
@@ -821,6 +836,29 @@ export const UserManagementPage: React.FC = () => {
                   placeholder="nhanvien@company.com"
                   disabled={isSubmittingAdd}
                 />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="newPhone">
+                  Số điện thoại <span className="text-danger">*</span>
+                </label>
+                <input
+                  id="newPhone"
+                  type="tel"
+                  required
+                  value={newPhone}
+                  onChange={(e) => {
+                    setNewPhone(e.target.value);
+                    if (newPhoneError) setNewPhoneError(null);
+                  }}
+                  placeholder="Ví dụ: 0912345678"
+                  disabled={isSubmittingAdd}
+                />
+                {newPhoneError && (
+                  <span className="field-error-text text-danger" style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', display: 'block' }}>
+                    {newPhoneError}
+                  </span>
+                )}
               </div>
 
               <div className="form-group">
@@ -979,6 +1017,28 @@ export const UserManagementPage: React.FC = () => {
                   placeholder="nhanvien@company.com"
                   disabled={isSubmittingEdit}
                 />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="editPhone">
+                  Số điện thoại
+                </label>
+                <input
+                  id="editPhone"
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => {
+                    setEditPhone(e.target.value);
+                    if (editPhoneError) setEditPhoneError(null);
+                  }}
+                  placeholder="Ví dụ: 0912345678"
+                  disabled={isSubmittingEdit}
+                />
+                {editPhoneError && (
+                  <span className="field-error-text text-danger" style={{ fontSize: '12px', color: '#dc2626', marginTop: '4px', display: 'block' }}>
+                    {editPhoneError}
+                  </span>
+                )}
               </div>
 
               <div className="form-group">

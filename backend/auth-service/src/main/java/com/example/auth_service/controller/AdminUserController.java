@@ -32,6 +32,8 @@ public class AdminUserController {
         this.adminUserService = adminUserService;
     }
 
+    private static final java.util.Set<String> ALLOWED_USER_SORT_FIELDS = java.util.Set.of("createdAt", "email", "fullName", "status", "id");
+
     /** S1-08 / Backlog "Người dùng & nhật ký": HR_MANAGER có R, ADMIN có F */
     @GetMapping
     @PreAuthorize("hasAuthority('USER_READ')")
@@ -40,9 +42,13 @@ public class AdminUserController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String role,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder
     ) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = com.example.auth_service.util.PaginationUtils.createPageable(
+                page, size, sortBy, sortOrder, "createdAt", Sort.Direction.DESC, ALLOWED_USER_SORT_FIELDS
+        );
         Page<UserSummaryDto> users = adminUserService.listUsers(search, status, role, pageable);
         return ResponseEntity.ok(users);
     }

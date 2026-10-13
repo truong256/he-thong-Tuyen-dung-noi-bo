@@ -20,6 +20,7 @@ import CompetencyFrameworkModal from '../components/competencyFramework/Competen
 import CompetencyFrameworkDetailModal from '../components/competencyFramework/CompetencyFrameworkDetailModal';
 import DeleteCompetencyFrameworkModal from '../components/competencyFramework/DeleteCompetencyFrameworkModal';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common/Pagination';
 import '../styles/competency-framework.css';
 
 export const CompetencyFrameworkPage: React.FC = () => {
@@ -30,6 +31,10 @@ export const CompetencyFrameworkPage: React.FC = () => {
   const [frameworks, setFrameworks] = useState<CompetencyFramework[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -97,6 +102,18 @@ export const CompetencyFrameworkPage: React.FC = () => {
       return matchSearch && matchCategory;
     });
   }, [frameworks, searchTerm, selectedCategory]);
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchTerm, selectedCategory]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredFrameworks.length / pageSize));
+
+  const pagedFrameworks = useMemo(() => {
+    const start = currentPage * pageSize;
+    return filteredFrameworks.slice(start, start + pageSize);
+  }, [filteredFrameworks, currentPage, pageSize]);
 
   // Handlers
   const handleSaveFramework = async (payload: CreateCompetencyFrameworkPayload | UpdateCompetencyFrameworkPayload) => {
@@ -278,7 +295,7 @@ export const CompetencyFrameworkPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredFrameworks.map((f) => (
+                {pagedFrameworks.map((f) => (
                   <tr key={f.id}>
                     <td>
                       <div
@@ -374,6 +391,24 @@ export const CompetencyFrameworkPage: React.FC = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {filteredFrameworks.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <Pagination
+              currentPage={currentPage + 1}
+              totalPages={totalPages}
+              totalItems={filteredFrameworks.length}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              onPageChange={(p) => setCurrentPage(p - 1)}
+              onPageSizeChange={(sz) => {
+                setPageSize(sz);
+                setCurrentPage(0);
+              }}
+              itemLabel="khung năng lực"
+            />
           </div>
         )}
       </div>

@@ -52,8 +52,37 @@ public record RequisitionRequest(
 
         String status,
 
-        Boolean isDraft
+        Boolean isDraft,
+
+        Long workLocationId,
+
+        Long employmentTypeId
 ) {
+    public RequisitionRequest(
+            String requisitionCode,
+            String title,
+            Long jobTitleId,
+            String jobTitle,
+            Long departmentId,
+            String department,
+            Integer quantity,
+            String recruitmentType,
+            String reason,
+            Long salaryMin,
+            Long salaryMax,
+            String salaryExplanation,
+            LocalDate targetDate,
+            LocalDate neededDate,
+            String jobDescription,
+            String candidateRequirements,
+            String status,
+            Boolean isDraft
+    ) {
+        this(requisitionCode, title, jobTitleId, jobTitle, departmentId, department, quantity,
+                recruitmentType, reason, salaryMin, salaryMax, salaryExplanation, targetDate,
+                neededDate, jobDescription, candidateRequirements, status, isDraft, null, null);
+    }
+
     public LocalDate effectiveTargetDate() {
         return targetDate != null ? targetDate : neededDate;
     }

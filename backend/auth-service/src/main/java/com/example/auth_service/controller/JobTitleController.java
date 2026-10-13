@@ -22,8 +22,12 @@ public class JobTitleController {
         this.service = service;
     }
 
+    private static final java.util.Set<String> ALLOWED_JOB_TITLE_SORT_FIELDS = java.util.Set.of(
+            "title", "code", "level", "currentHeadcount", "createdAt", "id"
+    );
+
     @GetMapping
-    public List<JobTitleResponse> list(
+    public ResponseEntity<?> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) Long departmentId,
@@ -31,9 +35,18 @@ public class JobTitleController {
             @RequestParam(required = false) String jobFamily,
             @RequestParam(required = false) String sortBy,
             @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
             Authentication authentication
     ) {
-        return service.list(search, active, departmentId, level, jobFamily, sortBy, sortOrder, canViewSalary(authentication));
+        boolean includeSalary = canViewSalary(authentication);
+        if (page != null) {
+            org.springframework.data.domain.Pageable pageable = com.example.auth_service.util.PaginationUtils.createPageable(
+                    page, size != null ? size : 10, sortBy, sortOrder, "createdAt", org.springframework.data.domain.Sort.Direction.DESC, ALLOWED_JOB_TITLE_SORT_FIELDS
+            );
+            return ResponseEntity.ok(service.listPaged(search, active, departmentId, level, jobFamily, pageable, includeSalary));
+        }
+        return ResponseEntity.ok(service.list(search, active, departmentId, level, jobFamily, sortBy, sortOrder, includeSalary));
     }
 
     @GetMapping("/{id}")

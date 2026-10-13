@@ -21,6 +21,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
     boolean existsByDepartmentIgnoreCase(String department);
 
+    Optional<User> findByPhone(String phone);
+    boolean existsByPhone(String phone);
+    boolean existsByPhoneAndIdNot(String phone, Long id);
+
     @Query("""
         SELECT COUNT(u) FROM User u 
         WHERE u.department IS NOT NULL 

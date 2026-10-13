@@ -23,6 +23,8 @@ export interface RequisitionDraftRequest {
   benefits?: string;
   workLocation?: string;
   workingModel?: string;
+  workLocationId?: number;
+  employmentTypeId?: number;
 }
 
 export interface CreateRequisitionRequest {
@@ -42,6 +44,8 @@ export interface CreateRequisitionRequest {
   benefits?: string;
   workLocation?: string;
   workingModel?: string;
+  workLocationId?: number;
+  employmentTypeId?: number;
 }
 
 export interface RequisitionResponse {
@@ -66,6 +70,8 @@ export interface RequisitionResponse {
   benefits?: string;
   workLocation?: string;
   workingModel?: string;
+  workLocationId?: number;
+  employmentTypeId?: number;
   status: string;
   reason?: string;
   rejectionReason?: string;
@@ -97,6 +103,8 @@ function mapToBackendPayload(payload: any) {
     candidateRequirements: reqs,
     recruitmentType: rType,
     reason: rReason,
+    workLocationId: payload.workLocationId ? Number(payload.workLocationId) : undefined,
+    employmentTypeId: payload.employmentTypeId ? Number(payload.employmentTypeId) : undefined,
   };
 }
 
@@ -107,6 +115,8 @@ function mapFromBackendResponse(item: any): Requisition {
     proposedMaxSalary: item.salaryMax !== undefined ? item.salaryMax : item.proposedMaxSalary,
     targetDate: item.neededDate || item.targetDate,
     requirements: item.candidateRequirements || item.requirements,
+    workLocationId: item.workLocationId,
+    employmentTypeId: item.employmentTypeId,
   };
 }
 

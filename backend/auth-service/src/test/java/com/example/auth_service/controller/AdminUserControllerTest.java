@@ -70,10 +70,11 @@ class AdminUserControllerTest {
         CreateUserRequest request = new CreateUserRequest();
         request.setEmail("new_hr@company.com");
         request.setFullName("Nguyễn Thị HR");
+        request.setPhone("0912345678");
         request.setRoles(Set.of("HR_MANAGER"));
         request.setStatus("ACTIVE");
         // Note: password is NOT set - server generates it server-side (S1-08 hardening)
-        UserSummaryDto response = new UserSummaryDto(3L, "new_hr@company.com", "Nguyễn Thị HR", null, null, Set.of("HR_MANAGER"), "ACTIVE");
+        UserSummaryDto response = new UserSummaryDto(3L, "new_hr@company.com", "Nguyễn Thị HR", "0912345678", null, Set.of("HR_MANAGER"), "ACTIVE");
 
         when(adminUserService.createUser(any(CreateUserRequest.class))).thenReturn(response);
 

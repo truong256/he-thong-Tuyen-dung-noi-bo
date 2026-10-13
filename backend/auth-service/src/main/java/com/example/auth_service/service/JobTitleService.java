@@ -13,6 +13,8 @@ import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -123,6 +125,38 @@ public class JobTitleService {
     @PreAuthorize("hasAuthority('CATALOG_READ')")
     public List<JobTitleResponse> list(String search, Boolean active, Long departmentId, boolean includeSalary) {
         return list(search, active, departmentId, null, null, null, null, includeSalary);
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasAuthority('CATALOG_READ')")
+    public Page<JobTitleResponse> listPaged(
+            String search,
+            Boolean active,
+            Long departmentId,
+            String level,
+            String jobFamily,
+            Pageable pageable,
+            boolean includeSalary
+    ) {
+        String cleanSearch = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
+        String cleanLevel = (level != null && !level.trim().isEmpty() && !"ALL".equalsIgnoreCase(level.trim())) ? level.trim() : null;
+        String cleanJobFamily = (jobFamily != null && !jobFamily.trim().isEmpty() && !"ALL".equalsIgnoreCase(jobFamily.trim())) ? jobFamily.trim() : null;
+
+        Page<JobTitle> page = repository.searchJobTitles(cleanSearch, active, departmentId, cleanLevel, cleanJobFamily, pageable);
+
+        Map<Long, Integer> openReqMap = new HashMap<>();
+        if (requisitionRepository != null) {
+            List<Object[]> groupedReqs = requisitionRepository.countOpenRequisitionsGroupedByJobTitle();
+            if (groupedReqs != null) {
+                for (Object[] row : groupedReqs) {
+                    if (row != null && row.length >= 2 && row[0] != null && row[1] != null) {
+                        openReqMap.put(((Number) row[0]).longValue(), ((Number) row[1]).intValue());
+                    }
+                }
+            }
+        }
+
+        return page.map(jobTitle -> toResponse(jobTitle, includeSalary, openReqMap.getOrDefault(jobTitle.getId(), 0)));
     }
 
     private int getLevelOrder(JobTitleResponse r) {

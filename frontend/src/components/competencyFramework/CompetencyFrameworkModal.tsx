@@ -39,13 +39,21 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
 
   // Criteria state
   const [criteria, setCriteria] = useState<CompetencyCriterion[]>([
-    { criterionCode: 'CRIT_01', criterionName: '', description: '', weightPercent: 100 },
+    { criterionCode: 'CRIT_01', criterionName: '', description: '', weightPercent: 50 },
+    { criterionCode: 'CRIT_02', criterionName: '', description: '', weightPercent: 50 },
   ]);
 
   // Available job titles
   const [availableJobTitles, setAvailableJobTitles] = useState<JobTitle[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // User interaction & validation touched states
+  const [touchedName, setTouchedName] = useState(false);
+  const [touchedCriteria, setTouchedCriteria] = useState<
+    Record<number, { code?: boolean; name?: boolean; weight?: boolean }>
+  >({});
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // Load available job titles on mount or when opening modal
   useEffect(() => {
@@ -93,6 +101,9 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
         { criterionCode: 'CRIT_02', criterionName: '', description: '', weightPercent: 50 },
       ]);
     }
+    setTouchedName(false);
+    setTouchedCriteria({});
+    setHasAttemptedSubmit(false);
     setErrorMessage(null);
   }, [framework, isOpen]);
 
@@ -113,20 +124,70 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
       .map(([code]) => code);
   }, [criteria]);
 
+  // Missing criteria names
+  const missingCriteriaNames = useMemo(() => {
+    return criteria
+      .map((c, i) => (!c.criterionName.trim() ? (c.criterionCode.trim() || `Dòng ${i + 1}`) : null))
+      .filter((v): v is string => Boolean(v));
+  }, [criteria]);
+
+  // Missing criteria codes
+  const missingCriteriaCodes = useMemo(() => {
+    return criteria
+      .map((c, i) => (!c.criterionCode.trim() ? `Dòng ${i + 1}` : null))
+      .filter((v): v is string => Boolean(v));
+  }, [criteria]);
+
+  // Invalid criteria weights
+  const invalidWeightCriteria = useMemo(() => {
+    return criteria
+      .map((c, i) =>
+        Number(c.weightPercent) <= 0 || Number(c.weightPercent) > 100
+          ? (c.criterionCode.trim() || `Dòng ${i + 1}`)
+          : null
+      )
+      .filter((v): v is string => Boolean(v));
+  }, [criteria]);
+
   // Validation status
-  const isWeightValid = totalWeight === 100;
+  const isWeightValid = totalWeight === 100 && invalidWeightCriteria.length === 0;
   const isFormValid =
     competencyName.trim().length > 0 &&
     criteria.length > 0 &&
     isWeightValid &&
     duplicateCodes.length === 0 &&
-    criteria.every(
-      (c) =>
-        c.criterionCode.trim().length > 0 &&
-        c.criterionName.trim().length > 0 &&
-        c.weightPercent > 0 &&
-        c.weightPercent <= 100
-    );
+    missingCriteriaNames.length === 0 &&
+    missingCriteriaCodes.length === 0;
+
+  const getValidationErrors = (): string[] => {
+    const errors: string[] = [];
+    if (!competencyName.trim()) {
+      errors.push('Tên khung năng lực không được để trống.');
+    }
+    if (criteria.length === 0) {
+      errors.push('Khung năng lực phải có ít nhất một tiêu chí đánh giá.');
+    }
+    if (missingCriteriaCodes.length > 0) {
+      errors.push(`Mã tiêu chí không được để trống (${missingCriteriaCodes.join(', ')}).`);
+    }
+    if (duplicateCodes.length > 0) {
+      errors.push(`Phát hiện trùng lặp mã tiêu chí: ${duplicateCodes.join(', ')}. Mỗi tiêu chí phải có mã duy nhất.`);
+    }
+    if (missingCriteriaNames.length > 0) {
+      errors.push(`Tên tiêu chí không được để trống (${missingCriteriaNames.join(', ')}).`);
+    }
+    if (invalidWeightCriteria.length > 0) {
+      errors.push(`Trọng số của tiêu chí ${invalidWeightCriteria.join(', ')} phải lớn hơn 0% và không vượt quá 100%.`);
+    }
+    if (totalWeight !== 100) {
+      if (totalWeight < 100) {
+        errors.push(`Tổng trọng số hiện tại là ${totalWeight}%, còn thiếu ${100 - totalWeight}%. Tổng trọng số phải bằng chính xác 100%.`);
+      } else {
+        errors.push(`Tổng trọng số hiện tại là ${totalWeight}%, vượt quá ${totalWeight - 100}%. Tổng trọng số phải bằng chính xác 100%.`);
+      }
+    }
+    return errors;
+  };
 
   const handleAddCriterion = () => {
     const nextIdx = criteria.length + 1;
@@ -160,9 +221,17 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid || isSubmitting) return;
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setHasAttemptedSubmit(true);
+
+    const errors = getValidationErrors();
+    if (errors.length > 0) {
+      setErrorMessage(errors[0]);
+      return;
+    }
+
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
     setErrorMessage(null);
@@ -231,13 +300,27 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
               <input
                 id="cf-name"
                 type="text"
-                className="cf-form-input"
+                className={`cf-form-input ${
+                  (hasAttemptedSubmit || touchedName) && !competencyName.trim()
+                    ? 'cf-input-error'
+                    : ''
+                }`}
                 placeholder="Ví dụ: Năng lực Lập trình & Kiến trúc Backend"
                 value={competencyName}
-                onChange={(e) => setCompetencyName(e.target.value)}
+                onChange={(e) => {
+                  setCompetencyName(e.target.value);
+                  setTouchedName(true);
+                }}
+                onBlur={() => setTouchedName(true)}
                 required
                 maxLength={100}
               />
+              {(hasAttemptedSubmit || touchedName) && !competencyName.trim() && (
+                <div className="cf-field-error">
+                  <AlertCircle size={14} />
+                  <span>Vui lòng nhập tên khung năng lực.</span>
+                </div>
+              )}
             </div>
 
             <div className="cf-form-group">
@@ -272,11 +355,15 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
           {/* Real-time Weight Banner (SCRUM-77) */}
           <div
             className={`cf-weight-banner ${
-              totalWeight === 100 ? 'success' : totalWeight < 100 ? 'warning' : 'error'
+              totalWeight === 100 && invalidWeightCriteria.length === 0
+                ? 'success'
+                : totalWeight < 100
+                ? 'warning'
+                : 'error'
             }`}
           >
             <div className="cf-weight-banner-left">
-              {totalWeight === 100 ? (
+              {totalWeight === 100 && invalidWeightCriteria.length === 0 ? (
                 <CheckCircle2 size={24} />
               ) : (
                 <AlertTriangle size={24} />
@@ -286,7 +373,14 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
                   Tổng trọng số hiện tại: {totalWeight}%
                 </div>
                 <div className="cf-weight-banner-subtitle">
-                  {totalWeight === 100 && 'Tổng trọng số đạt chuẩn chính xác 100% — Sẵn sàng lưu.'}
+                  {totalWeight === 100 &&
+                    invalidWeightCriteria.length === 0 &&
+                    (isFormValid
+                      ? 'Tổng trọng số đạt chuẩn chính xác 100% — Sẵn sàng lưu.'
+                      : 'Tổng trọng số đạt chuẩn chính xác 100% (cần hoàn tất các thông tin còn thiếu bên dưới).')}
+                  {totalWeight === 100 &&
+                    invalidWeightCriteria.length > 0 &&
+                    'Cảnh báo: Có tiêu chí có trọng số không hợp lệ (mỗi tiêu chí phải từ 1% đến 100%).'}
                   {totalWeight < 100 &&
                     `Cảnh báo: Còn thiếu ${100 - totalWeight}% để đạt 100%. Vui lòng điều chỉnh.`}
                   {totalWeight > 100 &&
@@ -302,6 +396,48 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
               />
             </div>
           </div>
+
+          {/* Validation Notice: Thông báo khi người dùng còn điền thiếu hoặc sai trọng số */}
+          {!isFormValid && (
+            <div className="cf-validation-box" role="status">
+              <div className="cf-validation-box-header">
+                <AlertTriangle size={18} />
+                <span>Thông tin cần hoàn tất trước khi lưu khung năng lực:</span>
+              </div>
+              <ul className="cf-validation-list">
+                {!competencyName.trim() && (
+                  <li>Chưa nhập Tên khung năng lực (trường bắt buộc).</li>
+                )}
+                {missingCriteriaNames.length > 0 && (
+                  <li>
+                    Chưa nhập Tên tiêu chí cho: {missingCriteriaNames.join(', ')}.
+                  </li>
+                )}
+                {missingCriteriaCodes.length > 0 && (
+                  <li>
+                    Chưa nhập Mã tiêu chí cho: {missingCriteriaCodes.join(', ')}.
+                  </li>
+                )}
+                {duplicateCodes.length > 0 && (
+                  <li>
+                    Mã tiêu chí đang bị trùng lặp: {duplicateCodes.join(', ')} (mỗi tiêu chí trong khung phải có mã riêng biệt).
+                  </li>
+                )}
+                {totalWeight !== 100 && (
+                  <li>
+                    {totalWeight < 100
+                      ? `Tổng trọng số hiện tại mới đạt ${totalWeight}% (cần phân bổ thêm ${100 - totalWeight}% để đạt đúng 100%).`
+                      : `Tổng trọng số hiện tại là ${totalWeight}% (đang dư ${totalWeight - 100}% so với chuẩn 100%).`}
+                  </li>
+                )}
+                {invalidWeightCriteria.length > 0 && (
+                  <li>
+                    Trọng số của các tiêu chí {invalidWeightCriteria.join(', ')} chưa hợp lệ (mỗi tiêu chí phải từ 1% đến 100%).
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
 
           {/* Duplicate Code Error */}
           {duplicateCodes.length > 0 && (
@@ -341,28 +477,75 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
                     <td>
                       <input
                         type="text"
-                        className="cf-form-input cf-criteria-input-code"
+                        className={`cf-form-input cf-criteria-input-code ${
+                          (hasAttemptedSubmit || touchedCriteria[index]?.code) &&
+                          (!c.criterionCode.trim() || duplicateCodes.includes(c.criterionCode.trim().toUpperCase()))
+                            ? 'cf-input-error'
+                            : ''
+                        }`}
                         placeholder="BE_01"
                         value={c.criterionCode}
-                        onChange={(e) =>
-                          handleCriterionChange(index, 'criterionCode', e.target.value)
+                        onChange={(e) => {
+                          handleCriterionChange(index, 'criterionCode', e.target.value);
+                          setTouchedCriteria((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], code: true },
+                          }));
+                        }}
+                        onBlur={() =>
+                          setTouchedCriteria((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], code: true },
+                          }))
                         }
                         required
                         maxLength={50}
                       />
+                      {(hasAttemptedSubmit || touchedCriteria[index]?.code) &&
+                        !c.criterionCode.trim() && (
+                          <div className="cf-field-error" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            <span>* Thiếu mã</span>
+                          </div>
+                        )}
+                      {duplicateCodes.includes(c.criterionCode.trim().toUpperCase()) && (
+                        <div className="cf-field-error" style={{ fontSize: '11px', marginTop: '2px' }}>
+                          <span>* Trùng mã</span>
+                        </div>
+                      )}
                     </td>
                     <td>
                       <input
                         type="text"
-                        className="cf-form-input"
+                        className={`cf-form-input ${
+                          (hasAttemptedSubmit || touchedCriteria[index]?.name) &&
+                          !c.criterionName.trim()
+                            ? 'cf-input-error'
+                            : ''
+                        }`}
                         placeholder="Tên tiêu chí năng lực"
                         value={c.criterionName}
-                        onChange={(e) =>
-                          handleCriterionChange(index, 'criterionName', e.target.value)
+                        onChange={(e) => {
+                          handleCriterionChange(index, 'criterionName', e.target.value);
+                          setTouchedCriteria((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], name: true },
+                          }));
+                        }}
+                        onBlur={() =>
+                          setTouchedCriteria((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], name: true },
+                          }))
                         }
                         required
                         maxLength={150}
                       />
+                      {(hasAttemptedSubmit || touchedCriteria[index]?.name) &&
+                        !c.criterionName.trim() && (
+                          <div className="cf-field-error" style={{ fontSize: '11px', marginTop: '2px' }}>
+                            <span>* Chưa nhập tên tiêu chí</span>
+                          </div>
+                        )}
                     </td>
                     <td>
                       <input
@@ -378,20 +561,44 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
                     <td>
                       <input
                         type="number"
-                        className="cf-form-input cf-criteria-input-weight"
+                        className={`cf-form-input cf-criteria-input-weight ${
+                          (hasAttemptedSubmit || touchedCriteria[index]?.weight) &&
+                          (Number(c.weightPercent) <= 0 || Number(c.weightPercent) > 100)
+                            ? 'cf-input-error'
+                            : ''
+                        }`}
                         placeholder="%"
                         min={1}
                         max={100}
                         value={c.weightPercent || ''}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           handleCriterionChange(
                             index,
                             'weightPercent',
                             parseInt(e.target.value, 10) || 0
-                          )
+                          );
+                          setTouchedCriteria((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], weight: true },
+                          }));
+                        }}
+                        onBlur={() =>
+                          setTouchedCriteria((prev) => ({
+                            ...prev,
+                            [index]: { ...prev[index], weight: true },
+                          }))
                         }
                         required
                       />
+                      {(hasAttemptedSubmit || touchedCriteria[index]?.weight) &&
+                        (Number(c.weightPercent) <= 0 || Number(c.weightPercent) > 100) && (
+                          <div
+                            className="cf-field-error"
+                            style={{ fontSize: '11px', marginTop: '2px', textAlign: 'right' }}
+                          >
+                            <span>{Number(c.weightPercent) <= 0 ? '* > 0%' : '* ≤ 100%'}</span>
+                          </div>
+                        )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button
@@ -444,6 +651,26 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
 
         {/* Footer */}
         <div className="cf-modal-footer">
+          {!isFormValid && (
+            <div className="cf-footer-hint warning" title="Vui lòng hoàn tất các thông tin còn thiếu">
+              <AlertTriangle size={15} />
+              <span>
+                {!competencyName.trim()
+                  ? 'Còn thiếu tên khung năng lực'
+                  : missingCriteriaNames.length > 0
+                  ? 'Còn tiêu chí chưa có tên'
+                  : totalWeight !== 100
+                  ? `Tổng trọng số chưa đạt 100% (${totalWeight}%)`
+                  : 'Vui lòng hoàn tất thông tin còn thiếu'}
+              </span>
+            </div>
+          )}
+          {isFormValid && (
+            <div className="cf-footer-hint success">
+              <CheckCircle2 size={15} />
+              <span>Đã hoàn tất thông tin — Sẵn sàng lưu</span>
+            </div>
+          )}
           <button
             type="button"
             className="cf-btn-secondary"
@@ -452,14 +679,27 @@ export const CompetencyFrameworkModal: React.FC<CompetencyFrameworkModalProps> =
           >
             Hủy bỏ
           </button>
-          <button
-            type="button"
-            className="cf-btn-primary"
-            onClick={handleSubmit}
-            disabled={!isFormValid || isSubmitting}
+          <div
+            style={{ display: 'inline-block' }}
+            onClick={() => {
+              if (!isFormValid) {
+                setHasAttemptedSubmit(true);
+                const errors = getValidationErrors();
+                if (errors.length > 0) {
+                  setErrorMessage(errors[0]);
+                }
+              }
+            }}
           >
-            {isSubmitting ? 'Đang lưu...' : isEditing ? 'Cập nhật khung' : 'Tạo khung năng lực'}
-          </button>
+            <button
+              type="button"
+              className="cf-btn-primary"
+              onClick={handleSubmit}
+              disabled={!isFormValid || isSubmitting}
+            >
+              {isSubmitting ? 'Đang lưu...' : isEditing ? 'Cập nhật khung' : 'Tạo khung năng lực'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

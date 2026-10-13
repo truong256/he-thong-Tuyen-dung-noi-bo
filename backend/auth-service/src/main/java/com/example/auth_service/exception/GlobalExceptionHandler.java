@@ -153,15 +153,34 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiErrorResponse(
-                409, "CONFLICT", ex.getMessage(), request.getRequestURI()));
+        ApiErrorResponse response = new ApiErrorResponse(
+                409, "CONFLICT", ex.getMessage(), request.getRequestURI());
+        if (ex.getField() != null) {
+            response.setValidationErrors(Map.of(ex.getField(), ex.getMessage()));
+        } else if (ex.getMessage() != null && (ex.getMessage().contains("Số điện thoại") || ex.getMessage().contains("số điện thoại"))) {
+            response.setValidationErrors(Map.of("phone", ex.getMessage()));
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler({org.springframework.dao.DataIntegrityViolationException.class,
             org.springframework.dao.PessimisticLockingFailureException.class})
     public ResponseEntity<ApiErrorResponse> handleDataConflict(RuntimeException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiErrorResponse(409, "CONFLICT",
-                "Dữ liệu bị trùng, đang được sử dụng hoặc vừa thay đổi. Vui lòng tải lại và thử lại.", request.getRequestURI()));
+        String msg = "Dữ liệu bị trùng, đang được sử dụng hoặc vừa thay đổi. Vui lòng tải lại và thử lại.";
+        Map<String, String> errors = null;
+        String rawMsg = ex.getMessage() != null ? ex.getMessage() : "";
+        Throwable root = org.springframework.core.NestedExceptionUtils.getMostSpecificCause(ex);
+        String rootMsg = root != null && root.getMessage() != null ? root.getMessage() : "";
+        String combined = (rawMsg + " " + rootMsg).toLowerCase();
+        if (combined.contains("phone") || combined.contains("idx_users_phone")) {
+            msg = "Số điện thoại này đã được sử dụng bởi tài khoản khác.";
+            errors = Map.of("phone", msg);
+        }
+        ApiErrorResponse response = new ApiErrorResponse(409, "CONFLICT", msg, request.getRequestURI());
+        if (errors != null) {
+            response.setValidationErrors(errors);
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
