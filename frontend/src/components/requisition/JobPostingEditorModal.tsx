@@ -308,15 +308,7 @@ export const JobPostingEditorModal: React.FC<JobPostingEditorModalProps> = ({
               onClick={() => setActiveTab(activeTab === 'edit' ? 'preview' : 'edit')}
               disabled={isLoading || !!apiError}
             >
-              {activeTab === 'edit' ? (
-                <>
-                  <Eye size={16} /> Xem trước tin công khai
-                </>
-              ) : (
-                <>
-                  <Edit3 size={16} /> Quay lại soạn thảo
-                </>
-              )}
+              {activeTab === 'edit' ? 'Xem trước tin công khai' : 'Quay lại soạn thảo'}
             </Button>
           </div>
 
@@ -338,7 +330,7 @@ export const JobPostingEditorModal: React.FC<JobPostingEditorModalProps> = ({
               disabled={isLoading || isSubmitting || !!apiError}
               onClick={() => handleSave('PENDING_APPROVAL')}
             >
-              <CheckCircle size={16} /> Gửi phê duyệt
+              Gửi phê duyệt
             </Button>
           </div>
         </div>

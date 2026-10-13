@@ -1,11 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import * as useAuthHook from '../hooks/useAuth';
 import { JobPostingEditorModal } from '../components/requisition/JobPostingEditorModal';
+import { JobPostingManagementPage } from '../pages/JobPostingManagementPage';
 import { jobPostingApi } from '../api/jobPosting';
 import { Requisition } from '../types/requisition';
 import { JobPosting, JobPostingTemplate } from '../types/jobPosting';
 
 vi.mock('../api/jobPosting');
+vi.mock('../hooks/useAuth');
 
 const mockApprovedRequisition: Requisition = {
   id: 100,
@@ -269,5 +273,108 @@ describe('JobPostingEditorModal (S3-09)', () => {
     expect(screen.getByDisplayValue('Mô tả đã lưu')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Đà Nẵng')).toBeInTheDocument();
     expect(screen.getByDisplayValue('2026-12-15')).toBeInTheDocument();
+  });
+
+  it('Nút Xem trước và Gửi phê duyệt hiển thị văn bản rõ ràng không chứa icon thừa', async () => {
+    vi.mocked(jobPostingApi.getByRequisitionId).mockResolvedValue(null);
+    vi.mocked(jobPostingApi.getTemplate).mockResolvedValue(mockTemplate);
+
+    render(
+      <JobPostingEditorModal
+        isOpen={true}
+        onClose={vi.fn()}
+        requisition={mockApprovedRequisition}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Tuyển dụng Kỹ sư Java Backend')).toBeInTheDocument();
+    });
+
+    const previewBtn = screen.getByRole('button', { name: 'Xem trước tin công khai' });
+    const submitBtn = screen.getByRole('button', { name: 'Gửi phê duyệt' });
+    expect(previewBtn).toBeInTheDocument();
+    expect(submitBtn).toBeInTheDocument();
+  });
+});
+
+describe('JobPostingManagementPage - Nút Xem chi tiết (View-only)', () => {
+  beforeEach(() => {
+    vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
+      user: { id: 1, email: 'recruiter@company.com', fullName: 'Recruiter User' } as any,
+      isAuthenticated: true,
+      hasRole: () => true,
+      hasAnyRole: () => true,
+      hasPermission: () => true,
+      hasAnyPermission: () => true,
+    } as any);
+  });
+
+  it('Nút mắt xem mở modal chi tiết chỉ xem không thể chỉnh sửa giống bên yêu cầu tuyển dụng', async () => {
+    const mockPostings = [
+      {
+        id: 201,
+        postingCode: 'JP-20261013-0001',
+        requisitionId: 100,
+        requisitionCode: 'REQ-2026-0001',
+        title: 'Tuyển dụng Kỹ sư Java Backend',
+        jobDescription: 'Lập trình backend bằng Java Spring Boot',
+        candidateRequirements: '2 năm kinh nghiệm Spring Boot',
+        benefits: 'Thưởng tháng 13',
+        workLocation: 'Hà Nội',
+        workingModel: 'HYBRID' as const,
+        applicationDeadline: '2026-11-30',
+        showSalary: true,
+        salaryType: 'RANGE' as const,
+        salaryMin: 20000000,
+        salaryMax: 35000000,
+        currency: 'VND',
+        status: 'DRAFT' as const,
+        createdByUserId: 1,
+        createdByName: 'Nguyễn Văn A',
+        createdAt: '2026-10-13T08:00:00Z',
+        updatedAt: '2026-10-13T08:00:00Z',
+      },
+    ];
+
+    vi.mocked(jobPostingApi.list).mockResolvedValue({
+      content: mockPostings,
+      totalElements: 1,
+      totalPages: 1,
+      size: 50,
+      number: 0,
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <JobPostingManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('JP-20261013-0001')).toBeInTheDocument();
+    });
+
+    // Bấm nút Xem chi tiết (Eye icon)
+    const viewDetailBtn = screen.getByTitle('Xem chi tiết');
+    expect(viewDetailBtn).toBeInTheDocument();
+    fireEvent.click(viewDetailBtn);
+
+    // Mở modal chi tiết giống bên yêu cầu tuyển dụng (read-only)
+    await waitFor(() => {
+      expect(screen.getByText('Chi tiết Tin tuyển dụng: JP-20261013-0001')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('Lập trình backend bằng Java Spring Boot')).toBeInTheDocument();
+    expect(screen.getByText('2 năm kinh nghiệm Spring Boot')).toBeInTheDocument();
+    expect(screen.getByText('Thưởng tháng 13')).toBeInTheDocument();
+
+    // Bấm nút Đóng để tắt modal
+    const closeBtn = screen.getByRole('button', { name: 'Đóng' });
+    fireEvent.click(closeBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText('Chi tiết Tin tuyển dụng: JP-20261013-0001')).not.toBeInTheDocument();
+    });
   });
 });

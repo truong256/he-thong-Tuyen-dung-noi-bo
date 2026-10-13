@@ -1,17 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  FileText,
   Search,
   Clock,
   Eye,
   Edit2,
   Calendar,
   MapPin,
-  Building2,
-  AlertCircle,
   Briefcase,
-  PlusCircle,
-  Share2,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import jobPostingApi from '../api/jobPosting';
@@ -32,7 +28,10 @@ export const JobPostingManagementPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Modal editor / preview
+  // Modal xem chi tiết (chỉ xem, không thể chỉnh sửa)
+  const [detailPosting, setDetailPosting] = useState<JobPosting | null>(null);
+
+  // Modal editor / chỉnh sửa
   const [selectedPostingId, setSelectedPostingId] = useState<number | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
 
@@ -228,20 +227,22 @@ export const JobPostingManagementPage: React.FC = () => {
                       <button
                         type="button"
                         className="req-action-btn"
-                        title="Xem trước & Chỉnh sửa"
-                        onClick={() => handleOpenEditor(p.id)}
+                        title="Xem chi tiết"
+                        onClick={() => setDetailPosting(p)}
                         style={{ color: '#2563eb' }}
                       >
                         <Eye size={16} />
                       </button>
-                      <button
-                        type="button"
-                        className="req-action-btn"
-                        title="Chỉnh sửa nội dung tin"
-                        onClick={() => handleOpenEditor(p.id)}
-                      >
-                        <Edit2 size={16} />
-                      </button>
+                      {canManage && (
+                        <button
+                          type="button"
+                          className="req-action-btn"
+                          title="Chỉnh sửa nội dung tin"
+                          onClick={() => handleOpenEditor(p.id)}
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -251,7 +252,106 @@ export const JobPostingManagementPage: React.FC = () => {
         )}
       </div>
 
-      {/* Editor & Preview Modal */}
+      {/* Modal Chi tiết Tin tuyển dụng (Chỉ xem - Read-only giống bên Yêu cầu tuyển dụng) */}
+      {detailPosting && (
+        <div className="req-modal-backdrop">
+          <div className="req-modal-content">
+            <div className="req-modal-header">
+              <h2>Chi tiết Tin tuyển dụng: {detailPosting.postingCode}</h2>
+              <button
+                type="button"
+                className="req-action-btn"
+                onClick={() => setDetailPosting(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="req-modal-body">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#1e293b' }}>{detailPosting.title}</h3>
+                {renderStatusBadge(detailPosting.status)}
+              </div>
+
+              <div className="req-form-grid" style={{ marginTop: '12px' }}>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Mã tin tuyển dụng:</span>
+                  <div style={{ fontWeight: 600 }}>{detailPosting.postingCode}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Yêu cầu nguồn:</span>
+                  <div style={{ fontWeight: 600 }}>{detailPosting.requisitionCode || '—'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Địa điểm làm việc:</span>
+                  <div style={{ fontWeight: 600 }}>{detailPosting.workLocation || '—'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Hình thức làm việc:</span>
+                  <div style={{ fontWeight: 600 }}>{detailPosting.workingModel || '—'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Mức lương:</span>
+                  <div style={{ fontWeight: 600, color: '#059669' }}>{formatSalary(detailPosting)}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Hạn nhận hồ sơ:</span>
+                  <div style={{ fontWeight: 600 }}>{detailPosting.applicationDeadline || '—'}</div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Ngày tạo tin:</span>
+                  <div style={{ fontWeight: 600 }}>
+                    {detailPosting.createdAt ? new Date(detailPosting.createdAt).toLocaleDateString('vi-VN') : '—'}
+                  </div>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Người tạo:</span>
+                  <div style={{ fontWeight: 600 }}>{detailPosting.createdByName || '—'}</div>
+                </div>
+              </div>
+
+              {detailPosting.jobDescription && (
+                <div style={{ marginTop: '16px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>Mô tả công việc:</span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap' }}>
+                    {detailPosting.jobDescription}
+                  </p>
+                </div>
+              )}
+
+              {detailPosting.candidateRequirements && (
+                <div style={{ marginTop: '16px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>Yêu cầu ứng viên:</span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap' }}>
+                    {detailPosting.candidateRequirements}
+                  </p>
+                </div>
+              )}
+
+              {detailPosting.benefits && (
+                <div style={{ marginTop: '16px' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569' }}>Quyền lợi & đãi ngộ:</span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#334155', whiteSpace: 'pre-wrap' }}>
+                    {detailPosting.benefits}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="req-modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="req-btn-primary"
+                onClick={() => setDetailPosting(null)}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Editor Modal */}
       {isEditorOpen && (
         <JobPostingEditorModal
           isOpen={isEditorOpen}

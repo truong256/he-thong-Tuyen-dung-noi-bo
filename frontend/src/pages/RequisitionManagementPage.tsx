@@ -886,7 +886,7 @@ export const RequisitionManagementPage: React.FC = () => {
                 {detailReq.status === 'APPROVED' && canManageJob && (
                   <button
                     type="button"
-                    className="req-btn-primary"
+                    className="req-btn-secondary"
                     onClick={() => {
                       const r = detailReq;
                       setDetailReq(null);
@@ -896,7 +896,6 @@ export const RequisitionManagementPage: React.FC = () => {
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
-                      backgroundColor: '#059669',
                     }}
                   >
                     <FileText size={16} />

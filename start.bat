@@ -4,7 +4,13 @@ echo ========================================================
 echo   KHỞI CHẠY HỆ THỐNG TUYỂN DỤNG NỘI BỘ (ATS)
 echo ========================================================
 
-set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
+if exist "C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot" (
+    set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot"
+) else if exist "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot" (
+    set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
+) else if exist "C:\Program Files\Java\jdk-21.0.12.1" (
+    set "JAVA_HOME=C:\Program Files\Java\jdk-21.0.12.1"
+)
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 
 rem Tải biến môi trường từ file .env nếu có
