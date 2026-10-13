@@ -2,7 +2,6 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.dto.ApprovalActionRequest;
-import com.example.auth_service.dto.ApproveRequisitionRequest;
 import com.example.auth_service.dto.RejectRequisitionRequest;
 import com.example.auth_service.dto.RequisitionApprovalLogResponse;
 import com.example.auth_service.dto.RequisitionApprovalTimelineResponse;
@@ -30,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Controller xử lý theo dõi tiến độ, lịch sử phê duyệt và các thao tác duyệt/từ chối/yêu cầu bổ sung (S3-02 & S3-03).
+ * Controller xử lý theo dõi tiến độ, lịch sử phê duyệt và các thao tác duyệt/từ chối/yêu cầu bổ sung (S3-01, S3-02 & S3-03).
  */
 @RestController
 @RequestMapping("/api/requisitions/{id}")
@@ -54,8 +53,24 @@ public class RequisitionApprovalController {
     }
 
     /**
+     * GET /api/requisitions/{id}/timeline, /api/requisitions/{id}/approve/timeline
+     * Lấy dòng thời gian phê duyệt (ưu tiên snapshot thực tế S3-01).
+     */
+    @GetMapping({"/timeline", "/approve/timeline", "/approve"})
+    public ResponseEntity<RequisitionApprovalTimelineResponse> getApprovalTimeline(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new AccessDeniedException("Vui lòng đăng nhập.");
+        }
+        if (approvalWorkflow.hasWorkflowSnapshot(id)) {
+            return ResponseEntity.ok(approvalWorkflow.getTimelineResponse(id, principal.getId()));
+        }
+        return ResponseEntity.ok(approvalService.getApprovalTimeline(id));
+    }
+
+    /**
      * PUT /api/requisitions/{id}/approve
-     * Phê duyệt yêu cầu tuyển dụng (hỗ trợ cả luồng snapshot tuần tự S3-02 và luồng timeline S3-03).
+     * Phê duyệt yêu cầu tuyển dụng (hỗ trợ cả luồng snapshot tuần tự S3-01/S3-02 và luồng timeline S3-03).
      */
     @PutMapping("/approve")
     @Transactional
@@ -253,12 +268,17 @@ public class RequisitionApprovalController {
         resp.put("isRejected", "REJECTED".equalsIgnoreCase(r.getStatus()));
         resp.put("isCompleted", "APPROVED".equalsIgnoreCase(r.getStatus()));
         try {
-            RequisitionApprovalTimelineResponse timeline = approvalService.getApprovalTimeline(id);
-            resp.put("steps", timeline.steps());
-            resp.put("totalSteps", timeline.totalSteps());
-            resp.put("completedSteps", timeline.completedSteps());
-            resp.put("currentStepOrder", timeline.currentStepOrder());
-            resp.put("currentWaitingOn", timeline.currentWaitingOn());
+            RequisitionApprovalTimelineResponse timeline;
+            if (approvalWorkflow.hasWorkflowSnapshot(id)) {
+                timeline = approvalWorkflow.getTimelineResponse(id, r.getCreatedByUserId() != null ? r.getCreatedByUserId() : 1L);
+            } else {
+                timeline = approvalService.getApprovalTimeline(id);
+            }
+            resp.put("steps", timeline.getSteps());
+            resp.put("totalSteps", timeline.getTotalSteps());
+            resp.put("completedSteps", timeline.getCompletedSteps());
+            resp.put("currentStepOrder", timeline.getCurrentStepOrder());
+            resp.put("currentWaitingOn", timeline.getCurrentWaitingOn());
         } catch (Exception e) {
             resp.put("steps", List.of());
             resp.put("totalSteps", 1);

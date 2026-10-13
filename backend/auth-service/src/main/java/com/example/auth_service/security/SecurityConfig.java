@@ -60,6 +60,8 @@ public class SecurityConfig {
                 // S1-05 / S1-09: ROLE_READ → ADMIN + HR_MANAGER
                 .requestMatchers(HttpMethod.GET, "/api/admin/roles").hasAuthority("ROLE_READ")
                 // S1-08: USER_READ → ADMIN (F) + HR_MANAGER (R — only view, cannot mutate)
+                .requestMatchers(HttpMethod.GET, "/api/admin/users/import-template", "/api/admin/users/template").hasAnyAuthority("USER_READ", "USER_MANAGE")
+                .requestMatchers(HttpMethod.POST, "/api/admin/users/import-preview", "/api/admin/users/import", "/api/admin/users/import-rows", "/api/admin/users/import-file").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/admin/users", "/api/admin/users/{id}").hasAuthority("USER_READ")
                 // S1-09: ROLE_MANAGE → ADMIN only (assign/revoke roles)
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}/roles").hasAuthority("ROLE_MANAGE")
@@ -157,11 +159,14 @@ public class SecurityConfig {
                         "/api/requisitions/{id}/approval-action")
                         .hasAuthority("REQUISITION_APPROVE")
                 .requestMatchers(HttpMethod.GET,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/approve/**",
+                        "/api/requisitions/{id}/timeline",
                         "/api/requisitions/{id}/approval-logs",
                         "/api/requisitions/{id}/approval-history",
                         "/api/requisitions/{id}/approve/logs",
                         "/api/requisitions/{id}/approve/history")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                        .authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
                         .hasAnyAuthority("REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_CREATE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions", "/api/requisitions/{id}/submit")

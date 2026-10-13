@@ -44,8 +44,11 @@ class RequisitionIntegrationTest {
     @Autowired private DepartmentRepository departments;
     @Autowired private JobTitleRepository jobTitles;
     @Autowired private RecruitmentRequisitionRepository requisitions;
+    @Autowired private RequisitionApprovalConfigurationRepository configurations;
+    @Autowired private RequisitionApprovalConfigurationStepRepository configurationSteps;
 
     private User hiringManager;
+    private User hrManager;
     private User candidate;
     private Department dept;
     private JobTitle job;
@@ -53,6 +56,7 @@ class RequisitionIntegrationTest {
     @BeforeEach
     void setUp() {
         hiringManager = createUser("hm-req-test@example.com", RoleName.HIRING_MANAGER);
+        hrManager = createUser("hr-req-test@example.com", RoleName.HR_MANAGER);
         candidate = createUser("candidate-req-test@example.com", RoleName.CANDIDATE);
 
         dept = new Department(null, "Phòng Kỹ thuật Phần mềm", "SE-DEPT", "Mô tả", null, hiringManager.getId(), true, Instant.now());
@@ -66,6 +70,20 @@ class RequisitionIntegrationTest {
         job.setMinSalary(15_000_000L);
         job.setMaxSalary(30_000_000L);
         job = jobTitles.save(job);
+
+        com.example.auth_service.entity.RequisitionApprovalConfiguration config = new com.example.auth_service.entity.RequisitionApprovalConfiguration();
+        config.setDepartmentId(dept.getId());
+        config.setVersion(1);
+        config.setActive(true);
+        config.setCreatedByUserId(hrManager.getId());
+        config = configurations.save(config);
+
+        com.example.auth_service.entity.RequisitionApprovalConfigurationStep step = new com.example.auth_service.entity.RequisitionApprovalConfigurationStep();
+        step.setConfigurationId(config.getId());
+        step.setStepOrder(1);
+        step.setMinimumSalary(0L);
+        step.setApproverUserId(hrManager.getId());
+        configurationSteps.save(step);
     }
 
     @AfterEach

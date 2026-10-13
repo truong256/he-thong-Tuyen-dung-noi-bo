@@ -1233,7 +1233,7 @@ p {
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1.4;
-  transition: background-color 140ms ease, color 140ms ease;
+  transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease, transform var(--motion-fast) var(--ease-subtle), box-shadow var(--motion-fast) ease;
   box-sizing: border-box;
   white-space: nowrap;
 }

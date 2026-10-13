@@ -36,7 +36,6 @@ public class RequisitionService {
     private final JobTitleRepository jobTitles;
     private final UserRepository users;
     private final RequisitionApprovalWorkflowService approvalWorkflow;
-
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private RequisitionApprovalService approvalService;
 
@@ -565,5 +564,10 @@ public class RequisitionService {
                 req.getCreatedAt(),
                 req.getUpdatedAt()
         );
+    }
+
+    public com.example.auth_service.dto.RequisitionApprovalTimelineResponse getTimeline(Long id) {
+        User currentUser = getCurrentUser();
+        return approvalWorkflow.getTimelineResponse(id, currentUser.getId());
     }
 }
