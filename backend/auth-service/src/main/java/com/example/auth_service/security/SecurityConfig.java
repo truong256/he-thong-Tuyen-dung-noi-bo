@@ -143,6 +143,13 @@ public class SecurityConfig {
                         .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/approve")
                         .hasAuthority("REQUISITION_APPROVE")
+                .requestMatchers(HttpMethod.GET,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/approve/**",
+                        "/api/requisitions/{id}/timeline",
+                        "/api/requisitions/{id}/approval-logs",
+                        "/api/requisitions/{id}/approval-history")
+                        .authenticated()
                 .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
                         .hasAnyAuthority("REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_CREATE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions", "/api/requisitions/{id}/submit")

@@ -47,6 +47,8 @@ class RecruitmentRequisitionIntegrationTest {
     @Autowired private DepartmentRepository departments;
     @Autowired private JobTitleRepository jobTitles;
     @Autowired private RecruitmentRequisitionRepository requisitions;
+    @Autowired private com.example.auth_service.repository.RequisitionApprovalConfigurationRepository configurations;
+    @Autowired private com.example.auth_service.repository.RequisitionApprovalConfigurationStepRepository configurationSteps;
 
     private User hiringManager;
     private User otherManager;
@@ -85,6 +87,20 @@ class RecruitmentRequisitionIntegrationTest {
         devJob.setDepartment(itDept);
         devJob.setActive(true);
         devJob = jobTitles.saveAndFlush(devJob);
+
+        com.example.auth_service.entity.RequisitionApprovalConfiguration config = new com.example.auth_service.entity.RequisitionApprovalConfiguration();
+        config.setDepartmentId(itDept.getId());
+        config.setVersion(1);
+        config.setActive(true);
+        config.setCreatedByUserId(hrManager.getId());
+        config = configurations.save(config);
+
+        com.example.auth_service.entity.RequisitionApprovalConfigurationStep step = new com.example.auth_service.entity.RequisitionApprovalConfigurationStep();
+        step.setConfigurationId(config.getId());
+        step.setStepOrder(1);
+        step.setMinimumSalary(0L);
+        step.setApproverUserId(hrManager.getId());
+        configurationSteps.save(step);
     }
 
     @AfterEach
@@ -250,7 +266,7 @@ class RecruitmentRequisitionIntegrationTest {
         mvc.perform(post("/api/recruitment-requests/" + reqId + "/submit")
                         .header("Authorization", token(hiringManager)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SUBMITTED"));
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
 
         // 3. Get detail
         mvc.perform(get("/api/recruitment-requests/" + reqId)

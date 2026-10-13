@@ -34,6 +34,15 @@ public class RequisitionApprovalController {
         this.approvalWorkflow = approvalWorkflow;
     }
 
+    @GetMapping({"", "/timeline", "/logs", "/history"})
+    public ResponseEntity<com.example.auth_service.dto.RequisitionApprovalTimelineResponse> getApprovalTimeline(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new AccessDeniedException("Vui lòng đăng nhập.");
+        }
+        return ResponseEntity.ok(approvalWorkflow.getTimelineResponse(id, principal.getId()));
+    }
+
     @PutMapping
     @Transactional
     @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")

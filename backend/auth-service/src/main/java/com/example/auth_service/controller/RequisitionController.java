@@ -82,6 +82,14 @@ public class RequisitionController {
     }
 
     /**
+     * API lấy tiến trình và lịch sử phê duyệt thực tế theo snapshot (S3-01 / S3-03).
+     */
+    @GetMapping({"/{id}/timeline", "/{id}/approval-logs", "/{id}/approval-history"})
+    public ResponseEntity<com.example.auth_service.dto.RequisitionApprovalTimelineResponse> getTimeline(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getTimeline(id));
+    }
+
+    /**
      * API danh sách yêu cầu tuyển dụng có phân trang, lọc theo trạng thái, phòng ban và từ khóa.
      */
     @GetMapping

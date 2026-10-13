@@ -553,4 +553,9 @@ public class RequisitionService {
                 req.getUpdatedAt()
         );
     }
+
+    public com.example.auth_service.dto.RequisitionApprovalTimelineResponse getTimeline(Long id) {
+        User currentUser = getCurrentUser();
+        return approvalWorkflow.getTimelineResponse(id, currentUser.getId());
+    }
 }
