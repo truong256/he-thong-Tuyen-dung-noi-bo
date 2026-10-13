@@ -104,13 +104,40 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        String message = (ex.getMessage() != null && !ex.getMessage().isBlank() && !ex.getMessage().equalsIgnoreCase("Access is denied"))
+                ? ex.getMessage()
+                : "Bạn không có quyền truy cập chức năng này.";
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
                 "FORBIDDEN",
-                "Bạn không có quyền truy cập chức năng này.",
+                message,
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
+    public ResponseEntity<ApiErrorResponse> handleIllegalStateAndArgument(RuntimeException ex, HttpServletRequest request) {
+        logger.warn("Validation/State error at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank())
+                ? ex.getMessage()
+                : "Yêu cầu không hợp lệ hoặc dữ liệu không đúng trạng thái.";
+        return ResponseEntity.badRequest().body(new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "BAD_REQUEST",
+                msg,
+                request.getRequestURI()
+        ));
+    }
+
+    @ExceptionHandler(org.springframework.web.HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotSupported(org.springframework.web.HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(new ApiErrorResponse(
+                HttpStatus.METHOD_NOT_ALLOWED.value(),
+                "METHOD_NOT_ALLOWED",
+                "Phương thức HTTP " + ex.getMethod() + " không được hỗ trợ trên đường dẫn này.",
+                request.getRequestURI()
+        ));
     }
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -142,10 +169,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         logger.error("Unhandled exception at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank())
+                ? "Lỗi xử lý: " + ex.getMessage()
+                : "Đã xảy ra lỗi trong quá trình xử lý. Vui lòng thử lại sau.";
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "INTERNAL_SERVER_ERROR",
-                "Đã xảy ra lỗi trong quá trình xử lý.",
+                msg,
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);

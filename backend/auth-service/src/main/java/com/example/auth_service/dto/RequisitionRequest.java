@@ -34,9 +34,11 @@ public record RequisitionRequest(
         String reason,
 
         @PositiveOrZero(message = "Lương tối thiểu không được âm")
+        @JsonAlias({"proposedMinSalary", "minSalary"})
         Long salaryMin,
 
         @PositiveOrZero(message = "Lương tối đa không được âm")
+        @JsonAlias({"proposedMaxSalary", "maxSalary"})
         Long salaryMax,
 
         String salaryExplanation,
@@ -48,6 +50,7 @@ public record RequisitionRequest(
 
         String jobDescription,
 
+        @JsonAlias("requirements")
         String candidateRequirements,
 
         String status,

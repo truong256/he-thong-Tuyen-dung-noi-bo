@@ -13,7 +13,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import requisitionApi from '../api/requisition';
+import requisitionApi, { extractApiErrorMessage } from '../api/requisition';
 import organizationApi from '../api/organization';
 import jobTitleApi from '../api/jobTitle';
 import { Requisition, RequisitionPayload } from '../types/requisition';
@@ -162,7 +162,7 @@ export const RequisitionManagementPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const validateForm = (): boolean => {
+  const validateForm = (isDraftMode: boolean = false): boolean => {
     const errors: Record<string, string> = {};
     if (!title.trim()) {
       errors.title = 'Vui lòng nhập tiêu đề yêu cầu tuyển dụng.';
@@ -178,8 +178,19 @@ export const RequisitionManagementPage: React.FC = () => {
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    if (targetDate && targetDate < todayStr) {
+    if (!isDraftMode && !targetDate) {
+      errors.targetDate = 'Vui lòng chọn ngày cần nhân sự nhận việc.';
+    } else if (targetDate && targetDate < todayStr) {
       errors.targetDate = 'Ngày cần người không được ở quá khứ.';
+    }
+
+    if (!isDraftMode) {
+      if (!jobDescription.trim()) {
+        errors.jobDescription = 'Vui lòng nhập mô tả công việc.';
+      }
+      if (!requirements.trim()) {
+        errors.requirements = 'Vui lòng nhập yêu cầu ứng viên.';
+      }
     }
 
     const minSal = proposedMinSalary ? Number(proposedMinSalary) : null;
@@ -188,7 +199,7 @@ export const RequisitionManagementPage: React.FC = () => {
       errors.salary = 'Lương tối thiểu không được lớn hơn lương tối đa.';
     }
 
-    if (isOutOfSalaryRange && !salaryExplanation.trim()) {
+    if (!isDraftMode && isOutOfSalaryRange && !salaryExplanation.trim()) {
       errors.salaryExplanation = 'Dải lương đề xuất nằm ngoài khung chuẩn, bắt buộc nhập giải trình.';
     }
 
@@ -197,7 +208,7 @@ export const RequisitionManagementPage: React.FC = () => {
   };
 
   const handleSubmit = async (isDraft: boolean) => {
-    if (!validateForm()) return;
+    if (!validateForm(isDraft)) return;
 
     const payload: RequisitionPayload = {
       title: title.trim(),
@@ -225,7 +236,8 @@ export const RequisitionManagementPage: React.FC = () => {
       setIsModalOpen(false);
       loadData();
     } catch (err: any) {
-      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi lưu yêu cầu tuyển dụng.', 'error');
+      const msg = extractApiErrorMessage(err, 'Có lỗi xảy ra khi lưu yêu cầu tuyển dụng.');
+      showToast(msg, 'error');
     }
   };
 
@@ -242,7 +254,7 @@ export const RequisitionManagementPage: React.FC = () => {
       showToast('Đã xóa bản nháp yêu cầu tuyển dụng.');
       loadData();
     } catch (err: any) {
-      showToast(err.response?.data?.message || 'Không thể xóa bản nháp.', 'error');
+      showToast(extractApiErrorMessage(err, 'Không thể xóa bản nháp.'), 'error');
     }
   };
 
@@ -255,7 +267,7 @@ export const RequisitionManagementPage: React.FC = () => {
       openEditModal(cloned as any);
       await loadData();
     } catch (err: any) {
-      showToast(err.response?.data?.message || 'Không thể sao chép yêu cầu tuyển dụng.', 'error');
+      showToast(extractApiErrorMessage(err, 'Không thể sao chép yêu cầu tuyển dụng.'), 'error');
     } finally {
       setIsLoading(false);
     }
@@ -631,23 +643,29 @@ export const RequisitionManagementPage: React.FC = () => {
               </div>
 
               <div className="req-form-group">
-                <label className="req-label">Mô tả công việc</label>
+                <label className="req-label">
+                  Mô tả công việc <span className="required">*</span>
+                </label>
                 <textarea
                   className="req-textarea"
                   placeholder="Mô tả các nhiệm vụ chính của vị trí..."
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                 />
+                {formErrors.jobDescription && <span className="req-error-text">{formErrors.jobDescription}</span>}
               </div>
 
               <div className="req-form-group">
-                <label className="req-label">Yêu cầu ứng viên</label>
+                <label className="req-label">
+                  Yêu cầu ứng viên <span className="required">*</span>
+                </label>
                 <textarea
                   className="req-textarea"
                   placeholder="Kỹ năng, kinh nghiệm, bằng cấp cần thiết..."
                   value={requirements}
                   onChange={(e) => setRequirements(e.target.value)}
                 />
+                {formErrors.requirements && <span className="req-error-text">{formErrors.requirements}</span>}
               </div>
             </div>
 

@@ -21,7 +21,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
-import { requisitionApi, RequisitionResponse } from '../api/requisition';
+import { requisitionApi, RequisitionResponse, extractApiErrorMessage } from '../api/requisition';
 import { PageHeader } from '../components/common/PageHeader';
 import '../styles/recruitment-request.css';
 
@@ -313,7 +313,7 @@ export const RecruitmentRequestPage: React.FC = () => {
       });
       loadRequisitions();
     } catch (err: any) {
-      const errText = err.response?.data?.message || 'Không thể lưu bản nháp. Vui lòng thử lại.';
+      const errText = extractApiErrorMessage(err, 'Không thể lưu bản nháp. Vui lòng thử lại.');
       setMessage({ text: errText, type: 'error' });
     } finally {
       setIsSubmitting(false);
@@ -402,7 +402,7 @@ export const RecruitmentRequestPage: React.FC = () => {
       loadRequisitions();
       setActiveTab('list');
     } catch (err: any) {
-      const errText = err.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu.';
+      const errText = extractApiErrorMessage(err, 'Có lỗi xảy ra khi gửi yêu cầu.');
       setMessage({ text: errText, type: 'error' });
     } finally {
       setIsSubmitting(false);
@@ -449,8 +449,8 @@ export const RecruitmentRequestPage: React.FC = () => {
       if (form.id === id) {
         setForm(EMPTY_FORM);
       }
-    } catch {
-      setMessage({ text: 'Không thể xóa bản nháp này.', type: 'error' });
+    } catch (err: any) {
+      setMessage({ text: extractApiErrorMessage(err, 'Không thể xóa bản nháp này.'), type: 'error' });
     }
   };
 
@@ -491,7 +491,7 @@ export const RecruitmentRequestPage: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
       await loadRequisitions();
     } catch (err: any) {
-      const errText = err.response?.data?.message || 'Có lỗi xảy ra khi sao chép yêu cầu tuyển dụng.';
+      const errText = extractApiErrorMessage(err, 'Có lỗi xảy ra khi sao chép yêu cầu tuyển dụng.');
       setMessage({ text: errText, type: 'error' });
     } finally {
       setIsLoadingList(false);

@@ -47,6 +47,23 @@ public class RequisitionController {
     }
 
     /**
+     * API cập nhật và gửi phê duyệt yêu cầu tuyển dụng.
+     * Hỗ trợ lưu nháp nếu payload truyền isDraft = true.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<RequisitionResponse> update(
+            @PathVariable Long id,
+            @RequestBody CreateRequisitionRequest request
+    ) {
+        if (Boolean.TRUE.equals(request.isDraft())) {
+            RequisitionResponse updated = service.updateDraft(id, request.toDraftRequest());
+            return ResponseEntity.ok(updated);
+        }
+        RequisitionResponse updated = service.updateAndSubmit(id, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
      * API tạo và gửi phê duyệt yêu cầu tuyển dụng chính thức.
      * Hỗ trợ lưu nháp nếu payload truyền isDraft = true.
      */

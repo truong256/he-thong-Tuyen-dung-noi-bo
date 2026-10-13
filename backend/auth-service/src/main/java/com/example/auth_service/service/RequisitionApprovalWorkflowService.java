@@ -28,6 +28,24 @@ public class RequisitionApprovalWorkflowService {
     private final RequisitionApprovalSnapshotRepository snapshots;
     private final RecruitmentRequisitionRepository requisitions;
     private final UserRepository users;
+    private final com.example.auth_service.repository.JobTitleRepository jobTitles;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public RequisitionApprovalWorkflowService(
+            RequisitionApprovalConfigurationRepository configurations,
+            RequisitionApprovalConfigurationStepRepository configurationSteps,
+            RequisitionApprovalSnapshotRepository snapshots,
+            RecruitmentRequisitionRepository requisitions,
+            UserRepository users,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.example.auth_service.repository.JobTitleRepository jobTitles
+    ) {
+        this.configurations = configurations;
+        this.configurationSteps = configurationSteps;
+        this.snapshots = snapshots;
+        this.requisitions = requisitions;
+        this.users = users;
+        this.jobTitles = jobTitles;
+    }
 
     public RequisitionApprovalWorkflowService(
             RequisitionApprovalConfigurationRepository configurations,
@@ -36,11 +54,7 @@ public class RequisitionApprovalWorkflowService {
             RecruitmentRequisitionRepository requisitions,
             UserRepository users
     ) {
-        this.configurations = configurations;
-        this.configurationSteps = configurationSteps;
-        this.snapshots = snapshots;
-        this.requisitions = requisitions;
-        this.users = users;
+        this(configurations, configurationSteps, snapshots, requisitions, users, null);
     }
 
     public boolean snapshotForSubmission(RecruitmentRequisition requisition) {
@@ -52,30 +66,50 @@ public class RequisitionApprovalWorkflowService {
         if (activeConfiguration.isEmpty()) {
             return false;
         }
+
+        // Xóa snapshot cũ nếu có để cho phép submit lại bản nháp
         if (snapshots.existsByRequisitionId(requisition.getId())) {
-            throw new BadRequestException("Yêu cầu tuyển dụng đã có snapshot luồng phê duyệt.");
+            List<RequisitionApprovalSnapshot> existing = snapshots.findAllByRequisitionIdOrderByStepOrderAsc(requisition.getId());
+            snapshots.deleteAll(existing);
         }
 
         RequisitionApprovalConfiguration configuration = activeConfiguration.get();
-        long proposedSalary = requisition.getSalaryMax() != null
-                ? requisition.getSalaryMax()
-                : requisition.getSalaryMin() != null ? requisition.getSalaryMin() : 0L;
-        List<RequisitionApprovalConfigurationStep> applicableSteps = configurationSteps
-                .findAllByConfigurationIdOrderByStepOrderAsc(configuration.getId())
-                .stream()
+        Long salMax = requisition.getSalaryMax() != null ? requisition.getSalaryMax() : requisition.getProposedMaxSalary();
+        Long salMin = requisition.getSalaryMin() != null ? requisition.getSalaryMin() : requisition.getProposedMinSalary();
+        if (salMax == null && salMin == null && requisition.getJobTitleId() != null && jobTitles != null) {
+            var jtOpt = jobTitles.findById(requisition.getJobTitleId());
+            if (jtOpt.isPresent()) {
+                salMax = jtOpt.get().getMaxSalary();
+                salMin = jtOpt.get().getMinSalary();
+            }
+        }
+        long proposedSalary = salMax != null ? salMax : (salMin != null ? salMin : 0L);
+
+        List<RequisitionApprovalConfigurationStep> allSteps = configurationSteps
+                .findAllByConfigurationIdOrderByStepOrderAsc(configuration.getId());
+        if (allSteps.isEmpty()) {
+            throw new BadRequestException("Cấu hình phê duyệt của phòng ban chưa có bước phê duyệt nào.");
+        }
+
+        List<RequisitionApprovalConfigurationStep> applicableSteps = allSteps.stream()
                 .filter(step -> step.getMinimumSalary() <= proposedSalary)
                 .toList();
+
+        // Nếu mức lương đề xuất thấp hơn mức sàn các bước, fallback về bước 1 (cấp phê duyệt cơ sở)
         if (applicableSteps.isEmpty()) {
-            throw new BadRequestException("Không có cấp phê duyệt phù hợp với mức lương đề xuất.");
+            applicableSteps = List.of(allSteps.getFirst());
         }
 
         List<RequisitionApprovalSnapshot> workflow = applicableSteps.stream().map(step -> {
+            if (step.getApproverUserId() == null) {
+                throw new BadRequestException("Cấu hình phê duyệt bước " + step.getStepOrder() + " chưa thiết lập Người phê duyệt (Approver).");
+            }
             User approver = users.findById(step.getApproverUserId())
-                    .orElseThrow(() -> new BadRequestException("Người phê duyệt đã bị xóa."));
-            boolean eligible = "ACTIVE".equals(approver.getStatus()) && approver.getRoles().stream()
-                    .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER);
+                    .orElseThrow(() -> new BadRequestException("Người phê duyệt (ID: " + step.getApproverUserId() + ") tại bước " + step.getStepOrder() + " không tồn tại hoặc đã bị xóa."));
+            boolean eligible = "ACTIVE".equalsIgnoreCase(approver.getStatus()) && approver.getRoles().stream()
+                    .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER || role.getName() == RoleName.ADMIN);
             if (!eligible) {
-                throw new BadRequestException("Cấu hình có người phê duyệt không còn hợp lệ.");
+                throw new BadRequestException("Người phê duyệt (" + approver.getFullName() + ") tại bước " + step.getStepOrder() + " không ở trạng thái hoạt động hoặc thiếu vai trò phê duyệt (APPROVER/HR_MANAGER).");
             }
 
             RequisitionApprovalSnapshot snapshot = new RequisitionApprovalSnapshot();
@@ -88,6 +122,7 @@ public class RequisitionApprovalWorkflowService {
             snapshot.setStatus("PENDING");
             return snapshot;
         }).toList();
+
         snapshots.saveAll(workflow);
         return true;
     }

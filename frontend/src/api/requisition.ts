@@ -241,4 +241,29 @@ export const requisitionApi = {
   },
 };
 
+export function extractApiErrorMessage(err: any, fallbackMessage: string = 'Đã xảy ra lỗi trong quá trình xử lý.'): string {
+  if (!err) return fallbackMessage;
+  const data = err.response?.data;
+  if (data) {
+    if (data.validationErrors && typeof data.validationErrors === 'object') {
+      const details = Object.entries(data.validationErrors)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join('; ');
+      if (details) {
+        return data.message ? `${data.message} (${details})` : details;
+      }
+    }
+    if (data.message && typeof data.message === 'string') {
+      return data.message;
+    }
+    if (data.error && typeof data.error === 'string') {
+      return data.error;
+    }
+  }
+  if (err.message && typeof err.message === 'string') {
+    return err.message;
+  }
+  return fallbackMessage;
+}
+
 export default requisitionApi;
