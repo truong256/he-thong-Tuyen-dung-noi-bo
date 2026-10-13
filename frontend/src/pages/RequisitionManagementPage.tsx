@@ -10,6 +10,7 @@ import {
   Trash2,
   X,
   Briefcase,
+  Copy,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import requisitionApi from '../api/requisition';
@@ -144,13 +145,19 @@ export const RequisitionManagementPage: React.FC = () => {
     setDepartmentId(req.departmentId);
     setJobTitleId(req.jobTitleId);
     setQuantity(req.quantity);
-    setReason(req.reason);
-    setProposedMinSalary(req.proposedMinSalary ? String(req.proposedMinSalary) : '');
-    setProposedMaxSalary(req.proposedMaxSalary ? String(req.proposedMaxSalary) : '');
+    const mappedReason = req.reason === 'REPLACEMENT' || (req.reason as string) === 'Thay thế nhân sự'
+      ? 'REPLACEMENT'
+      : 'NEW_HEADCOUNT';
+    setReason(mappedReason);
+    const minSal = req.proposedMinSalary ?? req.salaryMin ?? req.minSalary;
+    const maxSal = req.proposedMaxSalary ?? req.salaryMax ?? req.maxSalary;
+    const reqs = req.requirements ?? req.candidateRequirements ?? '';
+    setProposedMinSalary(minSal != null ? String(minSal) : '');
+    setProposedMaxSalary(maxSal != null ? String(maxSal) : '');
     setSalaryExplanation(req.salaryExplanation || '');
-    setTargetDate(req.targetDate || '');
+    setTargetDate(req.targetDate || req.neededDate || '');
     setJobDescription(req.jobDescription || '');
-    setRequirements(req.requirements || '');
+    setRequirements(reqs);
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -236,6 +243,21 @@ export const RequisitionManagementPage: React.FC = () => {
       loadData();
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Không thể xóa bản nháp.', 'error');
+    }
+  };
+
+  const handleClone = async (req: Requisition) => {
+    try {
+      setIsLoading(true);
+      const cloned = await requisitionApi.clone(req.id);
+      showToast(`Đã sao chép thành công bản nháp mới: ${cloned.requisitionCode}`);
+      // Mở ngay modal form nháp để người dùng chỉnh sửa
+      openEditModal(cloned as any);
+      await loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Không thể sao chép yêu cầu tuyển dụng.', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -420,6 +442,14 @@ export const RequisitionManagementPage: React.FC = () => {
                           <Trash2 size={16} />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        className="req-action-btn"
+                        title="Sao chép yêu cầu tuyển dụng"
+                        onClick={() => handleClone(req)}
+                      >
+                        <Copy size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>

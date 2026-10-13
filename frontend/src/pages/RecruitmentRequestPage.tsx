@@ -18,6 +18,7 @@ import {
   ChevronRight,
   ShieldAlert,
   Zap,
+  Copy,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
@@ -410,6 +411,10 @@ export const RecruitmentRequestPage: React.FC = () => {
 
   // Nạp bản nháp để sửa tiếp
   const handleEditDraft = (item: RequisitionResponse) => {
+    const minSalaryVal = item.salaryMin ?? item.minSalary ?? item.proposedMinSalary;
+    const maxSalaryVal = item.salaryMax ?? item.maxSalary ?? item.proposedMaxSalary;
+    const reqsVal = item.candidateRequirements ?? item.requirements ?? '';
+
     setForm({
       id: item.id,
       requisitionCode: item.requisitionCode,
@@ -419,12 +424,12 @@ export const RecruitmentRequestPage: React.FC = () => {
       quantity: String(item.quantity || 1),
       recruitmentType: item.recruitmentType || 'NEW',
       reason: item.reason || '',
-      salaryMin: item.salaryMin ? String(item.salaryMin) : '',
-      salaryMax: item.salaryMax ? String(item.salaryMax) : '',
+      salaryMin: minSalaryVal != null ? String(minSalaryVal) : '',
+      salaryMax: maxSalaryVal != null ? String(maxSalaryVal) : '',
       salaryExplanation: item.salaryExplanation || '',
       neededDate: item.neededDate || item.targetDate || '',
       jobDescription: item.jobDescription || '',
-      candidateRequirements: item.candidateRequirements || '',
+      candidateRequirements: reqsVal,
       benefits: item.benefits || '',
       workLocation: item.workLocation || 'Trụ sở chính',
       workingModel: item.workingModel || 'ONSITE',
@@ -446,6 +451,50 @@ export const RecruitmentRequestPage: React.FC = () => {
       }
     } catch {
       setMessage({ text: 'Không thể xóa bản nháp này.', type: 'error' });
+    }
+  };
+
+  // Thao tác sao chép yêu cầu tuyển dụng (SCRUM-129)
+  const handleClone = async (id: number) => {
+    try {
+      setIsLoadingList(true);
+      const cloned = await requisitionApi.clone(id);
+      const minSalaryVal = cloned.salaryMin ?? cloned.minSalary ?? cloned.proposedMinSalary;
+      const maxSalaryVal = cloned.salaryMax ?? cloned.maxSalary ?? cloned.proposedMaxSalary;
+      const reqsVal = cloned.candidateRequirements ?? cloned.requirements ?? '';
+
+      setForm({
+        id: cloned.id,
+        requisitionCode: cloned.requisitionCode,
+        title: cloned.title || '',
+        departmentId: cloned.departmentId ? String(cloned.departmentId) : '',
+        jobTitleId: cloned.jobTitleId ? String(cloned.jobTitleId) : '',
+        quantity: String(cloned.quantity || 1),
+        recruitmentType: cloned.recruitmentType || 'NEW',
+        reason: cloned.reason || '',
+        salaryMin: minSalaryVal != null ? String(minSalaryVal) : '',
+        salaryMax: maxSalaryVal != null ? String(maxSalaryVal) : '',
+        salaryExplanation: cloned.salaryExplanation || '',
+        neededDate: cloned.neededDate || cloned.targetDate || '',
+        jobDescription: cloned.jobDescription || '',
+        candidateRequirements: reqsVal,
+        benefits: cloned.benefits || '',
+        workLocation: cloned.workLocation || 'Trụ sở chính',
+        workingModel: cloned.workingModel || 'ONSITE',
+      });
+      setErrors({});
+      setMessage({
+        text: `Đã sao chép thành công bản nháp mới (Mã: ${cloned.requisitionCode}). Đang mở form để chỉnh sửa...`,
+        type: 'success',
+      });
+      setActiveTab('create');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await loadRequisitions();
+    } catch (err: any) {
+      const errText = err.response?.data?.message || 'Có lỗi xảy ra khi sao chép yêu cầu tuyển dụng.';
+      setMessage({ text: errText, type: 'error' });
+    } finally {
+      setIsLoadingList(false);
     }
   };
 
@@ -1270,13 +1319,16 @@ export const RecruitmentRequestPage: React.FC = () => {
                       </td>
                       <td>
                         <span style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 600 }}>
-                          {formatSalaryPreview(item.salaryMin ? String(item.salaryMin) : '', item.salaryMax ? String(item.salaryMax) : '')}
+                          {formatSalaryPreview(
+                            (item.salaryMin ?? item.proposedMinSalary ?? item.minSalary) ? String(item.salaryMin ?? item.proposedMinSalary ?? item.minSalary) : '',
+                            (item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary) ? String(item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary) : ''
+                          )}
                         </span>
                       </td>
                       <td>{getStatusBadge(item.status)}</td>
                       <td>
                         <div className="rr-actions-cell">
-                          {item.status === 'DRAFT' ? (
+                          {item.status === 'DRAFT' && (
                             <>
                               <button
                                 type="button"
@@ -1296,11 +1348,17 @@ export const RecruitmentRequestPage: React.FC = () => {
                                 <Trash2 size={15} />
                               </button>
                             </>
-                          ) : (
-                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                              Đang xử lý
-                            </span>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleClone(item.id)}
+                            className="rr-btn-table-edit"
+                            style={{ color: '#0284c7', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
+                            title="Sao chép yêu cầu này"
+                          >
+                            <Copy size={13} />
+                            Sao chép
+                          </button>
                         </div>
                       </td>
                     </tr>

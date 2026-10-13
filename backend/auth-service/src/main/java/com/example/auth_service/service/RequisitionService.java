@@ -519,6 +519,12 @@ public class RequisitionService {
             }
         }
 
+        Long minSalary = req.getSalaryMin() != null ? req.getSalaryMin() : req.getProposedMinSalary();
+        Long maxSalary = req.getSalaryMax() != null ? req.getSalaryMax() : req.getProposedMaxSalary();
+        String reqs = (req.getCandidateRequirements() != null && !req.getCandidateRequirements().isBlank())
+                ? req.getCandidateRequirements()
+                : req.getRequirements();
+
         return new RequisitionResponse(
                 req.getId(),
                 req.getRequisitionCode(),
@@ -530,14 +536,14 @@ public class RequisitionService {
                 jobName,
                 req.getQuantity(),
                 req.getRecruitmentType(),
-                req.getSalaryMin(),
-                req.getSalaryMax(),
+                minSalary,
+                maxSalary,
                 req.getCurrency(),
                 req.getSalaryExplanation(),
                 req.getNeededDate(),
                 req.getTargetDate(),
                 req.getJobDescription(),
-                req.getCandidateRequirements(),
+                reqs,
                 req.getBenefits(),
                 req.getWorkLocation(),
                 req.getWorkingModel(),
