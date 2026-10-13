@@ -179,6 +179,18 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.POST, "/api/organization/profile/logo", "/api/organization/profile/image").hasAuthority("CATALOG_MANAGE")
+                // S3-10 / SCRUM-150: API công khai việc làm cho ứng viên
+                .requestMatchers(HttpMethod.GET, "/api/public/job-postings", "/api/public/job-postings/**").permitAll()
+                // S3-10 / SCRUM-149: Duyệt và xuất bản tin tuyển dụng - Chỉ HR Manager
+                .requestMatchers(HttpMethod.POST,
+                        "/api/job-postings/{id}/approve",
+                        "/api/job-postings/{id}/publish",
+                        "/api/job-postings/{id}/approve-and-publish",
+                        "/api/job-postings/{id}/reject")
+                        .hasRole("HR_MANAGER")
+                // S3-10 / S3-09: Quản lý tin tuyển dụng nội bộ
+                .requestMatchers("/api/job-postings", "/api/job-postings/**")
+                        .hasAnyAuthority("JOB_MANAGE", "ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_RECRUITER")
                 .anyRequest().denyAll()
             )
             .exceptionHandling(errors -> errors.authenticationEntryPoint(securityErrorHandler)
