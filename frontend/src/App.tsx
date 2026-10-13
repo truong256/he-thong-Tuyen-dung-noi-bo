@@ -23,6 +23,7 @@ import RequisitionManagementPage from './pages/RequisitionManagementPage';
 import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
 import ApprovalConfigurationPage from './pages/ApprovalConfigurationPage';
+import JobPostingManagementPage from './pages/JobPostingManagementPage';
 
 export const App: React.FC = () => {
   return (
@@ -203,6 +204,29 @@ export const App: React.FC = () => {
                   <ApprovalConfigurationPage />
                 </RoleGuard>
               }
+            />
+            {/*
+              Job Postings – S3-09 (JOB_MANAGE)
+              Roles: RECRUITER, HR_MANAGER, ADMIN
+            */}
+            <Route
+              path="recruitment/job-postings"
+              element={
+                <PermissionGuard
+                  requiredPermissions={['JOB_MANAGE']}
+                  requireAny
+                >
+                  <JobPostingManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/jobs"
+              element={<Navigate to="/recruitment/job-postings" replace />}
+            />
+            <Route
+              path="job-postings"
+              element={<Navigate to="/recruitment/job-postings" replace />}
             />
             <Route
               path="requisitions"

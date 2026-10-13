@@ -20,6 +20,8 @@ export const ROUTES = {
   USERS: '/users',
   IMPORT_EXCEL: '/users/import-excel',
   PREVIEW_IMPORT_EXCEL: '/preview/import-excel',
+  REQUISITIONS: '/recruitment/requisitions',
+  JOB_POSTINGS: '/recruitment/job-postings',
 } as const;
 
 export type AppRoute = typeof ROUTES[keyof typeof ROUTES];

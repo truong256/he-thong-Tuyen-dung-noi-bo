@@ -416,7 +416,7 @@ public class RequisitionService {
 
         User currentUser = getCurrentUser();
         boolean canReadAll = currentUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN || r.getName() == RoleName.APPROVER);
+                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN || r.getName() == RoleName.APPROVER || r.getName() == RoleName.RECRUITER);
         boolean isOwner = req.getCreatedByUserId() != null && req.getCreatedByUserId().equals(currentUser.getId());
 
         if (!canReadAll && !isOwner) {
@@ -428,13 +428,13 @@ public class RequisitionService {
 
     /**
      * Danh sách yêu cầu tuyển dụng phân trang kèm lọc trạng thái, phòng ban, từ khóa.
-     * Hiring Manager chỉ thấy yêu cầu do chính mình tạo. HR_MANAGER / ADMIN thấy tất cả.
+     * Hiring Manager chỉ thấy yêu cầu do chính mình tạo. HR_MANAGER / ADMIN / RECRUITER thấy tất cả.
      */
     @Transactional(readOnly = true)
     public Page<RequisitionResponse> list(String status, Long departmentId, String keyword, Pageable pageable) {
         User currentUser = getCurrentUser();
         boolean canReadAll = currentUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN || r.getName() == RoleName.APPROVER);
+                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN || r.getName() == RoleName.APPROVER || r.getName() == RoleName.RECRUITER);
 
         Long filterUserId = canReadAll ? null : currentUser.getId();
 

@@ -12,6 +12,7 @@ import {
   Briefcase,
   Copy,
   UserCheck,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import requisitionApi from '../api/requisition';
@@ -23,6 +24,7 @@ import { JobTitle } from '../types/jobTitle';
 import { PageHeader } from '../components/common/PageHeader';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import { AssignRecruiterModal } from '../components/requisition/AssignRecruiterModal';
+import { JobPostingEditorModal } from '../components/requisition/JobPostingEditorModal';
 import '../styles/requisitions.css';
 
 export const RequisitionManagementPage: React.FC = () => {
@@ -30,6 +32,7 @@ export const RequisitionManagementPage: React.FC = () => {
   const canCreate = hasPermission ? hasPermission('REQUISITION_CREATE') : hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']);
   const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['APPROVER', 'HR_MANAGER', 'ADMIN']);
   const canAssign = hasPermission ? hasPermission('RECRUITER_ASSIGN') : hasAnyRole(['HR_MANAGER', 'ADMIN']);
+  const canManageJob = hasPermission ? hasPermission('JOB_MANAGE') : hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN']);
 
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -69,6 +72,9 @@ export const RequisitionManagementPage: React.FC = () => {
   // Assign Recruiter Modal (S3-06)
   const [assignModalReq, setAssignModalReq] = useState<Requisition | null>(null);
   const [assignmentMap, setAssignmentMap] = useState<Record<number, RequisitionAssignments>>({});
+
+  // Job Posting Editor Modal (S3-09)
+  const [jobPostingModalReq, setJobPostingModalReq] = useState<Requisition | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -463,6 +469,17 @@ export const RequisitionManagementPage: React.FC = () => {
                           onClick={() => setAssignModalReq(req)}
                         >
                           <UserCheck size={16} />
+                        </button>
+                      )}
+                      {req.status === 'APPROVED' && canManageJob && (
+                        <button
+                          type="button"
+                          className="req-action-btn"
+                          title="Soạn tin tuyển dụng từ yêu cầu đã duyệt (S3-09)"
+                          style={{ color: '#059669', backgroundColor: '#ecfdf5' }}
+                          onClick={() => setJobPostingModalReq(req)}
+                        >
+                          <FileText size={16} />
                         </button>
                       )}
                       <button
@@ -866,6 +883,26 @@ export const RequisitionManagementPage: React.FC = () => {
                     <span>Phân công Recruiter</span>
                   </button>
                 )}
+                {detailReq.status === 'APPROVED' && canManageJob && (
+                  <button
+                    type="button"
+                    className="req-btn-primary"
+                    onClick={() => {
+                      const r = detailReq;
+                      setDetailReq(null);
+                      setJobPostingModalReq(r);
+                    }}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      backgroundColor: '#059669',
+                    }}
+                  >
+                    <FileText size={16} />
+                    <span>Soạn tin tuyển dụng</span>
+                  </button>
+                )}
               </div>
               <button
                 type="button"
@@ -900,6 +937,19 @@ export const RequisitionManagementPage: React.FC = () => {
           loadData();
         }}
       />
+
+      {/* Modal Soạn & Xem trước tin tuyển dụng (S3-09) */}
+      {jobPostingModalReq && (
+        <JobPostingEditorModal
+          isOpen={Boolean(jobPostingModalReq)}
+          onClose={() => setJobPostingModalReq(null)}
+          requisition={jobPostingModalReq}
+          onSuccess={() => {
+            showToast('Lưu tin tuyển dụng từ yêu cầu đã duyệt thành công!');
+            loadData();
+          }}
+        />
+      )}
     </div>
   );
 };
