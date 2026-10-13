@@ -53,16 +53,22 @@ export interface RequisitionResponse {
   departmentCode?: string;
   jobTitleId?: number;
   jobTitleName?: string;
+  jobTitleCode?: string;
   quantity: number;
   recruitmentType?: string;
   salaryMin?: number;
   salaryMax?: number;
+  minSalary?: number;
+  maxSalary?: number;
+  proposedMinSalary?: number;
+  proposedMaxSalary?: number;
   currency?: string;
   salaryExplanation?: string;
   neededDate?: string;
   targetDate?: string;
   jobDescription?: string;
   candidateRequirements?: string;
+  requirements?: string;
   benefits?: string;
   workLocation?: string;
   workingModel?: string;
@@ -81,8 +87,8 @@ export interface RequisitionResponse {
 const client = namedApiClient || apiClient;
 
 function mapToBackendPayload(payload: any) {
-  const minSal = payload.salaryMin !== undefined ? payload.salaryMin : (payload.proposedMinSalary !== undefined ? payload.proposedMinSalary : undefined);
-  const maxSal = payload.salaryMax !== undefined ? payload.salaryMax : (payload.proposedMaxSalary !== undefined ? payload.proposedMaxSalary : undefined);
+  const minSal = payload.salaryMin !== undefined ? payload.salaryMin : (payload.proposedMinSalary !== undefined ? payload.proposedMinSalary : (payload.minSalary !== undefined ? payload.minSalary : undefined));
+  const maxSal = payload.salaryMax !== undefined ? payload.salaryMax : (payload.proposedMaxSalary !== undefined ? payload.proposedMaxSalary : (payload.maxSalary !== undefined ? payload.maxSalary : undefined));
   const nDate = payload.neededDate || payload.targetDate || undefined;
   const reqs = payload.candidateRequirements || payload.requirements || undefined;
   const rType = payload.recruitmentType || (payload.reason === 'REPLACEMENT' ? 'REPLACEMENT' : 'NEW_HEADCOUNT');
@@ -101,12 +107,23 @@ function mapToBackendPayload(payload: any) {
 }
 
 function mapFromBackendResponse(item: any): Requisition {
+  const minSal = item.salaryMin ?? item.proposedMinSalary ?? item.minSalary;
+  const maxSal = item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary;
+  const reqs = item.candidateRequirements ?? item.requirements;
+  const tDate = item.neededDate || item.targetDate;
+
   return {
     ...item,
-    proposedMinSalary: item.salaryMin !== undefined ? item.salaryMin : item.proposedMinSalary,
-    proposedMaxSalary: item.salaryMax !== undefined ? item.salaryMax : item.proposedMaxSalary,
-    targetDate: item.neededDate || item.targetDate,
-    requirements: item.candidateRequirements || item.requirements,
+    salaryMin: minSal,
+    minSalary: minSal,
+    proposedMinSalary: minSal,
+    salaryMax: maxSal,
+    maxSalary: maxSal,
+    proposedMaxSalary: maxSal,
+    targetDate: tDate,
+    neededDate: tDate,
+    candidateRequirements: reqs,
+    requirements: reqs,
   };
 }
 
@@ -202,8 +219,25 @@ export const requisitionApi = {
   },
 
   clone: async (id: number): Promise<RequisitionResponse> => {
-    const res = await client.post<RequisitionResponse>(`/api/recruitment-requests/${id}/clone`);
-    return res.data;
+    const res = await client.post<any>(`/api/recruitment-requests/${id}/clone`);
+    const item = res.data;
+    const minSal = item.salaryMin ?? item.proposedMinSalary ?? item.minSalary;
+    const maxSal = item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary;
+    const reqs = item.candidateRequirements ?? item.requirements;
+    const tDate = item.neededDate || item.targetDate;
+    return {
+      ...item,
+      salaryMin: minSal,
+      minSalary: minSal,
+      proposedMinSalary: minSal,
+      salaryMax: maxSal,
+      maxSalary: maxSal,
+      proposedMaxSalary: maxSal,
+      targetDate: tDate,
+      neededDate: tDate,
+      candidateRequirements: reqs,
+      requirements: reqs,
+    };
   },
 };
 

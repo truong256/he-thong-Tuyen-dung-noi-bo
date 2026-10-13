@@ -411,6 +411,10 @@ export const RecruitmentRequestPage: React.FC = () => {
 
   // Nạp bản nháp để sửa tiếp
   const handleEditDraft = (item: RequisitionResponse) => {
+    const minSalaryVal = item.salaryMin ?? item.minSalary ?? item.proposedMinSalary;
+    const maxSalaryVal = item.salaryMax ?? item.maxSalary ?? item.proposedMaxSalary;
+    const reqsVal = item.candidateRequirements ?? item.requirements ?? '';
+
     setForm({
       id: item.id,
       requisitionCode: item.requisitionCode,
@@ -420,12 +424,12 @@ export const RecruitmentRequestPage: React.FC = () => {
       quantity: String(item.quantity || 1),
       recruitmentType: item.recruitmentType || 'NEW',
       reason: item.reason || '',
-      salaryMin: item.salaryMin ? String(item.salaryMin) : '',
-      salaryMax: item.salaryMax ? String(item.salaryMax) : '',
+      salaryMin: minSalaryVal != null ? String(minSalaryVal) : '',
+      salaryMax: maxSalaryVal != null ? String(maxSalaryVal) : '',
       salaryExplanation: item.salaryExplanation || '',
       neededDate: item.neededDate || item.targetDate || '',
       jobDescription: item.jobDescription || '',
-      candidateRequirements: item.candidateRequirements || '',
+      candidateRequirements: reqsVal,
       benefits: item.benefits || '',
       workLocation: item.workLocation || 'Trụ sở chính',
       workingModel: item.workingModel || 'ONSITE',
@@ -455,6 +459,9 @@ export const RecruitmentRequestPage: React.FC = () => {
     try {
       setIsLoadingList(true);
       const cloned = await requisitionApi.clone(id);
+      const minSalaryVal = cloned.salaryMin ?? cloned.minSalary ?? cloned.proposedMinSalary;
+      const maxSalaryVal = cloned.salaryMax ?? cloned.maxSalary ?? cloned.proposedMaxSalary;
+      const reqsVal = cloned.candidateRequirements ?? cloned.requirements ?? '';
 
       setForm({
         id: cloned.id,
@@ -465,12 +472,12 @@ export const RecruitmentRequestPage: React.FC = () => {
         quantity: String(cloned.quantity || 1),
         recruitmentType: cloned.recruitmentType || 'NEW',
         reason: cloned.reason || '',
-        salaryMin: cloned.salaryMin ? String(cloned.salaryMin) : '',
-        salaryMax: cloned.salaryMax ? String(cloned.salaryMax) : '',
+        salaryMin: minSalaryVal != null ? String(minSalaryVal) : '',
+        salaryMax: maxSalaryVal != null ? String(maxSalaryVal) : '',
         salaryExplanation: cloned.salaryExplanation || '',
         neededDate: cloned.neededDate || cloned.targetDate || '',
         jobDescription: cloned.jobDescription || '',
-        candidateRequirements: cloned.candidateRequirements || '',
+        candidateRequirements: reqsVal,
         benefits: cloned.benefits || '',
         workLocation: cloned.workLocation || 'Trụ sở chính',
         workingModel: cloned.workingModel || 'ONSITE',
@@ -1312,7 +1319,10 @@ export const RecruitmentRequestPage: React.FC = () => {
                       </td>
                       <td>
                         <span style={{ fontSize: '0.82rem', color: '#059669', fontWeight: 600 }}>
-                          {formatSalaryPreview(item.salaryMin ? String(item.salaryMin) : '', item.salaryMax ? String(item.salaryMax) : '')}
+                          {formatSalaryPreview(
+                            (item.salaryMin ?? item.proposedMinSalary ?? item.minSalary) ? String(item.salaryMin ?? item.proposedMinSalary ?? item.minSalary) : '',
+                            (item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary) ? String(item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary) : ''
+                          )}
                         </span>
                       </td>
                       <td>{getStatusBadge(item.status)}</td>

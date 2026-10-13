@@ -145,13 +145,19 @@ export const RequisitionManagementPage: React.FC = () => {
     setDepartmentId(req.departmentId);
     setJobTitleId(req.jobTitleId);
     setQuantity(req.quantity);
-    setReason(req.reason);
-    setProposedMinSalary(req.proposedMinSalary ? String(req.proposedMinSalary) : '');
-    setProposedMaxSalary(req.proposedMaxSalary ? String(req.proposedMaxSalary) : '');
+    const mappedReason = req.reason === 'REPLACEMENT' || (req.reason as string) === 'Thay thế nhân sự'
+      ? 'REPLACEMENT'
+      : 'NEW_HEADCOUNT';
+    setReason(mappedReason);
+    const minSal = req.proposedMinSalary ?? req.salaryMin ?? req.minSalary;
+    const maxSal = req.proposedMaxSalary ?? req.salaryMax ?? req.maxSalary;
+    const reqs = req.requirements ?? req.candidateRequirements ?? '';
+    setProposedMinSalary(minSal != null ? String(minSal) : '');
+    setProposedMaxSalary(maxSal != null ? String(maxSal) : '');
     setSalaryExplanation(req.salaryExplanation || '');
-    setTargetDate(req.targetDate || '');
+    setTargetDate(req.targetDate || req.neededDate || '');
     setJobDescription(req.jobDescription || '');
-    setRequirements(req.requirements || '');
+    setRequirements(reqs);
     setFormErrors({});
     setIsModalOpen(true);
   };

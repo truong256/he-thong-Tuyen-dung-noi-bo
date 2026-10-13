@@ -177,4 +177,29 @@ public record RequisitionResponse(
                 createdAt
         );
     }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("minSalary")
+    public Long minSalary() {
+        return salaryMin;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("maxSalary")
+    public Long maxSalary() {
+        return salaryMax;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("proposedMinSalary")
+    public Long proposedMinSalary() {
+        return salaryMin;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("proposedMaxSalary")
+    public Long proposedMaxSalary() {
+        return salaryMax;
+    }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("requirements")
+    public String requirements() {
+        return candidateRequirements;
+    }
 }

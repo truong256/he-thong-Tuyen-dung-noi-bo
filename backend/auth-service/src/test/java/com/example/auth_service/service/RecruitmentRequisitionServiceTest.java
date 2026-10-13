@@ -453,10 +453,50 @@ class RecruitmentRequisitionServiceTest {
         assertThat(cloned.status()).isEqualTo("DRAFT");
         assertThat(cloned.jobDescription()).isEqualTo("Lập trình RESTful API, thiết kế cơ sở dữ liệu");
         assertThat(cloned.candidateRequirements()).isEqualTo("Có kinh nghiệm Spring Boot 2 năm trở lên");
+        assertThat(cloned.requirements()).isEqualTo("Có kinh nghiệm Spring Boot 2 năm trở lên");
+        assertThat(cloned.salaryMin()).isEqualTo(18_000_000L);
+        assertThat(cloned.salaryMax()).isEqualTo(28_000_000L);
+        assertThat(cloned.minSalary()).isEqualTo(18_000_000L);
+        assertThat(cloned.maxSalary()).isEqualTo(28_000_000L);
+        assertThat(cloned.proposedMinSalary()).isEqualTo(18_000_000L);
+        assertThat(cloned.proposedMaxSalary()).isEqualTo(28_000_000L);
         assertThat(cloned.quantity()).isEqualTo(2);
         assertThat(cloned.title()).isEqualTo("Kỹ sư phần mềm Java");
         assertThat(cloned.departmentId()).isEqualTo(itDept.getId());
         assertThat(cloned.jobTitleId()).isEqualTo(devJob.getId());
         assertThat(cloned.requisitionCode()).isNotEqualTo("REQ-ORIGINAL-001");
+    }
+
+    @Test
+    @DisplayName("SCRUM-128: clone sao chép đầy đủ khi bản ghi gốc dùng proposedMinSalary/proposedMaxSalary/requirements")
+    void clone_fallbackSalaryAndRequirements_success() {
+        RecruitmentRequisition original = new RecruitmentRequisition();
+        original.setId(51L);
+        original.setRequisitionCode("REQ-ORIGINAL-002");
+        original.setTitle("Lập trình viên React");
+        original.setDepartmentId(itDept.getId());
+        original.setJobTitleId(devJob.getId());
+        original.setQuantity(1);
+        original.setProposedMinSalary(15_000_000L);
+        original.setProposedMaxSalary(25_000_000L);
+        original.setRequirements("Thành thạo ReactJS, TypeScript");
+        original.setStatus("APPROVED");
+        original.setCreatedByUserId(hiringManager.getId());
+
+        when(requisitionRepository.findById(51L)).thenReturn(Optional.of(original));
+        when(departmentRepository.findById(itDept.getId())).thenReturn(Optional.of(itDept));
+        when(jobTitleRepository.findById(devJob.getId())).thenReturn(Optional.of(devJob));
+        when(requisitionRepository.save(any(RecruitmentRequisition.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RequisitionResponse cloned = service.clone(51L, hiringManager);
+
+        assertThat(cloned).isNotNull();
+        assertThat(cloned.status()).isEqualTo("DRAFT");
+        assertThat(cloned.salaryMin()).isEqualTo(15_000_000L);
+        assertThat(cloned.salaryMax()).isEqualTo(25_000_000L);
+        assertThat(cloned.minSalary()).isEqualTo(15_000_000L);
+        assertThat(cloned.maxSalary()).isEqualTo(25_000_000L);
+        assertThat(cloned.candidateRequirements()).isEqualTo("Thành thạo ReactJS, TypeScript");
+        assertThat(cloned.requirements()).isEqualTo("Thành thạo ReactJS, TypeScript");
     }
 }

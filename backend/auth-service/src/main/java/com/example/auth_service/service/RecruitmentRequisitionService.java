@@ -345,6 +345,12 @@ public class RecruitmentRequisitionService {
 
         String newCode = resolveRequisitionCode(null, null);
 
+        Long minSalary = source.getSalaryMin() != null ? source.getSalaryMin() : source.getProposedMinSalary();
+        Long maxSalary = source.getSalaryMax() != null ? source.getSalaryMax() : source.getProposedMaxSalary();
+        String reqs = (source.getCandidateRequirements() != null && !source.getCandidateRequirements().isBlank())
+                ? source.getCandidateRequirements()
+                : source.getRequirements();
+
         RecruitmentRequisition cloned = new RecruitmentRequisition();
         cloned.setRequisitionCode(newCode);
         cloned.setTitle(source.getTitle());
@@ -353,14 +359,18 @@ public class RecruitmentRequisitionService {
         cloned.setQuantity(source.getQuantity() > 0 ? source.getQuantity() : 1);
         cloned.setRecruitmentType(source.getRecruitmentType());
         cloned.setReason(source.getReason());
-        cloned.setSalaryMin(source.getSalaryMin());
-        cloned.setSalaryMax(source.getSalaryMax());
+        cloned.setSalaryMin(minSalary);
+        cloned.setProposedMinSalary(minSalary);
+        cloned.setSalaryMax(maxSalary);
+        cloned.setProposedMaxSalary(maxSalary);
         cloned.setSalaryExplanation(source.getSalaryExplanation());
         cloned.setTargetDate(source.getTargetDate());
+        cloned.setNeededDate(source.getNeededDate() != null ? source.getNeededDate() : source.getTargetDate());
 
         // Sao chép toàn bộ mô tả công việc (JD) và yêu cầu ứng viên
         cloned.setJobDescription(source.getJobDescription());
-        cloned.setCandidateRequirements(source.getCandidateRequirements());
+        cloned.setCandidateRequirements(reqs);
+        cloned.setRequirements(reqs);
 
         // Gán trạng thái mới là Draft (Nháp)
         cloned.setStatus("DRAFT");
@@ -586,7 +596,13 @@ public class RecruitmentRequisitionService {
             JobTitle jt,
             User creator
     ) {
-        boolean outside = isSalaryOutsideRange(jt, req.getSalaryMin(), req.getSalaryMax());
+        Long minSalary = req.getSalaryMin() != null ? req.getSalaryMin() : req.getProposedMinSalary();
+        Long maxSalary = req.getSalaryMax() != null ? req.getSalaryMax() : req.getProposedMaxSalary();
+        String reqs = (req.getCandidateRequirements() != null && !req.getCandidateRequirements().isBlank())
+                ? req.getCandidateRequirements()
+                : req.getRequirements();
+
+        boolean outside = isSalaryOutsideRange(jt, minSalary, maxSalary);
         return new RequisitionResponse(
                 req.getId(),
                 req.getRequisitionCode(),
@@ -602,14 +618,14 @@ public class RecruitmentRequisitionService {
                 req.getQuantity(),
                 req.getRecruitmentType(),
                 req.getReason(),
-                req.getSalaryMin(),
-                req.getSalaryMax(),
+                minSalary,
+                maxSalary,
                 req.getSalaryExplanation(),
                 req.getTargetDate(),
                 req.getTargetDate(),
                 outside,
                 req.getJobDescription(),
-                req.getCandidateRequirements(),
+                reqs,
                 req.getStatus(),
                 req.getCreatedByUserId(),
                 creator != null ? creator.getFullName() : null,
