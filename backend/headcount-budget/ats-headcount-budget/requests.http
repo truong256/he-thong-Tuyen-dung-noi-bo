@@ -1,0 +1,129 @@
+### Cài extension "REST Client" (humao.rest-client) rồi bấm "Send Request" phía trên mỗi khối.
+### Chạy trước:  npm run start:dev      (mật khẩu mọi tài khoản demo: Passw0rd!)
+
+@host = http://localhost:3000
+
+### 1) Đăng nhập HR Manager
+# @name loginHr
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{ "email": "hr.manager@company.vn", "password": "Passw0rd!" }
+
+###
+@hr = {{loginHr.response.body.accessToken}}
+
+### 2) Đăng nhập Trưởng phòng IT (Hiring Manager)
+# @name loginHm
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{ "email": "hm.it@company.vn", "password": "Passw0rd!" }
+
+###
+@hm = {{loginHm.response.body.accessToken}}
+
+### 3) Đăng nhập Approver
+# @name loginAp
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{ "email": "approver@company.vn", "password": "Passw0rd!" }
+
+###
+@approver = {{loginAp.response.body.accessToken}}
+
+### ============ SCRUM-124: API ngân sách ============
+
+### Danh sách phòng ban (id 1 = IT, id 2 = Marketing)
+GET {{host}}/departments
+Authorization: Bearer {{hr}}
+
+### Khai báo ngân sách Marketing 2026 (HR Manager)
+POST {{host}}/headcount-budgets
+Authorization: Bearer {{hr}}
+Content-Type: application/json
+
+{ "departmentId": 2, "year": 2026, "headcountQuota": 3, "salaryBudgetVnd": 1500000000 }
+
+### Danh sách ngân sách kèm đã dùng / còn lại
+GET {{host}}/headcount-budgets?year=2026
+Authorization: Bearer {{hr}}
+
+### Cập nhật ngân sách (id = 1)
+PUT {{host}}/headcount-budgets/1
+Authorization: Bearer {{hr}}
+Content-Type: application/json
+
+{ "headcountQuota": 6, "salaryBudgetVnd": 2000000000 }
+
+### Hiring Manager xem headcount còn lại của phòng mình (không thấy lương)
+GET {{host}}/headcount-budgets/remaining?departmentId=1&year=2026
+Authorization: Bearer {{hm}}
+
+### Hiring Manager thử tạo ngân sách => 403
+POST {{host}}/headcount-budgets
+Authorization: Bearer {{hm}}
+Content-Type: application/json
+
+{ "departmentId": 1, "year": 2027, "headcountQuota": 1, "salaryBudgetVnd": 1 }
+
+### Xem trước: yêu cầu 6 người có vượt chỉ tiêu không?
+POST {{host}}/headcount-budgets/check
+Authorization: Bearer {{hm}}
+Content-Type: application/json
+
+{ "departmentId": 1, "year": 2026, "quantity": 6, "proposedSalaryVnd": 20000000 }
+
+### ============ SCRUM-125: vượt chỉ tiêu + ghi đè ============
+
+### Tạo yêu cầu 6 người (IT chỉ có 5) -> phản hồi có budget.headcountRemaining
+# @name createReq
+POST {{host}}/requisitions
+Authorization: Bearer {{hm}}
+Content-Type: application/json
+
+{ "title": "Backend Developer", "departmentId": 1, "budgetYear": 2026, "quantity": 6, "proposedSalaryVnd": 20000000 }
+
+###
+@reqId = {{createReq.response.body.id}}
+
+### Gửi duyệt
+POST {{host}}/requisitions/{{reqId}}/submit
+Authorization: Bearer {{hm}}
+
+### Approver duyệt => 409 HEADCOUNT_BUDGET_EXCEEDED (bị chặn)
+POST {{host}}/requisitions/{{reqId}}/approve
+Authorization: Bearer {{approver}}
+Content-Type: application/json
+
+{}
+
+### Approver cố ghi đè => 403 OVERRIDE_FORBIDDEN
+POST {{host}}/requisitions/{{reqId}}/approve
+Authorization: Bearer {{approver}}
+Content-Type: application/json
+
+{ "override": { "reason": "Cần gấp cho dự án khách hàng X" } }
+
+### HR Manager ghi đè thiếu lý do => 400
+POST {{host}}/requisitions/{{reqId}}/approve
+Authorization: Bearer {{hr}}
+Content-Type: application/json
+
+{ "override": { "reason": "" } }
+
+### HR Manager ghi đè kèm lý do => 200, budgetOverridden = true
+POST {{host}}/requisitions/{{reqId}}/approve
+Authorization: Bearer {{hr}}
+Content-Type: application/json
+
+{ "override": { "reason": "Dự án khách hàng X được ký thêm, cần bổ sung nhân sự" } }
+
+### Nhật ký ghi đè (chỉ HR Manager / Admin)
+GET {{host}}/headcount-budgets/override-logs?action=BUDGET_OVERRIDE
+Authorization: Bearer {{hr}}
+
+### Huỷ yêu cầu => headcount được trả lại
+POST {{host}}/requisitions/{{reqId}}/cancel
+Authorization: Bearer {{hm}}
