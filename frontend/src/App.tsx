@@ -23,12 +23,20 @@ import RequisitionManagementPage from './pages/RequisitionManagementPage';
 import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
 import ApprovalConfigurationPage from './pages/ApprovalConfigurationPage';
+import JobPostingManagementPage from './pages/JobPostingManagementPage';
+import PublicCareerPage from './pages/PublicCareerPage';
+import PublicJobDetailPage from './pages/PublicJobDetailPage';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Cổng tuyển dụng công khai dành cho ứng viên (S3-10 / SCRUM-150) */}
+          <Route path="/careers" element={<PublicCareerPage />} />
+          <Route path="/careers/:id" element={<PublicJobDetailPage />} />
+          <Route path="/jobs" element={<Navigate to="/careers" replace />} />
+
           {/* Các trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -203,6 +211,19 @@ export const App: React.FC = () => {
                   <ApprovalConfigurationPage />
                 </RoleGuard>
               }
+            />
+            {/* Tin tuyển dụng (S3-10 / SCRUM-151) – RECRUITER, HR_MANAGER, ADMIN */}
+            <Route
+              path="recruitment/job-postings"
+              element={
+                <PermissionGuard requiredPermissions={['JOB_MANAGE']}>
+                  <JobPostingManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/jobs"
+              element={<Navigate to="/recruitment/job-postings" replace />}
             />
             <Route
               path="requisitions"
