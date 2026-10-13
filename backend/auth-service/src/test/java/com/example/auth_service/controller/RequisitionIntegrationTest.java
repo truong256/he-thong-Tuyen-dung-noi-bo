@@ -2,7 +2,6 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.JobTitle;
-import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionDraftRequest;
 import com.example.auth_service.entity.Role;

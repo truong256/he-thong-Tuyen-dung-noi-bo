@@ -65,6 +65,16 @@ public class RecruitmentRequisitionController {
         return ResponseEntity.ok(submitted);
     }
 
+    @PostMapping("/{id}/clone")
+    public ResponseEntity<RequisitionResponse> clone(
+            @PathVariable Long id,
+            Authentication authentication
+    ) {
+        User currentUser = getCurrentUser(authentication);
+        RequisitionResponse cloned = service.clone(id, currentUser);
+        return ResponseEntity.created(URI.create("/api/recruitment-requests/" + cloned.id())).body(cloned);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<RequisitionResponse> get(
             @PathVariable Long id,

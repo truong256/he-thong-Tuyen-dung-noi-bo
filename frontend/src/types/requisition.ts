@@ -51,3 +51,57 @@ export interface RequisitionPageResponse {
   size: number;
   number: number;
 }
+
+export interface AssignmentMember {
+  userId: number;
+  fullName: string;
+  email: string;
+  department?: string;
+  role: string;
+  isPrimary: boolean;
+  assignedAt?: string;
+  handoverRequired?: boolean;
+}
+
+export interface RequisitionAssignments {
+  requisitionId: number;
+  requisitionCode: string;
+  requisitionTitle: string;
+  primaryRecruiter?: AssignmentMember | null;
+  supportRecruiters: AssignmentMember[];
+  hiringManagers: AssignmentMember[];
+}
+
+export interface AssignmentHistoryItem {
+  id: number;
+  requisitionId: number;
+  userId: number;
+  userFullName: string;
+  userEmail?: string;
+  role: string;
+  assignmentType: 'PRIMARY' | 'SUPPORT';
+  action: 'ASSIGNED' | 'HANDOVER' | 'UNASSIGNED' | 'ROLE_CHANGED';
+  previousUserId?: number;
+  previousUserFullName?: string;
+  performedByUserId?: number;
+  performedByFullName?: string;
+  reason?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface AssignableRecruiter {
+  id: number;
+  fullName: string;
+  email: string;
+  department?: string;
+  username: string;
+}
+
+export interface AssignRecruiterPayload {
+  primaryRecruiterId: number;
+  supportRecruiterIds?: number[];
+  reason?: string;
+  notes?: string;
+}
+

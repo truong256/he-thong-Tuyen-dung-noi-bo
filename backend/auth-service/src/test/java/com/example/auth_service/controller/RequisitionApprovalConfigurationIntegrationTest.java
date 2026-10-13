@@ -2,20 +2,24 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.JobTitle;
+import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.dto.ApprovalConfigurationRequest;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionRequest;
 import com.example.auth_service.entity.RequisitionApprovalConfiguration;
 import com.example.auth_service.entity.RequisitionApprovalConfigurationStep;
 import com.example.auth_service.entity.RequisitionApprovalSnapshot;
+import com.example.auth_service.entity.RequisitionAssignment;
 import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
+import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.RequisitionApprovalConfigurationRepository;
 import com.example.auth_service.repository.RequisitionApprovalConfigurationStepRepository;
 import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
 import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.JwtUtils;
@@ -56,6 +60,8 @@ class RequisitionApprovalConfigurationIntegrationTest {
     @Autowired private RequisitionApprovalConfigurationRepository configurations;
     @Autowired private RequisitionApprovalConfigurationStepRepository configurationSteps;
     @Autowired private RequisitionApprovalSnapshotRepository snapshots;
+    @Autowired private RequisitionAssignmentRepository assignments;
+    @Autowired private RecruitmentRequisitionRepository requisitions;
 
     private User hrManager;
     private User hiringManager;
@@ -291,6 +297,122 @@ class RequisitionApprovalConfigurationIntegrationTest {
         assertThat(snapshots.findAllByRequisitionIdOrderByStepOrderAsc(requisitionId))
                 .extracting(RequisitionApprovalSnapshot::getApproverUserId)
                 .containsExactly(approverOne.getId(), approverTwo.getId());
+    }
+
+    @Test
+    void fallbackApprovalRequiresAssignmentEvenForHrManager() throws Exception {
+        RecruitmentRequisition requisition = new RecruitmentRequisition();
+        requisition.setRequisitionCode("APR-FALLBACK-" + System.nanoTime());
+        requisition.setTitle("Yêu cầu phê duyệt dự phòng");
+        requisition.setDepartmentId(department.getId());
+        requisition.setJobTitleId(jobTitle.getId());
+        requisition.setStatus("PENDING_APPROVAL");
+        requisition.setCreatedByUserId(hiringManager.getId());
+        requisition = requisitions.save(requisition);
+        Long requisitionId = requisition.getId();
+
+        mvc.perform(put("/api/requisitions/" + requisitionId + "/approve")
+                        .header("Authorization", token(hrManager)))
+                .andExpect(status().isForbidden());
+
+        RequisitionAssignment assignment = new RequisitionAssignment();
+        assignment.setRequisitionId(requisitionId);
+        assignment.setUserId(approverOne.getId());
+        assignment.setRole(RoleName.APPROVER);
+        assignments.save(assignment);
+
+        mvc.perform(put("/api/requisitions/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverOne)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+    }
+
+    @Test
+    void rejectAndRequestChangesRequireCommentsAndWriteApprovalHistory() throws Exception {
+        ApprovalConfigurationRequest configurationRequest = request(
+                new ApprovalConfigurationRequest.ApprovalStepRequest(0L, approverOne.getId())
+        );
+        mvc.perform(post(CONFIGURATIONS_URL)
+                        .header("Authorization", token(hrManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(configurationRequest)))
+                .andExpect(status().isCreated());
+
+        Long changesRequisitionId = createSubmittedRequisition();
+        mvc.perform(post("/api/requisitions/" + changesRequisitionId + "/request-changes")
+                        .header("Authorization", token(approverOne))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
+        mvc.perform(post("/api/requisitions/" + changesRequisitionId + "/request-changes")
+                        .header("Authorization", token(approverOne))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"Vui lòng bổ sung kế hoạch nhân sự.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DRAFT"));
+
+        mvc.perform(get("/api/requisitions/" + changesRequisitionId + "/approval-logs")
+                        .header("Authorization", token(hiringManager)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].action").value("REQUEST_CHANGES"))
+                .andExpect(jsonPath("$[0].comment").value("Vui lòng bổ sung kế hoạch nhân sự."))
+                .andExpect(jsonPath("$[0].approverUserId").value(approverOne.getId()))
+                .andExpect(jsonPath("$[0].createdAt").isNotEmpty());
+        assertThat(snapshots.findAllByRequisitionIdOrderByStepOrderAsc(changesRequisitionId))
+                .extracting(RequisitionApprovalSnapshot::getStatus)
+                .containsExactly("REQUEST_CHANGES");
+
+        Long rejectedRequisitionId = createSubmittedRequisition();
+        mvc.perform(post("/api/requisitions/" + rejectedRequisitionId + "/reject")
+                        .header("Authorization", token(approverOne))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
+        mvc.perform(post("/api/requisitions/" + rejectedRequisitionId + "/reject")
+                        .header("Authorization", token(approverOne))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"Không phù hợp ngân sách.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"));
+
+        mvc.perform(get("/api/requisitions/" + rejectedRequisitionId + "/approval-history")
+                        .header("Authorization", token(hiringManager)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].action").value("REJECT"))
+                .andExpect(jsonPath("$[0].comment").value("Không phù hợp ngân sách."));
+    }
+
+    private Long createSubmittedRequisition() throws Exception {
+        CreateRequisitionRequest request = new CreateRequisitionRequest(
+                "Yêu cầu tuyển dụng kiểm thử S3-02",
+                department.getId(),
+                jobTitle.getId(),
+                1,
+                "NEW",
+                "Mở rộng nhóm",
+                20_000_000L,
+                30_000_000L,
+                "VND",
+                null,
+                LocalDate.now().plusDays(30),
+                "Mô tả công việc",
+                "Kinh nghiệm phù hợp",
+                null,
+                "Hà Nội",
+                "ONSITE"
+        );
+        String response = mvc.perform(post("/api/requisitions")
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"))
+                .andReturn().getResponse().getContentAsString();
+        return mapper.readTree(response).get("id").asLong();
     }
 
     private ApprovalConfigurationRequest request(ApprovalConfigurationRequest.ApprovalStepRequest... steps) {

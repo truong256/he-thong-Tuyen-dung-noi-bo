@@ -39,6 +39,9 @@ class RequisitionApprovalWorkflowServiceTest {
     private RequisitionApprovalSnapshotRepository snapshots;
 
     @Mock
+    private RequisitionApprovalLogRepository approvalLogs;
+
+    @Mock
     private RecruitmentRequisitionRepository requisitions;
 
     @Mock

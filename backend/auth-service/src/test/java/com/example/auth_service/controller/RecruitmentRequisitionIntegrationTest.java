@@ -87,7 +87,6 @@ class RecruitmentRequisitionIntegrationTest {
         devJob.setDepartment(itDept);
         devJob.setActive(true);
         devJob = jobTitles.saveAndFlush(devJob);
-
         com.example.auth_service.entity.RequisitionApprovalConfiguration config = new com.example.auth_service.entity.RequisitionApprovalConfiguration();
         config.setDepartmentId(itDept.getId());
         config.setVersion(1);
@@ -282,6 +281,60 @@ class RecruitmentRequisitionIntegrationTest {
                 .andExpect(jsonPath("$.content", hasSize(1)));
     }
 
+    @Test
+    @DisplayName("SCRUM-128: Clone yêu cầu tuyển dụng sao chép JD, requirements và tạo bản nháp mới (DRAFT)")
+    void cloneRequisition_success_createsDraftWithCopiedJd() throws Exception {
+        // 1. Tạo yêu cầu tuyển dụng gốc
+        RequisitionRequest sourceReq = new RequisitionRequest(
+                null,
+                "Senior Java Engineer Gốc",
+                devJob.getId(),
+                null,
+                itDept.getId(),
+                null,
+                3,
+                "NEW",
+                "Mở rộng dự án thanh toán quốc tế",
+                15_000_000L,
+                25_000_000L,
+                null,
+                LocalDate.now().plusMonths(2),
+                null,
+                "Chịu trách nhiệm thiết kế hệ thống Microservice và tối ưu cơ sở dữ liệu PostgreSQL",
+                "Tối thiểu 3 năm kinh nghiệm với Spring Boot, Redis, Kafka, Docker",
+                "SUBMITTED",
+                false
+        );
+
+        String createContent = mvc.perform(post("/api/recruitment-requests")
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(sourceReq)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long sourceId = mapper.readTree(createContent).get("id").asLong();
+        String sourceCode = mapper.readTree(createContent).get("requisitionCode").asText();
+
+        // 2. Thực hiện gọi API clone
+        String cloneContent = mvc.perform(post("/api/recruitment-requests/" + sourceId + "/clone")
+                        .header("Authorization", token(hiringManager)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(jsonPath("$.status").value("DRAFT"))
+                .andExpect(jsonPath("$.jobDescription").value("Chịu trách nhiệm thiết kế hệ thống Microservice và tối ưu cơ sở dữ liệu PostgreSQL"))
+                .andExpect(jsonPath("$.candidateRequirements").value("Tối thiểu 3 năm kinh nghiệm với Spring Boot, Redis, Kafka, Docker"))
+                .andExpect(jsonPath("$.quantity").value(3))
+                .andExpect(jsonPath("$.title").value("Senior Java Engineer Gốc"))
+                .andReturn().getResponse().getContentAsString();
+
+        Long clonedId = mapper.readTree(cloneContent).get("id").asLong();
+        String clonedCode = mapper.readTree(cloneContent).get("requisitionCode").asText();
+
+        // ID và mã bản sao phải khác bản gốc
+        org.junit.jupiter.api.Assertions.assertNotEquals(sourceId, clonedId);
+        org.junit.jupiter.api.Assertions.assertNotEquals(sourceCode, clonedCode);
+    }
     private User createUser(String emailPrefix, RoleName roleName) {
         User user = new User(emailPrefix + "@test.local", "password123");
         user.setFullName("User " + emailPrefix);

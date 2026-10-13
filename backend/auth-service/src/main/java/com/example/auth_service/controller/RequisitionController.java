@@ -3,9 +3,7 @@ package com.example.auth_service.controller;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionDraftRequest;
 import com.example.auth_service.dto.RequisitionResponse;
-import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.service.RequisitionService;
-import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -79,14 +77,6 @@ public class RequisitionController {
     public ResponseEntity<RequisitionResponse> getById(@PathVariable Long id) {
         RequisitionResponse requisition = service.getById(id);
         return ResponseEntity.ok(requisition);
-    }
-
-    /**
-     * API lấy tiến trình và lịch sử phê duyệt thực tế theo snapshot (S3-01 / S3-03).
-     */
-    @GetMapping({"/{id}/timeline", "/{id}/approval-logs", "/{id}/approval-history"})
-    public ResponseEntity<com.example.auth_service.dto.RequisitionApprovalTimelineResponse> getTimeline(@PathVariable Long id) {
-        return ResponseEntity.ok(service.getTimeline(id));
     }
 
     /**

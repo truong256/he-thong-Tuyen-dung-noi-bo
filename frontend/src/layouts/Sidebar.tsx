@@ -211,16 +211,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN']) && (
                   <>
                     <li>
-                      <a
-                        href="#jobs"
-                        className="sidebar-link-upcoming"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleUpcomingClick('Tin tuyển dụng');
-                        }}
+                      <NavLink
+                        to="/recruitment/job-postings"
+                        className={({ isActive }) => (isActive ? 'active' : '')}
+                        onClick={handleLinkClick}
                       >
                         <span>Tin tuyển dụng</span>
-                      </a>
+                      </NavLink>
                     </li>
                     <li>
                       <a

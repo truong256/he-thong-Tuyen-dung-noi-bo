@@ -200,6 +200,49 @@ export const requisitionApi = {
   deleteDraft: async (id: number): Promise<void> => {
     await client.delete(`/api/requisitions/${id}`);
   },
+
+  clone: async (id: number): Promise<RequisitionResponse> => {
+    const res = await client.post<RequisitionResponse>(`/api/recruitment-requests/${id}/clone`);
+    return res.data;
+  },
+
+  getApprovalTimeline: async (id: number) => {
+    const res = await client.get<any>(`/api/requisitions/${id}/approval-history`);
+    return res.data;
+  },
+
+  approve: async (id: number, comments?: string) => {
+    const res = await client.put<any>(`/api/requisitions/${id}/approve`, { comments });
+    return res.data;
+  },
+
+  reject: async (id: number, rejectionReason: string, comments?: string) => {
+    const res = await client.put<any>(`/api/requisitions/${id}/reject`, { rejectionReason, comments });
+    return res.data;
+  },
+
+  getAssignableRecruiters: async (): Promise<import('../types/requisition').AssignableRecruiter[]> => {
+    const res = await client.get<import('../types/requisition').AssignableRecruiter[]>('/api/requisitions/assignable-recruiters');
+    return res.data;
+  },
+
+  getAssignments: async (id: number): Promise<import('../types/requisition').RequisitionAssignments> => {
+    const res = await client.get<import('../types/requisition').RequisitionAssignments>(`/api/requisitions/${id}/assignments`);
+    return res.data;
+  },
+
+  assignRecruiters: async (
+    id: number,
+    payload: import('../types/requisition').AssignRecruiterPayload
+  ): Promise<import('../types/requisition').RequisitionAssignments> => {
+    const res = await client.put<import('../types/requisition').RequisitionAssignments>(`/api/requisitions/${id}/assignments`, payload);
+    return res.data;
+  },
+
+  getAssignmentHistory: async (id: number): Promise<import('../types/requisition').AssignmentHistoryItem[]> => {
+    const res = await client.get<import('../types/requisition').AssignmentHistoryItem[]>(`/api/requisitions/${id}/assignments/history`);
+    return res.data;
+  },
 };
 
 export default requisitionApi;
