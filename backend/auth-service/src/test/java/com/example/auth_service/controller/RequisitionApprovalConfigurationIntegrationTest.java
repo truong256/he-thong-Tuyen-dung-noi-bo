@@ -60,8 +60,8 @@ class RequisitionApprovalConfigurationIntegrationTest {
     @Autowired private RequisitionApprovalConfigurationRepository configurations;
     @Autowired private RequisitionApprovalConfigurationStepRepository configurationSteps;
     @Autowired private RequisitionApprovalSnapshotRepository snapshots;
-        @Autowired private RequisitionAssignmentRepository assignments;
-        @Autowired private RecruitmentRequisitionRepository requisitions;
+    @Autowired private RequisitionAssignmentRepository assignments;
+    @Autowired private RecruitmentRequisitionRepository requisitions;
 
     private User hrManager;
     private User hiringManager;

@@ -10,25 +10,32 @@ import {
   Trash2,
   X,
   Briefcase,
+  Copy,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import requisitionApi from '../api/requisition';
 import organizationApi from '../api/organization';
 import jobTitleApi from '../api/jobTitle';
-import { Requisition, RequisitionPayload } from '../types/requisition';
+import { Requisition, RequisitionPayload, RequisitionAssignments } from '../types/requisition';
 import { Department } from '../types/organization';
 import { JobTitle } from '../types/jobTitle';
 import { PageHeader } from '../components/common/PageHeader';
+import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
+import { AssignRecruiterModal } from '../components/requisition/AssignRecruiterModal';
 import '../styles/requisitions.css';
 
 export const RequisitionManagementPage: React.FC = () => {
   const { user, hasPermission, hasAnyRole } = useAuth();
   const canCreate = hasPermission ? hasPermission('REQUISITION_CREATE') : hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']);
+  const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['APPROVER', 'HR_MANAGER', 'ADMIN']);
+  const canAssign = hasPermission ? hasPermission('RECRUITER_ASSIGN') : hasAnyRole(['HR_MANAGER', 'ADMIN']);
 
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [timelineReqId, setTimelineReqId] = useState<number | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -59,6 +66,10 @@ export const RequisitionManagementPage: React.FC = () => {
   // Detail Modal
   const [detailReq, setDetailReq] = useState<Requisition | null>(null);
 
+  // Assign Recruiter Modal (S3-06)
+  const [assignModalReq, setAssignModalReq] = useState<Requisition | null>(null);
+  const [assignmentMap, setAssignmentMap] = useState<Record<number, RequisitionAssignments>>({});
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -77,9 +88,25 @@ export const RequisitionManagementPage: React.FC = () => {
         organizationApi.getDepartments(),
         jobTitleApi.getJobTitles(),
       ]);
-      setRequisitions(reqRes.content || []);
+      const items = reqRes.content || [];
+      setRequisitions(items);
       setDepartments(deptRes || []);
       setJobTitles(jtRes || []);
+
+      // Load assignments for visible requisitions
+      if (items.length > 0) {
+        Promise.allSettled(
+          items.map((r) => requisitionApi.getAssignments(r.id))
+        ).then((results) => {
+          const map: Record<number, RequisitionAssignments> = {};
+          results.forEach((res) => {
+            if (res.status === 'fulfilled' && res.value) {
+              map[res.value.requisitionId] = res.value;
+            }
+          });
+          setAssignmentMap(map);
+        });
+      }
     } catch (err: any) {
       console.error('Failed to load requisitions:', err);
       showToast(err.response?.data?.message || 'Không thể tải danh sách yêu cầu tuyển dụng.', 'error');
@@ -239,6 +266,21 @@ export const RequisitionManagementPage: React.FC = () => {
     }
   };
 
+  const handleClone = async (req: Requisition) => {
+    try {
+      setIsLoading(true);
+      const cloned = await requisitionApi.clone(req.id);
+      showToast(`Đã sao chép thành công bản nháp mới: ${cloned.requisitionCode}`);
+      // Mở ngay modal form nháp để người dùng chỉnh sửa
+      openEditModal(cloned as any);
+      await loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Không thể sao chép yêu cầu tuyển dụng.', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatCurrency = (val?: number) => {
     if (!val) return '—';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -365,6 +407,7 @@ export const RequisitionManagementPage: React.FC = () => {
                 <th>Số Lượng</th>
                 <th>Lý Do Tuyển</th>
                 <th>Ngày Cần</th>
+                <th>Người Phụ Trách</th>
                 <th>Trạng Thái</th>
                 <th>Thao Tác</th>
               </tr>
@@ -389,9 +432,39 @@ export const RequisitionManagementPage: React.FC = () => {
                     </span>
                   </td>
                   <td>{req.targetDate || '—'}</td>
+                  <td>
+                    {assignmentMap[req.id]?.primaryRecruiter ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#0369a1', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <UserCheck size={13} />
+                          {assignmentMap[req.id].primaryRecruiter?.fullName}
+                        </span>
+                        {assignmentMap[req.id].supportRecruiters.length > 0 && (
+                          <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                            +{assignmentMap[req.id].supportRecruiters.length} hỗ trợ
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '0.8125rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                        Chưa phân công
+                      </span>
+                    )}
+                  </td>
                   <td>{renderStatusBadge(req.status)}</td>
                   <td>
                     <div className="req-actions-cell">
+                      {canAssign && (
+                        <button
+                          type="button"
+                          className="req-action-btn"
+                          title="Phân công Recruiter phụ trách"
+                          style={{ color: '#0284c7' }}
+                          onClick={() => setAssignModalReq(req)}
+                        >
+                          <UserCheck size={16} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="req-action-btn"
@@ -399,6 +472,15 @@ export const RequisitionManagementPage: React.FC = () => {
                         onClick={() => setDetailReq(req)}
                       >
                         <Eye size={16} />
+                      </button>
+                      <button
+                        type="button"
+                        className="req-action-btn"
+                        title="Theo dõi tiến độ & lịch sử phê duyệt"
+                        onClick={() => setTimelineReqId(req.id)}
+                        style={{ color: '#d97706' }}
+                      >
+                        <Clock size={16} />
                       </button>
                       {(req.status === 'DRAFT' || req.status === 'PENDING_APPROVAL') && (
                         <button
@@ -420,6 +502,14 @@ export const RequisitionManagementPage: React.FC = () => {
                           <Trash2 size={16} />
                         </button>
                       )}
+                      <button
+                        type="button"
+                        className="req-action-btn"
+                        title="Sao chép yêu cầu tuyển dụng"
+                        onClick={() => handleClone(req)}
+                      >
+                        <Copy size={16} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -704,6 +794,20 @@ export const RequisitionManagementPage: React.FC = () => {
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Người tạo yêu cầu:</span>
                   <div style={{ fontWeight: 600 }}>{detailReq.createdByName || '—'}</div>
                 </div>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Recruiter chính:</span>
+                  <div style={{ fontWeight: 600, color: '#0369a1' }}>
+                    {assignmentMap[detailReq.id]?.primaryRecruiter?.fullName || 'Chưa phân công'}
+                  </div>
+                </div>
+                {assignmentMap[detailReq.id]?.supportRecruiters && assignmentMap[detailReq.id]!.supportRecruiters.length > 0 && (
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Recruiter hỗ trợ:</span>
+                    <div style={{ fontWeight: 500, color: '#475569', fontSize: '0.875rem' }}>
+                      {assignmentMap[detailReq.id]!.supportRecruiters.map((s) => s.fullName).join(', ')}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {detailReq.salaryExplanation && (
@@ -732,7 +836,37 @@ export const RequisitionManagementPage: React.FC = () => {
               )}
             </div>
 
-            <div className="req-modal-footer">
+            <div className="req-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="req-btn-secondary"
+                  onClick={() => {
+                    const id = detailReq.id;
+                    setDetailReq(null);
+                    setTimelineReqId(id);
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Clock size={15} color="#d97706" />
+                  Tiến độ & Lịch sử phê duyệt
+                </button>
+                {canAssign && (
+                  <button
+                    type="button"
+                    className="req-btn-secondary"
+                    onClick={() => {
+                      const r = detailReq;
+                      setDetailReq(null);
+                      setAssignModalReq(r);
+                    }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <UserCheck size={16} />
+                    <span>Phân công Recruiter</span>
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 className="req-btn-primary"
@@ -744,6 +878,28 @@ export const RequisitionManagementPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal Theo dõi trạng thái & Lịch sử phê duyệt (S3-03) */}
+      {timelineReqId !== null && (
+        <ApprovalTimelineModal
+          requisitionId={timelineReqId}
+          isOpen={true}
+          onClose={() => setTimelineReqId(null)}
+          canApprove={canApprove}
+          onStatusChange={loadData}
+        />
+      )}
+
+      {/* Modal Phân công Recruiter (S3-06) */}
+      <AssignRecruiterModal
+        isOpen={Boolean(assignModalReq)}
+        onClose={() => setAssignModalReq(null)}
+        requisition={assignModalReq}
+        onSuccess={() => {
+          showToast('Đã lưu phân công recruiter thành công!');
+          loadData();
+        }}
+      />
     </div>
   );
 };

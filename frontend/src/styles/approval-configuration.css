@@ -667,3 +667,41 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+@media (max-width: 360px) {
+  .approval-config-page {
+    padding-inline: 8px;
+  }
+
+  .approval-config-panel-header,
+  .approval-config-history-header {
+    padding: 12px 14px;
+  }
+
+  .approval-config-step-list {
+    padding-inline: 10px;
+  }
+
+  .approval-config-header-actions,
+  .approval-config-editor-footer {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .approval-config-header-actions button,
+  .approval-config-editor-footer button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .approval-config-step {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 6px 10px;
+  }
+
+  .approval-config-step-index {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+}

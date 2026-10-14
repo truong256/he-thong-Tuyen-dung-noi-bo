@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "jsx": "react-jsx", "allowImportingTsExtensions": true },
+  "include": ["src/**/*.ts", "frontend/**/*.ts", "frontend/**/*.tsx", "test/fe/*.tsx"]
+}

@@ -323,6 +323,58 @@ public class RecruitmentRequisitionService {
         requisitionRepository.delete(requisition);
     }
 
+    public RequisitionResponse clone(Long sourceId, User currentUser) {
+        RecruitmentRequisition source = requisitionRepository.findById(sourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng gốc với ID: " + sourceId));
+
+        Department department = source.getDepartmentId() != null
+                ? departmentRepository.findById(source.getDepartmentId()).orElse(null)
+                : null;
+        checkViewPermission(currentUser, source, department);
+
+        if (department != null) {
+            if (!department.isActive()) {
+                throw new BadRequestException("Phòng ban của yêu cầu gốc đã ngừng áp dụng, không thể sao chép.");
+            }
+            checkDepartmentManagerScope(currentUser, department);
+        }
+
+        JobTitle jobTitle = source.getJobTitleId() != null
+                ? jobTitleRepository.findById(source.getJobTitleId()).orElse(null)
+                : null;
+
+        String newCode = resolveRequisitionCode(null, null);
+
+        RecruitmentRequisition cloned = new RecruitmentRequisition();
+        cloned.setRequisitionCode(newCode);
+        cloned.setTitle(source.getTitle());
+        cloned.setDepartmentId(source.getDepartmentId());
+        cloned.setJobTitleId(source.getJobTitleId());
+        cloned.setQuantity(source.getQuantity() > 0 ? source.getQuantity() : 1);
+        cloned.setRecruitmentType(source.getRecruitmentType());
+        cloned.setReason(source.getReason());
+        cloned.setSalaryMin(source.getSalaryMin());
+        cloned.setSalaryMax(source.getSalaryMax());
+        cloned.setSalaryExplanation(source.getSalaryExplanation());
+        cloned.setTargetDate(source.getTargetDate());
+
+        // Sao chép toàn bộ mô tả công việc (JD) và yêu cầu ứng viên
+        cloned.setJobDescription(source.getJobDescription());
+        cloned.setCandidateRequirements(source.getCandidateRequirements());
+
+        // Gán trạng thái mới là Draft (Nháp)
+        cloned.setStatus("DRAFT");
+
+        // Gán người tạo mới và mốc thời gian
+        cloned.setCreatedByUserId(currentUser.getId());
+        cloned.setCreatedAt(Instant.now());
+        cloned.setUpdatedAt(Instant.now());
+
+        // Không sao chép lịch sử phê duyệt hay bình luận cũ
+        RecruitmentRequisition saved = requisitionRepository.save(cloned);
+        return toResponse(saved, department, jobTitle, currentUser);
+    }
+
     // --- Validation & Permission Helper Methods ---
 
     public boolean isSalaryOutsideRange(JobTitle jobTitle, Long proposedMin, Long proposedMax) {

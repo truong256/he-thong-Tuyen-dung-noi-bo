@@ -22,4 +22,10 @@ public class RequisitionAssignment {
 
     @Column(name = "handover_required", nullable = false)
     private boolean handoverRequired = false;
+
+    @Column(name = "is_primary", nullable = false)
+    private boolean isPrimary = false;
+
+    @Column(name = "assigned_at")
+    private java.time.Instant assignedAt = java.time.Instant.now();
 }
