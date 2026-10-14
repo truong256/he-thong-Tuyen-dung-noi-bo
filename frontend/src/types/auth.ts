@@ -1,0 +1,55 @@
+export type RoleName =
+  | 'CANDIDATE'
+  | 'RECRUITER'
+  | 'HIRING_MANAGER'
+  | 'INTERVIEWER'
+  | 'HR_MANAGER'
+  | 'APPROVER'
+  | 'ADMIN';
+
+export interface UserSummary {
+  id: number;
+  email: string;
+  recoveryEmail?: string;
+  fullName: string;
+  phone?: string;
+  displayName?: string;
+  department?: string;
+  role: string;
+  roles: string[];
+  status: string;
+  lockReason?: string;
+  lockNote?: string;
+  lockedAt?: string;
+  lockedBy?: string;
+  handoverWarnings?: string[];
+  mustChangePassword?: boolean;
+  avatarUrl?: string;
+  avatarThumbnailUrl?: string;
+}
+
+export interface LoginResponse {
+  message: string;
+  accessToken: string;
+  refreshToken: string;
+  user: UserSummary;
+  mustChangePassword?: boolean;
+}
+
+export interface AvatarUploadResponse {
+  message: string;
+  avatarUrl: string;
+  thumbnailUrl: string;
+  avatarThumbnailUrl?: string;
+  user?: UserSummary;
+}
+
+export interface ApiError {
+  timestamp?: string;
+  status: number;
+  code: string;
+  message: string;
+  path?: string;
+  validationErrors?: Record<string, string>;
+  lockedUntil?: string | null;
+}

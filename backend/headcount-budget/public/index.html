@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATS — Ngân sách headcount</title>
+<style>
+:root{--bg:#f3f5f9;--card:#fff;--text:#14213d;--muted:#5b6478;--border:#dde2ec;--primary:#1d4ed8;--primary-d:#1e3fae;
+--ok:#15803d;--ok-bg:#e7f6ec;--warn:#92400e;--warn-bg:#fef3c7;--danger:#b91c1c;--danger-bg:#fde8e8;--info-bg:#e8effd;--shadow:0 1px 3px rgba(20,33,61,.08)}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1420;--card:#192033;--text:#e8ecf5;--muted:#9aa5bd;--border:#2b3550;--primary:#6b9bff;--primary-d:#8bb0ff;
+--ok:#4ade80;--ok-bg:#12301f;--warn:#fbbf24;--warn-bg:#33270b;--danger:#f87171;--danger-bg:#3a1517;--info-bg:#16264a;--shadow:none}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);overflow-wrap:anywhere}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+header{background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.bar{max-width:1100px;margin:0 auto;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:16px;flex:1 1 auto;min-width:0}
+.user{font-size:13px;color:var(--muted);text-align:right;min-width:0}
+.user b{color:var(--text)}
+nav{max-width:1100px;margin:0 auto;display:flex;gap:4px;padding:0 8px;overflow-x:auto}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:11px 12px;min-height:44px;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
+nav button[aria-selected=true]{color:var(--primary);border-color:var(--primary)}
+main{max-width:1100px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spread{justify-content:space-between}
+h2{font-size:18px;margin:4px 0 12px}
+h3{font-size:16px;margin:0}
+.muted{color:var(--muted);font-size:13px}
+.btn{border:1px solid var(--border);background:var(--card);border-radius:8px;padding:9px 14px;min-height:44px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--primary)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-d)}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn.small{min-height:38px;padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+label{display:block;font-weight:600;font-size:13px;margin:10px 0 4px}
+input,select,textarea{width:100%;min-height:44px;padding:9px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card)}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--primary);outline-offset:1px}
+input[readonly]{background:var(--bg)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:0 12px}
+.badge{display:inline-block;padding:3px 9px;border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
+.b-ok{background:var(--ok-bg);color:var(--ok)}.b-warn{background:var(--warn-bg);color:var(--warn)}
+.b-danger{background:var(--danger-bg);color:var(--danger)}.b-info{background:var(--info-bg);color:var(--primary)}.b-gray{background:var(--bg);color:var(--muted);border:1px solid var(--border)}
+.bar-track{height:10px;background:var(--bg);border:1px solid var(--border);border-radius:99px;overflow:hidden;margin:6px 0 4px}
+.bar-fill{height:100%;background:var(--ok)}.bar-fill.warn{background:#f59e0b}.bar-fill.danger{background:#dc2626}
+.kv{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:3px 0}
+.kv span:first-child{color:var(--muted)}
+.big{font-size:26px;font-weight:800;line-height:1.1}
+.alert{border-radius:10px;padding:11px 13px;margin:10px 0;border:1px solid;font-size:14px}
+.alert.warn{background:var(--warn-bg);color:var(--warn);border-color:#f59e0b}
+.alert.danger{background:var(--danger-bg);color:var(--danger);border-color:#dc2626}
+.alert.ok{background:var(--ok-bg);color:var(--ok);border-color:#22c55e}
+.alert.info{background:var(--info-bg);color:var(--primary);border-color:var(--primary)}
+.sep{border:0;border-top:1px solid var(--border);margin:10px 0}
+.login{max-width:420px;margin:28px auto}
+.err{color:var(--danger);font-size:13px;margin-top:8px;min-height:18px}
+.overlay{position:fixed;inset:0;background:rgba(10,15,30,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.modal{background:var(--card);width:100%;max-width:520px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;padding:16px}
+@media (min-width:640px){.overlay{align-items:center}.modal{border-radius:16px}}
+#toasts{position:fixed;left:12px;right:12px;bottom:12px;display:flex;flex-direction:column;gap:8px;z-index:60;pointer-events:none;align-items:center}
+.toast{background:#14213d;color:#fff;border-radius:10px;padding:10px 14px;max-width:460px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.toast.err{background:#b91c1c;color:#fff;margin:0}
+pre{white-space:pre-wrap;font-size:12px;background:var(--bg);padding:8px;border-radius:8px;overflow:auto}
+summary{cursor:pointer;color:var(--primary);font-size:13px}
+.empty{text-align:center;padding:28px 12px;color:var(--muted)}
+.counter{font-size:12px;color:var(--muted);text-align:right}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">ATS · Ngân sách headcount <span class="muted">(S3-04)</span></div>
+    <div class="user hidden" id="userBox"></div>
+    <button class="btn small hidden" id="logoutBtn" type="button">Đăng xuất</button>
+  </div>
+  <nav id="tabs" role="tablist" class="hidden"></nav>
+</header>
+
+<main>
+  <section id="loginView" class="card login">
+    <h2>Đăng nhập</h2>
+    <label for="demoAcc">Tài khoản demo</label>
+    <select id="demoAcc">
+      <option value="hr.manager@company.vn">Trưởng phòng Nhân sự (HR Manager — được ghi đè)</option>
+      <option value="hm.it@company.vn">Trưởng phòng IT (Hiring Manager)</option>
+      <option value="hm.mkt@company.vn">Trưởng phòng Marketing (Hiring Manager)</option>
+      <option value="approver@company.vn">Người duyệt (Approver)</option>
+      <option value="recruiter@company.vn">Nhân viên tuyển dụng (Recruiter)</option>
+      <option value="admin@company.vn">Quản trị hệ thống (Admin — không được ghi đè)</option>
+    </select>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" value="hr.manager@company.vn">
+    <label for="password">Mật khẩu</label>
+    <input id="password" type="password" autocomplete="current-password" value="Passw0rd!">
+    <div class="err" id="loginErr" role="alert"></div>
+    <button class="btn primary" id="loginBtn" type="button" style="width:100%;margin-top:6px">Đăng nhập</button>
+  </section>
+
+  <section id="appView" class="hidden"></section>
+</main>
+
+<div id="modalRoot"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ============ Tiện ích ============ */
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nf = new Intl.NumberFormat('vi-VN');
+const num = (n) => nf.format(Number(n) || 0);
+const vnd = (n) => nf.format(Math.round(Number(n) || 0)) + ' ₫';
+const money = (s) => Number(String(s ?? '').replace(/\D/g, '')) || 0;
+const dt = (s) => (s ? new Date(s).toLocaleString('vi-VN') : '');
+const thisYear = new Date().getFullYear();
+
+const ROLE = { ADMIN: 'ADMIN', HR: 'HR_MANAGER', REC: 'RECRUITER', HM: 'HIRING_MANAGER', INT: 'INTERVIEWER', APR: 'APPROVER' };
+const ROLE_LABEL = { ADMIN: 'Quản trị', HR_MANAGER: 'Trưởng phòng Nhân sự', RECRUITER: 'Tuyển dụng', HIRING_MANAGER: 'Trưởng bộ phận', INTERVIEWER: 'Người phỏng vấn', APPROVER: 'Người duyệt' };
+const STATUS = {
+  DRAFT: ['Nháp', 'b-gray'], PENDING_APPROVAL: ['Chờ duyệt', 'b-info'], APPROVED: ['Đã duyệt', 'b-ok'],
+  REJECTED: ['Từ chối', 'b-danger'], ON_HOLD: ['Tạm hoãn', 'b-warn'], CANCELLED: ['Đã huỷ', 'b-gray'], FILLED: ['Đã tuyển đủ', 'b-ok'],
+};
+const ACTION_LABEL = {
+  BUDGET_CREATED: ['Khai báo ngân sách', 'b-info'], BUDGET_UPDATED: ['Cập nhật ngân sách', 'b-gray'],
+  BUDGET_DELETED: ['Xoá ngân sách', 'b-warn'], BUDGET_OVERRIDE: ['Ghi đè vượt chỉ tiêu', 'b-danger'],
+};
+
+const S = { token: null, user: null, depts: [], tab: 'budget', year: thisYear, reqFilter: '' };
+const hasRole = (...r) => !!S.user && S.user.roles.some((x) => r.includes(x));
+const can = {
+  writeBudget: () => hasRole(ROLE.HR, ROLE.ADMIN),
+  fullBudget: () => hasRole(ROLE.HR, ROLE.ADMIN, ROLE.APR),
+  seeRemaining: () => hasRole(ROLE.HR, ROLE.ADMIN, ROLE.APR, ROLE.HM, ROLE.REC),
+  writeReq: () => hasRole(ROLE.HM, ROLE.REC, ROLE.HR, ROLE.ADMIN),
+  readReq: () => hasRole(ROLE.HM, ROLE.REC, ROLE.HR, ROLE.ADMIN, ROLE.APR),
+  approve: () => hasRole(ROLE.APR, ROLE.HR, ROLE.ADMIN),
+  override: () => hasRole(ROLE.HR),
+  logs: () => hasRole(ROLE.HR, ROLE.ADMIN),
+};
+const deptName = (id) => { const d = S.depts.find((x) => x.id === id); return d ? `${d.code} – ${d.name}` : `Phòng ban #${id}`; };
+
+function toast(msg, isErr) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), isErr ? 6000 : 3500);
+}
+
+function errMsg(data, status) {
+  if (!data) return `Lỗi ${status}`;
+  if (Array.isArray(data.details) && data.details.length && data.details[0].errors) {
+    return data.details.map((d) => d.errors.join(', ')).join('; ');
+  }
+  return Array.isArray(data.message) ? data.message.join('; ') : data.message || `Lỗi ${status}`;
+}
+
+async function api(path, { method = 'GET', body } = {}) {
+  const res = await fetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(S.token ? { Authorization: 'Bearer ' + S.token } : {}) },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await res.json(); } catch (_) { /* không có body */ }
+  if (!res.ok) {
+    if (res.status === 401 && S.token && path !== '/auth/login') logout('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.');
+    throw { status: res.status, body: data || {}, message: errMsg(data, res.status) };
+  }
+  return data;
+}
+
+/* ============ Modal ============ */
+function openModal(html, onMount) {
+  const root = $('#modalRoot');
+  root.innerHTML = `<div class="overlay" id="ov"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`;
+  const close = () => { root.innerHTML = ''; document.removeEventListener('keydown', onKey); };
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  $('#ov').addEventListener('mousedown', (e) => { if (e.target.id === 'ov') close(); });
+  root.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', close));
+  if (onMount) onMount(root, close);
+  const first = root.querySelector('input:not([readonly]),select,textarea');
+  if (first) first.focus();
+  return close;
+}
+
+/* ============ Đăng nhập ============ */
+$('#demoAcc').addEventListener('change', (e) => { $('#email').value = e.target.value; });
+$('#loginBtn').addEventListener('click', doLogin);
+$('#password').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+$('#logoutBtn').addEventListener('click', () => logout());
+
+async function doLogin() {
+  $('#loginErr').textContent = '';
+  const btn = $('#loginBtn'); btn.disabled = true;
+  try {
+    const r = await api('/auth/login', { method: 'POST', body: { email: $('#email').value.trim(), password: $('#password').value } });
+    S.token = r.accessToken; S.user = r.user;
+    sessionStorage.setItem('ats_session', JSON.stringify({ token: S.token, user: S.user }));
+    await enterApp();
+  } catch (e) { $('#loginErr').textContent = e.message || 'Không đăng nhập được.'; }
+  finally { btn.disabled = false; }
+}
+
+function logout(msg) {
+  S.token = null; S.user = null; sessionStorage.removeItem('ats_session');
+  $('#modalRoot').innerHTML = '';
+  $('#appView').classList.add('hidden'); $('#tabs').classList.add('hidden');
+  $('#userBox').classList.add('hidden'); $('#logoutBtn').classList.add('hidden');
+  $('#loginView').classList.remove('hidden');
+  $('#loginErr').textContent = msg || '';
+}
+
+async function enterApp() {
+  $('#loginView').classList.add('hidden');
+  $('#appView').classList.remove('hidden');
+  $('#userBox').classList.remove('hidden'); $('#logoutBtn').classList.remove('hidden');
+  $('#userBox').innerHTML = `<b>${esc(S.user.fullName)}</b><br>${S.user.roles.map((r) => esc(ROLE_LABEL[r] || r)).join(', ')}`;
+  try { S.depts = await api('/departments'); } catch (e) { S.depts = []; toast(e.message, true); }
+  const tabs = [];
+  if (can.seeRemaining()) tabs.push(['budget', 'Ngân sách']);
+  if (can.readReq()) tabs.push(['req', 'Yêu cầu tuyển dụng']);
+  if (can.logs()) tabs.push(['logs', 'Nhật ký ghi đè']);
+  const nav = $('#tabs'); nav.classList.remove('hidden');
+  if (!tabs.length) { nav.classList.add('hidden'); $('#appView').innerHTML = `<div class="alert danger">Vai trò của bạn không có quyền truy cập màn hình này.</div>`; return; }
+  nav.innerHTML = tabs.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}">${l}</button>`).join('');
+  nav.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  showTab(tabs[0][0]);
+}
+
+function showTab(k) {
+  S.tab = k;
+  document.querySelectorAll('#tabs button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
+  ({ budget: renderBudget, req: renderReq, logs: renderLogs })[k]();
+}
+
+/* ============ Màn hình 1: Ngân sách ============ */
+function budgetState(b) {
+  if (!b.hasBudget) return { key: 'none', label: 'Chưa khai báo', cls: 'b-danger' };
+  const salaryKnown = b.salaryBudgetVnd !== undefined;
+  if (b.headcountRemaining < 0 || (salaryKnown && b.salaryRemainingVnd < 0)) return { key: 'over', label: 'Vượt chỉ tiêu', cls: 'b-danger' };
+  if (b.headcountRemaining === 0 || (salaryKnown && b.salaryBudgetVnd > 0 && b.salaryRemainingVnd === 0)) return { key: 'full', label: 'Đã hết chỉ tiêu — chặn yêu cầu mới', cls: 'b-danger' };
+  const pctH = b.headcountQuota ? b.headcountUsed / b.headcountQuota : 0;
+  const pctS = salaryKnown && b.salaryBudgetVnd ? b.salaryUsedVnd / b.salaryBudgetVnd : 0;
+  if (Math.max(pctH, pctS) >= 0.8) return { key: 'near', label: 'Sắp hết chỉ tiêu', cls: 'b-warn' };
+  return { key: 'ok', label: 'Trong ngân sách', cls: 'b-ok' };
+}
+const pct = (used, total) => (total > 0 ? Math.min(100, Math.round((used / total) * 100)) : used > 0 ? 100 : 0);
+const barCls = (used, total) => { const p = total > 0 ? used / total : used > 0 ? 2 : 0; return p > 1 ? 'danger' : p >= 0.8 ? 'warn' : ''; };
+
+async function renderBudget() {
+  const v = $('#appView');
+  v.innerHTML = `
+    <div class="row spread">
+      <h2 style="margin:0">Ngân sách headcount theo phòng ban</h2>
+      ${can.writeBudget() ? `<button class="btn primary" id="addBudget" type="button">+ Khai báo ngân sách</button>` : ''}
+    </div>
+    <div class="row" style="margin:10px 0">
+      <label for="yearSel" style="margin:0">Năm</label>
+      <input id="yearSel" type="number" min="2000" max="2100" value="${S.year}" style="width:110px">
+      <button class="btn" id="reloadB" type="button">Xem</button>
+    </div>
+    <div id="budgetSummary"></div>
+    <div id="budgetList" class="grid"><div class="empty">Đang tải…</div></div>`;
+  const reload = () => { S.year = Number($('#yearSel').value) || thisYear; renderBudgetList(); };
+  $('#reloadB').addEventListener('click', reload);
+  $('#yearSel').addEventListener('keydown', (e) => { if (e.key === 'Enter') reload(); });
+  if ($('#addBudget')) $('#addBudget').addEventListener('click', () => budgetForm(null));
+  renderBudgetList();
+}
+
+async function renderBudgetList() {
+  const list = $('#budgetList'); if (!list) return;
+  let items = [];
+  try {
+    if (can.fullBudget()) {
+      const rows = await api(`/headcount-budgets?year=${S.year}`);
+      const byDept = new Map(rows.map((r) => [r.departmentId, r]));
+      items = S.depts.map((d) => byDept.get(d.id) || { departmentId: d.id, year: S.year, hasBudget: false, headcountQuota: 0, headcountUsed: 0, headcountRemaining: 0, salaryBudgetVnd: 0, salaryUsedVnd: 0, salaryRemainingVnd: 0 });
+    } else if (S.user.departmentId) {
+      items = [await api(`/headcount-budgets/remaining?departmentId=${S.user.departmentId}&year=${S.year}`)];
+    } else {
+      list.innerHTML = `<div class="alert warn" style="grid-column:1/-1">Tài khoản chưa được gán phòng ban nên không có số liệu để hiển thị.</div>`;
+      return;
+    }
+  } catch (e) { list.innerHTML = `<div class="alert danger" style="grid-column:1/-1">${esc(e.message)}</div>`; return; }
+
+  const st = items.map(budgetState);
+  const blocked = items.filter((_, i) => ['over', 'full', 'none'].includes(st[i].key));
+  const near = items.filter((_, i) => st[i].key === 'near');
+  let banner = '';
+  if (blocked.length) banner += `<div class="alert danger" role="alert"><b>Cảnh báo vượt chỉ tiêu:</b> ${blocked.map((b) => esc(deptName(b.departmentId))).join('; ')} — yêu cầu mới sẽ bị <b>chặn khi duyệt</b>${can.override() ? '; bạn là HR Manager nên có thể ghi đè kèm lý do.' : '; chỉ HR Manager được ghi đè kèm lý do.'}</div>`;
+  if (near.length) banner += `<div class="alert warn"><b>Sắp hết chỉ tiêu (≥ 80%):</b> ${near.map((b) => esc(deptName(b.departmentId))).join('; ')}</div>`;
+  $('#budgetSummary').innerHTML = banner;
+
+  list.innerHTML = items.length ? items.map((b, i) => budgetCard(b, st[i])).join('') : `<div class="empty" style="grid-column:1/-1">Chưa có phòng ban nào.</div>`;
+  list.querySelectorAll('[data-edit]').forEach((el) => el.addEventListener('click', () => budgetForm(items.find((x) => x.id === Number(el.dataset.edit)))));
+  list.querySelectorAll('[data-del]').forEach((el) => el.addEventListener('click', () => budgetDelete(items.find((x) => x.id === Number(el.dataset.del)))));
+  list.querySelectorAll('[data-new]').forEach((el) => el.addEventListener('click', () => budgetForm(null, Number(el.dataset.new))));
+}
+
+function budgetCard(b, st) {
+  const showSalary = b.salaryBudgetVnd !== undefined;
+  const hc = `
+    <div class="kv"><span>Chỉ tiêu headcount</span><b>${num(b.headcountQuota)}</b></div>
+    <div class="bar-track" aria-hidden="true"><div class="bar-fill ${barCls(b.headcountUsed, b.headcountQuota)}" style="width:${pct(b.headcountUsed, b.headcountQuota)}%"></div></div>
+    <div class="kv"><span>Đã dùng (yêu cầu đã duyệt)</span><b>${num(b.headcountUsed)}</b></div>`;
+  const sal = showSalary ? `<hr class="sep">
+    <div class="kv"><span>Ngân sách lương năm</span><b>${vnd(b.salaryBudgetVnd)}</b></div>
+    <div class="bar-track" aria-hidden="true"><div class="bar-fill ${barCls(b.salaryUsedVnd, b.salaryBudgetVnd)}" style="width:${pct(b.salaryUsedVnd, b.salaryBudgetVnd)}%"></div></div>
+    <div class="kv"><span>Đã dùng</span><b>${vnd(b.salaryUsedVnd)}</b></div>
+    <div class="kv"><span>Còn lại</span><b style="color:${b.salaryRemainingVnd < 0 ? 'var(--danger)' : 'inherit'}">${vnd(b.salaryRemainingVnd)}</b></div>` : '';
+  const actions = can.writeBudget()
+    ? (b.hasBudget
+      ? `<div class="row" style="margin-top:10px"><button class="btn small" data-edit="${b.id}" type="button">Sửa</button><button class="btn small danger" data-del="${b.id}" type="button">Xoá</button></div>`
+      : `<div style="margin-top:10px"><button class="btn small primary" data-new="${b.departmentId}" type="button">Khai báo ngân sách ${b.year}</button></div>`)
+    : '';
+  return `<div class="card">
+    <div class="row spread"><h3>${esc(deptName(b.departmentId))}</h3><span class="badge ${st.cls}">${esc(st.label)}</span></div>
+    <div style="margin:10px 0 6px"><div class="muted">Headcount còn lại</div>
+      <div class="big" style="color:${b.headcountRemaining <= 0 ? 'var(--danger)' : 'var(--ok)'}">${num(b.headcountRemaining)}</div></div>
+    ${hc}${sal}${actions}</div>`;
+}
+
+function budgetForm(b, presetDept) {
+  const editing = !!b;
+  const usedHc = editing ? b.headcountUsed : 0, usedSal = editing ? b.salaryUsedVnd : 0;
+  const deptOpts = S.depts.map((d) => `<option value="${d.id}" ${d.id === presetDept ? 'selected' : ''}>${esc(d.code)} – ${esc(d.name)}</option>`).join('');
+  openModal(`
+    <h2>${editing ? 'Sửa ngân sách' : 'Khai báo ngân sách'}</h2>
+    <label for="fDept">Phòng ban</label>
+    ${editing ? `<input id="fDept" value="${esc(deptName(b.departmentId))}" readonly>` : `<select id="fDept">${deptOpts}</select>`}
+    <div class="form-grid">
+      <div><label for="fYear">Năm</label><input id="fYear" type="number" min="2000" max="2100" value="${editing ? b.year : S.year}" ${editing ? 'readonly' : ''}></div>
+      <div><label for="fQuota">Chỉ tiêu headcount</label><input id="fQuota" type="number" min="0" step="1" inputmode="numeric" value="${editing ? b.headcountQuota : ''}"></div>
+    </div>
+    <label for="fSalary">Ngân sách lương cả năm (VND)</label>
+    <input id="fSalary" inputmode="numeric" placeholder="vd. 3.600.000.000" value="${editing ? num(b.salaryBudgetVnd) : ''}">
+    <div class="muted" id="fSalaryHint"></div>
+    ${editing ? `<div class="muted" style="margin-top:6px">Không được đặt thấp hơn số đã dùng: ${num(usedHc)} headcount, ${vnd(usedSal)}.</div>` : ''}
+    <div class="err" id="fErr" role="alert"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:8px">
+      <button class="btn" data-close type="button">Huỷ</button>
+      <button class="btn primary" id="fSave" type="button">${editing ? 'Lưu thay đổi' : 'Khai báo'}</button>
+    </div>`, (root, close) => {
+    const sal = $('#fSalary', root);
+    const fmt = () => { const n = money(sal.value); sal.value = n ? num(n) : ''; $('#fSalaryHint', root).textContent = n ? vnd(n) : ''; };
+    sal.addEventListener('input', fmt); fmt();
+    $('#fSave', root).addEventListener('click', async () => {
+      const quota = $('#fQuota', root).value, salary = money(sal.value);
+      const err = $('#fErr', root); err.textContent = '';
+      if (quota === '' || Number(quota) < 0 || !Number.isInteger(Number(quota))) { err.textContent = 'Chỉ tiêu headcount phải là số nguyên ≥ 0.'; return; }
+      if (editing && (Number(quota) < usedHc || salary < usedSal)) { err.textContent = 'Chỉ tiêu / ngân sách không được thấp hơn số đã dùng.'; return; }
+      const btn = $('#fSave', root); btn.disabled = true;
+      try {
+        if (editing) await api(`/headcount-budgets/${b.id}`, { method: 'PUT', body: { headcountQuota: Number(quota), salaryBudgetVnd: salary } });
+        else await api('/headcount-budgets', { method: 'POST', body: { departmentId: Number($('#fDept', root).value), year: Number($('#fYear', root).value), headcountQuota: Number(quota), salaryBudgetVnd: salary } });
+        close(); toast(editing ? 'Đã cập nhật ngân sách.' : 'Đã khai báo ngân sách.');
+        S.year = editing ? S.year : Number($('#fYear', root)?.value || S.year);
+        renderBudget();
+      } catch (e) { err.textContent = e.message; btn.disabled = false; }
+    });
+  });
+}
+
+function budgetDelete(b) {
+  openModal(`<h2>Xoá ngân sách?</h2>
+    <p>Xoá ngân sách <b>${esc(deptName(b.departmentId))}</b> năm <b>${b.year}</b>. Không thể xoá nếu đã có yêu cầu được duyệt. Thao tác được ghi nhật ký.</p>
+    <div class="err" id="dErr" role="alert"></div>
+    <div class="row" style="justify-content:flex-end"><button class="btn" data-close type="button">Giữ lại</button><button class="btn danger" id="dOk" type="button">Xoá</button></div>`,
+  (root, close) => $('#dOk', root).addEventListener('click', async () => {
+    try { await api(`/headcount-budgets/${b.id}`, { method: 'DELETE' }); close(); toast('Đã xoá ngân sách.'); renderBudgetList(); }
+    catch (e) { $('#dErr', root).textContent = e.message; }
+  }));
+}
+
+/* ============ Màn hình 2: Yêu cầu tuyển dụng + cảnh báo vượt chỉ tiêu ============ */
+async function renderReq() {
+  const v = $('#appView');
+  const myDept = hasRole(ROLE.HR, ROLE.ADMIN, ROLE.APR, ROLE.REC) ? null : S.user.departmentId;
+  const deptOpts = S.depts.filter((d) => !myDept || d.id === myDept).map((d) => `<option value="${d.id}">${esc(d.code)} – ${esc(d.name)}</option>`).join('');
+  v.innerHTML = `
+    ${can.writeReq() ? `
+    <div class="card" style="margin-bottom:14px">
+      <h2>Tạo yêu cầu tuyển dụng</h2>
+      <div class="form-grid">
+        <div style="grid-column:1/-1"><label for="rTitle">Tiêu đề vị trí</label><input id="rTitle" maxlength="255" placeholder="vd. Backend Developer"></div>
+        <div><label for="rDept">Phòng ban</label><select id="rDept">${deptOpts}</select></div>
+        <div><label for="rYear">Năm ngân sách</label><input id="rYear" type="number" min="2000" max="2100" value="${thisYear}"></div>
+        <div><label for="rQty">Số lượng</label><input id="rQty" type="number" min="1" step="1" inputmode="numeric" value="1"></div>
+        <div><label for="rSalary">Lương đề xuất / tháng / người (VND)</label><input id="rSalary" inputmode="numeric" placeholder="vd. 25.000.000"></div>
+        <div><label for="rReason">Lý do tuyển</label><select id="rReason"><option value="NEW">Vị trí mới</option><option value="REPLACEMENT">Thay thế</option></select></div>
+      </div>
+      <div id="checkBox" aria-live="polite"></div>
+      <div class="err" id="rErr" role="alert"></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" id="rCreate" type="button">Tạo yêu cầu (nháp)</button></div>
+    </div>` : ''}
+    <div class="row spread"><h2 style="margin:0">Danh sách yêu cầu</h2>
+      <select id="rFilter" style="width:auto;min-width:160px"><option value="">Tất cả trạng thái</option>
+      ${Object.entries(STATUS).map(([k, [l]]) => `<option value="${k}" ${S.reqFilter === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+    <div id="reqList" class="grid" style="margin-top:12px"><div class="empty">Đang tải…</div></div>`;
+
+  $('#rFilter').addEventListener('change', (e) => { S.reqFilter = e.target.value; loadReqList(); });
+  if (can.writeReq()) {
+    const sal = $('#rSalary');
+    sal.addEventListener('input', () => { const n = money(sal.value); sal.value = n ? num(n) : ''; });
+    ['rDept', 'rYear', 'rQty', 'rSalary'].forEach((id) => $('#' + id).addEventListener('input', debounce(liveCheck, 350)));
+    $('#rCreate').addEventListener('click', createReq);
+    liveCheck();
+  }
+  loadReqList();
+}
+
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+
+let checkSeq = 0;
+async function liveCheck() {
+  const box = $('#checkBox'); if (!box) return;
+  const body = { departmentId: Number($('#rDept').value), year: Number($('#rYear').value), quantity: Number($('#rQty').value), proposedSalaryVnd: money($('#rSalary').value) };
+  if (!body.departmentId || !body.year || !(body.quantity >= 1) || !Number.isInteger(body.quantity)) { box.innerHTML = ''; return; }
+  const seq = ++checkSeq;
+  if (!(body.proposedSalaryVnd >= 1)) {
+    // Chưa nhập lương: vẫn hiển thị số headcount còn lại (AC2) bằng 1 VND giả định rồi chỉ dùng phần headcount
+    body.proposedSalaryVnd = 1;
+  }
+  const salaryEntered = money($('#rSalary').value) >= 1;
+  try {
+    const ev = await api('/headcount-budgets/check', { method: 'POST', body });
+    if (seq !== checkSeq) return;
+    box.innerHTML = renderCheck(ev, salaryEntered);
+  } catch (e) { if (seq === checkSeq) box.innerHTML = `<div class="alert danger">${esc(e.message)}</div>`; }
+}
+
+function renderCheck(ev, salaryEntered) {
+  const showSal = ev.salaryBudgetVnd !== undefined;
+  const hcOver = ev.exceedsHeadcount;
+  const salOver = salaryEntered && ev.exceedsSalary;
+  const head = `<div class="row" style="margin-top:12px"><span class="muted">Headcount còn lại của ${esc(deptName(ev.departmentId))} năm ${ev.year}:</span> <b class="big" style="font-size:20px;color:${ev.headcountRemaining <= 0 ? 'var(--danger)' : 'var(--ok)'}">${num(ev.headcountRemaining)}</b><span class="muted">/ ${num(ev.headcountQuota)}</span></div>`;
+  if (!ev.hasBudget) {
+    return head + `<div class="alert danger" role="alert"><b>Chưa khai báo ngân sách</b> cho phòng ban này trong năm ${ev.year}. Bạn vẫn lưu được bản nháp nhưng sẽ <b>bị chặn khi duyệt</b>; chỉ HR Manager được ghi đè kèm lý do.</div>`;
+  }
+  if (hcOver || salOver) {
+    const parts = [];
+    if (hcOver) parts.push(`yêu cầu <b>${num(ev.requestedQuantity)}</b> nhưng chỉ còn <b>${num(Math.max(0, ev.headcountRemaining))}</b> headcount (vượt <b>${num(ev.headcountOver)}</b>)`);
+    if (salOver) parts.push(showSal ? `chi phí lương cả năm <b>${vnd(ev.requestedSalaryCostVnd)}</b> vượt ngân sách còn lại <b>${vnd(Math.max(0, ev.salaryRemainingVnd))}</b> (vượt <b>${vnd(ev.salaryOverVnd)}</b>)` : 'vượt ngân sách lương của phòng ban');
+    return head + `<div class="alert danger" role="alert"><b>⚠ Vượt chỉ tiêu:</b> ${parts.join('; ')}.<br>Yêu cầu sẽ <b>bị chặn khi duyệt</b>. ${ev.canOverride ? 'Bạn là HR Manager: có thể ghi đè kèm lý do khi duyệt.' : 'Chỉ HR Manager mới được ghi đè kèm lý do.'}</div>`;
+  }
+  const after = ev.headcountRemaining - ev.requestedQuantity;
+  return head + `<div class="alert ${after === 0 ? 'warn' : 'ok'}">Trong chỉ tiêu. Nếu được duyệt, phòng ban còn lại <b>${num(after)}</b> headcount${after === 0 ? ' (hết chỉ tiêu)' : ''}.</div>`;
+}
+
+async function createReq() {
+  const err = $('#rErr'); err.textContent = '';
+  const body = { title: $('#rTitle').value.trim(), departmentId: Number($('#rDept').value), budgetYear: Number($('#rYear').value), quantity: Number($('#rQty').value), proposedSalaryVnd: money($('#rSalary').value), reason: $('#rReason').value };
+  if (!body.title) { err.textContent = 'Phải nhập tiêu đề.'; return; }
+  if (!Number.isInteger(body.quantity) || body.quantity < 1) { err.textContent = 'Số lượng tối thiểu là 1.'; return; }
+  if (body.proposedSalaryVnd < 1) { err.textContent = 'Lương đề xuất phải lớn hơn 0.'; return; }
+  const btn = $('#rCreate'); btn.disabled = true;
+  try {
+    const r = await api('/requisitions', { method: 'POST', body });
+    const b = r.budget;
+    toast(b.exceeds ? `Đã lưu nháp. ⚠ Vượt chỉ tiêu (còn ${num(Math.max(0, b.headcountRemaining))} headcount) — sẽ bị chặn khi duyệt.` : `Đã tạo yêu cầu. Phòng ban còn ${num(b.headcountRemaining)} headcount.`, false);
+    $('#rTitle').value = '';
+    loadReqList(); liveCheck();
+  } catch (e) { err.textContent = e.message; }
+  finally { btn.disabled = false; }
+}
+
+async function loadReqList() {
+  const list = $('#reqList'); if (!list) return;
+  try {
+    const q = S.reqFilter ? `?status=${S.reqFilter}` : '';
+    const rows = await api('/requisitions' + q);
+    if (!rows.length) { list.innerHTML = `<div class="empty" style="grid-column:1/-1">Chưa có yêu cầu nào.</div>`; return; }
+    list.innerHTML = rows.map(reqCard).join('');
+    list.querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => reqAction(el.dataset.act, rows.find((x) => x.id === Number(el.dataset.id)))));
+  } catch (e) { list.innerHTML = `<div class="alert danger" style="grid-column:1/-1">${esc(e.message)}</div>`; }
+}
+
+function reqCard(r) {
+  const [label, cls] = STATUS[r.status] || [r.status, 'b-gray'];
+  const acts = [];
+  if (can.writeReq() && r.status === 'DRAFT') acts.push(`<button class="btn small primary" data-act="submit" data-id="${r.id}" type="button">Gửi duyệt</button>`);
+  if (can.approve() && r.status === 'PENDING_APPROVAL') acts.push(`<button class="btn small primary" data-act="approve" data-id="${r.id}" type="button">Duyệt</button>`);
+  if (can.writeReq() && ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ON_HOLD'].includes(r.status)) acts.push(`<button class="btn small danger" data-act="cancel" data-id="${r.id}" type="button">Huỷ</button>`);
+  return `<div class="card">
+    <div class="row spread"><h3>#${r.id} · ${esc(r.title)}</h3><span class="badge ${cls}">${esc(label)}</span></div>
+    <div class="muted" style="margin:4px 0 8px">${esc(deptName(r.departmentId))} · năm ${r.budgetYear}</div>
+    <div class="kv"><span>Số lượng</span><b>${num(r.quantity)}</b></div>
+    <div class="kv"><span>Lương đề xuất / tháng</span><b>${vnd(r.proposedSalaryVnd)}</b></div>
+    ${r.budgetOverridden ? `<div style="margin-top:6px"><span class="badge b-danger">Đã ghi đè vượt chỉ tiêu</span></div>` : ''}
+    ${acts.length ? `<div class="row" style="margin-top:10px">${acts.join('')}</div>` : ''}</div>`;
+}
+
+async function reqAction(act, r) {
+  try {
+    if (act === 'submit') { await api(`/requisitions/${r.id}/submit`, { method: 'POST' }); toast('Đã gửi duyệt.'); }
+    else if (act === 'cancel') { await api(`/requisitions/${r.id}/cancel`, { method: 'POST' }); toast('Đã huỷ yêu cầu — headcount được trả lại ngân sách.'); }
+    else if (act === 'approve') { await api(`/requisitions/${r.id}/approve`, { method: 'POST', body: {} }); toast('Đã duyệt yêu cầu (trong chỉ tiêu).'); }
+    loadReqList(); if (S.tab === 'req') liveCheck();
+  } catch (e) {
+    if (act === 'approve' && e.status === 409 && e.body && e.body.details) blockedModal(r, e.body);
+    else toast(e.message, true);
+  }
+}
+
+/* Hộp thoại CHẶN vượt chỉ tiêu: chỉ HR Manager mới thấy ô ghi đè */
+function blockedModal(r, body) {
+  const ev = body.details, showSal = ev.salaryBudgetVnd !== undefined;
+  const canOv = !!body.canOverride && can.override();
+  const rows = [
+    ['Yêu cầu', `${num(ev.requestedQuantity)} headcount`],
+    ['Headcount còn lại', `${num(ev.headcountRemaining)} / ${num(ev.headcountQuota)}`],
+    ev.exceedsHeadcount ? ['Vượt headcount', `<b style="color:var(--danger)">${num(ev.headcountOver)}</b>`] : null,
+    showSal ? ['Chi phí lương cả năm của yêu cầu', vnd(ev.requestedSalaryCostVnd)] : null,
+    showSal ? ['Ngân sách lương còn lại', vnd(ev.salaryRemainingVnd)] : null,
+    ev.exceedsSalary && showSal ? ['Vượt ngân sách lương', `<b style="color:var(--danger)">${vnd(ev.salaryOverVnd)}</b>`] : null,
+  ].filter(Boolean).map(([k, v]) => `<div class="kv"><span>${k}</span><span>${v}</span></div>`).join('');
+  openModal(`
+    <h2 style="color:var(--danger)">⛔ Bị chặn: vượt chỉ tiêu</h2>
+    <div class="muted">#${r.id} · ${esc(r.title)} · ${esc(deptName(r.departmentId))}</div>
+    <div class="alert danger" role="alert">${esc(body.message)}</div>
+    ${rows}
+    <hr class="sep">
+    ${canOv ? `
+      <label for="ovReason">Lý do ghi đè <span class="muted">(bắt buộc, 10–500 ký tự — được ghi nhật ký)</span></label>
+      <textarea id="ovReason" rows="4" maxlength="500" placeholder="vd. Dự án khách hàng X được ký thêm, cần bổ sung nhân sự gấp."></textarea>
+      <div class="counter"><span id="ovCount">0</span>/500</div>
+      <div class="err" id="ovErr" role="alert"></div>
+      <div class="row" style="justify-content:flex-end"><button class="btn" data-close type="button">Không duyệt</button>
+        <button class="btn danger" id="ovGo" type="button" disabled>Ghi đè &amp; duyệt</button></div>`
+    : `<div class="alert info">Bạn không có quyền ghi đè. Chỉ <b>Trưởng phòng Nhân sự (HR Manager)</b> được duyệt vượt chỉ tiêu kèm lý do.</div>
+       <div class="row" style="justify-content:flex-end"><button class="btn" data-close type="button">Đóng</button></div>`}`,
+  (root, close) => {
+    if (!canOv) return;
+    const ta = $('#ovReason', root), go = $('#ovGo', root);
+    ta.addEventListener('input', () => { const n = ta.value.trim().length; $('#ovCount', root).textContent = ta.value.length; go.disabled = n < 10; });
+    go.addEventListener('click', async () => {
+      go.disabled = true; $('#ovErr', root).textContent = '';
+      try {
+        await api(`/requisitions/${r.id}/approve`, { method: 'POST', body: { override: { reason: ta.value.trim() } } });
+        close(); toast('Đã ghi đè và duyệt. Thao tác đã được ghi nhật ký.'); loadReqList(); if (S.tab === 'req') liveCheck();
+      } catch (e) { $('#ovErr', root).textContent = e.message; go.disabled = false; }
+    });
+  });
+}
+
+/* ============ Màn hình 3: Nhật ký ghi đè ============ */
+async function renderLogs() {
+  $('#appView').innerHTML = `
+    <h2>Nhật ký ngân sách &amp; ghi đè <span class="muted">(chỉ đọc, không sửa/xoá)</span></h2>
+    <div class="form-grid card" style="margin-bottom:12px">
+      <div><label for="lAct">Loại thao tác</label><select id="lAct"><option value="">Tất cả</option>${Object.entries(ACTION_LABEL).map(([k, [l]]) => `<option value="${k}">${l}</option>`).join('')}</select></div>
+      <div><label for="lDept">Phòng ban</label><select id="lDept"><option value="">Tất cả</option>${S.depts.map((d) => `<option value="${d.id}">${esc(d.code)} – ${esc(d.name)}</option>`).join('')}</select></div>
+      <div><label for="lYear">Năm</label><input id="lYear" type="number" min="2000" max="2100" placeholder="Tất cả"></div>
+    </div>
+    <div id="logList" class="grid"><div class="empty">Đang tải…</div></div>`;
+  const load = async () => {
+    const q = new URLSearchParams();
+    if ($('#lAct').value) q.set('action', $('#lAct').value);
+    if ($('#lDept').value) q.set('departmentId', $('#lDept').value);
+    if ($('#lYear').value) q.set('year', $('#lYear').value);
+    const list = $('#logList');
+    try {
+      const rows = await api('/headcount-budgets/override-logs?' + q.toString());
+      list.innerHTML = rows.length ? rows.map(logCard).join('') : `<div class="empty" style="grid-column:1/-1">Chưa có bản ghi nào.</div>`;
+    } catch (e) { list.innerHTML = `<div class="alert danger" style="grid-column:1/-1">${esc(e.message)}</div>`; }
+  };
+  ['lAct', 'lDept'].forEach((id) => $('#' + id).addEventListener('change', load));
+  $('#lYear').addEventListener('input', debounce(load, 400));
+  load();
+}
+
+function logCard(l) {
+  const [label, cls] = ACTION_LABEL[l.action] || [l.action, 'b-gray'];
+  const d = l.detail;
+  const ovLine = l.action === 'BUDGET_OVERRIDE' && d ? `<div class="muted" style="margin-top:6px">Yêu cầu ${num(d.requestedQuantity)} headcount, còn lại ${num(d.headcountRemaining)}${d.headcountOver ? ` (vượt ${num(d.headcountOver)})` : ''}${d.salaryOverVnd ? `; vượt ngân sách lương ${vnd(d.salaryOverVnd)}` : ''}.</div>` : '';
+  return `<div class="card" ${l.action === 'BUDGET_OVERRIDE' ? 'style="border-left:4px solid var(--danger)"' : ''}>
+    <div class="row spread"><span class="badge ${cls}">${esc(label)}</span><span class="muted">${esc(dt(l.createdAt))}</span></div>
+    <div class="kv"><span>Phòng ban / năm</span><b>${esc(deptName(l.departmentId))} · ${l.year}</b></div>
+    <div class="kv"><span>Người thực hiện</span><b>${esc(l.userEmail)}</b></div>
+    ${l.requisitionId ? `<div class="kv"><span>Yêu cầu</span><b>#${l.requisitionId}</b></div>` : ''}
+    ${l.reason ? `<div class="alert info" style="margin:8px 0 0"><b>Lý do:</b> ${esc(l.reason)}</div>` : ''}
+    ${ovLine}
+    ${d ? `<details style="margin-top:8px"><summary>Chi tiết số liệu</summary><pre>${esc(JSON.stringify(d, null, 2))}</pre></details>` : ''}</div>`;
+}
+
+/* ============ Khởi động ============ */
+(async function init() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem('ats_session') || 'null');
+    if (saved && saved.token) { S.token = saved.token; S.user = saved.user; await enterApp(); }
+  } catch (_) { logout(); }
+})();
+</script>
+</body>
+</html>
