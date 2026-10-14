@@ -4,9 +4,11 @@
    ========================================================================== */
 
 .profile-page-clean-container {
-  max-width: 980px;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 8px 16px 48px;
+  box-sizing: border-box;
   animation: profileEnter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -314,20 +316,30 @@
   gap: 10px;
 }
 
-/* Toast alert in ProfileHeader */
+/* Toast Container & Notification for Profile */
+.profile-toast-container {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 440px;
+  pointer-events: none;
+}
+
 .profile-header-toast {
-  position: absolute;
-  top: 16px;
-  right: 20px;
+  pointer-events: auto;
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 16px;
+  padding: 12px 18px;
   border-radius: var(--radius-md, 8px);
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12);
-  z-index: 10;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.08);
   animation: slideDownToast 0.2s ease-out;
 }
 
@@ -343,19 +355,30 @@
   border: 1px solid #fecaca;
 }
 
+.profile-header-toast.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
 .toast-close-btn {
   background: none;
   border: none;
-  padding: 0;
+  padding: 4px;
+  margin-left: auto;
   color: inherit;
   opacity: 0.7;
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 
 .toast-close-btn:hover {
   opacity: 1;
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 @keyframes slideDownToast {
@@ -755,7 +778,7 @@
 /* 2-Column Row for Readonly metadata */
 .profile-form-row-2col {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
 }
 
@@ -1246,10 +1269,11 @@
     height: 24px;
   }
 
-  .profile-header-toast {
-    position: static;
-    margin-bottom: 14px;
-    width: 100%;
+  .profile-toast-container {
+    top: 72px;
+    left: 16px;
+    right: 16px;
+    max-width: none;
   }
 
   .avatar-preview-circle-wrap {

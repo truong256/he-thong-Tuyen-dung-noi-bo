@@ -60,17 +60,17 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     };
   }, [previewUrl]);
 
-  // Auto-dismiss toasts
+  // Auto-dismiss toasts after 4 seconds (S1-04 / UI standard)
   useEffect(() => {
     if (toastMessage) {
-      const timer = setTimeout(() => setToastMessage(null), 4500);
+      const timer = setTimeout(() => setToastMessage(null), 4000);
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
 
   useEffect(() => {
     if (toastError) {
-      const timer = setTimeout(() => setToastError(null), 5000);
+      const timer = setTimeout(() => setToastError(null), 4000);
       return () => clearTimeout(timer);
     }
   }, [toastError]);
@@ -207,36 +207,38 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <section className="profile-summary-header" aria-label="Thông tin hồ sơ quản trị viên">
-      {/* Toast notifications */}
-      {toastMessage && (
-        <div className="profile-header-toast success" role="status">
-          <Check size={16} />
-          <span>{toastMessage}</span>
-          <button
-            type="button"
-            className="toast-close-btn"
-            onClick={() => setToastMessage(null)}
-            aria-label="Đóng thông báo"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+      {/* Floating Toast Notification Container (Prevents overlapping header actions or Change Password button) */}
+      <div className="profile-toast-container" aria-live="polite">
+        {toastMessage && (
+          <div className="profile-header-toast success" role="status">
+            <Check size={16} />
+            <span>{toastMessage}</span>
+            <button
+              type="button"
+              className="toast-close-btn"
+              onClick={() => setToastMessage(null)}
+              aria-label="Đóng thông báo"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
 
-      {toastError && (
-        <div className="profile-header-toast error" role="alert">
-          <AlertCircle size={16} />
-          <span>{toastError}</span>
-          <button
-            type="button"
-            className="toast-close-btn"
-            onClick={() => setToastError(null)}
-            aria-label="Đóng thông báo"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
+        {toastError && (
+          <div className="profile-header-toast error" role="alert">
+            <AlertCircle size={16} />
+            <span>{toastError}</span>
+            <button
+              type="button"
+              className="toast-close-btn"
+              onClick={() => setToastError(null)}
+              aria-label="Đóng thông báo"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Hidden file input */}
       <input

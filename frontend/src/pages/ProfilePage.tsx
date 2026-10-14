@@ -7,6 +7,7 @@ import ProfileTabs, { ProfileTabType } from '../components/profile/ProfileTabs';
 import PersonalInfoTab, { ProfileFieldErrors } from '../components/profile/PersonalInfoTab';
 import RolesPermissionsTab from '../components/profile/RolesPermissionsTab';
 import SecuritySessionsTab from '../components/profile/SecuritySessionsTab';
+import { Check, X } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
 import '../styles/profile.css';
 
@@ -148,7 +149,7 @@ export const ProfilePage: React.FC = () => {
       await refreshUser();
 
       setSuccessMsg('Thông tin hồ sơ cá nhân đã được cập nhật thành công!');
-      setTimeout(() => setSuccessMsg(null), 5000);
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       const apiValidation = err.response?.data?.validationErrors;
       if (apiValidation && typeof apiValidation === 'object') {
@@ -187,10 +188,21 @@ export const ProfilePage: React.FC = () => {
         ]}
       />
 
-      {/* Floating success toast notification */}
+      {/* Floating success toast notification (Fixed top-right, auto-dismiss 4s, manual close) */}
       {successMsg && (
-        <div className="profile-toast-success" role="status" aria-live="polite">
-          <span>{successMsg}</span>
+        <div className="profile-toast-container" aria-live="polite">
+          <div className="profile-header-toast success" role="status">
+            <Check size={16} />
+            <span>{successMsg}</span>
+            <button
+              type="button"
+              className="toast-close-btn"
+              onClick={() => setSuccessMsg(null)}
+              aria-label="Đóng thông báo"
+            >
+              <X size={14} />
+            </button>
+          </div>
         </div>
       )}
 
@@ -242,7 +254,7 @@ export const ProfilePage: React.FC = () => {
         onClose={() => setIsPasswordModalOpen(false)}
         onSuccess={() => {
           setSuccessMsg('Mật khẩu của bạn đã được thay đổi thành công!');
-          setTimeout(() => setSuccessMsg(null), 5000);
+          setTimeout(() => setSuccessMsg(null), 4000);
         }}
       />
     </div>
