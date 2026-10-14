@@ -603,6 +603,9 @@ public class RecruitmentRequisitionService {
                 : req.getRequirements();
 
         boolean outside = isSalaryOutsideRange(jt, minSalary, maxSalary);
+
+        // Dùng canonical constructor đầy đủ để đảm bảo map đúng
+        // neededDate, targetDate, benefits, workLocation, workingModel
         return new RequisitionResponse(
                 req.getId(),
                 req.getRequisitionCode(),
@@ -612,26 +615,34 @@ public class RecruitmentRequisitionService {
                 dept != null ? dept.getCode() : null,
                 req.getJobTitleId(),
                 jt != null ? jt.getTitle() : null,
+                req.getQuantity(),
+                req.getRecruitmentType(),
+                minSalary,
+                maxSalary,
+                req.getCurrency() != null ? req.getCurrency() : "VND",
+                req.getSalaryExplanation(),
+                req.getNeededDate() != null ? req.getNeededDate() : req.getTargetDate(),
+                req.getTargetDate() != null ? req.getTargetDate() : req.getNeededDate(),
+                req.getJobDescription(),
+                reqs,
+                req.getBenefits(),
+                req.getWorkLocation(),
+                req.getWorkingModel(),
+                req.getStatus(),
+                req.getReason(),
+                req.getRejectionReason(),
+                req.getCreatedByUserId(),
+                creator != null ? creator.getFullName() : null,
+                req.getSubmittedAt(),
+                req.getApprovedByUserId(),
+                req.getApprovedAt(),
+                req.getCreatedAt(),
+                req.getUpdatedAt(),
                 jt != null ? jt.getCode() : null,
                 jt != null ? jt.getMinSalary() : null,
                 jt != null ? jt.getMaxSalary() : null,
-                req.getQuantity(),
-                req.getRecruitmentType(),
-                req.getReason(),
-                minSalary,
-                maxSalary,
-                req.getSalaryExplanation(),
-                req.getTargetDate(),
-                req.getTargetDate(),
                 outside,
-                req.getJobDescription(),
-                reqs,
-                req.getStatus(),
-                req.getCreatedByUserId(),
-                creator != null ? creator.getFullName() : null,
-                creator != null ? creator.getEmail() : null,
-                req.getCreatedAt(),
-                req.getUpdatedAt()
+                creator != null ? creator.getEmail() : null
         );
     }
 }
