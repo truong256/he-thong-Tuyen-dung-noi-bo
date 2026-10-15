@@ -5,12 +5,10 @@ import {
   Building,
   MapPin,
   Globe,
-  DollarSign,
   Calendar,
   Briefcase,
   AlertCircle,
   CheckCircle,
-  Share2,
 } from 'lucide-react';
 import { JobPostingPublic } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';

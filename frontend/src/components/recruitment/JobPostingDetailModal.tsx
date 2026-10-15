@@ -9,7 +9,6 @@ import {
   Building,
   MapPin,
   DollarSign,
-  Calendar,
   AlertCircle,
   FileText,
   User,
@@ -17,7 +16,7 @@ import {
   Send,
   Lock,
 } from 'lucide-react';
-import { JobPosting, JobPostingAuditLog } from '../../types/jobPosting';
+import { JobPosting } from '../../types/jobPosting';
 import jobPostingApi from '../../api/jobPosting';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -34,7 +33,7 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
   onClose,
   onActionSuccess,
 }) => {
-  const { hasRole, user } = useAuth();
+  const { hasRole } = useAuth();
   const isHrManager = hasRole('HR_MANAGER');
 
   const [activeTab, setActiveTab] = useState<'preview' | 'details' | 'audit'>('preview');

@@ -10,28 +10,20 @@ import {
   CheckCircle,
   Globe,
   Lock,
-  Building,
-  Calendar,
   AlertCircle,
   RefreshCw,
-  MapPin,
-  DollarSign,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck,
 } from 'lucide-react';
 import { JobPosting, JobPostingStatus } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';
 import organizationApi from '../api/organization';
 import { Department } from '../types/organization';
-import { useAuth } from '../hooks/useAuth';
 import JobPostingDetailModal from '../components/recruitment/JobPostingDetailModal';
 import JobPostingFormModal from '../components/recruitment/JobPostingFormModal';
 import '../styles/job-postings.css';
 
 export const JobPostingManagementPage: React.FC = () => {
-  const { hasRole } = useAuth();
-  const isHrManager = hasRole('HR_MANAGER');
 
   // State
   const [postings, setPostings] = useState<JobPosting[]>([]);

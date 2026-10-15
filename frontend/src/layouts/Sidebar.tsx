@@ -36,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const canReadCatalog = checkPerm('CATALOG_READ', ['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER', 'APPROVER']);
   const canReadUsers = checkPerm('USER_READ', ['ADMIN', 'HR_MANAGER']);
   const canManageUsers = checkPerm('USER_MANAGE', ['ADMIN']);
+  const canReadRoles = checkPerm('ROLE_READ', ['ADMIN', 'HR_MANAGER']);
   const canReadAudit = checkPerm('AUDIT_READ', ['ADMIN', 'HR_MANAGER']);
 
   return (
@@ -135,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* User Administration Section */}
-          {(canReadUsers || canManageUsers) && (
+          {(canReadUsers || canManageUsers || canReadRoles) && (
             <div className="sidebar-section">
               <span className="sidebar-title">QUẢN TRỊ TÀI KHOẢN</span>
               <ul className="sidebar-menu">
@@ -147,6 +148,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={handleLinkClick}
                     >
                       <span>{canManageUsers ? 'Quản lý Tài khoản' : 'Danh sách tài khoản'}</span>
+                    </NavLink>
+                  </li>
+                )}
+
+                {canReadRoles && (
+                  <li>
+                    <NavLink
+                      to="/admin/permission-matrix"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Ma trận phân quyền</span>
                     </NavLink>
                   </li>
                 )}

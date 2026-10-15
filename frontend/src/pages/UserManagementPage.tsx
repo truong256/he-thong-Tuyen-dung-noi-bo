@@ -19,7 +19,6 @@ import { UserSummary } from '../types/user';
 import { useAuth } from '../hooks/useAuth';
 import RoleAssignmentModal from '../components/admin/RoleAssignmentModal';
 import LockAccountModal from '../components/admin/LockAccountModal';
-import RbacMatrixModal from '../components/admin/RbacMatrixModal';
 import { ATS_ROLES_INFO, getRoleLabel } from '../constants/rbac';
 import { PageHeader } from '../components/common/PageHeader';
 
@@ -53,7 +52,6 @@ export const UserManagementPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [showLockModal, setShowLockModal] = useState(false);
-  const [showRbacMatrixModal, setShowRbacMatrixModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
 
   // Add User Form states (S1-08: Admin does not manually input temporary password)
@@ -277,10 +275,10 @@ export const UserManagementPage: React.FC = () => {
             <button
               type="button"
               className="btn btn-secondary"
-              onClick={() => setShowRbacMatrixModal(true)}
-              aria-label="Xem ma trận phân quyền RBAC"
+              onClick={() => navigate('/admin/permission-matrix')}
+              aria-label="Xem trang ma trận phân quyền"
             >
-              <span>Ma trận RBAC</span>
+              <span>Ma trận phân quyền</span>
             </button>
             <button
               type="button"
@@ -1071,12 +1069,6 @@ export const UserManagementPage: React.FC = () => {
           fetchUsers();
         }}
         onError={(msg) => showToast(msg, 'error')}
-      />
-
-      {/* RBAC Matrix Information Modal (S1-05) */}
-      <RbacMatrixModal
-        isOpen={showRbacMatrixModal}
-        onClose={() => setShowRbacMatrixModal(false)}
       />
 
       {/* Delete User Confirmation Modal */}

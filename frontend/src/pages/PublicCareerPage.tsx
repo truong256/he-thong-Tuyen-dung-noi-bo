@@ -10,8 +10,6 @@ import {
   Calendar,
   ArrowRight,
   Sparkles,
-  CheckCircle,
-  AlertCircle,
 } from 'lucide-react';
 import { JobPostingPublic } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';
