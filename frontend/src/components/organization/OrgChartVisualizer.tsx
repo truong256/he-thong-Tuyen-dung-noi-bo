@@ -17,6 +17,7 @@ import {
   ListTree,
   Network,
   Briefcase,
+  MoreVertical,
 } from 'lucide-react';
 import { Department } from '../../types/organization';
 
@@ -52,6 +53,19 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
   // Drag-to-pan states
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
+
+  // Node action dropdown state
+  const [menuOpenNodeId, setMenuOpenNodeId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.node-action-menu-container')) {
+        setMenuOpenNodeId(null);
+      }
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, []);
 
   // Build tree structure from flat departments list
   const treeRoots = useMemo(() => {
@@ -232,6 +246,83 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
                 />
                 <span className="status-label">{node.active ? 'Hoạt động' : 'Ngưng'}</span>
               </div>
+
+              {/* Compact 3-dot dropdown menu for actions */}
+              {canEdit && (
+                <div className="node-action-menu-container">
+                  <button
+                    type="button"
+                    className="node-menu-trigger-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOpenNodeId((prev) => (prev === node.id ? null : node.id));
+                    }}
+                    aria-label={`Thao tác ${node.name}`}
+                    title="Thao tác phòng ban"
+                    data-testid={`node-actions-${node.id}`}
+                  >
+                    <MoreVertical size={13} />
+                  </button>
+
+                  {menuOpenNodeId === node.id && (
+                    <div
+                      className="node-action-dropdown-menu"
+                      role="menu"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button
+                        type="button"
+                        className="node-dropdown-item"
+                        onClick={() => {
+                          setMenuOpenNodeId(null);
+                          onAddSubDepartment(node.id);
+                        }}
+                      >
+                        <Plus size={13} />
+                        <span>Thêm phòng ban con</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="node-dropdown-item"
+                        onClick={() => {
+                          setMenuOpenNodeId(null);
+                          onEditDepartment(node);
+                        }}
+                      >
+                        <Edit2 size={13} />
+                        <span>Chỉnh sửa thông tin</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="node-dropdown-item"
+                        onClick={() => {
+                          setMenuOpenNodeId(null);
+                          onToggleStatus(node.id, node.active);
+                        }}
+                      >
+                        <Power size={13} />
+                        <span>{node.active ? 'Tạm ngưng hoạt động' : 'Kích hoạt lại'}</span>
+                      </button>
+
+                      {onDeleteDepartment && (
+                        <button
+                          type="button"
+                          className="node-dropdown-item delete-item"
+                          onClick={() => {
+                            setMenuOpenNodeId(null);
+                            onDeleteDepartment(node);
+                          }}
+                        >
+                          <Trash2 size={13} />
+                          <span>Xóa phòng ban</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -277,55 +368,6 @@ export const OrgChartVisualizer: React.FC<OrgChartVisualizerProps> = ({
               )}
             </div>
           </div>
-
-          {/* Node Action Footer */}
-          {canEdit && (
-            <div className="node-footer-actions">
-              <button
-                type="button"
-                className="node-action-btn btn-add-sub"
-                onClick={() => onAddSubDepartment(node.id)}
-                title="Thêm phòng ban trực thuộc"
-                aria-label={`Thêm phòng ban trực thuộc ${node.name}`}
-              >
-                <Plus size={13} />
-                <span>Thêm con</span>
-              </button>
-
-              <button
-                type="button"
-                className="node-action-btn btn-edit"
-                onClick={() => onEditDepartment(node)}
-                title="Chỉnh sửa thông tin phòng ban"
-                aria-label={`Chỉnh sửa ${node.name}`}
-              >
-                <Edit2 size={13} />
-              </button>
-
-              <button
-                type="button"
-                className={`node-action-btn btn-toggle ${node.active ? 'active-color' : 'inactive-color'}`}
-                onClick={() => onToggleStatus(node.id, node.active)}
-                title={node.active ? 'Tạm ngưng hoạt động' : 'Kích hoạt lại'}
-                aria-label={node.active ? `Ngưng hoạt động ${node.name}` : `Kích hoạt lại ${node.name}`}
-              >
-                <Power size={13} />
-              </button>
-
-              {onDeleteDepartment && (
-                <button
-                  type="button"
-                  className="node-action-btn btn-delete text-danger"
-                  onClick={() => onDeleteDepartment(node)}
-                  title="Xóa phòng ban"
-                  aria-label={`Xóa phòng ban ${node.name}`}
-                  style={{ color: '#ef4444' }}
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
-            </div>
-          )}
 
           {/* Collapse/Expand Toggle Button */}
           {hasChildren && (

@@ -422,7 +422,7 @@ export const JobPostingFormModal: React.FC<JobPostingFormModalProps> = ({
               className="jp-btn jp-btn-primary"
               disabled={submitting || loading}
             >
-              {submitting ? 'Đang lưu...' : editingPosting ? 'Lưu thay đổi' : 'Tạo bản nháp tin'}
+              {submitting ? 'Đang lưu...' : loading ? 'Đang tải...' : editingPosting ? 'Lưu thay đổi' : 'Tạo bản nháp tin'}
             </button>
           </div>
         </form>
