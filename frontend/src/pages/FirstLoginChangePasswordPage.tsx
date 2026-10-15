@@ -4,6 +4,7 @@ import { KeyRound, Eye, EyeOff, Lock, Check, X, AlertCircle, LogOut, User } from
 import authApi from '../api/auth';
 import { useAuth } from '../hooks/useAuth';
 import { validatePasswordPolicy } from '../utils/passwordPolicy';
+import '../styles/login.css';
 
 export const FirstLoginChangePasswordPage: React.FC = () => {
   const { user, logout } = useAuth();

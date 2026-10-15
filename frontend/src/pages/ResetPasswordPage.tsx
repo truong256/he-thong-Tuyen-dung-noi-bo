@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Eye, EyeOff, Lock, ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
 import authApi from '../api/auth';
 import { validatePasswordPolicy } from '../utils/passwordPolicy';
+import '../styles/login.css';
 
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
