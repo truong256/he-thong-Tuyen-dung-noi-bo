@@ -151,6 +151,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </li>
                 )}
 
+                {canReadUsers && (
+                  <li>
+                    <NavLink
+                      to="/admin/permission-matrix"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Ma trận phân quyền</span>
+                    </NavLink>
+                  </li>
+                )}
+
                 {canManageUsers && (
                   <li>
                     <NavLink

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertCircle, CheckCircle, Sparkles, Building, Briefcase, Calendar, MapPin } from 'lucide-react';
+import { X, AlertCircle, Sparkles } from 'lucide-react';
 import { JobPosting, JobPostingRequest } from '../../types/jobPosting';
 import jobPostingApi from '../../api/jobPosting';
 import { requisitionApi } from '../../api/requisition';
@@ -420,9 +420,9 @@ export const JobPostingFormModal: React.FC<JobPostingFormModalProps> = ({
             <button
               type="submit"
               className="jp-btn jp-btn-primary"
-              disabled={submitting}
+              disabled={submitting || loading}
             >
-              {submitting ? 'Đang lưu...' : editingPosting ? 'Lưu thay đổi' : 'Tạo bản nháp tin'}
+              {submitting ? 'Đang lưu...' : loading ? 'Đang tải...' : editingPosting ? 'Lưu thay đổi' : 'Tạo bản nháp tin'}
             </button>
           </div>
         </form>

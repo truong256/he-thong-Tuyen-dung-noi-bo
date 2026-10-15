@@ -26,6 +26,7 @@ import ApprovalConfigurationPage from './pages/ApprovalConfigurationPage';
 import JobPostingManagementPage from './pages/JobPostingManagementPage';
 import PublicCareerPage from './pages/PublicCareerPage';
 import PublicJobDetailPage from './pages/PublicJobDetailPage';
+import PermissionMatrixPage from './pages/PermissionMatrixPage';
 
 export const App: React.FC = () => {
   return (
@@ -272,6 +273,20 @@ export const App: React.FC = () => {
               element={
                 <PermissionGuard requiredPermissions={['USER_READ']}>
                   <UserManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Permission Matrix – USER_READ (ADMIN + HR_MANAGER)
+              Standalone read-only view of the RBAC permission matrix.
+              Replaces the old RbacMatrixModal accessible only from UserManagementPage.
+            */}
+            <Route
+              path="admin/permission-matrix"
+              element={
+                <PermissionGuard requiredPermissions={['USER_READ']}>
+                  <PermissionMatrixPage />
                 </PermissionGuard>
               }
             />
