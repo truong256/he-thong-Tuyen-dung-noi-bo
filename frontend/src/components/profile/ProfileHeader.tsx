@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Trash2, X, Check, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Camera, Trash2, X, Check, AlertCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { UserSummary } from '../../types/auth';
 import { getRoleLabel } from '../../constants/rbac';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,14 +10,15 @@ interface ProfileHeaderProps {
   fullName: string;
   isAccountActive: boolean;
   onOpenPasswordModal: () => void;
+  onNotify?: (message: string, type: 'success' | 'warning' | 'error') => void;
 }
-
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   user,
   fullName,
   isAccountActive,
   onOpenPasswordModal,
+  onNotify,
 }) => {
   const { updateUser, refreshUser } = useAuth();
   const displayName = fullName.trim() || user?.fullName || user?.email || 'Người dùng';
@@ -40,8 +41,22 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [toastError, setToastError] = useState<string | null>(null);
+  const [localToasts, setLocalToasts] = useState<
+    Array<{ id: string; message: string; type: 'success' | 'warning' | 'error' }>
+  >([]);
+
+  const notify = (msg: string, type: 'success' | 'warning' | 'error') => {
+    if (onNotify) {
+      onNotify(msg, type);
+    } else {
+      const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setLocalToasts((prev) => [...prev, { id, message: msg, type }]);
+      setTimeout(() => {
+        setLocalToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4000);
+    }
+  };
+
   const [imgError, setImgError] = useState(false);
 
   /**
@@ -70,21 +85,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     };
   }, [previewUrl]);
 
-  // Auto-dismiss toasts after 4 seconds (S1-04 / UI standard)
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => setToastMessage(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
-
-  useEffect(() => {
-    if (toastError) {
-      const timer = setTimeout(() => setToastError(null), 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastError]);
-
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
@@ -106,14 +106,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     const isMimeValid = validMimes.includes(file.type.toLowerCase());
 
     if (!isMimeValid && !isJpegExt && !isPngExt) {
-      setToastError('Chỉ chấp nhận ảnh JPG hoặc PNG.');
+      notify('Chỉ chấp nhận ảnh JPG hoặc PNG.', 'error');
       return;
     }
 
     // B. Validate file size: Maximum 2MB (AV-14)
     const MAX_SIZE = 2 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      setToastError('Ảnh đại diện không được vượt quá 2MB.');
+      notify('Ảnh đại diện không được vượt quá 2MB.', 'error');
       return;
     }
 
@@ -172,8 +172,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         // refreshUser failed (network error, token expired, etc.)
         // We already applied the optimistic update, so the UI shows the new avatar,
         // but we warn the user that the server state could not be confirmed.
-        setToastError(
-          'Ảnh đã được tải lên nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.'
+        notify(
+          'Ảnh đã được tải lên nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.',
+          'warning'
         );
         handleCloseModal();
         return;
@@ -183,7 +184,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       setAvatarVersion((v) => v + 1);
 
       handleCloseModal();
-      setToastMessage('Cập nhật ảnh đại diện thành công.');
+      notify('Cập nhật ảnh đại diện thành công.', 'success');
     } catch (err: any) {
       const status = err.response?.status;
       if (status === 403) {
@@ -218,24 +219,25 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       if (!refreshed) {
         // Server confirmation failed, but optimistic update already cleared the avatar UI.
         // Warn the user.
-        setToastError(
-          'Ảnh đã được xóa nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.'
+        notify(
+          'Ảnh đã được xóa nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.',
+          'warning'
         );
         setIsDeleteModalOpen(false);
         return;
       }
 
       setIsDeleteModalOpen(false);
-      setToastMessage('Đã xóa ảnh đại diện.');
+      notify('Đã xóa ảnh đại diện.', 'success');
     } catch (err: any) {
       const status = err.response?.status;
       if (status === 403) {
-        setToastError('Bạn không có quyền xóa ảnh đại diện.');
+        notify('Bạn không có quyền xóa ảnh đại diện.', 'error');
       } else {
         const msg =
           err.response?.data?.message ||
           'Không thể xóa ảnh đại diện. Vui lòng thử lại sau.';
-        setToastError(msg);
+        notify(msg, 'error');
       }
     } finally {
       setIsDeleting(false);
@@ -251,41 +253,35 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   return (
     <section className="profile-summary-header" aria-label="Thông tin hồ sơ quản trị viên">
       {/*
-        Toast container is rendered here in the JSX tree but has position: fixed in CSS,
-        so it escapes the card's flow entirely and floats in the viewport corner.
-        Using a dedicated class ensures no overlap with the "Đổi mật khẩu" button (AV-11).
+        When onNotify is provided (e.g. within ProfilePage), toast notifications are handled centrally
+        by the page-level toast container to prevent duplicate containers or overlapping notifications.
+        When rendered standalone (e.g. isolated component unit tests), we render this local fallback container.
       */}
-      <div className="profile-toast-container" aria-live="polite">
-        {toastMessage && (
-          <div className="profile-header-toast success" role="status" data-testid="toast-success">
-            <Check size={16} />
-            <span>{toastMessage}</span>
-            <button
-              type="button"
-              className="toast-close-btn"
-              onClick={() => setToastMessage(null)}
-              aria-label="Đóng thông báo"
+      {!onNotify && localToasts.length > 0 && (
+        <div className="profile-toast-container" aria-live="polite">
+          {localToasts.map((t) => (
+            <div
+              key={t.id}
+              className={`profile-header-toast ${t.type}`}
+              role={t.type === 'error' ? 'alert' : 'status'}
+              data-testid={`toast-${t.type}`}
             >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-
-        {toastError && (
-          <div className="profile-header-toast error" role="alert" data-testid="toast-error">
-            <AlertCircle size={16} />
-            <span>{toastError}</span>
-            <button
-              type="button"
-              className="toast-close-btn"
-              onClick={() => setToastError(null)}
-              aria-label="Đóng thông báo"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-      </div>
+              {t.type === 'success' && <Check size={16} />}
+              {t.type === 'warning' && <AlertTriangle size={16} />}
+              {t.type === 'error' && <AlertCircle size={16} />}
+              <span>{t.message}</span>
+              <button
+                type="button"
+                className="toast-close-btn"
+                onClick={() => setLocalToasts((prev) => prev.filter((item) => item.id !== t.id))}
+                aria-label="Đóng thông báo"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Hidden file input */}
       <input

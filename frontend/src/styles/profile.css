@@ -329,6 +329,16 @@
   pointer-events: none;
 }
 
+@media (max-width: 640px) {
+  .profile-toast-container {
+    top: 72px;
+    right: 12px;
+    left: 12px;
+    max-width: none;
+    width: auto;
+  }
+}
+
 .profile-header-toast {
   pointer-events: auto;
   position: relative;

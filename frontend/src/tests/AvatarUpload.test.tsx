@@ -1,7 +1,9 @@
+import React, { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import ProfileHeader from '../components/profile/ProfileHeader';
+import ProfilePage from '../pages/ProfilePage';
 import Header from '../layouts/Header';
 import * as useAuthHook from '../hooks/useAuth';
 import authApi from '../api/auth';
@@ -510,5 +512,282 @@ describe('Avatar Upload & ProfileHeader / Header Integration (S2-03)', () => {
     expect(btn).toBeEnabled();
     fireEvent.click(btn);
     expect(mockOnOpenPasswordModal).toHaveBeenCalledOnce();
+  });
+
+  // Stateful integration component for testing real state updates between ProfileHeader and Header
+  const StatefulProfileAndHeader: React.FC<{
+    initialUser: UserSummary;
+    refreshFails?: boolean;
+  }> = ({ initialUser, refreshFails = false }) => {
+    const [currentUser, setCurrentUser] = useState<UserSummary>(initialUser);
+    const [passwordModalOpened, setPasswordModalOpened] = useState(false);
+    const [toasts, setToasts] = useState<
+      Array<{ id: string; message: string; type: 'success' | 'warning' | 'error' }>
+    >([]);
+
+    const handleNotify = (message: string, type: 'success' | 'warning' | 'error') => {
+      const id = `${Date.now()}-${Math.random()}`;
+      setToasts((prev) => [...prev, { id, message, type }]);
+    };
+
+    const removeToast = (id: string) => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    };
+
+    const mockRefresh = vi.fn().mockImplementation(async () => {
+      if (refreshFails) return false;
+      return true;
+    });
+
+    const mockUpdate = vi.fn().mockImplementation((updated: UserSummary) => {
+      setCurrentUser({ ...updated });
+    });
+
+    vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
+      user: currentUser,
+      token: 'mock-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: mockRefresh,
+      updateUser: mockUpdate,
+      hasRole: () => true,
+      hasAnyRole: () => true,
+    });
+
+    return (
+      <MemoryRouter>
+        <Header onChangePasswordClick={() => {}} />
+        {toasts.length > 0 && (
+          <div className="profile-toast-container" aria-live="polite">
+            {toasts.map((toast) => (
+              <div
+                key={toast.id}
+                className={`profile-header-toast ${toast.type}`}
+                data-testid={`toast-${toast.type}`}
+              >
+                <span>{toast.message}</span>
+                <button
+                  type="button"
+                  className="toast-close-btn"
+                  onClick={() => removeToast(toast.id)}
+                >
+                  X
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <ProfileHeader
+          user={currentUser}
+          fullName={currentUser.fullName}
+          isAccountActive={true}
+          onOpenPasswordModal={() => setPasswordModalOpened(true)}
+          onNotify={handleNotify}
+        />
+        {passwordModalOpened && <div data-testid="password-modal-content">MODAL ĐỔI MẬT KHẨU</div>}
+      </MemoryRouter>
+    );
+  };
+
+  // AV-19: Stateful integration - Xóa avatar thành công làm ảnh biến mất ở cả Profile và Header
+  it('AV-19: DELETE avatar updates real UI state: image disappears from Profile & Header, initials appear, delete button vanishes', async () => {
+    const userWithAvatar: UserSummary = {
+      ...baseUser,
+      avatarUrl: '/api/auth/avatar/active-user.jpg',
+      avatarThumbnailUrl: '/api/auth/avatar/active-user_thumb.jpg',
+    };
+    vi.spyOn(authApi, 'deleteAvatar').mockResolvedValue({ message: 'Deleted' } as any);
+
+    render(<StatefulProfileAndHeader initialUser={userWithAvatar} />);
+
+    // Initially, avatar image is displayed in both Profile and Header
+    expect(screen.getAllByAltText(baseUser.fullName)).toHaveLength(2);
+    expect(screen.getByTestId('delete-avatar-btn')).toBeInTheDocument();
+
+    // Click delete avatar
+    fireEvent.click(screen.getByTestId('delete-avatar-btn'));
+    const confirmBtn = await screen.findByTestId('confirm-delete-avatar-btn');
+    fireEvent.click(confirmBtn);
+
+    // After state updates: image gone from DOM, initials "N" present, delete button gone
+    await waitFor(() => {
+      expect(screen.queryAllByAltText(baseUser.fullName)).toHaveLength(0);
+      expect(screen.queryByTestId('delete-avatar-btn')).not.toBeInTheDocument();
+      expect(screen.getByTestId('toast-success')).toHaveTextContent('Đã xóa ảnh đại diện.');
+    });
+  });
+
+  // AV-20: Stateful integration - Đổi ảnh mới thành công làm cả Profile và Header cập nhật
+  it('AV-20: UPLOAD avatar updates real UI state: new image appears in Profile & Header, delete button appears', async () => {
+    vi.spyOn(authApi, 'uploadAvatar').mockResolvedValue({
+      message: 'OK',
+      avatarUrl: '/api/auth/avatar/new-photo.jpg',
+      avatarThumbnailUrl: '/api/auth/avatar/new-photo_thumb.jpg',
+      user: {
+        ...baseUser,
+        avatarUrl: '/api/auth/avatar/new-photo.jpg',
+        avatarThumbnailUrl: '/api/auth/avatar/new-photo_thumb.jpg',
+      },
+    } as any);
+
+    render(<StatefulProfileAndHeader initialUser={baseUser} />);
+
+    // Initially no avatar, no delete button
+    expect(screen.queryAllByAltText(baseUser.fullName)).toHaveLength(0);
+    expect(screen.queryByTestId('delete-avatar-btn')).not.toBeInTheDocument();
+
+    // Select valid file
+    const fileInput = screen.getByTestId('avatar-file-input');
+    const file = new File(['valid-image-bytes'], 'avatar.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    // Save avatar in modal
+    const saveBtn = await screen.findByTestId('save-avatar-btn');
+    fireEvent.click(saveBtn);
+
+    // After upload: image appears in both Profile and Header, delete button appears
+    await waitFor(() => {
+      expect(screen.getAllByAltText(baseUser.fullName)).toHaveLength(2);
+      expect(screen.getByTestId('delete-avatar-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('toast-success')).toHaveTextContent('Cập nhật ảnh đại diện thành công.');
+    });
+  });
+
+  // AV-21: Khi refreshUser() thất bại khi xóa ảnh, không hiện thông báo thành công sai
+  it('AV-21: When refreshUser fails after DELETE, does not show success toast, displays warning toast instead', async () => {
+    const userWithAvatar: UserSummary = {
+      ...baseUser,
+      avatarUrl: '/api/auth/avatar/active-user.jpg',
+    };
+    vi.spyOn(authApi, 'deleteAvatar').mockResolvedValue({ message: 'Deleted' } as any);
+
+    render(<StatefulProfileAndHeader initialUser={userWithAvatar} refreshFails={true} />);
+
+    fireEvent.click(screen.getByTestId('delete-avatar-btn'));
+    const confirmBtn = await screen.findByTestId('confirm-delete-avatar-btn');
+    fireEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('toast-success')).not.toBeInTheDocument();
+      expect(screen.getByTestId('toast-warning')).toBeInTheDocument();
+      expect(screen.getByTestId('toast-warning')).toHaveTextContent(
+        'Ảnh đã được xóa nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.'
+      );
+    });
+  });
+
+  // AV-22: Khi refreshUser() thất bại khi upload ảnh, không hiện thông báo thành công sai
+  it('AV-22: When refreshUser fails after UPLOAD, does not show success toast, displays warning toast instead', async () => {
+    vi.spyOn(authApi, 'uploadAvatar').mockResolvedValue({
+      message: 'OK',
+      avatarUrl: '/api/auth/avatar/new.jpg',
+    } as any);
+
+    render(<StatefulProfileAndHeader initialUser={baseUser} refreshFails={true} />);
+
+    const fileInput = screen.getByTestId('avatar-file-input');
+    const file = new File(['bytes'], 'new.jpg', { type: 'image/jpeg' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    const saveBtn = await screen.findByTestId('save-avatar-btn');
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('toast-success')).not.toBeInTheDocument();
+      expect(screen.getByTestId('toast-warning')).toBeInTheDocument();
+      expect(screen.getByTestId('toast-warning')).toHaveTextContent(
+        'Ảnh đã được tải lên nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.'
+      );
+    });
+  });
+
+  // AV-23: Hai toast xuất hiện gần nhau được xếp thành danh sách, không chồng đè nhau
+  it('AV-23: Multiple toasts stack vertically in profile-toast-container without overlapping', async () => {
+    render(
+      <MemoryRouter>
+        <div className="profile-toast-container" aria-live="polite">
+          <div className="profile-header-toast success" data-testid="toast-success">
+            <span>Thông báo 1</span>
+          </div>
+          <div className="profile-header-toast warning" data-testid="toast-warning">
+            <span>Thông báo 2</span>
+          </div>
+        </div>
+      </MemoryRouter>
+    );
+
+    const toasts = screen.getAllByTestId(/toast-/);
+    expect(toasts).toHaveLength(2);
+    expect(toasts[0]).toHaveTextContent('Thông báo 1');
+    expect(toasts[1]).toHaveTextContent('Thông báo 2');
+    expect(toasts[0].parentElement).toBe(toasts[1].parentElement);
+  });
+
+  // AV-24: Nút "Đổi mật khẩu" vẫn nhấn được khi có toast đang hiển thị
+  it('AV-24: Change-password button remains clickable and functional even when toasts are active', async () => {
+    render(<StatefulProfileAndHeader initialUser={baseUser} />);
+
+    // Trigger a toast by trying to upload an invalid file
+    const fileInput = screen.getByTestId('avatar-file-input');
+    const invalidFile = new File(['text'], 'resume.pdf', { type: 'application/pdf' });
+    fireEvent.change(fileInput, { target: { files: [invalidFile] } });
+
+    // Toast is active
+    expect(await screen.findByTestId('toast-error')).toBeInTheDocument();
+
+    // Click "Đổi mật khẩu"
+    const changePwdBtn = screen.getByTestId('change-password-btn');
+    fireEvent.click(changePwdBtn);
+
+    // Modal opens without obstruction
+    expect(screen.getByTestId('password-modal-content')).toBeInTheDocument();
+  });
+
+  // AV-25: ProfilePage hiển thị warning khi refreshUser thất bại sau khi lưu hồ sơ
+  it('AV-25: In ProfilePage, saving profile when refreshUser fails displays warning toast and avoids full success message', async () => {
+    vi.spyOn(authApi, 'updateProfile').mockResolvedValue({ message: 'Updated' } as any);
+    const mockFailingRefresh = vi.fn().mockResolvedValue(false);
+
+    vi.spyOn(useAuthHook, 'useAuth').mockReturnValue({
+      user: baseUser,
+      token: 'mock-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: mockFailingRefresh,
+      updateUser: mockUpdateUser,
+      hasRole: () => true,
+      hasAnyRole: () => true,
+    });
+
+    render(
+      <MemoryRouter>
+        <ProfilePage />
+      </MemoryRouter>
+    );
+
+    // Modify a field to mark form dirty
+    const nameInput = screen.getByLabelText(/Họ và tên/i);
+    fireEvent.change(nameInput, { target: { value: 'Nguyễn Văn Đã Cập Nhật' } });
+
+    const submitBtn = screen.getByRole('button', { name: /Lưu thay đổi/i });
+    expect(submitBtn).toBeEnabled();
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(authApi.updateProfile).toHaveBeenCalled();
+      expect(mockFailingRefresh).toHaveBeenCalled();
+    });
+
+    // Should display warning toast, not full success
+    await waitFor(() => {
+      expect(screen.getByTestId('toast-warning')).toHaveTextContent(
+        'Hồ sơ đã được lưu nhưng chưa thể đồng bộ lại dữ liệu từ máy chủ. Vui lòng tải lại trang.'
+      );
+      expect(screen.queryByTestId('toast-success')).not.toBeInTheDocument();
+    });
   });
 });
