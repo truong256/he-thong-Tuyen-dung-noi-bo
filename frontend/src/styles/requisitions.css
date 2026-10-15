@@ -1,7 +1,6 @@
 /* ==========================================================================
-   RECRUITMENT REQUISITION MANAGEMENT STYLES (SPRINT 2 - S2-10)
+*   RECRUITMENT REQUISITION MANAGEMENT STYLES (SPRINT 2 - S2-10)*
    ========================================================================== */
-
 .req-container {
   display: flex;
   flex-direction: column;
@@ -10,7 +9,6 @@
   margin: 0 auto;
   padding-bottom: 48px;
 }
-
 /* Hero Header */
 .req-hero-card {
   background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
@@ -24,13 +22,11 @@
   flex-wrap: wrap;
   gap: 20px;
 }
-
 .req-hero-info {
   display: flex;
   align-items: center;
   gap: 16px;
 }
-
 .req-hero-icon {
   width: 52px;
   height: 52px;
@@ -43,26 +39,22 @@
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
   flex-shrink: 0;
 }
-
 .req-hero-text h1 {
   font-size: 1.5rem;
   font-weight: 700;
   color: var(--text-color, #0f172a);
   margin: 0 0 4px 0;
 }
-
 .req-hero-text p {
   font-size: 0.9rem;
   color: #64748b;
   margin: 0;
 }
-
 .req-hero-actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
 .req-btn-primary {
   display: inline-flex;
   align-items: center;
@@ -78,12 +70,10 @@
   transition: all 0.2s;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.2);
 }
-
 .req-btn-primary:hover {
   background: #1d4ed8;
   transform: translateY(-1px);
 }
-
 .req-btn-secondary {
   display: inline-flex;
   align-items: center;
@@ -98,12 +88,10 @@
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .req-btn-secondary:hover {
   background: #f8fafc;
   border-color: #94a3b8;
 }
-
 /* Filter Card */
 .req-filter-card {
   background: #ffffff;
@@ -116,7 +104,6 @@
   align-items: center;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
 }
-
 .req-search-box {
   flex: 1;
   min-width: 240px;
@@ -124,13 +111,11 @@
   display: flex;
   align-items: center;
 }
-
 .req-search-box svg {
   position: absolute;
   left: 12px;
   color: #94a3b8;
 }
-
 .req-search-input {
   width: 100%;
   padding: 9px 12px 9px 38px;
@@ -140,12 +125,10 @@
   outline: none;
   transition: border-color 0.2s;
 }
-
 .req-search-input:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
-
 .req-select {
   padding: 9px 14px;
   border: 1px solid #cbd5e1;
@@ -157,11 +140,9 @@
   cursor: pointer;
   min-width: 170px;
 }
-
 .req-select:focus {
   border-color: #2563eb;
 }
-
 /* Requisition Table */
 .req-table-card {
   background: #ffffff;
@@ -170,13 +151,11 @@
   overflow: hidden;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
 }
-
 .req-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
 }
-
 .req-table th {
   background: #f8fafc;
   padding: 14px 20px;
@@ -187,7 +166,6 @@
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
 }
-
 .req-table td {
   padding: 16px 20px;
   border-bottom: 1px solid #f1f5f9;
@@ -195,11 +173,9 @@
   color: #1e293b;
   vertical-align: middle;
 }
-
 .req-table tr:hover td {
   background: #f8fafc;
 }
-
 .req-code-badge {
   font-family: monospace;
   font-size: 0.85rem;
@@ -210,7 +186,6 @@
   border-radius: 4px;
   border: 1px solid #e2e8f0;
 }
-
 /* Status Badges */
 .req-badge {
   display: inline-flex;
@@ -221,27 +196,22 @@
   font-size: 0.8rem;
   font-weight: 600;
 }
-
 .req-badge-draft {
   background: #f1f5f9;
   color: #475569;
 }
-
 .req-badge-pending {
   background: #fef3c7;
   color: #b45309;
 }
-
 .req-badge-approved {
   background: #dcfce7;
   color: #15803d;
 }
-
 .req-badge-rejected {
   background: #fee2e2;
   color: #b91c1c;
 }
-
 /* Reason Badges */
 .req-reason-tag {
   font-size: 0.78rem;
@@ -251,14 +221,12 @@
   color: #1d4ed8;
   font-weight: 500;
 }
-
 /* Action Buttons in Row */
 .req-actions-cell {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-
 .req-action-btn {
   background: transparent;
   border: none;
@@ -271,29 +239,24 @@
   align-items: center;
   justify-content: center;
 }
-
 .req-action-btn:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
-
 .req-action-btn.delete:hover {
   background: #fee2e2;
   color: #b91c1c;
 }
-
 /* Empty State */
 .req-empty-state {
   padding: 56px 24px;
   text-align: center;
   color: #64748b;
 }
-
 .req-empty-icon {
   margin: 0 auto 16px;
   color: #94a3b8;
 }
-
 /* Modal styles */
 .req-modal-backdrop {
   position: fixed;
@@ -306,7 +269,6 @@
   z-index: 1000;
   padding: 20px;
 }
-
 .req-modal-content {
   background: #ffffff;
   border-radius: 14px;
@@ -318,7 +280,6 @@
   display: flex;
   flex-direction: column;
 }
-
 .req-modal-header {
   padding: 20px 24px;
   border-bottom: 1px solid #e2e8f0;
@@ -326,21 +287,18 @@
   align-items: center;
   justify-content: space-between;
 }
-
 .req-modal-header h2 {
   font-size: 1.25rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
 }
-
 .req-modal-body {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-
 .req-modal-footer {
   padding: 18px 24px;
   border-top: 1px solid #e2e8f0;
@@ -351,41 +309,34 @@
   background: #f8fafc;
   border-radius: 0 0 14px 14px;
 }
-
 /* Form controls */
 .req-form-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
-
 @media (max-width: 640px) {
   .req-form-grid {
     grid-template-columns: 1fr;
   }
 }
-
 .req-form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-
 .req-form-group.col-span-2 {
   grid-column: span 2;
 }
-
 .req-label {
   font-size: 0.85rem;
   font-weight: 600;
   color: #334155;
 }
-
 .req-label .required {
   color: #ef4444;
   margin-left: 2px;
 }
-
 .req-input, .req-textarea {
   padding: 9px 12px;
   border: 1px solid #cbd5e1;
@@ -396,17 +347,14 @@
   width: 100%;
   box-sizing: border-box;
 }
-
 .req-input:focus, .req-textarea:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
-
 .req-textarea {
   min-height: 80px;
   resize: vertical;
 }
-
 /* Salary alert / explanation banner */
 .req-salary-warning {
   background: #fffbeb;
@@ -420,15 +368,41 @@
   flex-direction: column;
   gap: 6px;
 }
-
 .req-salary-info {
   font-size: 0.8rem;
   color: #64748b;
   margin-top: 2px;
 }
-
 .req-error-text {
   font-size: 0.8rem;
   color: #ef4444;
   margin-top: 2px;
+}
+
+/* SCRUM-141 / SCRUM-142 */
+.req-container { min-width: 0; width: 100%; }
+.req-table-scroll { max-width: 100%; overflow-x: auto; }
+.req-table-scroll:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
+.req-table { min-width: 1200px; }
+.req-extra-filters label, .req-pagination label { display: flex; flex-direction: column; gap: 6px; font-size: .875rem; }
+.req-extra-filters { align-items: flex-end; }
+.req-row-overdue td { background: #fff1f2; }
+.req-table .req-row-overdue:hover td { background: #ffe4e6; }
+.req-deadline-overdue { display: inline-flex; align-items: center; gap: 4px; color: #b91c1c; font-weight: 600; }
+.req-deadline-today { color: #92400e; font-weight: 600; }
+.req-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; }
+.req-pagination p { margin-right: auto; }
+.req-btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 640px) {
+  .req-filter-card { padding: 16px; gap: 12px; }
+  .req-search-box { min-width: 0; flex-basis: 100%; }
+  .req-filter-card > select, .req-extra-filters > label { width: 100%; min-width: 0; }
+  .req-extra-filters select, .req-extra-filters input { width: 100%; min-width: 0; box-sizing: border-box; }
+  .req-search-input { min-width: 0; box-sizing: border-box; }
+  .req-form-group.col-span-2 { grid-column: span 1; }
+  .req-pagination { justify-content: flex-start; }
+  .req-pagination p { flex-basis: 100%; }
+  .req-modal-backdrop { padding: 8px; }
+  .req-modal-body, .req-modal-header, .req-modal-footer { padding: 16px; }
+  .req-modal-footer { flex-wrap: wrap; }
 }
