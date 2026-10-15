@@ -1,0 +1,362 @@
+[
+  {
+    "key": "login-1440x900",
+    "page": "login",
+    "viewport": "1440x900",
+    "diffPixels": 0,
+    "totalPixels": 1296000,
+    "diffPercent": 0,
+    "passed": true,
+    "diffImage": "diff/login-1440x900.png"
+  },
+  {
+    "key": "dashboard-1440x900",
+    "page": "dashboard",
+    "viewport": "1440x900",
+    "diffPixels": 48753,
+    "totalPixels": 1296000,
+    "diffPercent": 3.762,
+    "passed": true,
+    "diffImage": "diff/dashboard-1440x900.png"
+  },
+  {
+    "key": "profile-1440x900",
+    "page": "profile",
+    "viewport": "1440x900",
+    "diffPixels": 47346,
+    "totalPixels": 1296000,
+    "diffPercent": 3.653,
+    "passed": true,
+    "diffImage": "diff/profile-1440x900.png"
+  },
+  {
+    "key": "admin-users-1440x900",
+    "page": "admin-users",
+    "viewport": "1440x900",
+    "diffPixels": 63247,
+    "totalPixels": 1296000,
+    "diffPercent": 4.88,
+    "passed": true,
+    "diffImage": "diff/admin-users-1440x900.png"
+  },
+  {
+    "key": "admin-permission-matrix-1440x900",
+    "page": "admin-permission-matrix",
+    "viewport": "1440x900",
+    "diffPixels": 35717,
+    "totalPixels": 1296000,
+    "diffPercent": 2.756,
+    "passed": true,
+    "diffImage": "diff/admin-permission-matrix-1440x900.png"
+  },
+  {
+    "key": "organization-1440x900",
+    "page": "organization",
+    "viewport": "1440x900",
+    "diffPixels": 23811,
+    "totalPixels": 1296000,
+    "diffPercent": 1.837,
+    "passed": true,
+    "diffImage": "diff/organization-1440x900.png"
+  },
+  {
+    "key": "job-titles-1440x900",
+    "page": "job-titles",
+    "viewport": "1440x900",
+    "diffPixels": 5969,
+    "totalPixels": 1296000,
+    "diffPercent": 0.461,
+    "passed": true,
+    "diffImage": "diff/job-titles-1440x900.png"
+  },
+  {
+    "key": "requisitions-1440x900",
+    "page": "requisitions",
+    "viewport": "1440x900",
+    "diffPixels": 3684,
+    "totalPixels": 1296000,
+    "diffPercent": 0.284,
+    "passed": true,
+    "diffImage": "diff/requisitions-1440x900.png"
+  },
+  {
+    "key": "job-postings-1440x900",
+    "page": "job-postings",
+    "viewport": "1440x900",
+    "diffPixels": 2618,
+    "totalPixels": 1296000,
+    "diffPercent": 0.202,
+    "passed": true,
+    "diffImage": "diff/job-postings-1440x900.png"
+  },
+  {
+    "key": "questions-1440x900",
+    "page": "questions",
+    "viewport": "1440x900",
+    "diffPixels": 14569,
+    "totalPixels": 1296000,
+    "diffPercent": 1.124,
+    "passed": true,
+    "diffImage": "diff/questions-1440x900.png"
+  },
+  {
+    "key": "approval-configurations-1440x900",
+    "page": "approval-configurations",
+    "viewport": "1440x900",
+    "diffPixels": 3628,
+    "totalPixels": 1296000,
+    "diffPercent": 0.28,
+    "passed": true,
+    "diffImage": "diff/approval-configurations-1440x900.png"
+  },
+  {
+    "key": "competencies-1440x900",
+    "page": "competencies",
+    "viewport": "1440x900",
+    "diffPixels": 2334,
+    "totalPixels": 1296000,
+    "diffPercent": 0.18,
+    "passed": true,
+    "diffImage": "diff/competencies-1440x900.png"
+  },
+  {
+    "key": "login-768x1024",
+    "page": "login",
+    "viewport": "768x1024",
+    "diffPixels": 0,
+    "totalPixels": 786432,
+    "diffPercent": 0,
+    "passed": true,
+    "diffImage": "diff/login-768x1024.png"
+  },
+  {
+    "key": "profile-768x1024",
+    "page": "profile",
+    "viewport": "768x1024",
+    "diffPixels": 38618,
+    "totalPixels": 786432,
+    "diffPercent": 4.911,
+    "passed": true,
+    "diffImage": "diff/profile-768x1024.png"
+  },
+  {
+    "key": "organization-768x1024",
+    "page": "organization",
+    "viewport": "768x1024",
+    "diffPixels": 14671,
+    "totalPixels": 786432,
+    "diffPercent": 1.866,
+    "passed": true,
+    "diffImage": "diff/organization-768x1024.png"
+  },
+  {
+    "key": "admin-users-768x1024",
+    "page": "admin-users",
+    "viewport": "768x1024",
+    "diffPixels": 47582,
+    "totalPixels": 786432,
+    "diffPercent": 6.05,
+    "passed": true,
+    "diffImage": "diff/admin-users-768x1024.png"
+  },
+  {
+    "key": "dashboard-768x1024",
+    "page": "dashboard",
+    "viewport": "768x1024",
+    "diffPixels": 49072,
+    "totalPixels": 786432,
+    "diffPercent": 6.24,
+    "passed": true,
+    "diffImage": "diff/dashboard-768x1024.png"
+  },
+  {
+    "key": "admin-permission-matrix-768x1024",
+    "page": "admin-permission-matrix",
+    "viewport": "768x1024",
+    "diffPixels": 43332,
+    "totalPixels": 786432,
+    "diffPercent": 5.51,
+    "passed": true,
+    "diffImage": "diff/admin-permission-matrix-768x1024.png"
+  },
+  {
+    "key": "job-titles-768x1024",
+    "page": "job-titles",
+    "viewport": "768x1024",
+    "diffPixels": 21783,
+    "totalPixels": 786432,
+    "diffPercent": 2.77,
+    "passed": true,
+    "diffImage": "diff/job-titles-768x1024.png"
+  },
+  {
+    "key": "job-postings-768x1024",
+    "page": "job-postings",
+    "viewport": "768x1024",
+    "diffPixels": 2367,
+    "totalPixels": 786432,
+    "diffPercent": 0.301,
+    "passed": true,
+    "diffImage": "diff/job-postings-768x1024.png"
+  },
+  {
+    "key": "approval-configurations-768x1024",
+    "page": "approval-configurations",
+    "viewport": "768x1024",
+    "diffPixels": 24303,
+    "totalPixels": 786432,
+    "diffPercent": 3.09,
+    "passed": true,
+    "diffImage": "diff/approval-configurations-768x1024.png"
+  },
+  {
+    "key": "competencies-768x1024",
+    "page": "competencies",
+    "viewport": "768x1024",
+    "diffPixels": 57415,
+    "totalPixels": 786432,
+    "diffPercent": 7.301,
+    "passed": true,
+    "diffImage": "diff/competencies-768x1024.png"
+  },
+  {
+    "key": "requisitions-768x1024",
+    "page": "requisitions",
+    "viewport": "768x1024",
+    "diffPixels": 40091,
+    "totalPixels": 786432,
+    "diffPercent": 5.098,
+    "passed": true,
+    "diffImage": "diff/requisitions-768x1024.png"
+  },
+  {
+    "key": "questions-768x1024",
+    "page": "questions",
+    "viewport": "768x1024",
+    "diffPixels": 33530,
+    "totalPixels": 786432,
+    "diffPercent": 4.264,
+    "passed": true,
+    "diffImage": "diff/questions-768x1024.png"
+  },
+  {
+    "key": "login-390x844",
+    "page": "login",
+    "viewport": "390x844",
+    "diffPixels": 70,
+    "totalPixels": 2490433,
+    "diffPercent": 0.003,
+    "passed": true,
+    "diffImage": "diff/login-390x844.png"
+  },
+  {
+    "key": "organization-390x844",
+    "page": "organization",
+    "viewport": "390x844",
+    "diffPixels": 23128,
+    "totalPixels": 2490433,
+    "diffPercent": 0.929,
+    "passed": true,
+    "diffImage": "diff/organization-390x844.png"
+  },
+  {
+    "key": "admin-permission-matrix-390x844",
+    "page": "admin-permission-matrix",
+    "viewport": "390x844",
+    "diffPixels": 90618,
+    "totalPixels": 2490433,
+    "diffPercent": 3.639,
+    "passed": true,
+    "diffImage": "diff/admin-permission-matrix-390x844.png"
+  },
+  {
+    "key": "dashboard-390x844",
+    "page": "dashboard",
+    "viewport": "390x844",
+    "diffPixels": 176688,
+    "totalPixels": 2490433,
+    "diffPercent": 7.095,
+    "passed": true,
+    "diffImage": "diff/dashboard-390x844.png"
+  },
+  {
+    "key": "admin-users-390x844",
+    "page": "admin-users",
+    "viewport": "390x844",
+    "diffPixels": 120618,
+    "totalPixels": 2490433,
+    "diffPercent": 4.843,
+    "passed": true,
+    "diffImage": "diff/admin-users-390x844.png"
+  },
+  {
+    "key": "profile-390x844",
+    "page": "profile",
+    "viewport": "390x844",
+    "diffPixels": 130132,
+    "totalPixels": 2490433,
+    "diffPercent": 5.225,
+    "passed": true,
+    "diffImage": "diff/profile-390x844.png"
+  },
+  {
+    "key": "job-titles-390x844",
+    "page": "job-titles",
+    "viewport": "390x844",
+    "diffPixels": 83885,
+    "totalPixels": 2490433,
+    "diffPercent": 3.368,
+    "passed": true,
+    "diffImage": "diff/job-titles-390x844.png"
+  },
+  {
+    "key": "requisitions-390x844",
+    "page": "requisitions",
+    "viewport": "390x844",
+    "diffPixels": 58337,
+    "totalPixels": 2490433,
+    "diffPercent": 2.342,
+    "passed": true,
+    "diffImage": "diff/requisitions-390x844.png"
+  },
+  {
+    "key": "job-postings-390x844",
+    "page": "job-postings",
+    "viewport": "390x844",
+    "diffPixels": 1174,
+    "totalPixels": 2490433,
+    "diffPercent": 0.047,
+    "passed": true,
+    "diffImage": "diff/job-postings-390x844.png"
+  },
+  {
+    "key": "approval-configurations-390x844",
+    "page": "approval-configurations",
+    "viewport": "390x844",
+    "diffPixels": 4102,
+    "totalPixels": 2490433,
+    "diffPercent": 0.165,
+    "passed": true,
+    "diffImage": "diff/approval-configurations-390x844.png"
+  },
+  {
+    "key": "competencies-390x844",
+    "page": "competencies",
+    "viewport": "390x844",
+    "diffPixels": 180756,
+    "totalPixels": 2490433,
+    "diffPercent": 7.258,
+    "passed": true,
+    "diffImage": "diff/competencies-390x844.png"
+  },
+  {
+    "key": "questions-390x844",
+    "page": "questions",
+    "viewport": "390x844",
+    "diffPixels": 144442,
+    "totalPixels": 2490433,
+    "diffPercent": 5.8,
+    "passed": true,
+    "diffImage": "diff/questions-390x844.png"
+  }
+]

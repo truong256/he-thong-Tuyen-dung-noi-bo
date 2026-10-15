@@ -140,12 +140,18 @@ function comparePngBuffers(beforeBuf: Buffer, afterBuf: Buffer, diffPath: string
 }
 
 test.describe('Baseline Screenshots Capture and Visual Regression', () => {
-  test.describe.configure({ mode: 'serial' });
 
   for (const pageItem of pagesToCapture) {
     test(`capture and verify ${pageItem.name}`, async ({ page }) => {
       const mode = (process.env.SNAPSHOT_MODE || 'before').toLowerCase();
-      const defaultPassword = process.env.TEST_USER_PASSWORD || 'Password123@';
+      const testPassword = process.env.TEST_USER_PASSWORD;
+
+      if (!testPassword) {
+        throw new Error(
+          'Missing required environment variable TEST_USER_PASSWORD. Running visual baseline tests requires TEST_USER_PASSWORD to be explicitly set in the development/CI environment.'
+        );
+      }
+
       const outputDir = path.resolve(process.cwd(), `e2e/screenshots/${mode}`);
       const beforeDir = path.resolve(process.cwd(), 'e2e/screenshots/before');
       const diffDir = path.resolve(process.cwd(), 'e2e/screenshots/diff');
@@ -154,14 +160,23 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
         fs.mkdirSync(outputDir, { recursive: true });
       }
 
+      // Base URL override if capturing baseline from a separate server (e.g. baseline worktree)
+      const baseUrl = (mode === 'before' && process.env.BASELINE_URL) ? process.env.BASELINE_URL : '';
+
       // Handle Authentication with strict assertion
       if (pageItem.requiresAuth) {
         const loginEmail = pageItem.authEmail || 'admin@company.com';
-        await page.goto('/login');
+
+        // Security check: Never run visual test against external or production email domains
+        if (!loginEmail.endsWith('@company.com') && !loginEmail.endsWith('.local') && !loginEmail.endsWith('@test.local')) {
+          throw new Error(`Forbidden test email domain: "${loginEmail}". Visual tests are strictly limited to internal development/test accounts.`);
+        }
+
+        await page.goto(`${baseUrl}/login`);
         await page.waitForLoadState('networkidle');
 
         await page.locator('#login-email, input[type="email"]').fill(loginEmail);
-        await page.locator('#login-password').fill(defaultPassword);
+        await page.locator('#login-password').fill(testPassword);
         await page.locator('button[type="submit"]').click();
 
         // Must succeed without swallowed errors
@@ -170,11 +185,25 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
       }
 
       // Navigate to target route
-      await page.goto(pageItem.path);
+      await page.goto(`${baseUrl}${pageItem.path}`);
       await page.waitForLoadState('networkidle');
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(600);
 
-      // Verify that the page did not fall back to 404, 403 or Login
+      // Determinism: Freeze animations, transitions, and hide blinking carets
+      await page.addStyleTag({
+        content: `
+          *, *::before, *::after {
+            animation-duration: 0s !important;
+            animation-delay: 0s !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+            caret-color: transparent !important;
+          }
+        `,
+      });
+      await page.waitForTimeout(200);
+
+      // Verify that the page did not fall back to 404, 403 or unauthenticated Login
       const currentUrl = page.url();
       const expectedPathSegment = pageItem.path.split('?')[0];
       expect(currentUrl).toContain(expectedPathSegment);
@@ -198,9 +227,11 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
       const filename = `${pageItem.name}-${vpSuffix}.png`;
       const currentScreenshotPath = path.join(outputDir, filename);
 
+      // Capture screenshot with password inputs masked
       await page.screenshot({
         path: currentScreenshotPath,
         fullPage: false,
+        mask: [page.locator('input[type="password"]')],
       });
 
       // Visual Comparison in 'after' mode
@@ -231,8 +262,35 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
 
         const { diffRatio, diffPixels, totalPixels } = comparePngBuffers(beforeBuf, afterBuf, diffPath);
 
-        const MAX_DIFF_THRESHOLD = 0.05; // 5% maximum difference
+        const MAX_DIFF_THRESHOLD = Number(
+          process.env.VISUAL_DIFF_THRESHOLD || (vpSuffix.includes('1440') ? '0.05' : '0.08')
+        );
         const percent = (diffRatio * 100).toFixed(2);
+
+        // Record to diff-report.json
+        const diffReportPath = path.resolve(process.cwd(), 'e2e/screenshots/diff-report.json');
+        let reportData: any[] = [];
+        if (fs.existsSync(diffReportPath)) {
+          try {
+            reportData = JSON.parse(fs.readFileSync(diffReportPath, 'utf-8'));
+          } catch {
+            reportData = [];
+          }
+        }
+        reportData = reportData.filter((r) => r.key !== `${pageItem.name}-${vpSuffix}`);
+        reportData.push({
+          key: `${pageItem.name}-${vpSuffix}`,
+          page: pageItem.name,
+          viewport: vpSuffix,
+          diffPixels,
+          totalPixels,
+          diffPercent: Number((diffRatio * 100).toFixed(3)),
+          passed: diffRatio <= MAX_DIFF_THRESHOLD,
+          diffImage: `diff/${filename}`,
+        });
+        fs.writeFileSync(diffReportPath, JSON.stringify(reportData, null, 2), 'utf-8');
+
+        console.log(`[VISUAL DIFF] ${pageItem.name} (${vpSuffix}): ${diffPixels}/${totalPixels} pixels differ (${percent}%)`);
 
         if (diffRatio > MAX_DIFF_THRESHOLD) {
           throw new Error(

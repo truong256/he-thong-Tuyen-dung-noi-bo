@@ -18,13 +18,13 @@
    TOP APPLICATION HEADER
    ========================================================================== */
 .app-header {
-  height: 64px;
+  height: 68px;
   background-color: var(--bg-surface);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 var(--space-6);
+  padding: 0 28px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -35,13 +35,13 @@
 .header-left {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: 14px;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 12px;
 }
 
 /* Desktop sidebar collapse / expand toggle */
@@ -95,7 +95,7 @@
 .header-logo {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 10px;
   text-decoration: none;
   cursor: pointer;
 }
@@ -107,10 +107,10 @@
 }
 
 .header-logo-text {
-  font-size: 1.125rem;
+  font-size: 1.12rem;
   font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.015em;
+  color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .header-badge {
@@ -369,16 +369,16 @@
   flex: 1;
   min-width: 0;
   width: 100%;
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 68px);
 }
 
 .app-sidebar {
-  width: 232px;
+  width: 240px;
   background-color: var(--bg-surface);
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  padding: var(--space-4) var(--space-3);
+  padding: 20px 12px;
   flex-shrink: 0;
   transition: width 200ms cubic-bezier(0.2, 0, 0, 1), opacity 200ms ease;
   overflow-y: auto;
@@ -403,17 +403,17 @@
 }
 
 .sidebar-section {
-  margin-bottom: var(--space-4);
+  margin-bottom: 22px;
 }
 
 .sidebar-title {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-secondary);
-  padding: 0 var(--space-3);
-  margin-bottom: var(--space-2);
+  color: #64748b;
+  padding: 0 12px;
+  margin-bottom: 8px;
   display: block;
   white-space: nowrap;
 }
@@ -426,7 +426,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   padding: 0;
   margin: 0;
 }
@@ -435,7 +435,7 @@
   display: flex;
   align-items: center;
   height: 38px;
-  padding: 0 var(--space-3);
+  padding: 0 12px;
   border-radius: var(--radius-md);
   color: #1e293b;
   text-decoration: none;
@@ -517,7 +517,7 @@
   max-width: 100%;
   padding: 24px 32px;
   background-color: var(--bg-page);
-  min-height: calc(100vh - 64px);
+  min-height: calc(100vh - 68px);
   overflow-y: auto;
   box-sizing: border-box;
 }
@@ -646,10 +646,6 @@
   }
 
   .header-badge {
-    display: none;
-  }
-
-  .user-details {
     display: none;
   }
 }
