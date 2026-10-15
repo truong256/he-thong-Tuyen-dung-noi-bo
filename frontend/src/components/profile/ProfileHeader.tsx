@@ -12,6 +12,7 @@ interface ProfileHeaderProps {
   onOpenPasswordModal: () => void;
 }
 
+
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   user,
   fullName,
@@ -43,13 +44,22 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [toastError, setToastError] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
 
-  const avatarUrl = user?.avatarUrl || user?.avatarThumbnailUrl;
-  const hasAvatar = !!avatarUrl && !imgError;
+  /**
+   * avatarDisplayUrl is derived from the current user prop, with a cache-busting param
+   * injected after any successful upload or delete (via a local version counter).
+   * This ensures the browser always fetches the latest image after changes.
+   */
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const rawAvatarUrl = user?.avatarUrl || user?.avatarThumbnailUrl;
+  const avatarDisplayUrl = rawAvatarUrl
+    ? `${rawAvatarUrl}${rawAvatarUrl.includes('?') ? '&' : '?'}v=${avatarVersion}`
+    : null;
+  const hasAvatar = !!rawAvatarUrl && !imgError;
 
-  // Reset imgError if avatarUrl changes
+  // Reset imgError whenever the underlying avatar URL changes
   useEffect(() => {
     setImgError(false);
-  }, [avatarUrl]);
+  }, [rawAvatarUrl]);
 
   // Clean up object URL when component unmounts
   useEffect(() => {
@@ -83,12 +93,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset input value so user can re-select the same file if needed
+    // Reset input value so user can re-select the same file if needed (AV-13)
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
 
-    // A. Validate file type: Only accept JPG or PNG
+    // A. Validate file type: Only accept JPG or PNG (AV-14)
     const validMimes = ['image/jpeg', 'image/jpg', 'image/png'];
     const fileName = file.name.toLowerCase();
     const isJpegExt = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg');
@@ -100,7 +110,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       return;
     }
 
-    // B. Validate file size: Maximum 2MB
+    // B. Validate file size: Maximum 2MB (AV-14)
     const MAX_SIZE = 2 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
       setToastError('Ảnh đại diện không được vượt quá 2MB.');
@@ -138,6 +148,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     try {
       const res = await authApi.uploadAvatar(selectedFile);
 
+      // Step 1: Optimistically update AuthContext with the data from upload response
+      // This gives immediate feedback (AV-01, AV-02)
       if (updateUser) {
         if (res.user) {
           updateUser(res.user);
@@ -150,7 +162,26 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         }
       }
 
-      await refreshUser();
+      // Step 2: Bump the avatar version to force cache-busting on the img element
+      setAvatarVersion((v) => v + 1);
+
+      // Step 3: Confirm the update by fetching /api/auth/me from the server
+      // If this fails, we still show the optimistic state and warn the user (AV-09, AV-10)
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        // refreshUser failed (network error, token expired, etc.)
+        // We already applied the optimistic update, so the UI shows the new avatar,
+        // but we warn the user that the server state could not be confirmed.
+        setToastError(
+          'Ảnh đã được tải lên nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.'
+        );
+        handleCloseModal();
+        return;
+      }
+
+      // Bump again after refreshUser so the freshly-fetched URL also gets a new cache-buster
+      setAvatarVersion((v) => v + 1);
+
       handleCloseModal();
       setToastMessage('Cập nhật ảnh đại diện thành công.');
     } catch (err: any) {
@@ -173,6 +204,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     try {
       await authApi.deleteAvatar();
 
+      // Step 1: Optimistically clear avatar in AuthContext (AV-03, AV-04)
       if (user && updateUser) {
         updateUser({
           ...user,
@@ -181,7 +213,18 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         });
       }
 
-      await refreshUser();
+      // Step 2: Confirm deletion by fetching /api/auth/me (AV-08)
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        // Server confirmation failed, but optimistic update already cleared the avatar UI.
+        // Warn the user.
+        setToastError(
+          'Ảnh đã được xóa nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.'
+        );
+        setIsDeleteModalOpen(false);
+        return;
+      }
+
       setIsDeleteModalOpen(false);
       setToastMessage('Đã xóa ảnh đại diện.');
     } catch (err: any) {
@@ -207,10 +250,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <section className="profile-summary-header" aria-label="Thông tin hồ sơ quản trị viên">
-      {/* Floating Toast Notification Container (Prevents overlapping header actions or Change Password button) */}
+      {/*
+        Toast container is rendered here in the JSX tree but has position: fixed in CSS,
+        so it escapes the card's flow entirely and floats in the viewport corner.
+        Using a dedicated class ensures no overlap with the "Đổi mật khẩu" button (AV-11).
+      */}
       <div className="profile-toast-container" aria-live="polite">
         {toastMessage && (
-          <div className="profile-header-toast success" role="status">
+          <div className="profile-header-toast success" role="status" data-testid="toast-success">
             <Check size={16} />
             <span>{toastMessage}</span>
             <button
@@ -225,7 +272,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         )}
 
         {toastError && (
-          <div className="profile-header-toast error" role="alert">
+          <div className="profile-header-toast error" role="alert" data-testid="toast-error">
             <AlertCircle size={16} />
             <span>{toastError}</span>
             <button
@@ -252,12 +299,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       />
 
       <div className="profile-header-main">
-        {/* Avatar with Status Indicator and Actions */}
+        {/* Avatar column: avatar circle + status dot + delete button */}
         <div className="profile-header-avatar-col">
           <div className="profile-header-avatar-box">
             <div
               className="profile-header-avatar"
-              aria-label="Ảnh đại diện"
+              aria-label="Ảnh đại diện — Nhấn để đổi ảnh"
               role="button"
               tabIndex={0}
               onClick={triggerFileInput}
@@ -272,7 +319,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             >
               {hasAvatar ? (
                 <img
-                  src={avatarUrl}
+                  src={avatarDisplayUrl!}
                   alt={displayName}
                   className="profile-header-avatar-img"
                   onError={() => setImgError(true)}
@@ -305,7 +352,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             />
           </div>
 
-          {/* Delete avatar button if user currently has an avatar */}
+          {/* Delete avatar button — only visible when user currently has an avatar (AV-04) */}
           {hasAvatar && (
             <button
               type="button"
@@ -341,13 +388,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
       </div>
 
-      {/* Action: Secondary Change Password Button */}
+      {/* Action: Change Password button — fixed position at the right side (AV-11) */}
       <div className="profile-header-actions">
         <button
           type="button"
           className="btn btn-secondary profile-btn-change-password"
           onClick={onOpenPasswordModal}
           title="Đổi mật khẩu tài khoản"
+          data-testid="change-password-btn"
         >
           <span>Đổi mật khẩu</span>
         </button>

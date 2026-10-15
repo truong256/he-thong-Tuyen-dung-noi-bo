@@ -13,6 +13,8 @@ export const useAuth = (): UseAuthReturn => {
     permissions: context.permissions ?? [],
     hasPermission: context.hasPermission ?? (() => false),
     hasAnyPermission: context.hasAnyPermission ?? (() => false),
+    // Ensure refreshUser always returns Promise<boolean> even if context implementation changes
+    refreshUser: context.refreshUser ?? (() => Promise.resolve(false)),
   };
 };
 

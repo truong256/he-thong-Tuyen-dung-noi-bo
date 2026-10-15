@@ -45,6 +45,8 @@ class RbacIntegrationTest {
     @Autowired DepartmentRepository departments;
     @Autowired JobTitleRepository jobTitles;
     @Autowired RequisitionAssignmentRepository assignments;
+    @Autowired RequisitionApprovalConfigurationRepository configurations;
+    @Autowired RequisitionApprovalConfigurationStepRepository configurationSteps;
     @Autowired SalaryRangeRepository salaries;
     @Autowired RecruitmentReadService readService;
     @Autowired org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
@@ -567,6 +569,21 @@ class RbacIntegrationTest {
         jt.setMinSalary(20000000L);
         jt.setMaxSalary(40000000L);
         jt = jobTitles.saveAndFlush(jt);
+
+        RequisitionApprovalConfiguration cfg = new RequisitionApprovalConfiguration();
+        cfg.setDepartmentId(dept.getId());
+        cfg.setVersion(1);
+        cfg.setActive(true);
+        cfg.setCreatedByUserId(hm.getId());
+        cfg = configurations.save(cfg);
+
+        User deptApprover = user("rbac-dept-approver", RoleName.APPROVER);
+        RequisitionApprovalConfigurationStep step = new RequisitionApprovalConfigurationStep();
+        step.setConfigurationId(cfg.getId());
+        step.setStepOrder(1);
+        step.setMinimumSalary(0L);
+        step.setApproverUserId(deptApprover.getId());
+        configurationSteps.save(step);
 
         // HM creates for own department -> 201 Created
         String payloadSuccess = """
