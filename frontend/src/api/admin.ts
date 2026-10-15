@@ -102,6 +102,11 @@ export const adminApi = {
     );
     return res.data;
   },
+
+  getRolesPermissions: async (): Promise<Record<string, string[]>> => {
+    const res = await apiClient.get<Record<string, string[]>>('/api/admin/roles');
+    return res.data;
+  },
 };
 
 export default adminApi;

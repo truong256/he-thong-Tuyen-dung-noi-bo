@@ -278,14 +278,13 @@ export const App: React.FC = () => {
             />
 
             {/*
-              Permission Matrix – USER_READ (ADMIN + HR_MANAGER)
-              Standalone read-only view of the RBAC permission matrix.
-              Replaces the old RbacMatrixModal accessible only from UserManagementPage.
+              Permission Matrix – ROLE_READ (ADMIN + HR_MANAGER)
+              Standalone dynamic view of the RBAC permission matrix fetched from /api/admin/roles.
             */}
             <Route
               path="admin/permission-matrix"
               element={
-                <PermissionGuard requiredPermissions={['USER_READ']}>
+                <PermissionGuard requiredPermissions={['ROLE_READ']}>
                   <PermissionMatrixPage />
                 </PermissionGuard>
               }
