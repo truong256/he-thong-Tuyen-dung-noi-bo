@@ -176,7 +176,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
 
   return (
     <div
-      className="modal-backdrop"
+      className="org-modal-backdrop modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="dept-modal-title"
@@ -184,17 +184,17 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-dialog modal-md" data-testid="department-modal">
+      <div className="org-modal-dialog modal-dialog modal-md" data-testid="department-modal">
         {/* Header */}
-        <div className="modal-header">
-          <div className="modal-title-wrap">
+        <div className="org-modal-header modal-header">
+          <div className="org-modal-title-wrap">
             <h3 id="dept-modal-title">
               {isEditing ? 'Chỉnh sửa Phòng ban / Đơn vị' : 'Thêm mới Phòng ban / Đơn vị'}
             </h3>
           </div>
           <button
             type="button"
-            className="modal-close-btn"
+            className="org-modal-close-btn modal-close-btn"
             onClick={onClose}
             aria-label="Đóng cửa sổ"
           >
@@ -204,24 +204,24 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit}>
-          <div className="modal-body">
+          <div className="org-modal-body modal-body">
             {validationError && (
-              <div className="modal-alert-error" role="alert" data-testid="dept-modal-error">
+              <div className="org-modal-alert-error modal-alert-error" role="alert" data-testid="dept-modal-error">
                 <AlertCircle size={16} />
                 <span>{validationError}</span>
               </div>
             )}
 
-            <div className="form-grid-2">
+            <div className="org-form-grid-2 form-grid-2">
               {/* Tên phòng ban */}
-              <div className="form-group span-2">
+              <div className="org-form-group form-group span-2">
                 <label htmlFor="dept-name">
                   Tên phòng ban / Đơn vị <span className="text-danger">*</span>
                 </label>
                 <input
                   id="dept-name"
                   type="text"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="Ví dụ: Phòng Tuyển dụng & Đào tạo"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -230,28 +230,28 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
               </div>
 
               {/* Mã phòng ban */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="dept-code">
                   Mã phòng ban <span className="text-danger">*</span>
                 </label>
                 <input
                   id="dept-code"
                   type="text"
-                  className="form-control text-uppercase"
+                  className="org-form-control form-control text-uppercase"
                   placeholder="Ví dụ: HR-REC"
                   value={code}
                   onChange={(e) => setCode(e.target.value.toUpperCase())}
                   required
                 />
-                <span className="field-hint">Mã viết tắt dạng chữ hoa (TECH, HR, QA...)</span>
+                <span className="org-field-hint field-hint">Mã viết tắt dạng chữ hoa (TECH, HR, QA...)</span>
               </div>
 
               {/* Phòng ban cấp trên */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="dept-parent">Đơn vị trực thuộc cấp trên</label>
                 <select
                   id="dept-parent"
-                  className="form-control"
+                  className="org-form-control form-control"
                   value={parentId === null ? '' : parentId}
                   onChange={(e) => {
                     const val = e.target.value;
@@ -268,7 +268,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
               </div>
 
               {/* Trưởng đơn vị / Người phụ trách */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label htmlFor="dept-manager" style={{ margin: 0 }}>
                     Người phụ trách nội bộ <span className="text-danger">*</span>
@@ -297,7 +297,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 </div>
                 <select
                   id="dept-manager"
-                  className="form-control"
+                  className="org-form-control form-control"
                   value={managerUserId || ''}
                   onChange={(e) => handleManagerSelect(e.target.value)}
                   disabled={isLoadingManagers}
@@ -312,65 +312,65 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                     </option>
                   ))}
                 </select>
-                <span className="field-hint">Chỉ được phân công nhân sự nội bộ đang hoạt động</span>
+                <span className="org-field-hint field-hint">Chỉ được phân công nhân sự nội bộ đang hoạt động</span>
               </div>
 
               {/* Email công vụ */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="dept-manager-email">Email công vụ</label>
                 <input
                   id="dept-manager-email"
                   type="email"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="Chọn nhân sự để tự động điền email"
                   value={managerEmail}
                   readOnly
                   disabled
                 />
-                <span className="field-hint">Tự động lấy theo tài khoản người phụ trách</span>
+                <span className="org-field-hint field-hint">Tự động lấy theo tài khoản người phụ trách</span>
               </div>
 
               {/* Số lượng nhân sự hiện tại */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="dept-employees">Số nhân sự hiện tại</label>
                 <input
                   id="dept-employees"
                   type="number"
-                  className="form-control"
+                  className="org-form-control form-control"
                   value={employeeCount}
                   readOnly
                   disabled
                 />
-                <span className="field-hint">Hệ thống tự động thống kê từ số tài khoản thuộc đơn vị</span>
+                <span className="org-field-hint field-hint">Hệ thống tự động thống kê từ số tài khoản thuộc đơn vị</span>
               </div>
 
               {/* Trạng thái hoạt động */}
-              <div className="form-group toggle-group">
-                <label className="toggle-label" htmlFor="dept-active">
+              <div className="org-form-group form-group org-toggle-group toggle-group">
+                <label className="org-toggle-label toggle-label" htmlFor="dept-active">
                   <span>Trạng thái hoạt động</span>
-                  <div className="toggle-switch-wrapper">
+                  <div className="org-toggle-switch-wrapper toggle-switch-wrapper">
                     <input
                       id="dept-active"
                       type="checkbox"
-                      className="toggle-checkbox"
+                      className="org-toggle-checkbox toggle-checkbox"
                       checked={active}
                       onChange={(e) => setActive(e.target.checked)}
                     />
-                    <span className="toggle-slider" />
+                    <span className="org-toggle-slider toggle-slider" />
                   </div>
                 </label>
-                <span className="field-hint">
+                <span className="org-field-hint field-hint">
                   {active ? 'Phòng ban đang hoạt động bình thường' : 'Phòng ban đang tạm ngưng'}
                 </span>
               </div>
 
               {/* Mô tả chức năng nhiệm vụ */}
-              <div className="form-group span-2">
+              <div className="org-form-group form-group span-2">
                 <label htmlFor="dept-desc">Chức năng & Nhiệm vụ</label>
                 <textarea
                   id="dept-desc"
                   rows={3}
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="Mô tả tóm tắt mục tiêu, trách nhiệm chính của phòng ban..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -380,7 +380,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="modal-footer" style={{ display: 'flex', justifyContent: isEditing && onDelete ? 'space-between' : 'flex-end', width: '100%' }}>
+          <div className="org-modal-footer modal-footer" style={{ display: 'flex', justifyContent: isEditing && onDelete ? 'space-between' : 'flex-end', width: '100%' }}>
             {isEditing && onDelete && department && (
               <button
                 type="button"

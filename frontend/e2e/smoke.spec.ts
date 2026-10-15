@@ -74,7 +74,7 @@ test.describe('Frontend UI Smoke Test', () => {
     });
 
     expect(metrics.fontFamily).toContain('Be Vietnam Pro');
-    expect(metrics.height).toBe('46px');
+    expect(metrics.height).toBe('44px');
 
     const width = page.viewportSize()?.width || 1440;
     if (width === 1440) {

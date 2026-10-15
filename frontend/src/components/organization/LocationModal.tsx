@@ -108,7 +108,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({
 
   return (
     <div
-      className="modal-backdrop"
+      className="org-modal-backdrop modal-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="loc-modal-title"
@@ -116,18 +116,18 @@ export const LocationModal: React.FC<LocationModalProps> = ({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="modal-dialog modal-md" data-testid="location-modal">
+      <div className="org-modal-dialog modal-dialog modal-md" data-testid="location-modal">
         {/* Header */}
-        <div className="modal-header">
-          <div className="modal-title-wrap">
-            <MapPin size={20} className="modal-title-icon" />
+        <div className="org-modal-header modal-header">
+          <div className="org-modal-title-wrap">
+            <MapPin size={20} className="org-modal-title-icon modal-title-icon" />
             <h3 id="loc-modal-title">
               {isEditing ? 'Chỉnh sửa Địa điểm & Chi nhánh' : 'Thêm mới Địa điểm & Chi nhánh'}
             </h3>
           </div>
           <button
             type="button"
-            className="modal-close-btn"
+            className="org-modal-close-btn modal-close-btn"
             onClick={onClose}
             aria-label="Đóng cửa sổ"
           >
@@ -137,24 +137,24 @@ export const LocationModal: React.FC<LocationModalProps> = ({
 
         {/* Body */}
         <form onSubmit={handleSubmit}>
-          <div className="modal-body">
+          <div className="org-modal-body modal-body">
             {validationError && (
-              <div className="modal-alert-error" role="alert">
+              <div className="org-modal-alert-error modal-alert-error" role="alert">
                 <AlertCircle size={16} />
                 <span>{validationError}</span>
               </div>
             )}
 
-            <div className="form-grid-2">
+            <div className="org-form-grid-2 form-grid-2">
               {/* Tên cơ sở */}
-              <div className="form-group span-2">
+              <div className="org-form-group form-group span-2">
                 <label htmlFor="loc-name">
                   Tên chi nhánh / Văn phòng <span className="text-danger">*</span>
                 </label>
                 <input
                   id="loc-name"
                   type="text"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="Ví dụ: Văn phòng Chi nhánh TP. Hồ Chí Minh"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -163,11 +163,11 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
 
               {/* Loại cơ sở */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="loc-type">Phân loại địa điểm</label>
                 <select
                   id="loc-type"
-                  className="form-control"
+                  className="org-form-control form-control"
                   value={type}
                   onChange={(e) => setType(e.target.value as LocationType)}
                 >
@@ -180,14 +180,14 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
 
               {/* Tỉnh / Thành phố */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="loc-city">
                   Tỉnh / Thành phố <span className="text-danger">*</span>
                 </label>
                 <input
                   id="loc-city"
                   type="text"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="Ví dụ: Hà Nội, TP. Hồ Chí Minh, Đà Nẵng..."
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
@@ -196,14 +196,14 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
 
               {/* Địa chỉ chi tiết */}
-              <div className="form-group span-2">
+              <div className="org-form-group form-group span-2">
                 <label htmlFor="loc-address">
                   Địa chỉ chi tiết <span className="text-danger">*</span>
                 </label>
                 <input
                   id="loc-address"
                   type="text"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
@@ -212,12 +212,12 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
 
               {/* Số điện thoại */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="loc-phone">Hotline / Điện thoại liên hệ</label>
                 <input
                   id="loc-phone"
                   type="text"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="024 3998 8899"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
@@ -225,12 +225,12 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
 
               {/* Email liên hệ */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="loc-email">Email văn phòng</label>
                 <input
                   id="loc-email"
                   type="email"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="office@ats-corp.vn"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -238,12 +238,12 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
 
               {/* Quản lý cơ sở */}
-              <div className="form-group">
+              <div className="org-form-group form-group">
                 <label htmlFor="loc-manager">Người phụ trách văn phòng</label>
                 <input
                   id="loc-manager"
                   type="text"
-                  className="form-control"
+                  className="org-form-control form-control"
                   placeholder="Họ và tên người quản lý"
                   value={managerName}
                   onChange={(e) => setManagerName(e.target.value)}
@@ -251,8 +251,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </div>
 
               {/* Checkbox Trụ sở chính & Active */}
-              <div className="form-group flex-col justify-center">
-                <label className="checkbox-custom-label">
+              <div className="org-form-group form-group flex-col justify-center">
+                <label className="org-checkbox-custom-label checkbox-custom-label">
                   <input
                     type="checkbox"
                     checked={isHeadquarter}
@@ -260,7 +260,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({
                   />
                   <span>Đặt làm Trụ sở chính của tổ chức</span>
                 </label>
-                <label className="checkbox-custom-label mt-2">
+                <label className="org-checkbox-custom-label checkbox-custom-label mt-2">
                   <input
                     type="checkbox"
                     checked={active}
@@ -273,7 +273,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({
           </div>
 
           {/* Footer */}
-          <div className="modal-footer">
+          <div className="org-modal-footer modal-footer">
             <button
               type="button"
               className="btn btn-secondary"

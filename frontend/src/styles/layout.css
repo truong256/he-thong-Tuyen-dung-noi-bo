@@ -522,20 +522,12 @@
   box-sizing: border-box;
 }
 
-/* Unified Page Container across ALL enterprise pages */
+/* Standard Page Containers (generic layout wrappers) */
 .page-container,
 .page-container-dashboard,
 .page-container-standard,
 .dashboard-content,
-.jt-page-container,
-.cat-page-container,
-.cf-page-container,
-.qb-page-container,
-.org-page-container,
-.admin-page,
-.excel-import-container,
-.rr-page-container,
-.req-container {
+.admin-page {
   width: 100%;
   max-width: 1440px;
   margin-inline: auto;
@@ -546,10 +538,9 @@
   box-sizing: border-box;
 }
 
-/* Form and profile pages constrained to 1200px */
+/* Form and profile page containers constrained to 1200px */
 .page-container-form,
-.page-container-profile,
-.profile-page-clean-container {
+.page-container-profile {
   width: 100%;
   max-width: 1200px;
   margin-inline: auto;
