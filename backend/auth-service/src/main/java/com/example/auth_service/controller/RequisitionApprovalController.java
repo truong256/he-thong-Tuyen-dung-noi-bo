@@ -100,6 +100,13 @@ public class RequisitionApprovalController {
             }
         }
 
+        if (approvalWorkflow != null && req.getDepartmentId() != null) {
+            long proposedSalary = req.getSalaryMax() != null
+                    ? req.getSalaryMax()
+                    : (req.getSalaryMin() != null ? req.getSalaryMin() : 0L);
+            approvalWorkflow.syncMissingSubsequentSteps(req, proposedSalary);
+        }
+
         boolean isAssignedApprover = (snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
                 .anyMatch(s -> userId.equals(s.getApproverUserId())))
                 || (historyRepository != null && historyRepository.findByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()

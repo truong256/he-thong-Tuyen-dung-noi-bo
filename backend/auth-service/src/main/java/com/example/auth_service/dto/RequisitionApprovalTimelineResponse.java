@@ -26,7 +26,10 @@ public class RequisitionApprovalTimelineResponse {
     private String currentWaitingOn;
     private int totalSteps;
     private int completedSteps;
+    @com.fasterxml.jackson.annotation.JsonProperty("isCompleted")
     private boolean isCompleted;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isRejected")
     private boolean isRejected;
     private String rejectionReason;
     private Instant submittedAt;
@@ -74,8 +77,13 @@ public class RequisitionApprovalTimelineResponse {
     public String currentWaitingOn() { return currentWaitingOn; }
     public int totalSteps() { return totalSteps; }
     public int completedSteps() { return completedSteps; }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isCompleted")
     public boolean isCompleted() { return isCompleted; }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isRejected")
     public boolean isRejected() { return isRejected; }
+
     public String rejectionReason() { return rejectionReason; }
     public Instant submittedAt() { return submittedAt; }
     public List<ApprovalStepResponse> steps() { return steps; }

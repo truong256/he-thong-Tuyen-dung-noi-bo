@@ -26,6 +26,7 @@ public class ApprovalStepResponse {
     private String action; // SUBMIT, APPROVE, REJECT, WAITING, PENDING
     private Instant actionAt;
     private String comments;
+    @com.fasterxml.jackson.annotation.JsonProperty("isCurrentStep")
     private boolean isCurrentStep;
 
     public ApprovalStepResponse(
@@ -66,5 +67,7 @@ public class ApprovalStepResponse {
     public String action() { return action; }
     public Instant actionAt() { return actionAt; }
     public String comments() { return comments; }
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isCurrentStep")
     public boolean isCurrentStep() { return isCurrentStep; }
 }

@@ -72,24 +72,25 @@ test.describe('S3-02 / S3-03 Approval Timeline & RBAC Actions E2E Verification',
     const approverUser = usersRes.data?.content?.find((u: any) => u.email === 'approver@company.com') || { id: 6 };
     console.log('--- approverUser:', approverUser.id, approverUser.email);
 
-    // Ensure 1-step workflow exists for targetDept with approver@company.com
+    // Ensure multi-level workflow exists for targetDept with approver@company.com at Step 1 and subsequent accounts
+    const stepsPayload = [
+      { minimumSalary: 0, approverUserId: approverUser.id },
+      { minimumSalary: 20000000, approverUserId: 3 },
+      { minimumSalary: 50000000, approverUserId: 228 },
+    ];
     const cfgListRes = await callApi(page, `/api/requisition-approval-configurations?departmentId=${targetDept.id}`);
     const existingCfgs = Array.isArray(cfgListRes.data) ? cfgListRes.data : [];
     const activeCfg = existingCfgs.find((c: any) => c.active);
     if (activeCfg) {
       const updateRes = await callApi(page, `/api/requisition-approval-configurations/${activeCfg.id}`, 'PUT', {
         departmentId: targetDept.id,
-        steps: [
-          { minimumSalary: 0, approverUserId: approverUser.id },
-        ],
+        steps: stepsPayload,
       });
       console.log('--- updated existing approval configuration:', updateRes.status);
     } else {
       const createCfgRes = await callApi(page, '/api/requisition-approval-configurations', 'POST', {
         departmentId: targetDept.id,
-        steps: [
-          { minimumSalary: 0, approverUserId: approverUser.id },
-        ],
+        steps: stepsPayload,
       });
       console.log('--- created approval configuration:', createCfgRes.status);
     }

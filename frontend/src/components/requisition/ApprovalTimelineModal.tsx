@@ -215,6 +215,17 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
   const percentCompleted = timeline
     ? Math.round((timeline.completedSteps / Math.max(1, timeline.totalSteps)) * 100)
     : 0;
+  const isTimelineCompleted = Boolean(
+    timeline?.isCompleted ||
+    (timeline as any)?.completed ||
+    timeline?.status === 'APPROVED' ||
+    (timeline && timeline.totalSteps > 0 && timeline.completedSteps >= timeline.totalSteps)
+  );
+  const isTimelineRejected = Boolean(
+    timeline?.isRejected ||
+    (timeline as any)?.rejected ||
+    timeline?.status === 'REJECTED'
+  );
 
   return (
     <div className="approval-timeline-modal" role="dialog" aria-modal="true" aria-labelledby="atl-modal-title">
@@ -272,7 +283,7 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
           ) : timeline ? (
             <>
               {/* Highlight callout: "Hồ sơ đang ở bàn ai" */}
-              {timeline.isRejected ? (
+              {isTimelineRejected ? (
                 <div className="atl-desk-callout rejected">
                   <div className="atl-desk-icon">
                     <XCircle size={22} />
@@ -284,7 +295,7 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                     </p>
                   </div>
                 </div>
-              ) : timeline.isCompleted ? (
+              ) : isTimelineCompleted ? (
                 <div className="atl-desk-callout approved">
                   <div className="atl-desk-icon">
                     <CheckCircle2 size={22} />
@@ -357,11 +368,23 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                             <UserCheck size={14} />
                             <span>
                               Người duyệt: <strong>{step.approverName || 'Chưa chỉ định'}</strong>
+                              {step.approverEmail && (
+                                <span style={{ color: '#64748b', fontSize: '0.78rem', marginLeft: '6px', fontWeight: 400 }}>
+                                  ({step.approverEmail})
+                                </span>
+                              )}
                             </span>
                             {step.approverRole && (
                               <span className="atl-step-role-badge">{step.approverRole}</span>
                             )}
                           </div>
+                          {step.minimumSalary != null && step.minimumSalary > 0 && (
+                            <div className="atl-step-meta-item">
+                              <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                                Hạn mức: <strong>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(step.minimumSalary)}</strong>
+                              </span>
+                            </div>
+                          )}
                           {step.actionAt && (
                             <div className="atl-step-meta-item">
                               <Calendar size={14} />
@@ -397,7 +420,7 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                 const isDesignatedApprover = currentPendingStep
                   ? (!user?.id ? canApprove : (currentPendingStep.approverId ? currentPendingStep.approverId === user.id : userHasApprovalAuthority))
                   : false;
-                const showActionBox = userHasApprovalAuthority && isDesignatedApprover && !timeline.isCompleted && !timeline.isRejected && timeline.status === 'PENDING_APPROVAL';
+                const showActionBox = userHasApprovalAuthority && isDesignatedApprover && !isTimelineCompleted && !isTimelineRejected && timeline.status === 'PENDING_APPROVAL';
 
                 return showActionBox ? (
                 <div className="atl-action-box">

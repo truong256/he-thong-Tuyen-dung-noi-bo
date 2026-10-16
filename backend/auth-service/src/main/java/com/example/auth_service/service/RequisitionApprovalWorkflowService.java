@@ -27,8 +27,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.text.DecimalFormat;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -146,15 +149,102 @@ public class RequisitionApprovalWorkflowService {
     }
 
     /**
+     * Bổ sung các cấp phê duyệt phía sau từ cấu hình phòng ban đang hoạt động nếu snapshot cũ bị thiếu.
+     */
+    @Transactional
+    public void syncMissingSubsequentSteps(RecruitmentRequisition req, long proposedSalary) {
+        if (req == null || req.getDepartmentId() == null) {
+            return;
+        }
+        if ("DRAFT".equalsIgnoreCase(req.getStatus()) || "CANCELLED".equalsIgnoreCase(req.getStatus())) {
+            return;
+        }
+
+        Optional<RequisitionApprovalConfiguration> activeConfigOpt = configurations
+                .findByDepartmentIdAndActiveTrue(req.getDepartmentId());
+        if (activeConfigOpt.isEmpty()) {
+            return;
+        }
+
+        RequisitionApprovalConfiguration activeConfig = activeConfigOpt.get();
+        List<RequisitionApprovalConfigurationStep> applicableSteps = configurationSteps
+                .findAllByConfigurationIdOrderByStepOrderAsc(activeConfig.getId())
+                .stream()
+                .filter(step -> step.getMinimumSalary() <= proposedSalary)
+                .toList();
+
+        if (applicableSteps.isEmpty()) {
+            return;
+        }
+
+        List<RequisitionApprovalSnapshot> existingSnapshots = snapshots
+                .findAllByRequisitionIdOrderByStepOrderAsc(req.getId());
+
+        if (existingSnapshots.isEmpty()) {
+            return;
+        }
+
+        Set<Long> existingApproverIds = existingSnapshots.stream()
+                .map(RequisitionApprovalSnapshot::getApproverUserId)
+                .collect(Collectors.toSet());
+
+        List<RequisitionApprovalConfigurationStep> missingSteps = applicableSteps.stream()
+                .filter(step -> !existingApproverIds.contains(step.getApproverUserId()))
+                .sorted(Comparator.comparingLong(RequisitionApprovalConfigurationStep::getMinimumSalary)
+                        .thenComparingInt(RequisitionApprovalConfigurationStep::getStepOrder))
+                .toList();
+
+        if (missingSteps.isEmpty()) {
+            return;
+        }
+
+        int maxOrder = existingSnapshots.stream()
+                .mapToInt(RequisitionApprovalSnapshot::getStepOrder)
+                .max()
+                .orElse(0);
+
+        List<RequisitionApprovalSnapshot> newSnapshots = new ArrayList<>();
+        for (RequisitionApprovalConfigurationStep step : missingSteps) {
+            maxOrder++;
+            RequisitionApprovalSnapshot s = new RequisitionApprovalSnapshot();
+            s.setRequisitionId(req.getId());
+            s.setConfigurationId(activeConfig.getId());
+            s.setConfigurationVersion(activeConfig.getVersion());
+            s.setStepOrder(maxOrder);
+            s.setMinimumSalary(step.getMinimumSalary());
+            s.setApproverUserId(step.getApproverUserId());
+            s.setStatus("PENDING");
+            newSnapshots.add(s);
+            existingApproverIds.add(step.getApproverUserId());
+        }
+
+        snapshots.saveAll(newSnapshots);
+
+        // Nếu trước đó yêu cầu bị đánh dấu là APPROVED do chỉ có 1 bước cũ,
+        // phục hồi trạng thái PENDING_APPROVAL để chuỗi phê duyệt đầy đủ các cấp phía sau
+        if ("APPROVED".equalsIgnoreCase(req.getStatus())) {
+            req.setStatus("PENDING_APPROVAL");
+            requisitions.save(req);
+        }
+    }
+
+    /**
      * Lấy cấu trúc timeline động chuẩn xác từ snapshot của yêu cầu, kiểm tra quyền theo từng yêu cầu.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public RequisitionApprovalTimelineResponse getTimelineResponse(Long requisitionId, Long currentUserId) {
         RecruitmentRequisition req = requisitions.findById(requisitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + requisitionId));
 
         User currentUser = users.findById(currentUserId)
                 .orElseThrow(() -> new AccessDeniedException("Người dùng không tồn tại."));
+
+        long proposedSalary = req.getSalaryMax() != null
+                ? req.getSalaryMax()
+                : (req.getSalaryMin() != null ? req.getSalaryMin() : 0L);
+
+        // Tự động đồng bộ các tài khoản / cấp phê duyệt phía sau theo cấu hình đang hoạt động của phòng ban
+        syncMissingSubsequentSteps(req, proposedSalary);
 
         // Lấy danh sách snapshot thực tế từ DB
         List<RequisitionApprovalSnapshot> snapshotList = snapshots.findAllByRequisitionIdOrderByStepOrderAsc(requisitionId);
@@ -174,10 +264,6 @@ public class RequisitionApprovalWorkflowService {
         if (req.getDepartmentId() != null) {
             deptName = departments.findById(req.getDepartmentId()).map(Department::getName).orElse("");
         }
-
-        long proposedSalary = req.getSalaryMax() != null
-                ? req.getSalaryMax()
-                : (req.getSalaryMin() != null ? req.getSalaryMin() : 0L);
 
         List<ApprovalStepResponse> stepResponses = new ArrayList<>();
         int completedCount = 0;
@@ -242,7 +328,7 @@ public class RequisitionApprovalWorkflowService {
                     .build());
         }
 
-        boolean isCompleted = "APPROVED".equalsIgnoreCase(req.getStatus()) || (completedCount == snapshotList.size() && !snapshotList.isEmpty());
+        boolean isCompleted = (completedCount == snapshotList.size() && !snapshotList.isEmpty());
         boolean isRejected = "REJECTED".equalsIgnoreCase(req.getStatus());
 
         return RequisitionApprovalTimelineResponse.builder()
