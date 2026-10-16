@@ -9,7 +9,7 @@ vi.mock('../hooks/useAuth');
 vi.mock('../api/auth');
 
 describe('ProfilePage Component (Personal User Profile)', () => {
-  const mockRefreshUser = vi.fn();
+  const mockRefreshUser = vi.fn().mockResolvedValue(true);
 
   beforeEach(() => {
     vi.clearAllMocks();

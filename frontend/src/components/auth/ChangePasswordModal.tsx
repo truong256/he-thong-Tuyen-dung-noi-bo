@@ -160,7 +160,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className="eye-toggle-btn"
                 onClick={() => setShowCurrent(!showCurrent)}
                 aria-label={showCurrent ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showCurrent ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -189,7 +190,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className="eye-toggle-btn"
                 onClick={() => setShowNew(!showNew)}
                 aria-label={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -233,7 +235,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className="eye-toggle-btn"
                 onClick={() => setShowConfirm(!showConfirm)}
                 aria-label={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>

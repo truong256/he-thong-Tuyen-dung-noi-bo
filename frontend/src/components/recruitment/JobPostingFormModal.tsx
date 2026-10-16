@@ -413,7 +413,7 @@ export const JobPostingFormModal: React.FC<JobPostingFormModalProps> = ({
               type="button"
               className="jp-btn jp-btn-secondary"
               onClick={onClose}
-              disabled={submitting}
+              disabled={submitting || loading}
             >
               Hủy
             </button>

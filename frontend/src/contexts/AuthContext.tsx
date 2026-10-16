@@ -13,7 +13,12 @@ export interface AuthContextType {
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<UserSummary>;
   logout: (skipServerRevoke?: boolean) => Promise<void>;
-  refreshUser: () => Promise<void>;
+  /**
+   * Refresh user data from the server.
+   * Returns true if refresh succeeded, false if it failed (network error, 401, etc.).
+   * Callers MUST check the return value before showing a success notification.
+   */
+  refreshUser: () => Promise<boolean>;
   updateUser?: (updatedUser: UserSummary) => void;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
@@ -41,7 +46,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user', JSON.stringify(updatedUser));
   }, []);
 
-  const refreshUser = async () => {
+  /**
+   * Refresh user data from server.
+   * Returns true on success, false on any failure.
+   * Does NOT silently swallow errors — callers can react accordingly.
+   */
+  const refreshUser = async (): Promise<boolean> => {
     try {
       const me = await authApi.getMe();
       setUser(me);
@@ -52,10 +62,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setPermissions(perms);
         localStorage.setItem('ats:permissions', JSON.stringify(perms));
       } catch {
-        // Keep existing permissions if fetch fails
+        // Keep existing permissions if fetch fails — non-fatal
       }
-    } catch {
-      // If fetching me fails, keep current state or logout if unauthorized
+      return true;
+    } catch (err: any) {
+      // If 401/403, the token is invalid — do NOT silently hide this
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        // Token expired mid-session; do not clear the user here (let the interceptor handle it)
+        // Just signal failure so the caller can show an appropriate error
+      }
+      // Signal failure to caller
+      return false;
     }
   };
 
