@@ -10,6 +10,7 @@ import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -37,26 +38,42 @@ public class RequisitionApprovalService {
     private final RequisitionAssignmentRepository assignments;
     private final DepartmentRepository departments;
     private final UserRepository users;
+    private final RequisitionApprovalSnapshotRepository snapshots;
 
+    @Autowired
     public RequisitionApprovalService(
             RecruitmentRequisitionRepository requisitions,
             RequisitionApprovalHistoryRepository historyRepository,
             RequisitionAssignmentRepository assignments,
             DepartmentRepository departments,
-            UserRepository users
+            UserRepository users,
+            @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots
     ) {
         this.requisitions = requisitions;
         this.historyRepository = historyRepository;
         this.assignments = assignments;
         this.departments = departments;
         this.users = users;
+        this.snapshots = snapshots;
+    }
+
+    /**
+     * Khởi tạo chuỗi phê duyệt chuẩn nếu chưa tồn tại cho yêu cầu này.
+     */
+    public void ensureApprovalChainInitialized(RecruitmentRequisition req) {
+        if (historyRepository != null) {
+            List<RequisitionApprovalHistory> existing = historyRepository.findByRequisitionIdOrderByStepOrderAsc(req.getId());
+            if (existing.isEmpty()) {
+                generateAndPersistDefaultApprovalChain(req);
+            }
+        }
     }
 
     /**
      * Lấy toàn bộ chuỗi cấp duyệt và dòng thời gian lịch sử phê duyệt của yêu cầu tuyển dụng.
      * Áp dụng phân quyền:
      * - Người tạo: chỉ xem yêu cầu của mình
-     * - Người duyệt: chỉ xem yêu cầu liên quan (được phân công hoặc quản lý phòng ban)
+     * - Người duyệt: chỉ xem yêu cầu liên quan (được phân công trong snapshot/history/assignments hoặc quản lý phòng ban)
      * - HR Manager & Admin: xem toàn bộ
      */
     @Transactional
@@ -64,15 +81,15 @@ public class RequisitionApprovalService {
         RecruitmentRequisition req = requisitions.findById(requisitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + requisitionId));
 
-        User currentUser = getCurrentUser();
-        verifyViewPermission(req, currentUser);
-
         List<RequisitionApprovalHistory> historyList = historyRepository.findByRequisitionIdOrderByStepOrderAsc(requisitionId);
 
-        // Nếu chưa có lịch sử (do dữ liệu khởi tạo trước đó), tự động sinh chuỗi cấp duyệt chuẩn và lưu nhật ký
+        // Nếu chưa có lịch sử (do dữ liệu khởi tạo trước đó), tự động sinh chuỗi cấp duyệt chuẩn và lưu nhật ký trước
         if (historyList.isEmpty()) {
             historyList = generateAndPersistDefaultApprovalChain(req);
         }
+
+        User currentUser = getCurrentUser();
+        verifyViewPermission(req, currentUser);
 
         return buildTimelineResponse(req, historyList);
     }
@@ -417,6 +434,18 @@ public class RequisitionApprovalService {
             return;
         }
 
+        // Kiểm tra xem người dùng có được phân công trong snapshot phê duyệt nhiều cấp (S3-01) hay không
+        if (snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(s -> currentUser.getId().equals(s.getApproverUserId()))) {
+            return;
+        }
+
+        // Kiểm tra xem người dùng có trong chuỗi bước phê duyệt (S3-03) hay không
+        if (historyRepository != null && historyRepository.findByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(h -> currentUser.getId().equals(h.getApproverId()))) {
+            return;
+        }
+
         throw new AccessDeniedException("Bạn không có quyền xem lịch sử phê duyệt của yêu cầu tuyển dụng này.");
     }
 
@@ -443,6 +472,16 @@ public class RequisitionApprovalService {
                 .filter(d -> currentUser.getId().equals(d.getManagerUserId()))
                 .isPresent();
         if (isDeptManager) {
+            return;
+        }
+
+        if (snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(s -> currentUser.getId().equals(s.getApproverUserId()))) {
+            return;
+        }
+
+        if (historyRepository != null && historyRepository.findByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(h -> currentUser.getId().equals(h.getApproverId()))) {
             return;
         }
 

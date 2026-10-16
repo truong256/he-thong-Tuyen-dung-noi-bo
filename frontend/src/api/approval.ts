@@ -1,11 +1,21 @@
 import apiClient, { apiClient as namedApiClient } from './client';
-import { RequisitionApprovalTimeline } from '../types/approval';
+import { RequisitionApprovalTimeline, RequisitionApprovalLog } from '../types/approval';
 
 const client = namedApiClient || apiClient;
 
 export const approvalApi = {
   getTimeline: async (requisitionId: number): Promise<RequisitionApprovalTimeline> => {
-    const res = await client.get<RequisitionApprovalTimeline>(`/api/requisitions/${requisitionId}/approval-history`);
+    const res = await client.get<RequisitionApprovalTimeline>(`/api/requisitions/${requisitionId}/timeline`);
+    return res.data;
+  },
+
+  getLogs: async (requisitionId: number): Promise<RequisitionApprovalLog[]> => {
+    const res = await client.get<RequisitionApprovalLog[]>(`/api/requisitions/${requisitionId}/approval-logs`);
+    return res.data;
+  },
+
+  getApprovalHistory: async (requisitionId: number): Promise<RequisitionApprovalTimeline> => {
+    const res = await client.get<RequisitionApprovalTimeline>(`/api/requisitions/${requisitionId}/timeline`);
     return res.data;
   },
 

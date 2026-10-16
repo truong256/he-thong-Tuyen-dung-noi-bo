@@ -57,6 +57,9 @@ class RequisitionApprovalServiceTest {
     @Mock
     private UserRepository users;
 
+    @Mock
+    private com.example.auth_service.repository.RequisitionApprovalSnapshotRepository snapshots;
+
     @InjectMocks
     private RequisitionApprovalService service;
 

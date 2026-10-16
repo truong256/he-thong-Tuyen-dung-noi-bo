@@ -27,3 +27,15 @@ export interface RequisitionApprovalTimeline {
   submittedAt?: string;
   steps: ApprovalStep[];
 }
+
+export interface RequisitionApprovalLog {
+  id: number;
+  requisitionId: number;
+  stepOrder?: number;
+  action: string;
+  comment?: string;
+  approverUserId?: number;
+  approverName?: string;
+  approverEmail?: string;
+  createdAt: string;
+}

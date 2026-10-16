@@ -222,7 +222,7 @@ export const requisitionApi = {
   },
 
   getApprovalTimeline: async (id: number) => {
-    const res = await client.get<any>(`/api/requisitions/${id}/approval-history`);
+    const res = await client.get<any>(`/api/requisitions/${id}/timeline`);
     return res.data;
   },
 

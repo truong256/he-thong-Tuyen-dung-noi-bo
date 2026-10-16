@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.example.auth_service.domain.sprint3.RequisitionApprovalHistory;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.RequisitionApprovalHistoryRepository;
 import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
@@ -90,10 +91,22 @@ public class RequisitionApprovalController {
                 .map(d -> userId.equals(d.getManagerUserId()))
                 .orElse(false);
         boolean isAssignedRecruiter = assignments.findByRequisitionIdAndUserId(req.getId(), userId).isPresent();
+
+        // Nếu chưa có snapshot hay history, khởi tạo chuỗi phê duyệt chuẩn để xác định đúng người được phân công
+        if ((snapshots == null || snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).isEmpty())
+                && (historyRepository != null && historyRepository.findByRequisitionIdOrderByStepOrderAsc(req.getId()).isEmpty())) {
+            if (approvalService != null) {
+                approvalService.ensureApprovalChainInitialized(req);
+            }
+        }
+
         boolean isAssignedApprover = (snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
                 .anyMatch(s -> userId.equals(s.getApproverUserId())))
                 || (historyRepository != null && historyRepository.findByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
-                .anyMatch(h -> userId.equals(h.getApproverId())));
+                .anyMatch(h -> userId.equals(h.getApproverId())))
+                || assignments.findByRequisitionIdAndUserId(req.getId(), userId)
+                .filter(a -> a.getRole() == RoleName.APPROVER || a.getRole() == RoleName.HIRING_MANAGER)
+                .isPresent();
 
         if (!isOwner && !isDeptManager && !isAssignedRecruiter && !isAssignedApprover) {
             throw new AccessDeniedException("Bạn không có quyền xem thông tin phê duyệt của yêu cầu tuyển dụng này.");
@@ -105,6 +118,7 @@ public class RequisitionApprovalController {
      * Lấy dòng thời gian phê duyệt (ưu tiên snapshot thực tế S3-01).
      */
     @GetMapping({"/timeline", "/approve/timeline", "/approve"})
+    @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE')")
     public ResponseEntity<RequisitionApprovalTimelineResponse> getApprovalTimeline(@PathVariable Long id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
@@ -240,11 +254,11 @@ public class RequisitionApprovalController {
 
     /**
      * GET /api/requisitions/{id}/approval-history
-     * Đọc nhật ký quyết định phê duyệt (S3-02 và S3-03 timeline).
+     * Đọc dòng thời gian phê duyệt (S3-01 & S3-03 timeline) với cấu trúc DTO thống nhất.
      */
     @GetMapping("/approval-history")
     @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE')")
-    public ResponseEntity<?> getApprovalHistory(@PathVariable Long id) {
+    public ResponseEntity<RequisitionApprovalTimelineResponse> getApprovalHistory(@PathVariable Long id) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
             throw new AccessDeniedException("Vui lòng đăng nhập.");
@@ -253,9 +267,8 @@ public class RequisitionApprovalController {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
         checkCanViewApprovalData(req, principal);
 
-        List<RequisitionApprovalLogResponse> logs = approvalWorkflow.getApprovalLogs(id);
-        if (logs != null && !logs.isEmpty()) {
-            return ResponseEntity.ok(logs);
+        if (approvalWorkflow.hasWorkflowSnapshot(id)) {
+            return ResponseEntity.ok(approvalWorkflow.getTimelineResponse(id, principal.getId()));
         }
         return ResponseEntity.ok(approvalService.getApprovalTimeline(id));
     }
@@ -313,25 +326,85 @@ public class RequisitionApprovalController {
         boolean isAssigned = assignments.findByRequisitionIdAndUserId(id, principal.getId())
                 .filter(a -> a.getRole() == RoleName.APPROVER || a.getRole() == RoleName.HIRING_MANAGER)
                 .isPresent();
-        if (!isAssigned) {
+        List<RequisitionApprovalHistory> historyList = historyRepository != null
+                ? historyRepository.findByRequisitionIdOrderByStepOrderAsc(id)
+                : List.of();
+        boolean isInHistory = historyList.stream().anyMatch(h -> principal.getId().equals(h.getApproverId()));
+
+        if (!isAssigned && !isInHistory) {
             throw new AccessDeniedException("Bạn không được phân công phê duyệt yêu cầu tuyển dụng này.");
         }
 
-        String trimmedComment = comment != null && !comment.isBlank() ? comment.trim() : null;
-
-        if ("APPROVE".equals(action)) {
-            req.setStatus("APPROVED");
-            req.setApprovedByUserId(principal.getId());
-            req.setApprovedAt(Instant.now());
-        } else if ("REJECT".equals(action)) {
-            req.setStatus("REJECTED");
-            req.setRejectionReason(trimmedComment);
-        } else if ("REQUEST_CHANGES".equals(action)) {
-            req.setStatus("DRAFT");
-            req.setRejectionReason(trimmedComment);
+        Optional<RequisitionApprovalHistory> pendingStepOpt = historyList.stream()
+                .filter(h -> "PENDING".equalsIgnoreCase(h.getStatus()))
+                .findFirst();
+        if (pendingStepOpt.isPresent()) {
+            RequisitionApprovalHistory currentStep = pendingStepOpt.get();
+            if (currentStep.getApproverId() != null && !currentStep.getApproverId().equals(principal.getId())) {
+                throw new AccessDeniedException("Bạn không phải người phê duyệt ở cấp hiện tại.");
+            }
         }
 
-        req.setUpdatedAt(Instant.now());
+        String trimmedComment = comment != null && !comment.isBlank() ? comment.trim() : null;
+        Instant now = Instant.now();
+
+        if (pendingStepOpt.isPresent()) {
+            RequisitionApprovalHistory currentStep = pendingStepOpt.get();
+            if ("APPROVE".equals(action)) {
+                currentStep.setStatus("COMPLETED");
+                currentStep.setAction("APPROVE");
+                currentStep.setActionAt(now);
+                currentStep.setComments(trimmedComment != null ? trimmedComment : "Đồng ý phê duyệt.");
+                historyRepository.save(currentStep);
+
+                int nextOrder = currentStep.getStepOrder() + 1;
+                Optional<RequisitionApprovalHistory> nextStepOpt = historyList.stream()
+                        .filter(h -> h.getStepOrder() == nextOrder)
+                        .findFirst();
+                if (nextStepOpt.isPresent()) {
+                    RequisitionApprovalHistory nextStep = nextStepOpt.get();
+                    nextStep.setStatus("PENDING");
+                    nextStep.setAction("WAITING");
+                    historyRepository.save(nextStep);
+                } else {
+                    req.setStatus("APPROVED");
+                    req.setApprovedByUserId(principal.getId());
+                    req.setApprovedAt(now);
+                }
+            } else if ("REJECT".equals(action)) {
+                currentStep.setStatus("REJECTED");
+                currentStep.setAction("REJECT");
+                currentStep.setActionAt(now);
+                currentStep.setComments(trimmedComment);
+                historyRepository.save(currentStep);
+
+                req.setStatus("REJECTED");
+                req.setRejectionReason(trimmedComment);
+            } else if ("REQUEST_CHANGES".equals(action)) {
+                currentStep.setStatus("REQUEST_CHANGES");
+                currentStep.setAction("REQUEST_CHANGES");
+                currentStep.setActionAt(now);
+                currentStep.setComments(trimmedComment);
+                historyRepository.save(currentStep);
+
+                req.setStatus("DRAFT");
+                req.setRejectionReason(trimmedComment);
+            }
+        } else {
+            if ("APPROVE".equals(action)) {
+                req.setStatus("APPROVED");
+                req.setApprovedByUserId(principal.getId());
+                req.setApprovedAt(now);
+            } else if ("REJECT".equals(action)) {
+                req.setStatus("REJECTED");
+                req.setRejectionReason(trimmedComment);
+            } else if ("REQUEST_CHANGES".equals(action)) {
+                req.setStatus("DRAFT");
+                req.setRejectionReason(trimmedComment);
+            }
+        }
+
+        req.setUpdatedAt(now);
         RecruitmentRequisition updated = requisitions.save(req);
 
         // Ghi nhật ký quyết định phê duyệt bất biến trong cùng giao dịch
