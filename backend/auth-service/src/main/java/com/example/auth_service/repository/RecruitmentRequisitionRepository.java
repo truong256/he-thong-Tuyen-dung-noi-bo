@@ -11,7 +11,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface RecruitmentRequisitionRepository extends JpaRepository<RecruitmentRequisition, Long> {
+public interface RecruitmentRequisitionRepository extends JpaRepository<RecruitmentRequisition, Long>, org.springframework.data.jpa.repository.JpaSpecificationExecutor<RecruitmentRequisition> {
     boolean existsByDepartmentId(Long departmentId);
 
     boolean existsByJobTitleId(Long jobTitleId);

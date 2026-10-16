@@ -441,6 +441,44 @@ public class RequisitionService {
         return page.map(this::toResponse);
     }
 
+    /** S3-08: all filters and ownership constraints run in SQL, before count/pagination. */
+    @Transactional(readOnly = true)
+    @org.springframework.security.access.prepost.PreAuthorize(
+            "hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL')")
+    public Page<RequisitionResponse> list(String status, Long departmentId, String keyword,
+            Long recruiterId, LocalDate createdFrom, LocalDate createdTo, Pageable pageable) {
+        User currentUser = getCurrentUser();
+        // Preserve the existing list policy; do not grant access through a filter parameter.
+        boolean canReadAll = currentUser.getRoles().stream().anyMatch(r ->
+                r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN
+                        || r.getName() == RoleName.APPROVER);
+        Long ownerId = canReadAll ? null : currentUser.getId();
+        var specification = com.example.auth_service.repository.RequisitionListSpecification.filtered(
+                ownerId, status, departmentId, keyword, recruiterId, createdFrom, createdTo);
+        Page<RecruitmentRequisition> result = requisitions.findAll(specification, pageable);
+        // Batch reference catalogs for the current page instead of three queries per row.
+        var rows = result.getContent();
+        var departmentIds = rows.stream().map(RecruitmentRequisition::getDepartmentId)
+                .filter(java.util.Objects::nonNull).distinct().toList();
+        var jobIds = rows.stream().map(RecruitmentRequisition::getJobTitleId)
+                .filter(java.util.Objects::nonNull).distinct().toList();
+        var creatorIds = rows.stream().map(RecruitmentRequisition::getCreatedByUserId)
+                .filter(java.util.Objects::nonNull).distinct().toList();
+        java.util.Map<Long, Department> departmentMap = new java.util.HashMap<>();
+        departments.findAllById(departmentIds).forEach(d -> departmentMap.put(d.getId(), d));
+        java.util.Map<Long, JobTitle> jobMap = new java.util.HashMap<>();
+        jobTitles.findAllById(jobIds).forEach(j -> jobMap.put(j.getId(), j));
+        java.util.Map<Long, User> creatorMap = new java.util.HashMap<>();
+        users.findAllById(creatorIds).forEach(u -> creatorMap.put(u.getId(), u));
+        return result.map(req -> {
+            Department dept = departmentMap.get(req.getDepartmentId());
+            JobTitle job = jobMap.get(req.getJobTitleId());
+            User creator = creatorMap.get(req.getCreatedByUserId());
+            return toResponse(req, dept == null ? null : dept.getName(), dept == null ? null : dept.getCode(),
+                    job == null ? null : job.getTitle(), creator == null ? null : creator.getFullName());
+        });
+    }
+
     /**
      * Xóa bản nháp yêu cầu tuyển dụng.
      */
@@ -531,6 +569,11 @@ public class RequisitionService {
             }
         }
 
+        return toResponse(req, deptName, deptCode, jobName, creatorName);
+    }
+
+    private RequisitionResponse toResponse(RecruitmentRequisition req, String deptName,
+            String deptCode, String jobName, String creatorName) {
         return new RequisitionResponse(
                 req.getId(),
                 req.getRequisitionCode(),

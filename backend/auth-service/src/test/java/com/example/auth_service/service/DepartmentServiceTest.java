@@ -205,7 +205,7 @@ class DepartmentServiceTest {
         when(departments.saveAndFlush(root)).thenReturn(root);
         assertThat(service.setActive(1L, false).active()).isFalse();
         assertThat(root.getManagerUserId()).isEqualTo(10L);
-        verify(requisitions, never()).delete(any());
+        verify(requisitions, never()).delete(any(com.example.auth_service.domain.sprint2.RecruitmentRequisition.class));
         verify(departments, never()).delete(any());
     }
 

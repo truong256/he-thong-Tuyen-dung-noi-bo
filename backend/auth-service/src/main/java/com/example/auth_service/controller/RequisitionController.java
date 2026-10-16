@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 
 @RestController
 @RequestMapping("/api/requisitions")
@@ -87,15 +89,21 @@ public class RequisitionController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long recruiterId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdTo,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         Pageable pageable = PageRequest.of(
                 Math.max(0, page),
                 Math.clamp(size, 1, 100),
-                Sort.by(Sort.Direction.DESC, "createdAt")
+                Sort.by(Sort.Direction.DESC, "createdAt", "id")
         );
-        Page<RequisitionResponse> result = service.list(status, departmentId, keyword, pageable);
+        Page<RequisitionResponse> result = service.list(status, departmentId,
+                search != null && !search.isBlank() ? search : keyword,
+                recruiterId, createdFrom, createdTo, pageable);
         return ResponseEntity.ok(result);
     }
 
