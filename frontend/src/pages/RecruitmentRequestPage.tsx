@@ -459,6 +459,11 @@ export const RecruitmentRequestPage: React.FC = () => {
       setIsLoadingList(true);
       const cloned = await requisitionApi.clone(id);
 
+      const minSal = cloned.salaryMin ?? (cloned as any).proposedMinSalary;
+      const maxSal = cloned.salaryMax ?? (cloned as any).proposedMaxSalary;
+      const reqs = cloned.candidateRequirements || (cloned as any).requirements || '';
+      const nDate = cloned.neededDate || cloned.targetDate || '';
+
       setForm({
         id: cloned.id,
         requisitionCode: cloned.requisitionCode,
@@ -468,12 +473,12 @@ export const RecruitmentRequestPage: React.FC = () => {
         quantity: String(cloned.quantity || 1),
         recruitmentType: cloned.recruitmentType || 'NEW',
         reason: cloned.reason || '',
-        salaryMin: cloned.salaryMin ? String(cloned.salaryMin) : '',
-        salaryMax: cloned.salaryMax ? String(cloned.salaryMax) : '',
+        salaryMin: minSal ? String(minSal) : '',
+        salaryMax: maxSal ? String(maxSal) : '',
         salaryExplanation: cloned.salaryExplanation || '',
-        neededDate: cloned.neededDate || cloned.targetDate || '',
+        neededDate: nDate,
         jobDescription: cloned.jobDescription || '',
-        candidateRequirements: cloned.candidateRequirements || '',
+        candidateRequirements: reqs,
         benefits: cloned.benefits || '',
         workLocation: cloned.workLocation || 'Trụ sở chính',
         workingModel: cloned.workingModel || 'ONSITE',

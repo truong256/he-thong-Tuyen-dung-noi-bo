@@ -8,13 +8,17 @@ export interface Requisition {
   jobTitleName?: string;
   quantity: number;
   targetDate?: string;
+  neededDate?: string;
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
   reason: 'REPLACEMENT' | 'NEW_HEADCOUNT';
   proposedMinSalary?: number;
   proposedMaxSalary?: number;
+  salaryMin?: number;
+  salaryMax?: number;
   salaryExplanation?: string;
   jobDescription?: string;
   requirements?: string;
+  candidateRequirements?: string;
   createdByUserId?: number;
   createdByName?: string;
   createdAt?: string;

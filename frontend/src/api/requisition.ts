@@ -202,8 +202,23 @@ export const requisitionApi = {
   },
 
   clone: async (id: number): Promise<RequisitionResponse> => {
-    const res = await client.post<RequisitionResponse>(`/api/recruitment-requests/${id}/clone`);
-    return res.data;
+    const res = await client.post<any>(`/api/recruitment-requests/${id}/clone`);
+    const item = res.data;
+    const minSal = item.salaryMin ?? item.proposedMinSalary ?? item.minSalary;
+    const maxSal = item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary;
+    const reqs = item.candidateRequirements ?? item.requirements;
+    const tDate = item.neededDate || item.targetDate;
+    return {
+      ...item,
+      salaryMin: minSal,
+      proposedMinSalary: minSal,
+      salaryMax: maxSal,
+      proposedMaxSalary: maxSal,
+      targetDate: tDate,
+      neededDate: tDate,
+      candidateRequirements: reqs,
+      requirements: reqs,
+    };
   },
 
   getApprovalTimeline: async (id: number) => {
