@@ -116,7 +116,7 @@ public class RequisitionApprovalWorkflowService {
             User approver = users.findById(step.getApproverUserId())
                     .orElseThrow(() -> new BadRequestException("Người phê duyệt đã bị xóa."));
             boolean eligible = "ACTIVE".equals(approver.getStatus()) && approver.getRoles().stream()
-                    .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER);
+                    .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER || role.getName() == RoleName.HIRING_MANAGER);
             if (!eligible) {
                 throw new BadRequestException("Cấu hình có người phê duyệt không còn hợp lệ.");
             }

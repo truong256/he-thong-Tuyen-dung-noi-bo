@@ -51,82 +51,114 @@ test.describe('S3-02 / S3-03 Approval Timeline & RBAC Actions E2E Verification',
     await expect(page.locator('h1')).toContainText(/Yêu cầu Tuyển dụng/i);
   });
 
-  test('Approver opens Timeline Modal, inspects "Yêu cầu bổ sung" action and responsive layout', async ({ page }) => {
-    // 1. Prepare requisition as Hiring Manager via API
-    await loginAs(page, 'hiring_manager@company.com');
+  test('Approver opens Timeline Modal, inspects all 3 approval buttons and responsive layout', async ({ page }) => {
+    // 1. Configure S3-01 approval workflow as HR Manager with approver@company.com (id 6) at Step 1
+    await loginAs(page, 'hr_manager@company.com');
 
-    // Fetch reference departments and job titles
     const deptRes = await callApi(page, '/api/departments');
     const depts = Array.isArray(deptRes.data) ? deptRes.data : (deptRes.data?.content || []);
-    const targetDept = depts.find((d: any) => d.active) || depts[0];
+    // Find department for Backend where hiring_manager belongs
+    const targetDept = depts.find((d: any) => d.name?.includes('Backend')) || depts.find((d: any) => d.active) || depts[0];
 
     const jtRes = await callApi(page, '/api/job-titles');
     const jts = Array.isArray(jtRes.data) ? jtRes.data : (jtRes.data?.content || []);
     const targetJt = jts.find((j: any) => j.active) || jts[0];
 
-    // Create a pending requisition
+    console.log('--- targetDept:', targetDept?.id, targetDept?.name);
+    console.log('--- targetJt:', targetJt?.id, targetJt?.title);
+
+    // Get approver user
+    const usersRes = await callApi(page, '/api/admin/users?role=APPROVER');
+    const approverUser = usersRes.data?.content?.find((u: any) => u.email === 'approver@company.com') || { id: 6 };
+    console.log('--- approverUser:', approverUser.id, approverUser.email);
+
+    // Ensure 1-step workflow exists for targetDept with approver@company.com
+    const cfgListRes = await callApi(page, `/api/requisition-approval-configurations?departmentId=${targetDept.id}`);
+    const existingCfgs = Array.isArray(cfgListRes.data) ? cfgListRes.data : [];
+    const activeCfg = existingCfgs.find((c: any) => c.active);
+    if (activeCfg) {
+      const updateRes = await callApi(page, `/api/requisition-approval-configurations/${activeCfg.id}`, 'PUT', {
+        departmentId: targetDept.id,
+        steps: [
+          { minimumSalary: 0, approverUserId: approverUser.id },
+        ],
+      });
+      console.log('--- updated existing approval configuration:', updateRes.status);
+    } else {
+      const createCfgRes = await callApi(page, '/api/requisition-approval-configurations', 'POST', {
+        departmentId: targetDept.id,
+        steps: [
+          { minimumSalary: 0, approverUserId: approverUser.id },
+        ],
+      });
+      console.log('--- created approval configuration:', createCfgRes.status);
+    }
+
+    // 2. Prepare requisition as Hiring Manager via API
+    await page.evaluate(() => localStorage.clear());
+    await loginAs(page, 'hiring_manager@company.com');
+
+    const testReqTitle = `Kỹ sư Backend S3-02 - ${Date.now()}`;
     const createRes = await callApi(page, '/api/requisitions', 'POST', {
-      title: `Kỹ sư Phần mềm E2E - ${Date.now()}`,
-      departmentId: targetDept?.id || 1,
-      jobTitleId: targetJt?.id || 1,
+      title: testReqTitle,
+      departmentId: targetDept?.id,
+      jobTitleId: targetJt?.id,
       quantity: 1,
       reason: 'NEW_HEADCOUNT',
-      proposedMinSalary: 20000000,
-      proposedMaxSalary: 30000000,
+      proposedMinSalary: 40000000,
+      proposedMaxSalary: 50000000,
+      salaryExplanation: 'Khung lương chuẩn cho vị trí Senior Backend Engineer',
       targetDate: '2026-12-01',
       isDraft: false,
     });
+    console.log('--- createRes:', createRes.status, createRes.data?.id, createRes.data?.requisitionCode);
+    expect(createRes.status).toBe(201);
 
-    const createdReqId = createRes.data?.id;
+    const createdReqCode = createRes.data?.requisitionCode;
 
-    // 2. Log in as Approver
-    await page.goto('/login');
+    // 3. Log in as Approver - designated approver at Step 1
     await page.evaluate(() => localStorage.clear());
     await loginAs(page, 'approver@company.com');
 
     await page.goto('/recruitment/requisitions');
     await page.waitForLoadState('networkidle');
 
-    // Open timeline modal for the requisition (or any requisition in table)
-    let timelineBtn = page.locator('button[title*="tiến độ"], button[title*="phê duyệt"]').first();
-    if (createdReqId) {
-      const specificBtn = page.locator(`tr:has-text("${createRes.data?.title}") button[title*="tiến độ"]`);
-      if (await specificBtn.count() > 0) {
-        timelineBtn = specificBtn.first();
-      }
-    }
+    // Wait for the table body to render
+    await page.waitForSelector('table.req-table tbody tr', { timeout: 15000 });
 
-    if (await timelineBtn.isVisible()) {
-      await timelineBtn.click();
-    } else {
-      // In mobile/responsive card view or fallback
-      const mobileBtn = page.locator('.mobile-card button[title*="tiến độ"], .req-action-btn:has(svg)').first();
-      if (await mobileBtn.isVisible()) {
-        await mobileBtn.click();
-      }
-    }
+    const targetRow = page.locator(`table.req-table tbody tr:has-text("${createdReqCode}")`);
+    await expect(targetRow).toBeVisible();
 
-    const modal = page.locator('.atl-modal');
-    if (await modal.isVisible()) {
-      await expect(modal.locator('.atl-title')).toContainText(/Tiến trình phê duyệt/i);
+    const timelineBtn = targetRow.locator('button[title*="tiến độ"]');
+    await timelineBtn.waitFor({ state: 'visible', timeout: 5000 });
+    await timelineBtn.click();
 
-      // Verify "Yêu cầu bổ sung" action button if quick actions box is rendered
-      const btnRequestChanges = page.locator('.atl-btn-request-changes');
-      if (await btnRequestChanges.isVisible()) {
-        await expect(btnRequestChanges).toBeEnabled();
+    const modal = page.locator('.approval-timeline-modal');
+    await expect(modal).toBeVisible();
+    await expect(modal.locator('.atl-header-title, #atl-modal-title')).toContainText(/Theo dõi tiến độ & Lịch sử phê duyệt/i);
 
-        // Clicking without comment produces validation message
-        await btnRequestChanges.click();
-        await expect(page.locator('text=Vui lòng nhập nội dung yêu cầu bổ sung vào ô ý kiến phản hồi.')).toBeVisible();
-      }
-    }
+    // Verify all 3 approval buttons for designated approver at current pending step
+    const actionBox = modal.locator('.atl-action-box');
+    await expect(actionBox).toBeVisible();
 
-    // 3. Inspect layout and overflow
+    const btnApprove = actionBox.locator('.atl-btn-approve');
+    const btnReject = actionBox.locator('.atl-btn-reject');
+    const btnRequestChanges = actionBox.locator('.atl-btn-request-changes');
+
+    await expect(btnApprove).toBeVisible();
+    await expect(btnReject).toBeVisible();
+    await expect(btnRequestChanges).toBeVisible();
+
+    // Clicking "Yêu cầu bổ sung" without comment produces validation message
+    await btnRequestChanges.click();
+    await expect(page.locator('text=Vui lòng nhập nội dung yêu cầu bổ sung vào ô ý kiến phản hồi.')).toBeVisible();
+
+    // 4. Inspect layout and overflow
     const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
     const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 2);
 
-    // Save viewport screenshot
+    // Save viewport screenshot showing the modal with the 3 approval buttons
     const vpName = page.viewportSize() ? `${page.viewportSize()?.width}x${page.viewportSize()?.height}` : 'current';
     await page.screenshot({
       path: `C:/Users/ASUS/.gemini/antigravity-ide/brain/71a2205f-e716-495a-9239-116a7713ec96/approval_timeline_${vpName}.png`,

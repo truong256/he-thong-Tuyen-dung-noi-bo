@@ -418,6 +418,162 @@ class RequisitionApprovalTimelineIntegrationTest {
                 .andExpect(jsonPath("$.status").value("APPROVED"));
     }
 
+    @Test
+    @DisplayName("S3-02: Luồng phê duyệt 4 cấp đầy đủ (HIRING_MANAGER -> HR_MANAGER -> APPROVER 1 -> APPROVER 2), kiểm tra đúng userId, chặn ngoài phạm vi và vượt cấp")
+    void s3_02_fourStepApprovalWorkflow_strictRbacEnforced_eachApproverInTurn_wrongApproverForbidden() throws Exception {
+        // 1. Tạo cấu hình luồng phê duyệt 4 cấp cho phòng ban:
+        // Cấp 1: >=0đ -> hiringManager (HIRING_MANAGER)
+        // Cấp 2: >=20tr -> hrManager (HR_MANAGER)
+        // Cấp 3: >=35tr -> approverOne (APPROVER)
+        // Cấp 4: >=50tr -> approverTwo (APPROVER)
+        ApprovalConfigurationRequest configReq = new ApprovalConfigurationRequest(department.getId(), List.of(
+                new ApprovalConfigurationRequest.ApprovalStepRequest(0L, hiringManager.getId()),
+                new ApprovalConfigurationRequest.ApprovalStepRequest(20_000_000L, hrManager.getId()),
+                new ApprovalConfigurationRequest.ApprovalStepRequest(35_000_000L, approverOne.getId()),
+                new ApprovalConfigurationRequest.ApprovalStepRequest(50_000_000L, approverTwo.getId())
+        ));
+        mvc.perform(post(CONFIGURATIONS_URL)
+                        .header("Authorization", token(hrManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(configReq)))
+                .andExpect(status().isCreated());
+
+        // 2. Tạo yêu cầu tuyển dụng với mức lương 60tr -> áp dụng đủ 4 cấp
+        CreateRequisitionRequest req = createRequisitionPayload(60_000_000L);
+        String createdJson = mvc.perform(post(REQUISITIONS_URL)
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        Long requisitionId = mapper.readTree(createdJson).get("id").asLong();
+
+        // Kiểm tra timeline có đủ 4 cấp và cấp 1 đang PENDING
+        mvc.perform(get(REQUISITIONS_URL + "/" + requisitionId + "/timeline")
+                        .header("Authorization", token(hiringManager)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalSteps").value(4))
+                .andExpect(jsonPath("$.completedSteps").value(0))
+                .andExpect(jsonPath("$.currentStepOrder").value(1));
+
+        // --- BƯỚC 1: ĐANG CHỜ CẤP 1 (hiringManager) ---
+        // approverThree (có role APPROVER nhưng không trong luồng) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverThree)))
+                .andExpect(status().isForbidden());
+
+        // hrManager (cấp 2, vượt cấp) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(hrManager)))
+                .andExpect(status().isForbidden());
+
+        // approverOne (cấp 3, vượt cấp) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverOne)))
+                .andExpect(status().isForbidden());
+
+        // approverTwo (cấp 4, vượt cấp) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverTwo)))
+                .andExpect(status().isForbidden());
+
+        // hiringManager duyệt cấp 1 đúng quyền -> 200 OK
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"Trưởng bộ phận đồng ý duyệt cấp 1.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
+
+        // --- BƯỚC 2: ĐANG CHỜ CẤP 2 (hrManager) ---
+        // hiringManager duyệt lại cấp 1 -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(hiringManager)))
+                .andExpect(status().isForbidden());
+
+        // approverThree (unassigned) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverThree)))
+                .andExpect(status().isForbidden());
+
+        // approverOne (cấp 3, vượt cấp) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverOne)))
+                .andExpect(status().isForbidden());
+
+        // hrManager duyệt cấp 2 đúng quyền -> 200 OK
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(hrManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"Nhân sự thẩm định và đồng ý duyệt cấp 2.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
+
+        // --- BƯỚC 3: ĐANG CHỜ CẤP 3 (approverOne) ---
+        // hrManager duyệt lại -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(hrManager)))
+                .andExpect(status().isForbidden());
+
+        // approverTwo (cấp 4, vượt cấp) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverTwo)))
+                .andExpect(status().isForbidden());
+
+        // approverThree (unassigned) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverThree)))
+                .andExpect(status().isForbidden());
+
+        // approverOne duyệt cấp 3 đúng quyền -> 200 OK
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverOne))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"Giám đốc khối đồng ý duyệt cấp 3.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
+
+        // --- BƯỚC 4: ĐANG CHỜ CẤP 4 (approverTwo) ---
+        // approverOne duyệt lại -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverOne)))
+                .andExpect(status().isForbidden());
+
+        // approverThree (unassigned) -> 403 Forbidden
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverThree)))
+                .andExpect(status().isForbidden());
+
+        // approverTwo duyệt cấp 4 (cấp cuối) -> 200 OK -> trạng thái chuyển sang APPROVED
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverTwo))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"comment\":\"Tổng Giám Đốc phê duyệt chính thức mở tuyển.\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        // 3. Sau khi hoàn tất 4 cấp:
+        // /timeline trả về completed = true, completedSteps = 4
+        mvc.perform(get(REQUISITIONS_URL + "/" + requisitionId + "/timeline")
+                        .header("Authorization", token(approverTwo)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.completed").value(true))
+                .andExpect(jsonPath("$.completedSteps").value(4))
+                .andExpect(jsonPath("$.totalSteps").value(4));
+
+        // /approval-logs có đủ 4 quyết định phê duyệt bất biến
+        mvc.perform(get(REQUISITIONS_URL + "/" + requisitionId + "/approval-logs")
+                        .header("Authorization", token(approverTwo)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(4));
+
+        // Nếu gọi duyệt tiếp sau khi đã hoàn tất -> 400 Bad Request
+        mvc.perform(put(REQUISITIONS_URL + "/" + requisitionId + "/approve")
+                        .header("Authorization", token(approverTwo)))
+                .andExpect(status().isBadRequest());
+    }
+
     private CreateRequisitionRequest createRequisitionPayload(Long maxSalary) {
         return new CreateRequisitionRequest(
                 "Yêu cầu thử nghiệm timeline",

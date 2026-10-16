@@ -34,9 +34,13 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
   onStatusChange,
 }) => {
   let user: any = null;
+  let hasPermission: ((perm: string) => boolean) | null = null;
+  let hasAnyRole: ((roles: string[]) => boolean) | null = null;
   try {
     const auth = useAuth();
     user = auth?.user;
+    hasPermission = auth?.hasPermission ?? null;
+    hasAnyRole = auth?.hasAnyRole ?? null;
   } catch {
     user = null;
   }
@@ -382,13 +386,20 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                 })}
               </div>
 
-              {/* Quick Actions (chỉ hiển thị cho người duyệt được phân công ở cấp hiện tại theo RBAC) */}
+              {/* Quick Actions (chỉ hiển thị cho người duyệt được phân công ở cấp hiện tại theo đúng luồng S3-01 / S3-02) */}
               {(() => {
+                const userHasApprovalAuthority = Boolean(
+                  canApprove ||
+                  (hasPermission && hasPermission('REQUISITION_APPROVE')) ||
+                  (hasAnyRole && hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'APPROVER', 'ADMIN']))
+                );
                 const currentPendingStep = timeline.steps.find((s) => s.isCurrentStep || s.status === 'PENDING');
                 const isDesignatedApprover = currentPendingStep
-                  ? (currentPendingStep.approverId == null || !user?.id || user.id === currentPendingStep.approverId)
-                  : canApprove;
-                return canApprove && isDesignatedApprover && !timeline.isCompleted && !timeline.isRejected ? (
+                  ? (!user?.id ? canApprove : (currentPendingStep.approverId ? currentPendingStep.approverId === user.id : userHasApprovalAuthority))
+                  : false;
+                const showActionBox = userHasApprovalAuthority && isDesignatedApprover && !timeline.isCompleted && !timeline.isRejected && timeline.status === 'PENDING_APPROVAL';
+
+                return showActionBox ? (
                 <div className="atl-action-box">
                   <h4 className="atl-action-title">
                     <CornerDownRight size={16} /> Thao tác phê duyệt tại bước hiện tại

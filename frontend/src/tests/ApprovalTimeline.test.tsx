@@ -258,4 +258,52 @@ describe('ApprovalTimelineModal Component (S3-03)', () => {
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalled();
   });
+
+  it('renders all 3 approval buttons (Phê duyệt, Từ chối yêu cầu, Yêu cầu bổ sung) for designated approver', async () => {
+    vi.mocked(approvalApi.getTimeline).mockResolvedValueOnce(mockTimelineData);
+
+    render(
+      <ApprovalTimelineModal
+        requisitionId={101}
+        isOpen={true}
+        onClose={vi.fn()}
+        canApprove={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Thao tác phê duyệt tại bước hiện tại/i)).toBeInTheDocument();
+    });
+
+    // 3 nút phê duyệt bắt buộc: Phê duyệt, Từ chối, Yêu cầu bổ sung
+    expect(screen.getByTitle(/Phê duyệt chuyển bước tiếp theo/i)).toBeInTheDocument();
+    expect(screen.getByTitle(/Từ chối yêu cầu tuyển dụng/i)).toBeInTheDocument();
+    expect(screen.getByTitle(/Yêu cầu bổ sung thông tin/i)).toBeInTheDocument();
+  });
+
+  it('does NOT render approval buttons when requisition is already completed', async () => {
+    const completedMock = {
+      ...mockTimelineData,
+      status: 'APPROVED',
+      isCompleted: true,
+      completedSteps: 4,
+    };
+    vi.mocked(approvalApi.getTimeline).mockResolvedValueOnce(completedMock);
+
+    render(
+      <ApprovalTimelineModal
+        requisitionId={101}
+        isOpen={true}
+        onClose={vi.fn()}
+        canApprove={true}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0001')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Thao tác phê duyệt tại bước hiện tại/i)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/Phê duyệt chuyển bước tiếp theo/i)).not.toBeInTheDocument();
+  });
 });

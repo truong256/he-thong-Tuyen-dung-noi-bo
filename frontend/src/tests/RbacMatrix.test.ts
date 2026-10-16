@@ -61,7 +61,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
   HIRING_MANAGER: [
     ...BASE_PERMS,
-    'CATALOG_READ', 'REQUISITION_CREATE', 'REQUISITION_READ_OWN',
+    'CATALOG_READ', 'REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_APPROVE',
     'CANDIDATE_READ_ASSIGNED', 'INTERVIEW_READ_ASSIGNED', 'EVALUATION_READ',
     'OFFER_READ_OWN', 'REPORT_READ',
   ],
@@ -177,9 +177,10 @@ describe('RBAC Matrix – Backlog Sheet 2. User Roles', () => {
       expect(ctx.hasPermission('EVALUATION_READ')).toBe(true);
       expect(ctx.hasPermission('EVALUATION_SUBMIT')).toBe(false);
     });
-    it('has REQUISITION_CREATE and REQUISITION_READ_OWN', () => {
+    it('has REQUISITION_CREATE, REQUISITION_READ_OWN, and REQUISITION_APPROVE (S3-01/S3-02)', () => {
       expect(ctx.hasPermission('REQUISITION_CREATE')).toBe(true);
       expect(ctx.hasPermission('REQUISITION_READ_OWN')).toBe(true);
+      expect(ctx.hasPermission('REQUISITION_APPROVE')).toBe(true);
     });
     it('does NOT have PIPELINE_MANAGE (F is Recruiter only)', () => {
       expect(ctx.hasPermission('PIPELINE_MANAGE')).toBe(false);

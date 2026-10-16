@@ -25,6 +25,7 @@ import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
 import { PageHeader } from '../components/common/PageHeader';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
+import { useAuth } from '../hooks/useAuth';
 import { formatNumberWithCommas, handleNumberInputChange, parseNumberFromCommas } from '../utils/numberFormat';
 import '../styles/recruitment-request.css';
 
@@ -82,6 +83,8 @@ const EMPTY_FORM: FormState = {
 };
 
 export const RecruitmentRequestPage: React.FC = () => {
+  const { user, hasPermission, hasAnyRole } = useAuth();
+  const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER', 'ADMIN']);
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -1395,6 +1398,7 @@ export const RecruitmentRequestPage: React.FC = () => {
         <ApprovalTimelineModal
           requisitionId={timelineReqId}
           isOpen={true}
+          canApprove={canApprove}
           onClose={() => setTimelineReqId(null)}
           onStatusChange={loadRequisitions}
         />

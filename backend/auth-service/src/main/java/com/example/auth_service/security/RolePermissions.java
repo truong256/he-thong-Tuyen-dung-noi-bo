@@ -96,6 +96,7 @@ public final class RolePermissions {
                 CATALOG_READ,
                 REQUISITION_CREATE,
                 REQUISITION_READ_OWN,
+                REQUISITION_APPROVE,
                 CANDIDATE_READ_ASSIGNED,
                 INTERVIEW_READ_ASSIGNED,
                 EVALUATION_READ,

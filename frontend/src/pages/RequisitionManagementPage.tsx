@@ -29,7 +29,7 @@ import '../styles/requisitions.css';
 export const RequisitionManagementPage: React.FC = () => {
   const { user, hasPermission, hasAnyRole } = useAuth();
   const canCreate = hasPermission ? hasPermission('REQUISITION_CREATE') : hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']);
-  const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['APPROVER', 'HR_MANAGER', 'ADMIN']);
+  const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER', 'ADMIN']);
   const canAssign = hasPermission ? hasPermission('RECRUITER_ASSIGN') : hasAnyRole(['HR_MANAGER', 'ADMIN']);
 
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);

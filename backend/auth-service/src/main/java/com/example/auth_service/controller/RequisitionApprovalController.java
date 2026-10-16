@@ -338,6 +338,9 @@ public class RequisitionApprovalController {
         Optional<RequisitionApprovalHistory> pendingStepOpt = historyList.stream()
                 .filter(h -> "PENDING".equalsIgnoreCase(h.getStatus()))
                 .findFirst();
+        if (!historyList.isEmpty() && pendingStepOpt.isEmpty()) {
+            throw new BadRequestException("Luồng phê duyệt này đã hoàn tất.");
+        }
         if (pendingStepOpt.isPresent()) {
             RequisitionApprovalHistory currentStep = pendingStepOpt.get();
             if (currentStep.getApproverId() != null && !currentStep.getApproverId().equals(principal.getId())) {

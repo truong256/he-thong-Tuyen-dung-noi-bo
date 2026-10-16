@@ -150,9 +150,9 @@ public class RequisitionApprovalConfigurationService {
             User approver = users.findById(step.approverUserId())
                     .orElseThrow(() -> new BadRequestException("Người phê duyệt không tồn tại."));
             boolean hasApprovalRole = approver.getRoles().stream()
-                    .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER);
+                    .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER || role.getName() == RoleName.HIRING_MANAGER);
             if (!"ACTIVE".equals(approver.getStatus()) || !hasApprovalRole) {
-                throw new BadRequestException("Người phê duyệt phải đang hoạt động và có vai trò APPROVER hoặc HR_MANAGER.");
+                throw new BadRequestException("Người phê duyệt phải đang hoạt động và có vai trò APPROVER, HR_MANAGER hoặc HIRING_MANAGER.");
             }
         }
     }
