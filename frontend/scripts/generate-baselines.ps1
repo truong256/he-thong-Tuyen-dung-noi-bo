@@ -4,6 +4,7 @@ param(
   [string]$Password = $env:TEST_USER_PASSWORD,
   [int]$Port = 3000,
   [string]$BackendUrl = "http://localhost:8080",
+  [int]$Workers = 2,
   [switch]$KeepWorktree
 )
 
@@ -29,7 +30,7 @@ function Test-ServiceReadiness {
     [int]$TimeoutSeconds = 30,
     [string]$ServiceName = "Service"
   )
-  Write-Host "Waiting for $ServiceName to be ready at $Url (timeout: ${TimeoutSeconds}s)..."
+  Write-Host "Waiting for $ServiceName at $Url to be ready (timeout: ${TimeoutSeconds}s)..."
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
   while ($sw.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
     try {
@@ -52,7 +53,7 @@ function Test-ServiceReadiness {
         }
       }
     } catch {
-      # Port not reachable yet
+      # Connection refused or port not open yet
     }
     Start-Sleep -Milliseconds 500
   }
@@ -77,16 +78,34 @@ if (-not (Test-ServiceReadiness -Url $BackendUrl -TimeoutSeconds 10 -ServiceName
 
 Write-Host "==> Establishing baseline from commit $Commit..." -ForegroundColor Cyan
 
-# 2. Clean previous worktree if exists
+# 2. Check and safely handle existing worktree
 if (Test-Path $worktreeDir) {
-  Write-Host "Cleaning existing worktree at $worktreeDir..."
-  git worktree remove --force $worktreeDir 2>$null
-  if (Test-Path $worktreeDir) { Remove-Item -Recurse -Force $worktreeDir }
+  Write-Host "Existing worktree detected at $worktreeDir. Checking integrity..." -ForegroundColor Yellow
+  $dirtyStatus = git -C $worktreeDir status --porcelain 2>$null
+  if ($dirtyStatus) {
+    Write-Error "CRITICAL: Existing worktree at $worktreeDir contains uncommitted or unverified changes! Refusing to delete or overwrite. Please inspect or stash changes manually."
+    exit 1
+  }
+
+  $existingCommit = (git -C $worktreeDir rev-parse --short HEAD 2>$null)
+  if ($existingCommit -and ($Commit.StartsWith($existingCommit) -or $existingCommit.StartsWith($Commit))) {
+    Write-Host "Existing worktree is already at target commit $Commit and clean. Reusing worktree..." -ForegroundColor Green
+  } else {
+    Write-Host "Existing worktree is at commit $existingCommit (requested: $Commit). Safely removing clean worktree..."
+    Invoke-CheckedCommand -Command { git worktree remove $worktreeDir } -ErrorMessage "Failed to safely remove existing worktree"
+    if (Test-Path $worktreeDir) { Remove-Item -Recurse -Force $worktreeDir }
+  }
 }
 
-# 3. Add git worktree with exit code check
-Write-Host "Creating worktree at $worktreeDir..."
-Invoke-CheckedCommand -Command { git worktree add $worktreeDir $Commit } -ErrorMessage "Failed to create git worktree for commit $Commit"
+# 3. Add git worktree if not present
+if (-not (Test-Path $worktreeDir)) {
+  Write-Host "Creating isolated worktree at $worktreeDir for commit $Commit..."
+  Invoke-CheckedCommand -Command { git worktree add $worktreeDir $Commit } -ErrorMessage "Failed to create git worktree for commit $Commit"
+}
+
+# Verify worktree commit
+$verifiedCommit = (git -C $worktreeDir rev-parse --short HEAD)
+Write-Host "Worktree verified at commit: $verifiedCommit (expected: $Commit)" -ForegroundColor Green
 
 $baselineVerified = $false
 $viteProcess = $null
@@ -102,9 +121,9 @@ try {
     }
   }
 
-  # 5. Start baseline vite server on specified port (e.g. 3000)
-  Write-Host "Starting baseline frontend server on port $Port..."
-  $viteProcess = Start-Process npx -ArgumentList "vite", "--port", "$Port" -WorkingDirectory "$worktreeDir/frontend" -PassThru -NoNewWindow
+  # 5. Start baseline vite server on specified port with --strictPort
+  Write-Host "Starting baseline frontend server on port $Port with --strictPort..."
+  $viteProcess = Start-Process "cmd.exe" -ArgumentList "/c", "npx", "vite", "--port", "$Port", "--strictPort" -WorkingDirectory "$worktreeDir/frontend" -PassThru -NoNewWindow
 
   # 6. Verify baseline frontend server readiness
   $frontendReady = Test-ServiceReadiness -Url "http://localhost:$Port" -TimeoutSeconds 30 -ServiceName "Baseline Frontend Server"
@@ -114,27 +133,41 @@ try {
   }
 
   # 7. Capture baselines
-  Write-Host "Capturing baseline screenshots into e2e/screenshots/before/..."
+  Write-Host "Capturing baseline screenshots into e2e/screenshots/baselines/$Commit/..."
   $env:SNAPSHOT_MODE = "before"
+  $env:BASELINE_COMMIT = $Commit
   $env:BASELINE_URL = "http://localhost:$Port"
   $env:TEST_USER_PASSWORD = $Password
 
+  $cmdArgs = @("playwright", "test", "e2e/visual-baselines.spec.ts")
+  if ($Workers -gt 0) {
+    $cmdArgs += @("--workers", "$Workers")
+  }
+
   Push-Location "$repoRoot/frontend"
   try {
-    Invoke-CheckedCommand -Command { npx playwright test e2e/visual-baselines.spec.ts } -ErrorMessage "Playwright baseline capture failed"
+    Invoke-CheckedCommand -Command { npx @cmdArgs } -ErrorMessage "Playwright baseline capture failed"
   } finally {
     Pop-Location
   }
 
   # 8. Verify captured baselines exist and are non-empty
-  $capturedImages = Get-ChildItem -Path "$repoRoot/frontend/e2e/screenshots/before" -Filter "*.png" -ErrorAction SilentlyContinue
+  $baselineDir = "$repoRoot/frontend/e2e/screenshots/baselines/$Commit"
+  $capturedImages = Get-ChildItem -Path $baselineDir -Filter "*.png" -ErrorAction SilentlyContinue
+  $metaPath = "$baselineDir/metadata.json"
+
   if (-not $capturedImages -or $capturedImages.Count -lt 12) {
-    Write-Error "Baseline capture verification failed: Expected at least 12 PNG screenshots in e2e/screenshots/before, found $(if ($capturedImages) { $capturedImages.Count } else { 0 })."
+    Write-Error "Baseline capture verification failed: Expected at least 12 PNG screenshots in $baselineDir, found $(if ($capturedImages) { $capturedImages.Count } else { 0 })."
+    exit 1
+  }
+
+  if (-not (Test-Path $metaPath)) {
+    Write-Error "Baseline verification failed: metadata.json was not created in $baselineDir."
     exit 1
   }
 
   $baselineVerified = $true
-  Write-Host "==> All $($capturedImages.Count) baselines captured and verified successfully!" -ForegroundColor Green
+  Write-Host "==> All $($capturedImages.Count) baselines for commit $Commit captured and verified with metadata!" -ForegroundColor Green
 } finally {
   # Clean up server process
   if ($viteProcess -and -not $viteProcess.HasExited) {
@@ -148,8 +181,8 @@ try {
   } elseif ($KeepWorktree) {
     Write-Host "Flag -KeepWorktree specified. Preserving worktree at $worktreeDir." -ForegroundColor Cyan
   } else {
-    Write-Host "Baseline data verified. Removing temporary worktree at $worktreeDir..."
-    git worktree remove --force $worktreeDir 2>$null
+    Write-Host "Baseline data verified. Safely removing temporary worktree at $worktreeDir..."
+    git worktree remove $worktreeDir
     if (Test-Path $worktreeDir) { Remove-Item -Recurse -Force $worktreeDir -ErrorAction SilentlyContinue }
   }
 }

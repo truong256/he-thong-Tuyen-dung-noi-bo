@@ -1,5 +1,6 @@
 # PowerShell script to run visual regression comparison against recorded baselines
 param(
+  [string]$BaselineCommit = "ba299a3",
   [string]$Password = $env:TEST_USER_PASSWORD,
   [string]$Project = "", # optional: "desktop-1440", "tablet-768", "mobile-390"
   [int]$Workers = 2,
@@ -81,14 +82,26 @@ if (-not (Test-ServiceReadiness -Url $FrontendUrl -TimeoutSeconds 10 -ServiceNam
   exit 1
 }
 
-# 3. Check baseline screenshots exist
-$beforeDir = "$repoRoot/frontend/e2e/screenshots/before"
-if (-not (Test-Path $beforeDir) -or (Get-ChildItem -Path $beforeDir -Filter "*.png").Count -eq 0) {
-  Write-Error "No baseline screenshots found in $beforeDir. Run generate-baselines.ps1 first to capture baselines."
+# 3. Check baseline screenshots and metadata exist for the baseline commit
+$baselineCommitDir = "$repoRoot/frontend/e2e/screenshots/baselines/$BaselineCommit"
+$legacyBeforeDir = "$repoRoot/frontend/e2e/screenshots/before"
+
+$hasBaselines = (Test-Path $baselineCommitDir) -or (Test-Path $legacyBeforeDir)
+if (-not $hasBaselines) {
+  Write-Error "No baseline screenshots found for commit $BaselineCommit. Please run generate-baselines.ps1 -Commit $BaselineCommit first."
   exit 1
 }
 
+# 4. Resolve current commit SHA
+$currentCommit = (git rev-parse --short HEAD).Trim()
+Write-Host "==> Comparing Baseline ($BaselineCommit) vs Current HEAD ($currentCommit)..." -ForegroundColor Cyan
+if ($BaselineCommit -eq $currentCommit) {
+  Write-Warning "Baseline commit ($BaselineCommit) is identical to current HEAD ($currentCommit). Comparison must ideally be between two distinct revisions."
+}
+
 $env:SNAPSHOT_MODE = "after"
+$env:BASELINE_COMMIT = $BaselineCommit
+$env:CURRENT_COMMIT_SHA = $currentCommit
 $env:TEST_USER_PASSWORD = $Password
 
 $cmdArgs = @("playwright", "test", "e2e/visual-baselines.spec.ts")
@@ -99,7 +112,7 @@ if ($Workers -gt 0) {
   $cmdArgs += @("--workers", "$Workers")
 }
 
-Write-Host "==> Running visual comparison against baseline..." -ForegroundColor Cyan
+Write-Host "==> Running visual comparison against baseline ($BaselineCommit)..." -ForegroundColor Cyan
 Push-Location "$repoRoot/frontend"
 try {
   Invoke-CheckedCommand -Command { npx @cmdArgs } -ErrorMessage "Playwright visual comparison tests failed"
@@ -107,7 +120,7 @@ try {
 
   # Print summary table and check exit code
   Invoke-CheckedCommand -Command {
-    node -e "const r = require('./e2e/screenshots/diff-report.json'); console.table(r.map(x => ({ page: x.page, viewport: x.viewport, diffPixels: x.diffPixels, diffPercent: x.diffPercent + '%', passed: x.passed })));"
+    node -e "const r = require('./e2e/screenshots/diff-report.json'); console.table(r.map(x => ({ page: x.page, viewport: x.viewport, baseline: x.baselineCommit, target: x.currentCommit, diffPixels: x.diffPixels, diffPercent: x.diffPercent + '%', passed: x.passed })));"
   } -ErrorMessage "Failed to render visual diff report summary"
 } finally {
   Pop-Location

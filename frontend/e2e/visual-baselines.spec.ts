@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import { PNG } from 'pngjs';
 import pixelmatch from 'pixelmatch';
 
@@ -11,6 +12,56 @@ interface PageTarget {
   authEmail?: string;
   legacyNames?: string[];
   mainSelector?: string;
+}
+
+interface ScreenshotMetadataItem {
+  page: string;
+  viewport: string;
+  filename: string;
+  width: number;
+  height: number;
+  capturedAt: string;
+  url: string;
+}
+
+interface RunMetadata {
+  commitSha: string;
+  mode: 'before' | 'after';
+  updatedAt: string;
+  screenshots: Record<string, ScreenshotMetadataItem>;
+}
+
+function getGitCommitSha(): string {
+  try {
+    return execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+  } catch {
+    return process.env.CURRENT_COMMIT_SHA || 'unknown';
+  }
+}
+
+function updateMetadataFile(metaPath: string, commitSha: string, mode: 'before' | 'after', item: ScreenshotMetadataItem) {
+  let meta: RunMetadata = {
+    commitSha,
+    mode,
+    updatedAt: new Date().toISOString(),
+    screenshots: {},
+  };
+  if (fs.existsSync(metaPath)) {
+    try {
+      meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+    } catch {
+      // Use clean meta structure
+    }
+  }
+  meta.commitSha = commitSha;
+  meta.mode = mode;
+  meta.updatedAt = new Date().toISOString();
+  if (!meta.screenshots) {
+    meta.screenshots = {};
+  }
+  meta.screenshots[`${item.page}-${item.viewport}`] = item;
+  fs.mkdirSync(path.dirname(metaPath), { recursive: true });
+  fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
 }
 
 const pagesToCapture: PageTarget[] = [
@@ -143,22 +194,29 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
 
   for (const pageItem of pagesToCapture) {
     test(`capture and verify ${pageItem.name}`, async ({ page }) => {
-      const mode = (process.env.SNAPSHOT_MODE || 'before').toLowerCase();
-      const testPassword = process.env.TEST_USER_PASSWORD;
+      // REQUIREMENT A: Strictly forbid defaulting SNAPSHOT_MODE to 'before'. Must be explicitly declared.
+      const rawMode = (process.env.SNAPSHOT_MODE || '').trim().toLowerCase();
+      if (rawMode !== 'before' && rawMode !== 'after') {
+        throw new Error(
+          `[FATAL INTEGRITY ERROR] SNAPSHOT_MODE must be explicitly set to either "before" or "after". Received: "${process.env.SNAPSHOT_MODE || ''}". Defaulting to "before" is strictly disallowed to prevent accidental overwriting of baseline captures.`
+        );
+      }
+      const mode = rawMode as 'before' | 'after';
 
+      const testPassword = process.env.TEST_USER_PASSWORD;
       if (!testPassword) {
         throw new Error(
           'Missing required environment variable TEST_USER_PASSWORD. Running visual baseline tests requires TEST_USER_PASSWORD to be explicitly set in the development/CI environment.'
         );
       }
 
-      const outputDir = path.resolve(process.cwd(), `e2e/screenshots/${mode}`);
-      const beforeDir = path.resolve(process.cwd(), 'e2e/screenshots/before');
-      const diffDir = path.resolve(process.cwd(), 'e2e/screenshots/diff');
+      const baselineCommit = (process.env.BASELINE_COMMIT || 'ba299a3').trim();
+      const currentCommit = (process.env.CURRENT_COMMIT_SHA || getGitCommitSha()).trim();
 
-      if (!fs.existsSync(outputDir)) {
-        fs.mkdirSync(outputDir, { recursive: true });
-      }
+      const baselineCommitDir = path.resolve(process.cwd(), 'e2e/screenshots/baselines', baselineCommit);
+      const legacyBeforeDir = path.resolve(process.cwd(), 'e2e/screenshots/before');
+      const afterDir = path.resolve(process.cwd(), 'e2e/screenshots/after');
+      const diffDir = path.resolve(process.cwd(), 'e2e/screenshots/diff');
 
       // Base URL override if capturing baseline from a separate server (e.g. baseline worktree)
       const baseUrl = (mode === 'before' && process.env.BASELINE_URL) ? process.env.BASELINE_URL : '';
@@ -184,9 +242,12 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
         expect(page.url()).toContain('/dashboard');
       }
 
-      // Navigate to target route
-      await page.goto(`${baseUrl}${pageItem.path}`);
-      await page.waitForLoadState('networkidle');
+      // Navigate to target route only if not already there
+      const expectedPathSegment = pageItem.path.split('?')[0];
+      if (!page.url().includes(expectedPathSegment)) {
+        await page.goto(`${baseUrl}${pageItem.path}`);
+        await page.waitForLoadState('networkidle');
+      }
       await page.waitForTimeout(600);
 
       // Determinism: Freeze animations, transitions, and hide blinking carets
@@ -205,7 +266,6 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
 
       // Verify that the page did not fall back to 404, 403 or unauthenticated Login
       const currentUrl = page.url();
-      const expectedPathSegment = pageItem.path.split('?')[0];
       expect(currentUrl).toContain(expectedPathSegment);
 
       const bodyText = await page.locator('body').innerText();
@@ -225,25 +285,76 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
       const vp = page.viewportSize();
       const vpSuffix = vp ? `${vp.width}x${vp.height}` : 'default';
       const filename = `${pageItem.name}-${vpSuffix}.png`;
-      const currentScreenshotPath = path.join(outputDir, filename);
 
-      // Capture screenshot with password inputs masked
-      await page.screenshot({
-        path: currentScreenshotPath,
-        fullPage: false,
-        mask: [page.locator('input[type="password"]')],
-      });
+      // CAPTURE BASELINE MODE ('before')
+      if (mode === 'before') {
+        const baselinePath = path.join(baselineCommitDir, filename);
+        const legacyPath = path.join(legacyBeforeDir, filename);
 
-      // Visual Comparison in 'after' mode
-      if (mode === 'after') {
-        const candidateBeforeNames = [
+        fs.mkdirSync(baselineCommitDir, { recursive: true });
+        fs.mkdirSync(legacyBeforeDir, { recursive: true });
+
+        // Capture screenshot with masked passwords
+        await page.screenshot({
+          path: baselinePath,
+          fullPage: false,
+          mask: [page.locator('input[type="password"]')],
+        });
+
+        // Mirror to legacy before directory for backwards compatibility
+        fs.copyFileSync(baselinePath, legacyPath);
+
+        const metadataItem: ScreenshotMetadataItem = {
+          page: pageItem.name,
+          viewport: vpSuffix,
           filename,
-          ...(pageItem.legacyNames || []).map((leg) => `${leg}-${vpSuffix}.png`),
+          width: vp?.width || 0,
+          height: vp?.height || 0,
+          capturedAt: new Date().toISOString(),
+          url: currentUrl,
+        };
+
+        updateMetadataFile(path.join(baselineCommitDir, 'metadata.json'), baselineCommit, 'before', metadataItem);
+        updateMetadataFile(path.join(legacyBeforeDir, 'metadata.json'), baselineCommit, 'before', metadataItem);
+
+        console.log(`[BASELINE CAPTURE] Saved baseline for ${pageItem.name} (${vpSuffix}) [commit: ${baselineCommit}]`);
+        return;
+      }
+
+      // COMPARISON MODE ('after')
+      if (mode === 'after') {
+        fs.mkdirSync(afterDir, { recursive: true });
+        const afterScreenshotPath = path.join(afterDir, filename);
+
+        await page.screenshot({
+          path: afterScreenshotPath,
+          fullPage: false,
+          mask: [page.locator('input[type="password"]')],
+        });
+
+        const afterMetadataItem: ScreenshotMetadataItem = {
+          page: pageItem.name,
+          viewport: vpSuffix,
+          filename,
+          width: vp?.width || 0,
+          height: vp?.height || 0,
+          capturedAt: new Date().toISOString(),
+          url: currentUrl,
+        };
+        updateMetadataFile(path.join(afterDir, 'metadata.json'), currentCommit, 'after', afterMetadataItem);
+
+        // Resolve baseline image: first try baselineCommitDir, then legacyBeforeDir
+        const candidateBeforePaths = [
+          path.join(baselineCommitDir, filename),
+          path.join(legacyBeforeDir, filename),
+          ...(pageItem.legacyNames || []).flatMap((leg) => [
+            path.join(baselineCommitDir, `${leg}-${vpSuffix}.png`),
+            path.join(legacyBeforeDir, `${leg}-${vpSuffix}.png`),
+          ]),
         ];
 
         let resolvedBeforePath: string | null = null;
-        for (const cand of candidateBeforeNames) {
-          const candPath = path.join(beforeDir, cand);
+        for (const candPath of candidateBeforePaths) {
           if (fs.existsSync(candPath)) {
             resolvedBeforePath = candPath;
             break;
@@ -252,12 +363,12 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
 
         if (!resolvedBeforePath) {
           throw new Error(
-            `Baseline before image for "${pageItem.name}" (${vpSuffix}) not found in ${beforeDir}. Please run SNAPSHOT_MODE=before first to establish baselines.`
+            `Baseline before image for "${pageItem.name}" (${vpSuffix}) not found in ${baselineCommitDir} or ${legacyBeforeDir}. Run SNAPSHOT_MODE=before first from commit ${baselineCommit}.`
           );
         }
 
         const beforeBuf = fs.readFileSync(resolvedBeforePath);
-        const afterBuf = fs.readFileSync(currentScreenshotPath);
+        const afterBuf = fs.readFileSync(afterScreenshotPath);
         const diffPath = path.join(diffDir, filename);
 
         const { diffRatio, diffPixels, totalPixels } = comparePngBuffers(beforeBuf, afterBuf, diffPath);
@@ -267,7 +378,7 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
         );
         const percent = (diffRatio * 100).toFixed(2);
 
-        // Record to diff-report.json
+        // Record to diff-report.json with commit tracking
         const diffReportPath = path.resolve(process.cwd(), 'e2e/screenshots/diff-report.json');
         let reportData: any[] = [];
         if (fs.existsSync(diffReportPath)) {
@@ -282,15 +393,19 @@ test.describe('Baseline Screenshots Capture and Visual Regression', () => {
           key: `${pageItem.name}-${vpSuffix}`,
           page: pageItem.name,
           viewport: vpSuffix,
+          baselineCommit,
+          currentCommit,
           diffPixels,
           totalPixels,
           diffPercent: Number((diffRatio * 100).toFixed(3)),
+          threshold: MAX_DIFF_THRESHOLD,
           passed: diffRatio <= MAX_DIFF_THRESHOLD,
           diffImage: `diff/${filename}`,
+          comparedAt: new Date().toISOString(),
         });
         fs.writeFileSync(diffReportPath, JSON.stringify(reportData, null, 2), 'utf-8');
 
-        console.log(`[VISUAL DIFF] ${pageItem.name} (${vpSuffix}): ${diffPixels}/${totalPixels} pixels differ (${percent}%)`);
+        console.log(`[VISUAL DIFF] ${pageItem.name} (${vpSuffix}) [baseline: ${baselineCommit} vs target: ${currentCommit}]: ${diffPixels}/${totalPixels} pixels differ (${percent}%)`);
 
         if (diffRatio > MAX_DIFF_THRESHOLD) {
           throw new Error(
