@@ -43,16 +43,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = async () => {
     try {
-      const me = await authApi.getMe();
-      setUser(me);
-      localStorage.setItem('user', JSON.stringify(me));
-      // Re-fetch permissions on user refresh
-      try {
-        const perms = await authApi.getPermissions();
-        setPermissions(perms);
-        localStorage.setItem('ats:permissions', JSON.stringify(perms));
-      } catch {
-        // Keep existing permissions if fetch fails
+      const [meRes, permsRes] = await Promise.allSettled([
+        authApi.getMe(),
+        authApi.getPermissions(),
+      ]);
+
+      if (meRes.status === 'fulfilled') {
+        setUser(meRes.value);
+        localStorage.setItem('user', JSON.stringify(meRes.value));
+      }
+      if (permsRes.status === 'fulfilled') {
+        setPermissions(permsRes.value);
+        localStorage.setItem('ats:permissions', JSON.stringify(permsRes.value));
       }
     } catch {
       // If fetching me fails, keep current state or logout if unauthorized
@@ -60,52 +62,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     const initAuth = async () => {
       const storedToken = localStorage.getItem('accessToken');
       if (storedToken) {
         if (isIdleExpired()) {
           triggerIdleSessionExpired();
-          setUser(null);
-          setToken(null);
-          setPermissions([]);
-          setIsLoading(false);
+          if (isMounted) {
+            setUser(null);
+            setToken(null);
+            setPermissions([]);
+            setIsLoading(false);
+          }
           return;
         }
 
         if (storedToken === 'mock-admin-token') {
           const saved = localStorage.getItem('user');
-          if (saved) {
+          if (saved && isMounted) {
             setUser(JSON.parse(saved));
           }
         } else {
           try {
-            const me = await authApi.getMe();
-            setUser(me);
-            localStorage.setItem('user', JSON.stringify(me));
-            // Fetch server-authoritative permissions (S1-05)
-            try {
-              const perms = await authApi.getPermissions();
-              setPermissions(perms);
-              localStorage.setItem('ats:permissions', JSON.stringify(perms));
-            } catch {
-              // Use cached permissions if server unavailable
+            const [meRes, permsRes] = await Promise.allSettled([
+              authApi.getMe(),
+              authApi.getPermissions(),
+            ]);
+
+            if (isMounted && meRes.status === 'fulfilled') {
+              setUser(meRes.value);
+              localStorage.setItem('user', JSON.stringify(meRes.value));
+            } else if (meRes.status === 'rejected') {
+              const err: any = meRes.reason;
+              if (err?.response?.status === 401 || err?.response?.status === 403 || !err?.response) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('user');
+                localStorage.removeItem('ats:permissions');
+                localStorage.removeItem('ats_job_titles');
+                clearActivity();
+                if (isMounted) {
+                  setUser(null);
+                  setToken(null);
+                  setPermissions([]);
+                }
+              }
             }
-          } catch (err: any) {
-            if (err?.response?.status === 401 || err?.response?.status === 403 || !err?.response) {
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              localStorage.removeItem('user');
-              localStorage.removeItem('ats:permissions');
-              localStorage.removeItem('ats_job_titles');
-              clearActivity();
-              setUser(null);
-              setToken(null);
-              setPermissions([]);
+
+            if (isMounted && permsRes.status === 'fulfilled') {
+              setPermissions(permsRes.value);
+              localStorage.setItem('ats:permissions', JSON.stringify(permsRes.value));
             }
+          } catch {
+            // Keep cached user if offline
           }
         }
       }
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     };
 
     initAuth();
@@ -121,6 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('ats:session-expired', handleSessionExpired);
     return () => {
+      isMounted = false;
       window.removeEventListener('ats:session-expired', handleSessionExpired);
     };
   }, []);

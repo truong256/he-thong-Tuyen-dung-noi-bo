@@ -201,6 +201,16 @@ export const requisitionApi = {
     await client.delete(`/api/requisitions/${id}`);
   },
 
+  approve: async (id: number): Promise<RequisitionResponse> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/approve`);
+    return res.data;
+  },
+
+  reject: async (id: number, reason: string): Promise<RequisitionResponse> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/reject`, { reason });
+    return res.data;
+  },
+
   getAssignableRecruiters: async (): Promise<import('../types/requisition').AssignableRecruiter[]> => {
     const res = await client.get<import('../types/requisition').AssignableRecruiter[]>('/api/requisitions/assignable-recruiters');
     return res.data;

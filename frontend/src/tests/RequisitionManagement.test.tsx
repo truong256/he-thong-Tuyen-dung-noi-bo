@@ -240,4 +240,110 @@ describe('RequisitionManagementPage (S2-10 - Yêu cầu Tuyển dụng)', () => 
     expect(window.confirm).toHaveBeenCalled();
     expect(requisitionApi.delete).toHaveBeenCalledWith(101);
   });
+
+  it('renders approve and reject buttons for APPROVER on PENDING_APPROVAL requisitions and allows approval', async () => {
+    vi.mocked(useAuthModule.useAuth).mockReturnValue({
+      user: {
+        id: 6,
+        email: 'approver@company.com',
+        fullName: 'Người Phê duyệt Tuyển dụng',
+        department: 'BOD',
+        role: 'APPROVER',
+        roles: ['APPROVER'],
+        status: 'ACTIVE',
+      },
+      token: 'fake-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      hasRole: (r: string) => r === 'APPROVER',
+      hasAnyRole: (roles: string[]) => roles.includes('APPROVER'),
+      permissions: ['REQUISITION_APPROVE', 'CATALOG_READ'],
+      hasPermission: (p: string) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some((p) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p)),
+    } as any);
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(requisitionApi.approve).mockResolvedValue({
+      id: 102,
+      requisitionCode: 'REQ-2026-0002',
+      status: 'APPROVED',
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0002')).toBeInTheDocument();
+    });
+
+    const approveBtn = screen.getByTitle('Phê duyệt yêu cầu tuyển dụng');
+    expect(approveBtn).toBeInTheDocument();
+    fireEvent.click(approveBtn);
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(requisitionApi.approve).toHaveBeenCalledWith(102);
+  });
+
+  it('allows APPROVER to reject a PENDING_APPROVAL requisition with reason', async () => {
+    vi.mocked(useAuthModule.useAuth).mockReturnValue({
+      user: {
+        id: 6,
+        email: 'approver@company.com',
+        fullName: 'Người Phê duyệt Tuyển dụng',
+        department: 'BOD',
+        role: 'APPROVER',
+        roles: ['APPROVER'],
+        status: 'ACTIVE',
+      },
+      token: 'fake-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      hasRole: (r: string) => r === 'APPROVER',
+      hasAnyRole: (roles: string[]) => roles.includes('APPROVER'),
+      permissions: ['REQUISITION_APPROVE', 'CATALOG_READ'],
+      hasPermission: (p: string) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some((p) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p)),
+    } as any);
+
+    vi.mocked(requisitionApi.reject).mockResolvedValue({
+      id: 102,
+      requisitionCode: 'REQ-2026-0002',
+      status: 'REJECTED',
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0002')).toBeInTheDocument();
+    });
+
+    const rejectBtn = screen.getByTitle('Từ chối yêu cầu tuyển dụng');
+    expect(rejectBtn).toBeInTheDocument();
+    fireEvent.click(rejectBtn);
+
+    expect(screen.getByText('Từ chối yêu cầu tuyển dụng')).toBeInTheDocument();
+
+    const textarea = screen.getByPlaceholderText(/Nhập lý do từ chối để người tạo yêu cầu nắm thông tin điều chỉnh.../i);
+    fireEvent.change(textarea, { target: { value: 'Chưa đủ ngân sách tuyển thêm vị trí này' } });
+
+    const confirmRejectBtn = screen.getByRole('button', { name: /Xác nhận từ chối/i });
+    fireEvent.click(confirmRejectBtn);
+
+    await waitFor(() => {
+      expect(requisitionApi.reject).toHaveBeenCalledWith(102, 'Chưa đủ ngân sách tuyển thêm vị trí này');
+    });
+  });
 });

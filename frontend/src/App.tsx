@@ -25,7 +25,12 @@ import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <Routes>
           {/* Các trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
@@ -169,14 +174,14 @@ export const App: React.FC = () => {
             />
 
             {/*
-              Requisitions – S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL)
-              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F)
+              Requisitions – S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL, REQUISITION_APPROVE)
+              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F), APPROVER (W*)
             */}
             <Route
               path="recruitment/requisitions"
               element={
                 <PermissionGuard
-                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL']}
+                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE']}
                   requireAny
                 >
                   <RequisitionManagementPage />

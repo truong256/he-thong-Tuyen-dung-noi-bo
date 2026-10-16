@@ -134,9 +134,6 @@ public class CreateRequisitionRequest {
 
     public void setReason(String reason) {
         this.reason = reason;
-        if (this.recruitmentType == null || "NEW".equals(this.recruitmentType)) {
-            this.recruitmentType = reason;
-        }
     }
 
     // Fluent accessors for record compatibility
@@ -147,9 +144,6 @@ public class CreateRequisitionRequest {
     public String recruitmentType() {
         if (recruitmentType != null && !recruitmentType.isBlank()) {
             return recruitmentType;
-        }
-        if (reason != null && !reason.isBlank()) {
-            return reason;
         }
         return "NEW";
     }
