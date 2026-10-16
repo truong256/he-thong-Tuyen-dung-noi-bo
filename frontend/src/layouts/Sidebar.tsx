@@ -184,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="sidebar-section">
               <span className="sidebar-title">QUY TRÌNH TUYỂN DỤNG</span>
               <ul className="sidebar-menu">
-                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']) || (hasPermission && hasPermission('REQUISITION_CREATE'))) ? (
+                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN', 'APPROVER']) || (hasPermission && (hasPermission('REQUISITION_CREATE') || hasPermission('REQUISITION_APPROVE')))) ? (
                   <li>
                     <NavLink
                       to="/recruitment/requisitions"

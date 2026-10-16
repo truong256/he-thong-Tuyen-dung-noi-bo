@@ -1,8 +1,13 @@
 import apiClient from './client';
 import { LoginResponse, UserSummary, AvatarUploadResponse } from '../types/auth';
 
+let inFlightMe: Promise<UserSummary> | null = null;
+let inFlightPermissions: Promise<string[]> | null = null;
+
 export const authApi = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
+    inFlightMe = null;
+    inFlightPermissions = null;
     const res = await apiClient.post<LoginResponse>('/api/auth/login', { email, password });
     return res.data;
   },
@@ -18,6 +23,8 @@ export const authApi = {
   },
 
   logout: async (payload?: { refreshToken?: string; email?: string } | string): Promise<{ message: string }> => {
+    inFlightMe = null;
+    inFlightPermissions = null;
     const body = typeof payload === 'string'
       ? { email: payload }
       : payload;
@@ -41,16 +48,26 @@ export const authApi = {
   },
 
   getMe: async (): Promise<UserSummary> => {
-    const res = await apiClient.get<UserSummary>('/api/auth/me');
-    return res.data;
+    if (inFlightMe) {
+      return inFlightMe;
+    }
+    inFlightMe = apiClient
+      .get<UserSummary>('/api/auth/me')
+      .then((res) => res.data)
+      .finally(() => {
+        inFlightMe = null;
+      });
+    return inFlightMe;
   },
 
   updateProfile: async (payload: { fullName: string; department?: string; phone?: string; displayName?: string; recoveryEmail?: string }): Promise<UserSummary> => {
+    inFlightMe = null;
     const res = await apiClient.put<UserSummary>('/api/auth/profile', payload);
     return res.data;
   },
 
   uploadAvatar: async (file: File): Promise<AvatarUploadResponse> => {
+    inFlightMe = null;
     const formData = new FormData();
     formData.append('file', file);
     const res = await apiClient.post<AvatarUploadResponse>(
@@ -62,14 +79,23 @@ export const authApi = {
   },
 
   deleteAvatar: async (): Promise<{ message: string }> => {
+    inFlightMe = null;
     const res = await apiClient.delete<{ message: string }>('/api/auth/avatar');
     return res.data;
   },
 
-  /** S1-05: Fetch server-authoritative permission list for current user */
+  /** S1-05: Fetch server-authoritative permission list for current user with in-flight deduplication */
   getPermissions: async (): Promise<string[]> => {
-    const res = await apiClient.get<string[]>('/api/auth/permissions');
-    return res.data;
+    if (inFlightPermissions) {
+      return inFlightPermissions;
+    }
+    inFlightPermissions = apiClient
+      .get<string[]>('/api/auth/permissions')
+      .then((res) => res.data)
+      .finally(() => {
+        inFlightPermissions = null;
+      });
+    return inFlightPermissions;
   },
 };
 

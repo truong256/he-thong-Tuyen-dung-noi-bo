@@ -24,6 +24,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.core.env.Environment;
 
+import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
+import com.example.auth_service.repository.RecruitmentRequisitionRepository;
+import java.time.LocalDate;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -42,6 +45,7 @@ public class DataInitializer {
                                       CompetencyCriterionRepository competencyCriterionRepository,
                                       InterviewQuestionRepository interviewQuestionRepository,
                                       CommonCategoryRepository commonCategoryRepository,
+                                      RecruitmentRequisitionRepository requisitionRepository,
                                       PasswordEncoder passwordEncoder,
                                       Environment env,
                                       org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
@@ -364,6 +368,77 @@ public class DataInitializer {
             // 6. Seed Common Categories if empty
             if (commonCategoryRepository.count() == 0) {
                 seedCategories(commonCategoryRepository);
+            }
+
+            // 7. Seed sample recruitment requisitions in PENDING_APPROVAL if none exist
+            if (!isTestProfile) {
+                boolean hasPending = requisitionRepository.findAll().stream()
+                        .anyMatch(r -> "PENDING_APPROVAL".equalsIgnoreCase(r.getStatus()));
+                if (!hasPending) {
+                    Department devBe = departmentRepository.findAll().stream()
+                            .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()))
+                            .findFirst().orElse(null);
+                    JobTitle beSenior = jobTitleRepository.findByCodeIgnoreCase("BE-SR-01").orElse(null);
+                    User hmUser = userRepository.findByEmail("hiring_manager@company.com").orElse(null);
+
+                    if (devBe != null && beSenior != null && hmUser != null) {
+                        String code1 = "REQ-202610-0001";
+                        RecruitmentRequisition req1 = requisitionRepository.findByRequisitionCode(code1).orElseGet(RecruitmentRequisition::new);
+                        req1.setRequisitionCode(code1);
+                        req1.setTitle("Tuyển dụng Kỹ sư Phần mềm Backend Cao cấp (Senior Backend Engineer)");
+                        req1.setDepartmentId(devBe.getId());
+                        req1.setJobTitleId(beSenior.getId());
+                        req1.setQuantity(2);
+                        req1.setRecruitmentType("NEW");
+                        req1.setReason("Tăng mới headcount theo kế hoạch mở rộng tính năng ATS Q4");
+                        req1.setSalaryMin(35000000L);
+                        req1.setSalaryMax(50000000L);
+                        req1.setCurrency("VND");
+                        req1.setNeededDate(LocalDate.now().plusDays(30));
+                        req1.setTargetDate(LocalDate.now().plusDays(30));
+                        req1.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                        req1.setWorkingModel("HYBRID");
+                        req1.setJobDescription("Phát triển các microservices backend, quản lý giao dịch CSDL, tối ưu hóa câu lệnh PostgreSQL và xây dựng RESTful APIs.");
+                        req1.setCandidateRequirements("Có từ 4+ năm kinh nghiệm phát triển Java/Spring Boot, hiểu sâu Concurrency, JPA/Hibernate.");
+                        req1.setBenefits("Lương tháng 13, thưởng hiệu suất dự án, gói bảo hiểm sức khỏe toàn diện.");
+                        req1.setStatus("PENDING_APPROVAL");
+                        req1.setCreatedByUserId(hmUser.getId());
+                        req1.setSubmittedAt(Instant.now());
+                        req1.setUpdatedAt(Instant.now());
+                        requisitionRepository.save(req1);
+                    }
+
+                    Department devFe = departmentRepository.findAll().stream()
+                            .filter(d -> "DEV-FE".equalsIgnoreCase(d.getCode()))
+                            .findFirst().orElse(null);
+                    JobTitle feMid = jobTitleRepository.findByCodeIgnoreCase("FE-MID-02").orElse(null);
+                    if (devFe != null && feMid != null && hmUser != null) {
+                        String code2 = "REQ-202610-0002";
+                        RecruitmentRequisition req2 = requisitionRepository.findByRequisitionCode(code2).orElseGet(RecruitmentRequisition::new);
+                        req2.setRequisitionCode(code2);
+                        req2.setTitle("Tuyển dụng Kỹ sư Phát triển Giao diện (Middle Frontend Developer)");
+                        req2.setDepartmentId(devFe.getId());
+                        req2.setJobTitleId(feMid.getId());
+                        req2.setQuantity(1);
+                        req2.setRecruitmentType("NEW");
+                        req2.setReason("Bổ sung nhân sự chuyên trách giao diện người dùng ATS");
+                        req2.setSalaryMin(22000000L);
+                        req2.setSalaryMax(32000000L);
+                        req2.setCurrency("VND");
+                        req2.setNeededDate(LocalDate.now().plusDays(25));
+                        req2.setTargetDate(LocalDate.now().plusDays(25));
+                        req2.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                        req2.setWorkingModel("ONSITE");
+                        req2.setJobDescription("Xây dựng component React 18, TypeScript, cải thiện trải nghiệm người dùng và responsive.");
+                        req2.setCandidateRequirements("Có 2-4 năm kinh nghiệm React, TypeScript, CSS Variables, tối ưu Core Web Vitals.");
+                        req2.setBenefits("Môi trường làm việc năng động, lộ trình phát triển rõ ràng, review lương định kỳ.");
+                        req2.setStatus("PENDING_APPROVAL");
+                        req2.setCreatedByUserId(hmUser.getId());
+                        req2.setSubmittedAt(Instant.now());
+                        req2.setUpdatedAt(Instant.now());
+                        requisitionRepository.save(req2);
+                    }
+                }
             }
         };
     }
