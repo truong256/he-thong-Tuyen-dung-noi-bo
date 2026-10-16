@@ -13,6 +13,9 @@ import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
+import com.example.auth_service.repository.RequisitionApprovalHistoryRepository;
+import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
 import com.example.auth_service.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +50,9 @@ class RequisitionServiceTest {
     @Mock private DepartmentRepository departments;
     @Mock private JobTitleRepository jobTitles;
     @Mock private UserRepository users;
+    @Mock private RequisitionAssignmentRepository assignments;
+    @Mock private RequisitionApprovalSnapshotRepository snapshots;
+    @Mock private RequisitionApprovalHistoryRepository historyRepository;
     @Mock private RequisitionApprovalWorkflowService approvalWorkflow;
 
     @InjectMocks private RequisitionService service;
@@ -390,12 +396,12 @@ class RequisitionServiceTest {
     @Test
     void list_ScopesProperlyForHiringManagerAndHRManager() {
         Page<RecruitmentRequisition> page = new PageImpl<>(List.of());
-        when(requisitions.search(eq(hiringManager.getId()), any(), any(), any(), any())).thenReturn(page);
+        when(requisitions.searchScoped(eq(false), eq(hiringManager.getId()), any(), any(), any(), any(), any(), any())).thenReturn(page);
 
         // HM calling list
         Page<RequisitionResponse> hmResult = service.list(null, null, null, PageRequest.of(0, 10));
         assertThat(hmResult).isNotNull();
-        verify(requisitions).search(eq(hiringManager.getId()), any(), any(), any(), any());
+        verify(requisitions).searchScoped(eq(false), eq(hiringManager.getId()), any(), any(), any(), any(), any(), any());
 
         // HR Manager calling list (can view all, filterUserId = null)
         setAuth(hrManager);
@@ -403,6 +409,28 @@ class RequisitionServiceTest {
         Page<RequisitionResponse> hrResult = service.list(null, null, null, PageRequest.of(0, 10));
         assertThat(hrResult).isNotNull();
         verify(requisitions).search(eq(null), any(), any(), any(), any());
+    }
+
+    @Test
+    void getById_CreatorCanAccess_UnassignedOutsiderDenied() {
+        RecruitmentRequisition req = new RecruitmentRequisition();
+        req.setId(100L);
+        req.setStatus("DRAFT");
+        req.setCreatedByUserId(hiringManager.getId());
+        req.setDepartmentId(dept.getId());
+
+        when(requisitions.findById(100L)).thenReturn(Optional.of(req));
+
+        // Creator HM -> 200 OK
+        RequisitionResponse creatorResult = service.getById(100L);
+        assertThat(creatorResult).isNotNull();
+        assertThat(creatorResult.id()).isEqualTo(100L);
+
+        // Outsider -> 403 AccessDeniedException
+        setAuth(anotherUser);
+        assertThatThrownBy(() -> service.getById(100L))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("Bạn không có quyền truy cập yêu cầu tuyển dụng này");
     }
 
     @Test

@@ -130,8 +130,8 @@ public class RequisitionApprovalConfigurationService {
         if (steps == null || steps.isEmpty()) {
             throw new BadRequestException("Cấu hình phải có ít nhất một cấp phê duyệt.");
         }
-        if (steps.getFirst() == null || steps.getFirst().minimumSalary() == null || steps.getFirst().minimumSalary() != 0) {
-            throw new BadRequestException("Cấp phê duyệt đầu tiên phải áp dụng từ mức lương 0.");
+        if (steps.getFirst() == null || steps.getFirst().minimumSalary() == null || steps.getFirst().minimumSalary() < 0) {
+            throw new BadRequestException("Cấp phê duyệt đầu tiên phải có mức lương không âm (>= 0).");
         }
 
         long previousMinimum = -1;

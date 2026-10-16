@@ -14,6 +14,10 @@ import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.repository.RequisitionApprovalHistoryRepository;
+import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,8 +40,33 @@ public class RequisitionService {
     private final JobTitleRepository jobTitles;
     private final UserRepository users;
     private final RequisitionApprovalWorkflowService approvalWorkflow;
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private final RequisitionAssignmentRepository assignments;
+    private final RequisitionApprovalSnapshotRepository snapshots;
+    private final RequisitionApprovalHistoryRepository historyRepository;
+
+    @Autowired(required = false)
     private RequisitionApprovalService approvalService;
+
+    @Autowired
+    public RequisitionService(
+            RecruitmentRequisitionRepository requisitions,
+            DepartmentRepository departments,
+            JobTitleRepository jobTitles,
+            UserRepository users,
+            RequisitionApprovalWorkflowService approvalWorkflow,
+            @Autowired(required = false) RequisitionAssignmentRepository assignments,
+            @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots,
+            @Autowired(required = false) RequisitionApprovalHistoryRepository historyRepository
+    ) {
+        this.requisitions = requisitions;
+        this.departments = departments;
+        this.jobTitles = jobTitles;
+        this.users = users;
+        this.approvalWorkflow = approvalWorkflow;
+        this.assignments = assignments;
+        this.snapshots = snapshots;
+        this.historyRepository = historyRepository;
+    }
 
     public RequisitionService(
             RecruitmentRequisitionRepository requisitions,
@@ -46,11 +75,7 @@ public class RequisitionService {
             UserRepository users,
             RequisitionApprovalWorkflowService approvalWorkflow
     ) {
-        this.requisitions = requisitions;
-        this.departments = departments;
-        this.jobTitles = jobTitles;
-        this.users = users;
-        this.approvalWorkflow = approvalWorkflow;
+        this(requisitions, departments, jobTitles, users, approvalWorkflow, null, null, null);
     }
 
     /**
@@ -414,12 +439,23 @@ public class RequisitionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
 
         User currentUser = getCurrentUser();
-        boolean canReadAll = currentUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN || r.getName() == RoleName.APPROVER);
-        boolean isOwner = req.getCreatedByUserId() != null && req.getCreatedByUserId().equals(currentUser.getId());
+        boolean isHrOrAdmin = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
 
-        if (!canReadAll && !isOwner) {
-            throw new AccessDeniedException("Bạn không có quyền truy cập yêu cầu tuyển dụng này");
+        if (!isHrOrAdmin) {
+            boolean isOwner = req.getCreatedByUserId() != null && req.getCreatedByUserId().equals(currentUser.getId());
+            boolean isDeptManager = req.getDepartmentId() != null && departments.findById(req.getDepartmentId())
+                    .map(d -> currentUser.getId().equals(d.getManagerUserId()))
+                    .orElse(false);
+            boolean isAssignedRecruiter = assignments != null && assignments.findByRequisitionIdAndUserId(id, currentUser.getId()).isPresent();
+            boolean isAssignedApprover = (snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(id).stream()
+                    .anyMatch(s -> currentUser.getId().equals(s.getApproverUserId())))
+                    || (historyRepository != null && historyRepository.findByRequisitionIdOrderByStepOrderAsc(id).stream()
+                    .anyMatch(h -> currentUser.getId().equals(h.getApproverId())));
+
+            if (!isOwner && !isDeptManager && !isAssignedRecruiter && !isAssignedApprover) {
+                throw new AccessDeniedException("Bạn không có quyền truy cập yêu cầu tuyển dụng này");
+            }
         }
 
         return toResponse(req);
@@ -427,17 +463,51 @@ public class RequisitionService {
 
     /**
      * Danh sách yêu cầu tuyển dụng phân trang kèm lọc trạng thái, phòng ban, từ khóa.
-     * Hiring Manager chỉ thấy yêu cầu do chính mình tạo. HR_MANAGER / ADMIN thấy tất cả.
+     * Chỉ HR_MANAGER và ADMIN được xem tất cả. Các vai trò khác chỉ xem phạm vi được giao/sở hữu.
      */
     @Transactional(readOnly = true)
     public Page<RequisitionResponse> list(String status, Long departmentId, String keyword, Pageable pageable) {
         User currentUser = getCurrentUser();
         boolean canReadAll = currentUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN || r.getName() == RoleName.APPROVER);
+                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
 
-        Long filterUserId = canReadAll ? null : currentUser.getId();
+        if (canReadAll) {
+            return requisitions.search(null, status, departmentId, keyword, pageable).map(this::toResponse);
+        }
 
-        Page<RecruitmentRequisition> page = requisitions.search(filterUserId, status, departmentId, keyword, pageable);
+        java.util.Set<Long> assignedIds = new java.util.HashSet<>();
+        if (assignments != null) {
+            assignments.findByUserId(currentUser.getId()).forEach(a -> assignedIds.add(a.getRequisitionId()));
+        }
+        if (snapshots != null) {
+            snapshots.findAllByApproverUserId(currentUser.getId()).forEach(s -> assignedIds.add(s.getRequisitionId()));
+        }
+        if (historyRepository != null) {
+            historyRepository.findAll().stream()
+                    .filter(h -> currentUser.getId().equals(h.getApproverId()))
+                    .forEach(h -> assignedIds.add(h.getRequisitionId()));
+        }
+        if (assignedIds.isEmpty()) {
+            assignedIds.add(-1L);
+        }
+
+        java.util.List<Long> managedDeptIds = departments.findByManagerUserId(currentUser.getId()).stream()
+                .map(Department::getId)
+                .toList();
+        if (managedDeptIds.isEmpty()) {
+            managedDeptIds = java.util.List.of(-1L);
+        }
+
+        Page<RecruitmentRequisition> page = requisitions.searchScoped(
+                false,
+                currentUser.getId(),
+                assignedIds,
+                managedDeptIds,
+                status,
+                departmentId,
+                keyword,
+                pageable
+        );
         return page.map(this::toResponse);
     }
 

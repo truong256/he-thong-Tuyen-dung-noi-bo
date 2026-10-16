@@ -23,6 +23,7 @@ import { JobTitle } from '../types/jobTitle';
 import { PageHeader } from '../components/common/PageHeader';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import { AssignRecruiterModal } from '../components/requisition/AssignRecruiterModal';
+import { formatNumberWithCommas, handleNumberInputChange, parseNumberFromCommas } from '../utils/numberFormat';
 import '../styles/requisitions.css';
 
 export const RequisitionManagementPage: React.FC = () => {
@@ -128,8 +129,10 @@ export const RequisitionManagementPage: React.FC = () => {
   // Check if proposed salary is out of standard range
   const isOutOfSalaryRange = useMemo(() => {
     if (!selectedJobTitleObj) return false;
-    const minVal = proposedMinSalary ? Number(proposedMinSalary) : null;
-    const maxVal = proposedMaxSalary ? Number(proposedMaxSalary) : null;
+    const cleanMin = parseNumberFromCommas(proposedMinSalary);
+    const cleanMax = parseNumberFromCommas(proposedMaxSalary);
+    const minVal = cleanMin ? Number(cleanMin) : null;
+    const maxVal = cleanMax ? Number(cleanMax) : null;
     let out = false;
     if (selectedJobTitleObj.minSalary && minVal !== null && minVal < selectedJobTitleObj.minSalary) {
       out = true;
@@ -204,8 +207,10 @@ export const RequisitionManagementPage: React.FC = () => {
       errors.targetDate = 'Ngày cần người không được ở quá khứ.';
     }
 
-    const minSal = proposedMinSalary ? Number(proposedMinSalary) : null;
-    const maxSal = proposedMaxSalary ? Number(proposedMaxSalary) : null;
+    const cleanMin = parseNumberFromCommas(proposedMinSalary);
+    const cleanMax = parseNumberFromCommas(proposedMaxSalary);
+    const minSal = cleanMin ? Number(cleanMin) : null;
+    const maxSal = cleanMax ? Number(cleanMax) : null;
     if (minSal !== null && maxSal !== null && minSal > maxSal) {
       errors.salary = 'Lương tối thiểu không được lớn hơn lương tối đa.';
     }
@@ -221,14 +226,17 @@ export const RequisitionManagementPage: React.FC = () => {
   const handleSubmit = async (isDraft: boolean) => {
     if (!validateForm()) return;
 
+    const cleanMin = parseNumberFromCommas(proposedMinSalary);
+    const cleanMax = parseNumberFromCommas(proposedMaxSalary);
+
     const payload: RequisitionPayload = {
       title: title.trim(),
       departmentId: Number(departmentId),
       jobTitleId: Number(jobTitleId),
       quantity,
       reason,
-      proposedMinSalary: proposedMinSalary ? Number(proposedMinSalary) : undefined,
-      proposedMaxSalary: proposedMaxSalary ? Number(proposedMaxSalary) : undefined,
+      proposedMinSalary: cleanMin ? Number(cleanMin) : undefined,
+      proposedMaxSalary: cleanMax ? Number(cleanMax) : undefined,
       salaryExplanation: salaryExplanation.trim() || undefined,
       targetDate: targetDate || undefined,
       jobDescription: jobDescription.trim() || undefined,
@@ -626,22 +634,24 @@ export const RequisitionManagementPage: React.FC = () => {
                 <div className="req-form-group">
                   <label className="req-label">Mức lương tối thiểu đề xuất (VND)</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className="req-input"
-                    placeholder="Ví dụ: 20000000"
-                    value={proposedMinSalary}
-                    onChange={(e) => setProposedMinSalary(e.target.value)}
+                    placeholder="Ví dụ: 20,000,000"
+                    value={formatNumberWithCommas(proposedMinSalary)}
+                    onChange={(e) => handleNumberInputChange(e, (raw) => setProposedMinSalary(raw))}
                   />
                 </div>
 
                 <div className="req-form-group">
                   <label className="req-label">Mức lương tối đa đề xuất (VND)</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     className="req-input"
-                    placeholder="Ví dụ: 35000000"
-                    value={proposedMaxSalary}
-                    onChange={(e) => setProposedMaxSalary(e.target.value)}
+                    placeholder="Ví dụ: 35,000,000"
+                    value={formatNumberWithCommas(proposedMaxSalary)}
+                    onChange={(e) => handleNumberInputChange(e, (raw) => setProposedMaxSalary(raw))}
                   />
                 </div>
               </div>

@@ -5,9 +5,11 @@ import {
   ArrowUp,
   Check,
   Clock3,
+  Edit3,
   GitBranch,
   Plus,
   RefreshCw,
+  RotateCcw,
   Save,
   ShieldCheck,
   X,
@@ -24,6 +26,7 @@ import {
 } from '../api/approvalConfiguration';
 import { Department } from '../types/organization';
 import { UserSummary } from '../types/auth';
+import { formatNumberWithCommas, handleNumberInputChange } from '../utils/numberFormat';
 import '../styles/approval-configuration.css';
 
 interface EditableStep {
@@ -96,8 +99,16 @@ export const ApprovalConfigurationPage: React.FC = () => {
     [configurations, departmentId],
   );
   const activeConfiguration = departmentConfigurations.find((configuration) => configuration.active) || null;
-  const selectedConfiguration = departmentConfigurations.find((configuration) => configuration.id === selectedVersionId) || activeConfiguration;
+  const selectedConfiguration = departmentConfigurations.find((configuration) => configuration.id === selectedVersionId)
+    || activeConfiguration
+    || departmentConfigurations[0]
+    || null;
   const selectedDepartment = departments.find((department) => String(department.id) === departmentId) || null;
+
+  const startRollback = (configuration: ApprovalConfiguration) => {
+    startEditing(configuration);
+    setNotice(`Đang khôi phục cấp duyệt từ phiên bản ${configuration.version}. Bạn có thể điều chỉnh và lưu thành phiên bản mới.`);
+  };
 
   const startEditing = (configuration: ApprovalConfiguration | null) => {
     setSelectedVersionId(configuration?.id ?? null);
@@ -143,16 +154,19 @@ export const ApprovalConfigurationPage: React.FC = () => {
       setErrorMessage('Vui lòng chọn phòng ban.');
       return null;
     }
-    if (steps.length === 0 || Number(steps[0].minimumSalary) !== 0) {
-      setErrorMessage('Cấp đầu tiên phải bắt đầu từ 0 VND.');
+    if (steps.length === 0) {
+      setErrorMessage('Cấu hình phải có ít nhất một cấp phê duyệt.');
       return null;
     }
 
-    const parsedSteps = steps.map((step, index) => ({
-      minimumSalary: step.minimumSalary === '' ? NaN : Number(step.minimumSalary),
-      approverUserId: step.approverUserId === '' ? NaN : Number(step.approverUserId),
-      stepNumber: index + 1,
-    }));
+    const parsedSteps = steps.map((step, index) => {
+      const cleanMin = String(step.minimumSalary ?? '').replace(/\D/g, '');
+      return {
+        minimumSalary: cleanMin === '' ? NaN : Number(cleanMin),
+        approverUserId: step.approverUserId === '' ? NaN : Number(step.approverUserId),
+        stepNumber: index + 1,
+      };
+    });
     const assignedApprovers = parsedSteps.map((step) => step.approverUserId);
 
     for (let index = 0; index < parsedSteps.length; index += 1) {
@@ -188,16 +202,53 @@ export const ApprovalConfigurationPage: React.FC = () => {
 
     setIsSaving(true);
     try {
-      const saved = selectedConfiguration?.active
-        ? await approvalConfigurationApi.update(selectedConfiguration.id, payload)
+      const saved = activeConfiguration
+        ? await approvalConfigurationApi.update(activeConfiguration.id, payload)
         : await approvalConfigurationApi.create(payload);
-      setConfigurations((current) => [saved, ...current.filter((configuration) => configuration.id !== saved.id)
-        .map((configuration) => configuration.departmentId === saved.departmentId && configuration.active
-          ? { ...configuration, active: false, deactivatedAt: saved.createdAt }
-          : configuration)]);
+      setConfigurations((current) => [
+        saved,
+        ...current
+          .filter((configuration) => configuration.id !== saved.id)
+          .map((configuration) => (configuration.departmentId === saved.departmentId && configuration.active
+            ? { ...configuration, active: false, deactivatedAt: saved.createdAt }
+            : configuration)),
+      ]);
       setSelectedVersionId(saved.id);
       setIsEditing(false);
       setNotice(`Đã lưu cấu hình phiên bản ${saved.version}.`);
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const resumeConfiguration = async (configurationToResume: ApprovalConfiguration) => {
+    setIsSaving(true);
+    setErrorMessage('');
+    try {
+      const payload: ApprovalConfigurationRequest = {
+        departmentId: configurationToResume.departmentId,
+        steps: configurationToResume.steps.map((step) => ({
+          minimumSalary: step.minimumSalary,
+          approverUserId: step.approverUserId,
+        })),
+      };
+      const saved = activeConfiguration
+        ? await approvalConfigurationApi.update(activeConfiguration.id, payload)
+        : await approvalConfigurationApi.create(payload);
+
+      setConfigurations((current) => [
+        saved,
+        ...current
+          .filter((configuration) => configuration.id !== saved.id)
+          .map((configuration) => (configuration.departmentId === saved.departmentId && configuration.active
+            ? { ...configuration, active: false, deactivatedAt: saved.createdAt }
+            : configuration)),
+      ]);
+      setSelectedVersionId(saved.id);
+      setIsEditing(false);
+      setNotice(`Đã kích hoạt lại cấu hình và áp dụng phiên bản ${saved.version}.`);
     } catch (error) {
       setErrorMessage(getErrorMessage(error));
     } finally {
@@ -310,11 +361,62 @@ export const ApprovalConfigurationPage: React.FC = () => {
                 <p>{selectedConfiguration ? `Phiên bản ${selectedConfiguration.version}` : 'Chưa có cấu hình cho phòng ban này'}</p>
               </div>
               <div className="approval-config-header-actions">
-                {!isEditing && activeConfiguration && selectedConfiguration?.active && (
-                  <Button variant="outline" size="sm" onClick={() => startEditing(activeConfiguration)}>Chỉnh sửa</Button>
+                {!isEditing && selectedConfiguration?.active && (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => startEditing(selectedConfiguration)}>Chỉnh sửa</Button>
+                    <Button variant="danger" size="sm" onClick={() => setIsConfirmOpen(true)}>Ngừng áp dụng</Button>
+                  </>
                 )}
-                {!isEditing && activeConfiguration && selectedConfiguration?.active && (
-                  <Button variant="danger" size="sm" onClick={() => setIsConfirmOpen(true)}>Ngừng áp dụng</Button>
+                {!isEditing && !selectedConfiguration?.active && !activeConfiguration && selectedConfiguration && (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<RotateCcw size={15} />}
+                      onClick={() => void resumeConfiguration(selectedConfiguration)}
+                      isLoading={isSaving}
+                      loadingText="Đang áp dụng..."
+                    >
+                      Sử dụng tiếp
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={<Edit3 size={15} />}
+                      onClick={() => startEditing(selectedConfiguration)}
+                    >
+                      Chỉnh sửa & Áp dụng
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon={<Plus size={15} />}
+                      onClick={() => startEditing(null)}
+                    >
+                      Tạo cấu hình mới
+                    </Button>
+                  </>
+                )}
+                {!isEditing && !selectedConfiguration?.active && activeConfiguration && selectedConfiguration && (
+                  <>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      icon={<RotateCcw size={15} />}
+                      onClick={() => startRollback(selectedConfiguration)}
+                    >
+                      Quay lại phiên bản này
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void resumeConfiguration(selectedConfiguration)}
+                      isLoading={isSaving}
+                      loadingText="Đang áp dụng..."
+                    >
+                      Áp dụng ngay
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
@@ -323,8 +425,16 @@ export const ApprovalConfigurationPage: React.FC = () => {
               <div className="approval-config-editor">
                 <div className="approval-config-editor-heading">
                   <div>
-                    <strong>{selectedConfiguration ? `Tạo phiên bản ${selectedConfiguration.version + 1}` : 'Cấu hình mới'}</strong>
-                    <span>Di chuyển người duyệt bằng nút mũi tên. Ngưỡng đầu tiên luôn bắt đầu từ 0 VND.</span>
+                    <strong>
+                      {departmentConfigurations.length > 0
+                        ? `Tạo phiên bản ${(departmentConfigurations[0]?.version || 0) + 1}${
+                            selectedVersionId && selectedConfiguration && selectedConfiguration.id !== activeConfiguration?.id
+                              ? ` (Khôi phục từ phiên bản ${selectedConfiguration.version})`
+                              : ''
+                          }`
+                        : 'Cấu hình mới'}
+                    </strong>
+                    <span>Di chuyển người duyệt bằng nút mũi tên. Ngưỡng lương là số nguyên không âm (&gt;= 0 VND).</span>
                   </div>
                   <Button
                     variant="outline"
@@ -348,18 +458,24 @@ export const ApprovalConfigurationPage: React.FC = () => {
                         <div className="approval-config-money-input">
                           <input
                             id={`approval-threshold-${index}`}
-                            type="number"
-                            min="0"
-                            step="1"
+                            type="text"
                             inputMode="numeric"
-                            value={step.minimumSalary}
-                            disabled={index === 0}
-                            onChange={(event) => updateStep(index, 'minimumSalary', event.target.value)}
-                            aria-describedby={index > 0 ? `approval-threshold-help-${index}` : undefined}
+                            min="0"
+                            placeholder="0"
+                            value={formatNumberWithCommas(step.minimumSalary)}
+                            onKeyDown={(event) => {
+                              if (event.key === '-' || event.key === '+' || event.key === 'e' || event.key === 'E') {
+                                event.preventDefault();
+                              }
+                            }}
+                            onChange={(event) => handleNumberInputChange(event, (raw) => updateStep(index, 'minimumSalary', raw))}
+                            aria-describedby={`approval-threshold-help-${index}`}
                           />
                           <span>VND</span>
                         </div>
-                        {index > 0 && <small id={`approval-threshold-help-${index}`}>Phải cao hơn cấp {index}.</small>}
+                        <small id={`approval-threshold-help-${index}`}>
+                          {index === 0 ? 'Ngưỡng lương khởi điểm không âm (>= 0 VND).' : `Phải cao hơn cấp ${index} và là số nguyên không âm.`}
+                        </small>
                       </div>
                       <div className="approval-config-step-input approver-input">
                         <label htmlFor={`approval-approver-${index}`}>Người phê duyệt</label>

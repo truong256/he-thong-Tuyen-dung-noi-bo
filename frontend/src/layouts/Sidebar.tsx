@@ -184,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="sidebar-section">
               <span className="sidebar-title">QUY TRÌNH TUYỂN DỤNG</span>
               <ul className="sidebar-menu">
-                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']) || (hasPermission && hasPermission('REQUISITION_CREATE'))) ? (
+                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN', 'RECRUITER', 'APPROVER']) || (hasPermission && (hasPermission('REQUISITION_CREATE') || hasPermission('REQUISITION_READ_OWN') || hasPermission('REQUISITION_READ_ALL') || hasPermission('REQUISITION_APPROVE')))) && (
                   <li>
                     <NavLink
                       to="/recruitment/requisitions"
@@ -193,19 +193,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     >
                       <span>Yêu cầu tuyển dụng</span>
                     </NavLink>
-                  </li>
-                ) : (
-                  <li>
-                    <a
-                      href="#requisitions"
-                      className="sidebar-link-upcoming"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleUpcomingClick('Yêu cầu tuyển dụng');
-                      }}
-                    >
-                      <span>Yêu cầu tuyển dụng</span>
-                    </a>
                   </li>
                 )}
 

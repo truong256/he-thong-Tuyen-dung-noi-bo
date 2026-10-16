@@ -306,10 +306,8 @@ public class RequisitionApprovalWorkflowService {
 
         User currentUser = users.findById(userId)
                 .orElseThrow(() -> new AccessDeniedException("Người dùng không tồn tại."));
-        boolean isHrOrAdmin = currentUser.getRoles().stream()
-                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
 
-        if (!currentStep.getApproverUserId().equals(userId) && !isHrOrAdmin) {
+        if (!currentStep.getApproverUserId().equals(userId)) {
             throw new AccessDeniedException("Bạn không phải người phê duyệt ở cấp hiện tại.");
         }
 

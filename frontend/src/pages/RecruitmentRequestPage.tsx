@@ -25,6 +25,7 @@ import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
 import { PageHeader } from '../components/common/PageHeader';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
+import { formatNumberWithCommas, handleNumberInputChange, parseNumberFromCommas } from '../utils/numberFormat';
 import '../styles/recruitment-request.css';
 
 interface DepartmentItem {
@@ -136,8 +137,10 @@ export const RecruitmentRequestPage: React.FC = () => {
 
   // --- REAL-TIME VALIDATION CHO DẢI LƯƠNG ---
   const salaryValidation = useMemo(() => {
-    const minNum = form.salaryMin !== '' && !isNaN(Number(form.salaryMin)) ? Number(form.salaryMin) : null;
-    const maxNum = form.salaryMax !== '' && !isNaN(Number(form.salaryMax)) ? Number(form.salaryMax) : null;
+    const cleanMin = parseNumberFromCommas(form.salaryMin);
+    const cleanMax = parseNumberFromCommas(form.salaryMax);
+    const minNum = cleanMin !== '' && !isNaN(Number(cleanMin)) ? Number(cleanMin) : null;
+    const maxNum = cleanMax !== '' && !isNaN(Number(cleanMax)) ? Number(cleanMax) : null;
 
     let minError: string | null = null;
     let maxError: string | null = null;
@@ -283,8 +286,8 @@ export const RecruitmentRequestPage: React.FC = () => {
       quantity: form.quantity ? Number(form.quantity) : 1,
       recruitmentType: form.recruitmentType || undefined,
       reason: form.reason || undefined,
-      salaryMin: form.salaryMin ? Number(form.salaryMin) : undefined,
-      salaryMax: form.salaryMax ? Number(form.salaryMax) : undefined,
+      salaryMin: form.salaryMin ? Number(parseNumberFromCommas(form.salaryMin)) : undefined,
+      salaryMax: form.salaryMax ? Number(parseNumberFromCommas(form.salaryMax)) : undefined,
       currency: 'VND',
       salaryExplanation: form.salaryExplanation || undefined,
       neededDate: form.neededDate || undefined,
@@ -374,8 +377,8 @@ export const RecruitmentRequestPage: React.FC = () => {
       quantity: Number(form.quantity),
       recruitmentType: form.recruitmentType,
       reason: form.reason.trim(),
-      salaryMin: form.salaryMin ? Number(form.salaryMin) : undefined,
-      salaryMax: form.salaryMax ? Number(form.salaryMax) : undefined,
+      salaryMin: form.salaryMin ? Number(parseNumberFromCommas(form.salaryMin)) : undefined,
+      salaryMax: form.salaryMax ? Number(parseNumberFromCommas(form.salaryMax)) : undefined,
       currency: 'VND',
       salaryExplanation: form.salaryExplanation.trim() || undefined,
       neededDate: form.neededDate,
@@ -834,12 +837,11 @@ export const RecruitmentRequestPage: React.FC = () => {
                   </label>
                   <div className="rr-input-wrapper">
                     <input
-                      type="number"
-                      step="500000"
-                      min="0"
-                      placeholder="Ví dụ: 15000000"
-                      value={form.salaryMin}
-                      onChange={(e) => updateField('salaryMin', e.target.value)}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ví dụ: 15,000,000"
+                      value={formatNumberWithCommas(form.salaryMin)}
+                      onChange={(e) => handleNumberInputChange(e, (raw) => updateField('salaryMin', raw))}
                       className={`rr-input ${salaryValidation.minError || errors.salaryMin ? 'error' : ''}`}
                     />
                     <span className="rr-unit-badge">VND</span>
@@ -877,12 +879,11 @@ export const RecruitmentRequestPage: React.FC = () => {
                   </label>
                   <div className="rr-input-wrapper">
                     <input
-                      type="number"
-                      step="500000"
-                      min="0"
-                      placeholder="Ví dụ: 30000000"
-                      value={form.salaryMax}
-                      onChange={(e) => updateField('salaryMax', e.target.value)}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ví dụ: 30,000,000"
+                      value={formatNumberWithCommas(form.salaryMax)}
+                      onChange={(e) => handleNumberInputChange(e, (raw) => updateField('salaryMax', raw))}
                       className={`rr-input ${salaryValidation.maxError || errors.salaryMax ? 'error' : ''}`}
                     />
                     <span className="rr-unit-badge">VND</span>

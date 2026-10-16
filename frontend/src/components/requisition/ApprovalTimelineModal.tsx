@@ -11,9 +11,11 @@ import {
   CornerDownRight,
   Loader2,
   Lock,
+  AlertCircle,
 } from 'lucide-react';
 import { approvalApi } from '../../api/approval';
 import { RequisitionApprovalTimeline, ApprovalStep } from '../../types/approval';
+import { useAuth } from '../../hooks/useAuth';
 import '../../styles/approval-timeline.css';
 
 interface ApprovalTimelineModalProps {
@@ -31,6 +33,13 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
   canApprove = false,
   onStatusChange,
 }) => {
+  let user: any = null;
+  try {
+    const auth = useAuth();
+    user = auth?.user;
+  } catch {
+    user = null;
+  }
   const [timeline, setTimeline] = useState<RequisitionApprovalTimeline | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,6 +117,29 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
     }
   };
 
+  const handleRequestChanges = async () => {
+    if (!timeline) return;
+    if (!actionComments.trim()) {
+      setActionError('Vui lòng nhập nội dung yêu cầu bổ sung vào ô ý kiến phản hồi.');
+      return;
+    }
+    setIsSubmittingAction(true);
+    setActionError(null);
+    try {
+      const updated = await approvalApi.requestChanges(
+        timeline.requisitionId,
+        actionComments.trim()
+      );
+      setTimeline(updated);
+      setActionComments('');
+      if (onStatusChange) onStatusChange();
+    } catch (err: any) {
+      setActionError(err.response?.data?.message || 'Có lỗi xảy ra khi yêu cầu bổ sung thông tin.');
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
   const formatTimestamp = (iso?: string) => {
     if (!iso) return '—';
     try {
@@ -139,6 +171,13 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
         </div>
       );
     }
+    if (step.status === 'REQUEST_CHANGES') {
+      return (
+        <div className="atl-step-dot request-changes" title="Yêu cầu bổ sung">
+          <AlertCircle size={20} />
+        </div>
+      );
+    }
     if (step.isCurrentStep || step.status === 'PENDING') {
       return (
         <div className="atl-step-dot current-pending" title="Đang chờ duyệt">
@@ -156,6 +195,7 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
   const getStepBadgeText = (step: ApprovalStep) => {
     if (step.status === 'COMPLETED') return 'ĐÃ DUYỆT';
     if (step.status === 'REJECTED') return 'TỪ CHỐI';
+    if (step.status === 'REQUEST_CHANGES') return 'YÊU CẦU BỔ SUNG';
     if (step.isCurrentStep || step.status === 'PENDING') return 'ĐANG CHỜ DUYỆT';
     return 'CHƯA TỚI LƯỢT';
   };
@@ -163,6 +203,7 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
   const getStepBadgeClass = (step: ApprovalStep) => {
     if (step.status === 'COMPLETED') return 'completed';
     if (step.status === 'REJECTED') return 'rejected';
+    if (step.status === 'REQUEST_CHANGES') return 'request-changes';
     if (step.isCurrentStep || step.status === 'PENDING') return 'pending';
     return 'upcoming';
   };
@@ -341,8 +382,13 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                 })}
               </div>
 
-              {/* Quick Actions (if user has approve permissions and request is pending) */}
-              {canApprove && !timeline.isCompleted && !timeline.isRejected && (
+              {/* Quick Actions (chỉ hiển thị cho người duyệt được phân công ở cấp hiện tại theo RBAC) */}
+              {(() => {
+                const currentPendingStep = timeline.steps.find((s) => s.isCurrentStep || s.status === 'PENDING');
+                const isDesignatedApprover = currentPendingStep
+                  ? (currentPendingStep.approverId == null || !user?.id || user.id === currentPendingStep.approverId)
+                  : canApprove;
+                return canApprove && isDesignatedApprover && !timeline.isCompleted && !timeline.isRejected ? (
                 <div className="atl-action-box">
                   <h4 className="atl-action-title">
                     <CornerDownRight size={16} /> Thao tác phê duyệt tại bước hiện tại
@@ -372,6 +418,16 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                     </button>
                     <button
                       type="button"
+                      className="atl-btn-request-changes"
+                      onClick={handleRequestChanges}
+                      disabled={isSubmittingAction}
+                      title="Yêu cầu bổ sung thông tin (chuyển về bản nháp để người tạo cập nhật)"
+                    >
+                      <AlertCircle size={15} />
+                      Yêu cầu bổ sung
+                    </button>
+                    <button
+                      type="button"
                       className="atl-btn-approve"
                       onClick={handleApprove}
                       disabled={isSubmittingAction}
@@ -386,7 +442,8 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                     </button>
                   </div>
                 </div>
-              )}
+              ) : null;
+            })()}
             </>
           ) : null}
         </div>

@@ -187,7 +187,7 @@ export const App: React.FC = () => {
               path="recruitment/requisitions"
               element={
                 <PermissionGuard
-                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL']}
+                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE']}
                   requireAny
                 >
                   <RequisitionManagementPage />

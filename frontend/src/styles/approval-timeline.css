@@ -270,6 +270,12 @@
   box-shadow: 0 0 0 4px #fef2f2;
 }
 
+.atl-step-dot.request-changes {
+  background: #d97706;
+  color: #ffffff;
+  box-shadow: 0 0 0 4px #fef3c7;
+}
+
 .atl-step-line {
   position: absolute;
   top: 36px;
@@ -346,6 +352,12 @@
   background: #fee2e2;
   color: #dc2626;
   border: 1px solid #fca5a5;
+}
+
+.atl-step-badge.request-changes {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .atl-step-meta {
@@ -474,8 +486,28 @@
   background: #dc2626;
 }
 
+.atl-btn-request-changes {
+  background: #d97706;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.atl-btn-request-changes:hover:not(:disabled) {
+  background: #b45309;
+}
+
 .atl-btn-approve:disabled,
-.atl-btn-reject:disabled {
+.atl-btn-reject:disabled,
+.atl-btn-request-changes:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -579,7 +611,8 @@
   }
 
   .atl-btn-approve,
-  .atl-btn-reject {
+  .atl-btn-reject,
+  .atl-btn-request-changes {
     width: 100%;
     justify-content: center;
   }

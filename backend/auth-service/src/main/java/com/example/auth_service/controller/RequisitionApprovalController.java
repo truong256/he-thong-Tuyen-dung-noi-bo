@@ -28,6 +28,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.example.auth_service.repository.DepartmentRepository;
+import com.example.auth_service.repository.RequisitionApprovalHistoryRepository;
+import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+
 /**
  * Controller xử lý theo dõi tiến độ, lịch sử phê duyệt và các thao tác duyệt/từ chối/yêu cầu bổ sung (S3-01, S3-02 & S3-03).
  */
@@ -39,6 +44,28 @@ public class RequisitionApprovalController {
     private final RequisitionAssignmentRepository assignments;
     private final RequisitionApprovalWorkflowService approvalWorkflow;
     private final RequisitionApprovalService approvalService;
+    private final DepartmentRepository departments;
+    private final RequisitionApprovalSnapshotRepository snapshots;
+    private final RequisitionApprovalHistoryRepository historyRepository;
+
+    @Autowired
+    public RequisitionApprovalController(
+            RecruitmentRequisitionRepository requisitions,
+            RequisitionAssignmentRepository assignments,
+            RequisitionApprovalWorkflowService approvalWorkflow,
+            RequisitionApprovalService approvalService,
+            @Autowired(required = false) DepartmentRepository departments,
+            @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots,
+            @Autowired(required = false) RequisitionApprovalHistoryRepository historyRepository
+    ) {
+        this.requisitions = requisitions;
+        this.assignments = assignments;
+        this.approvalWorkflow = approvalWorkflow;
+        this.approvalService = approvalService;
+        this.departments = departments;
+        this.snapshots = snapshots;
+        this.historyRepository = historyRepository;
+    }
 
     public RequisitionApprovalController(
             RecruitmentRequisitionRepository requisitions,
@@ -46,10 +73,31 @@ public class RequisitionApprovalController {
             RequisitionApprovalWorkflowService approvalWorkflow,
             RequisitionApprovalService approvalService
     ) {
-        this.requisitions = requisitions;
-        this.assignments = assignments;
-        this.approvalWorkflow = approvalWorkflow;
-        this.approvalService = approvalService;
+        this(requisitions, assignments, approvalWorkflow, approvalService, null, null, null);
+    }
+
+    private void checkCanViewApprovalData(RecruitmentRequisition req, UserPrincipal principal) {
+        boolean isHrOrAdmin = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_HR_MANAGER") || a.getAuthority().equals("ROLE_ADMIN")
+                            || a.getAuthority().equals("REQUISITION_READ_ALL"));
+        if (isHrOrAdmin) {
+            return;
+        }
+
+        Long userId = principal.getId();
+        boolean isOwner = req.getCreatedByUserId() != null && req.getCreatedByUserId().equals(userId);
+        boolean isDeptManager = req.getDepartmentId() != null && departments != null && departments.findById(req.getDepartmentId())
+                .map(d -> userId.equals(d.getManagerUserId()))
+                .orElse(false);
+        boolean isAssignedRecruiter = assignments.findByRequisitionIdAndUserId(req.getId(), userId).isPresent();
+        boolean isAssignedApprover = (snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(s -> userId.equals(s.getApproverUserId())))
+                || (historyRepository != null && historyRepository.findByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(h -> userId.equals(h.getApproverId())));
+
+        if (!isOwner && !isDeptManager && !isAssignedRecruiter && !isAssignedApprover) {
+            throw new AccessDeniedException("Bạn không có quyền xem thông tin phê duyệt của yêu cầu tuyển dụng này.");
+        }
     }
 
     /**
@@ -62,6 +110,10 @@ public class RequisitionApprovalController {
         if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
             throw new AccessDeniedException("Vui lòng đăng nhập.");
         }
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+        checkCanViewApprovalData(req, principal);
+
         if (approvalWorkflow.hasWorkflowSnapshot(id)) {
             return ResponseEntity.ok(approvalWorkflow.getTimelineResponse(id, principal.getId()));
         }
@@ -153,6 +205,21 @@ public class RequisitionApprovalController {
     }
 
     /**
+     * PUT /api/requisitions/{id}/request-changes
+     * Yêu cầu bổ sung thông tin (bắt buộc có ý kiến, trả hồ sơ về người tạo nhưng giữ lịch sử, S3-02).
+     */
+    @PutMapping("/request-changes")
+    @Transactional
+    @PreAuthorize("hasAuthority('REQUISITION_APPROVE')")
+    public ResponseEntity<?> requestChangesPut(
+            @PathVariable Long id,
+            @RequestBody(required = false) ApprovalActionRequest request
+    ) {
+        String comment = request != null ? request.effectiveComment() : null;
+        return executeApprovalAction(id, "REQUEST_CHANGES", comment);
+    }
+
+    /**
      * POST /api/requisitions/{id}/approval-actions hoặc /api/requisitions/{id}/approval-action
      * API chung cho cả 3 hành động: APPROVE, REJECT, REQUEST_CHANGES (S3-02).
      */
@@ -178,6 +245,14 @@ public class RequisitionApprovalController {
     @GetMapping("/approval-history")
     @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE')")
     public ResponseEntity<?> getApprovalHistory(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new AccessDeniedException("Vui lòng đăng nhập.");
+        }
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+        checkCanViewApprovalData(req, principal);
+
         List<RequisitionApprovalLogResponse> logs = approvalWorkflow.getApprovalLogs(id);
         if (logs != null && !logs.isEmpty()) {
             return ResponseEntity.ok(logs);
@@ -193,6 +268,14 @@ public class RequisitionApprovalController {
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE')")
     public ResponseEntity<List<RequisitionApprovalLogResponse>> getApprovalLogs(@PathVariable Long id) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new AccessDeniedException("Vui lòng đăng nhập.");
+        }
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+        checkCanViewApprovalData(req, principal);
+
         List<RequisitionApprovalLogResponse> history = approvalWorkflow.getApprovalLogs(id);
         return ResponseEntity.ok(history);
     }

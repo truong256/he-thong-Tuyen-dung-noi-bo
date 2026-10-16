@@ -4,6 +4,7 @@ import { JobTitle, JobTitleLevel, JobFamily, LEVEL_METADATA, JOB_FAMILY_METADATA
 import { Department } from '../../types/organization';
 import { CompetencyFramework } from '../../types/competencyFramework';
 import competencyFrameworkApi from '../../api/competencyFramework';
+import { formatNumberWithCommas, handleNumberInputChange } from '../../utils/numberFormat';
 
 interface JobTitleModalProps {
   isOpen: boolean;
@@ -374,14 +375,15 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                   <label htmlFor="jt-min-salary">Lương tối thiểu (VNĐ)</label>
                   <input
                     id="jt-min-salary"
-                    type="number"
-                    step="1000000"
-                    min="0"
+                    type="text"
+                    inputMode="numeric"
                     className="jt-input"
-                    placeholder="Ví dụ: 25000000"
-                    value={minSalary}
+                    placeholder="Ví dụ: 25,000,000"
+                    value={formatNumberWithCommas(minSalary)}
                     onChange={(e) =>
-                      handleMinSalaryChange(e.target.value ? Number(e.target.value) : '')
+                      handleNumberInputChange(e, (raw) =>
+                        handleMinSalaryChange(raw ? Number(raw) : '')
+                      )
                     }
                   />
                 </div>
@@ -390,14 +392,15 @@ export const JobTitleModal: React.FC<JobTitleModalProps> = ({
                   <label htmlFor="jt-max-salary">Lương tối đa (VNĐ)</label>
                   <input
                     id="jt-max-salary"
-                    type="number"
-                    step="1000000"
-                    min="0"
+                    type="text"
+                    inputMode="numeric"
                     className="jt-input"
-                    placeholder="Ví dụ: 40000000"
-                    value={maxSalary}
+                    placeholder="Ví dụ: 40,000,000"
+                    value={formatNumberWithCommas(maxSalary)}
                     onChange={(e) =>
-                      handleMaxSalaryChange(e.target.value ? Number(e.target.value) : '')
+                      handleNumberInputChange(e, (raw) =>
+                        handleMaxSalaryChange(raw ? Number(raw) : '')
+                      )
                     }
                   />
                 </div>

@@ -55,7 +55,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
   RECRUITER: [
     ...BASE_PERMS,
-    'CATALOG_READ', 'JOB_MANAGE', 'CANDIDATE_READ_ASSIGNED',
+    'CATALOG_READ', 'REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'JOB_MANAGE', 'CANDIDATE_READ_ASSIGNED',
     'PIPELINE_MANAGE', 'INTERVIEW_MANAGE', 'EVALUATION_READ', 'OFFER_MANAGE', 'ONBOARDING_MANAGE',
     'NOTIFICATION_MANAGE', 'REPORT_READ',
   ],
@@ -80,7 +80,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
   ],
   APPROVER: [
     ...BASE_PERMS,
-    'CATALOG_READ', 'REQUISITION_APPROVE', 'CANDIDATE_READ_ALL',
+    'CATALOG_READ', 'REQUISITION_READ_OWN', 'REQUISITION_APPROVE', 'CANDIDATE_READ_ALL',
     'EVALUATION_READ', 'OFFER_APPROVE', 'REPORT_READ',
   ],
   ADMIN: [
@@ -212,6 +212,11 @@ describe('RBAC Matrix – Backlog Sheet 2. User Roles', () => {
     it('has NOTIFICATION_MANAGE (email & thông báo = F)', () => {
       expect(ctx.hasPermission('NOTIFICATION_MANAGE')).toBe(true);
     });
+    it('has REQUISITION_CREATE and REQUISITION_READ_OWN (Sheet 2: W within assigned scope)', () => {
+      expect(ctx.hasPermission('REQUISITION_CREATE')).toBe(true);
+      expect(ctx.hasPermission('REQUISITION_READ_OWN')).toBe(true);
+      expect(ctx.hasPermission('REQUISITION_READ_ALL')).toBe(false);
+    });
     it('does NOT have USER_MANAGE', () => {
       expect(ctx.hasPermission('USER_MANAGE')).toBe(false);
     });
@@ -230,9 +235,11 @@ describe('RBAC Matrix – Backlog Sheet 2. User Roles', () => {
     it('has EVALUATION_READ', () => {
       expect(ctx.hasPermission('EVALUATION_READ')).toBe(true);
     });
-    it('has REQUISITION_APPROVE and OFFER_APPROVE', () => {
+    it('has REQUISITION_READ_OWN, REQUISITION_APPROVE, and OFFER_APPROVE', () => {
+      expect(ctx.hasPermission('REQUISITION_READ_OWN')).toBe(true);
       expect(ctx.hasPermission('REQUISITION_APPROVE')).toBe(true);
       expect(ctx.hasPermission('OFFER_APPROVE')).toBe(true);
+      expect(ctx.hasPermission('REQUISITION_READ_ALL')).toBe(false);
     });
     it('has CANDIDATE_READ_ALL (read total overview)', () => {
       expect(ctx.hasPermission('CANDIDATE_READ_ALL')).toBe(true);

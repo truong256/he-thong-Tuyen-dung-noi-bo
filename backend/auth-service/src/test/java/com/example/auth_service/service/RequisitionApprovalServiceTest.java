@@ -423,23 +423,36 @@ class RequisitionApprovalServiceTest {
     }
 
     @Test
-    @DisplayName("Approve requisition by HR Manager or Admin completes all pending/upcoming steps")
-    void approveRequisition_byAdmin_completesAllRemainingSteps() {
+    @DisplayName("Admin or HR Manager cannot bypass approval steps when not designated approver")
+    void approveRequisition_byAdmin_whenNotDesignatedApprover_throwsAccessDenied() {
         authenticateAs(adminUser);
         when(requisitions.findById(100L)).thenReturn(Optional.of(requisition));
 
         List<RequisitionApprovalHistory> chain = mockDefaultChain(100L);
         when(historyRepository.findByRequisitionIdOrderByStepOrderAsc(100L)).thenReturn(chain);
+
+        assertThatThrownBy(() -> service.approveRequisition(100L, "Admin duyệt nhanh"))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("Bạn không phải người phê duyệt ở cấp hiện tại.");
+    }
+
+    @Test
+    @DisplayName("Admin can approve step when designated as current step approver without skipping upcoming steps")
+    void approveRequisition_byAdmin_whenDesignatedApprover_approvesOnlyCurrentStep() {
+        authenticateAs(adminUser);
+        when(requisitions.findById(100L)).thenReturn(Optional.of(requisition));
+
+        List<RequisitionApprovalHistory> chain = mockDefaultChain(100L);
+        chain.get(1).setApproverId(adminUser.getId());
+        when(historyRepository.findByRequisitionIdOrderByStepOrderAsc(100L)).thenReturn(chain);
         when(historyRepository.save(any(RequisitionApprovalHistory.class))).thenAnswer(i -> i.getArgument(0));
 
-        RequisitionApprovalTimelineResponse response = service.approveRequisition(100L, "Admin duyệt nhanh");
+        RequisitionApprovalTimelineResponse response = service.approveRequisition(100L, "Admin duyệt hợp lệ");
 
         assertThat(response).isNotNull();
-        assertThat(requisition.getStatus()).isEqualTo("APPROVED");
-        for (RequisitionApprovalHistory step : chain) {
-            assertThat(step.getStatus()).isEqualTo("COMPLETED");
-        }
-        verify(requisitions).save(requisition);
+        assertThat(chain.get(1).getStatus()).isEqualTo("COMPLETED");
+        assertThat(chain.get(2).getStatus()).isEqualTo("PENDING");
+        assertThat(requisition.getStatus()).isEqualTo("PENDING_APPROVAL");
     }
 
     @Test

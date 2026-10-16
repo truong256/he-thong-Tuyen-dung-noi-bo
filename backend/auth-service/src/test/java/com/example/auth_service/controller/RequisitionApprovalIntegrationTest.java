@@ -32,6 +32,7 @@ import java.util.Set;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -56,6 +57,8 @@ class RequisitionApprovalIntegrationTest {
     private User hrManager;
     private User approverUser;
     private User candidateUser;
+    private User adminUser;
+    private User unassignedApprover;
     private Department dept;
     private JobTitle job;
     private RecruitmentRequisition requisition;
@@ -66,6 +69,8 @@ class RequisitionApprovalIntegrationTest {
         hrManager = createUser("hr_s3@example.com", RoleName.HR_MANAGER);
         approverUser = createUser("approver_s3@example.com", RoleName.APPROVER);
         candidateUser = createUser("cand_s3@example.com", RoleName.CANDIDATE);
+        adminUser = createUser("admin_s3@example.com", RoleName.ADMIN);
+        unassignedApprover = createUser("other_appr_s3@example.com", RoleName.APPROVER);
 
         dept = new Department(null, "Phòng Công nghệ S3", "TECH-S3", "Mô tả", null, hiringManager.getId(), true, Instant.now());
         dept = departments.save(dept);
@@ -194,5 +199,75 @@ class RequisitionApprovalIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("S3-02: Assigned Approver can request changes with comments, setting status to DRAFT")
+    void assignedApproverCanRequestChanges() throws Exception {
+        java.util.Map<String, String> request = java.util.Map.of("comment", "Cần bổ sung chi tiết yêu cầu ứng viên");
+
+        mvc.perform(post("/api/requisitions/" + requisition.getId() + "/request-changes")
+                        .header("Authorization", token(approverUser))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("DRAFT")))
+                .andExpect(jsonPath("$.rejectionReason", is("Cần bổ sung chi tiết yêu cầu ứng viên")));
+    }
+
+    @Test
+    @DisplayName("S3-02: Request changes without comments returns 400 Bad Request")
+    void requestChangesWithoutCommentReturnsBadRequest() throws Exception {
+        java.util.Map<String, String> request = java.util.Map.of("comment", "   ");
+
+        mvc.perform(post("/api/requisitions/" + requisition.getId() + "/request-changes")
+                        .header("Authorization", token(approverUser))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code", is("BAD_REQUEST")));
+    }
+
+    @Test
+    @DisplayName("Defect 4: Admin cannot approve requisition when not assigned as step approver")
+    void adminCannotApproveRequisitionWhenNotAssigned() throws Exception {
+        ApproveRequisitionRequest request = new ApproveRequisitionRequest("Admin duyệt vượt cấp");
+
+        mvc.perform(put("/api/requisitions/" + requisition.getId() + "/approve")
+                        .header("Authorization", token(adminUser))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Defect 1 & 2: Unassigned Approver cannot view detail, approval history, or approve requisition")
+    void unassignedApproverCannotViewOrActOnRequisition() throws Exception {
+        // Detail view -> 403 Forbidden
+        mvc.perform(get("/api/requisitions/" + requisition.getId())
+                        .header("Authorization", token(unassignedApprover)))
+                .andExpect(status().isForbidden());
+
+        // Approval history view -> 403 Forbidden
+        mvc.perform(get("/api/requisitions/" + requisition.getId() + "/approval-history")
+                        .header("Authorization", token(unassignedApprover)))
+                .andExpect(status().isForbidden());
+
+        // Approve action -> 403 Forbidden
+        ApproveRequisitionRequest request = new ApproveRequisitionRequest("Người ngoài duyệt");
+        mvc.perform(put("/api/requisitions/" + requisition.getId() + "/approve")
+                        .header("Authorization", token(unassignedApprover))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Defect 1: Assigned Approver can view requisition detail within assigned scope")
+    void assignedApproverCanViewRequisitionDetail() throws Exception {
+        mvc.perform(get("/api/requisitions/" + requisition.getId())
+                        .header("Authorization", token(approverUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id", is(requisition.getId().intValue())));
     }
 }

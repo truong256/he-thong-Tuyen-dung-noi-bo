@@ -100,9 +100,6 @@ public class RequisitionApprovalService {
             historyList = generateAndPersistDefaultApprovalChain(req);
         }
 
-        boolean isFullAuthority = currentUser.getRoles().stream().anyMatch(r ->
-                r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN || r.getName() == RoleName.APPROVER);
-
         // Tìm bước đang chờ duyệt (PENDING)
         Optional<RequisitionApprovalHistory> pendingStepOpt = historyList.stream()
                 .filter(h -> "PENDING".equalsIgnoreCase(h.getStatus()))
@@ -115,6 +112,10 @@ public class RequisitionApprovalService {
 
         if (pendingStepOpt.isPresent()) {
             RequisitionApprovalHistory currentStep = pendingStepOpt.get();
+            if (currentStep.getApproverId() != null && !currentStep.getApproverId().equals(currentUser.getId())) {
+                throw new AccessDeniedException("Bạn không phải người phê duyệt ở cấp hiện tại.");
+            }
+
             currentStep.setStatus("COMPLETED");
             currentStep.setAction("APPROVE");
             currentStep.setApproverId(currentUser.getId());
@@ -130,31 +131,12 @@ public class RequisitionApprovalService {
                     .filter(h -> h.getStepOrder() == nextOrder)
                     .findFirst();
 
-            if (nextStepOpt.isPresent() && !isFullAuthority) {
+            if (nextStepOpt.isPresent()) {
                 RequisitionApprovalHistory nextStep = nextStepOpt.get();
                 nextStep.setStatus("PENDING");
                 nextStep.setAction("WAITING");
                 historyRepository.save(nextStep);
             } else {
-                // Nếu không còn bước nào hoặc duyệt bởi cấp cao nhất (Full Authority) -> Hoàn tất toàn bộ
-                if (isFullAuthority) {
-                    for (RequisitionApprovalHistory step : historyList) {
-                        if ("UPCOMING".equalsIgnoreCase(step.getStatus()) || "PENDING".equalsIgnoreCase(step.getStatus())) {
-                            step.setStatus("COMPLETED");
-                            step.setAction("APPROVE");
-                            step.setActionAt(now);
-                            if (step.getApproverId() == null) {
-                                step.setApproverId(currentUser.getId());
-                                step.setApproverName(currentUser.getFullName());
-                                step.setApproverEmail(currentUser.getEmail());
-                            }
-                            if (step.getComments() == null) {
-                                step.setComments(approvalComment);
-                            }
-                            historyRepository.save(step);
-                        }
-                    }
-                }
                 req.setStatus("APPROVED");
                 req.setApprovedByUserId(currentUser.getId());
                 req.setApprovedAt(now);
@@ -208,6 +190,9 @@ public class RequisitionApprovalService {
 
         if (pendingStepOpt.isPresent()) {
             RequisitionApprovalHistory currentStep = pendingStepOpt.get();
+            if (currentStep.getApproverId() != null && !currentStep.getApproverId().equals(currentUser.getId())) {
+                throw new AccessDeniedException("Bạn không phải người phê duyệt ở cấp hiện tại.");
+            }
             currentStep.setStatus("REJECTED");
             currentStep.setAction("REJECT");
             currentStep.setApproverId(currentUser.getId());

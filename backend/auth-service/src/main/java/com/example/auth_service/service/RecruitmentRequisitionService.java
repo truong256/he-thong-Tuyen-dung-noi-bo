@@ -14,6 +14,9 @@ import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,7 +39,28 @@ public class RecruitmentRequisitionService {
     private final JobTitleRepository jobTitleRepository;
     private final UserRepository userRepository;
     private final RequisitionApprovalWorkflowService approvalWorkflow;
+    private final RequisitionAssignmentRepository assignments;
+    private final RequisitionApprovalSnapshotRepository snapshots;
     private final Random random = new Random();
+
+    @Autowired
+    public RecruitmentRequisitionService(
+            RecruitmentRequisitionRepository requisitionRepository,
+            DepartmentRepository departmentRepository,
+            JobTitleRepository jobTitleRepository,
+            UserRepository userRepository,
+            RequisitionApprovalWorkflowService approvalWorkflow,
+            @Autowired(required = false) RequisitionAssignmentRepository assignments,
+            @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots
+    ) {
+        this.requisitionRepository = requisitionRepository;
+        this.departmentRepository = departmentRepository;
+        this.jobTitleRepository = jobTitleRepository;
+        this.userRepository = userRepository;
+        this.approvalWorkflow = approvalWorkflow;
+        this.assignments = assignments;
+        this.snapshots = snapshots;
+    }
 
     public RecruitmentRequisitionService(
             RecruitmentRequisitionRepository requisitionRepository,
@@ -45,11 +69,7 @@ public class RecruitmentRequisitionService {
             UserRepository userRepository,
             RequisitionApprovalWorkflowService approvalWorkflow
     ) {
-        this.requisitionRepository = requisitionRepository;
-        this.departmentRepository = departmentRepository;
-        this.jobTitleRepository = jobTitleRepository;
-        this.userRepository = userRepository;
-        this.approvalWorkflow = approvalWorkflow;
+        this(requisitionRepository, departmentRepository, jobTitleRepository, userRepository, approvalWorkflow, null, null);
     }
 
     public RequisitionResponse create(RequisitionRequest request, User currentUser) {
@@ -501,7 +521,11 @@ public class RecruitmentRequisitionService {
         }
         boolean isCreator = Objects.equals(req.getCreatedByUserId(), user.getId());
         boolean isDeptManager = dept != null && Objects.equals(dept.getManagerUserId(), user.getId());
-        if (!isCreator && !isDeptManager) {
+        boolean isAssignedRecruiter = assignments != null && assignments.findByRequisitionIdAndUserId(req.getId(), user.getId()).isPresent();
+        boolean isAssignedApprover = snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(s -> Objects.equals(s.getApproverUserId(), user.getId()));
+
+        if (!isCreator && !isDeptManager && !isAssignedRecruiter && !isAssignedApprover) {
             throw new AccessDeniedException("Bạn không có quyền truy cập yêu cầu tuyển dụng này.");
         }
     }

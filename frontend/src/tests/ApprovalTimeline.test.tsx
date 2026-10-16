@@ -188,6 +188,56 @@ describe('ApprovalTimelineModal Component (S3-03)', () => {
     });
   });
 
+  it('allows approver to request changes with mandatory comments (S3-02)', async () => {
+    vi.mocked(approvalApi.getTimeline).mockResolvedValueOnce(mockTimelineData);
+    const updatedMock = {
+      ...mockTimelineData,
+      status: 'DRAFT',
+      steps: [
+        mockTimelineData.steps[0],
+        {
+          ...mockTimelineData.steps[1],
+          status: 'REQUEST_CHANGES' as const,
+          action: 'REQUEST_CHANGES' as const,
+          comments: 'Cần bổ sung JD chi tiết và mức kinh nghiệm tối thiểu',
+          isCurrentStep: false,
+        },
+        mockTimelineData.steps[2],
+        mockTimelineData.steps[3],
+      ],
+    };
+    vi.mocked(approvalApi.requestChanges).mockResolvedValueOnce(updatedMock);
+
+    const onStatusChange = vi.fn();
+    render(
+      <ApprovalTimelineModal
+        requisitionId={101}
+        isOpen={true}
+        onClose={vi.fn()}
+        canApprove={true}
+        onStatusChange={onStatusChange}
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Thao tác phê duyệt tại bước hiện tại/i)).toBeInTheDocument();
+    });
+
+    const requestChangesBtn = screen.getByTitle(/Yêu cầu bổ sung thông tin/i);
+    fireEvent.click(requestChangesBtn);
+    expect(screen.getByText(/Vui lòng nhập nội dung yêu cầu bổ sung/i)).toBeInTheDocument();
+
+    const commentInput = screen.getByPlaceholderText(/Nhập ý kiến, ghi chú phê duyệt hoặc lý do từ chối/i);
+    fireEvent.change(commentInput, { target: { value: 'Cần bổ sung JD chi tiết và mức kinh nghiệm tối thiểu' } });
+
+    fireEvent.click(requestChangesBtn);
+
+    await waitFor(() => {
+      expect(approvalApi.requestChanges).toHaveBeenCalledWith(101, 'Cần bổ sung JD chi tiết và mức kinh nghiệm tối thiểu');
+      expect(onStatusChange).toHaveBeenCalled();
+    });
+  });
+
   it('calls onClose when close button is clicked', async () => {
     vi.mocked(approvalApi.getTimeline).mockResolvedValueOnce(mockTimelineData);
     const onClose = vi.fn();

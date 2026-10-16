@@ -161,7 +161,7 @@ class RequisitionApprovalConfigurationIntegrationTest {
                         .header("Authorization", token(hrManager))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request(
-                                new ApprovalConfigurationRequest.ApprovalStepRequest(1_000_000L, approverOne.getId())
+                                new ApprovalConfigurationRequest.ApprovalStepRequest(-1_000_000L, approverOne.getId())
                         ))))
                 .andExpect(status().isBadRequest());
 

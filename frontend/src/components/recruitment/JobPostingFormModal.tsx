@@ -8,6 +8,7 @@ import { Department } from '../../types/organization';
 import { JobTitle } from '../../types/jobTitle';
 import organizationApi from '../../api/organization';
 import jobTitleApi from '../../api/jobTitle';
+import { formatNumberWithCommas, handleNumberInputChange } from '../../utils/numberFormat';
 
 interface JobPostingFormModalProps {
   isOpen: boolean;
@@ -331,24 +332,24 @@ export const JobPostingFormModal: React.FC<JobPostingFormModalProps> = ({
             <div className="jp-form-group jp-flex-1">
               <label className="jp-label">Mức lương tối thiểu (VND)</label>
               <input
-                type="number"
-                step={500000}
+                type="text"
+                inputMode="numeric"
                 className="jp-input"
                 placeholder="20,000,000"
-                value={salaryMin ?? ''}
-                onChange={(e) => setSalaryMin(e.target.value ? Number(e.target.value) : undefined)}
+                value={formatNumberWithCommas(salaryMin)}
+                onChange={(e) => handleNumberInputChange(e, (raw) => setSalaryMin(raw ? Number(raw) : undefined))}
               />
             </div>
 
             <div className="jp-form-group jp-flex-1">
               <label className="jp-label">Mức lương tối đa (VND)</label>
               <input
-                type="number"
-                step={500000}
+                type="text"
+                inputMode="numeric"
                 className="jp-input"
                 placeholder="35,000,000"
-                value={salaryMax ?? ''}
-                onChange={(e) => setSalaryMax(e.target.value ? Number(e.target.value) : undefined)}
+                value={formatNumberWithCommas(salaryMax)}
+                onChange={(e) => handleNumberInputChange(e, (raw) => setSalaryMax(raw ? Number(raw) : undefined))}
               />
             </div>
 
