@@ -88,9 +88,15 @@ public class RequisitionApprovalWorkflowService {
         }
 
         RequisitionApprovalConfiguration configuration = activeConfiguration.get();
+        if (requisition.getSalaryMax() == null && requisition.getSalaryMin() == null) {
+            throw new BadRequestException("Dải lương đề xuất không được để trống khi xác định cấp phê duyệt.");
+        }
         long proposedSalary = requisition.getSalaryMax() != null
                 ? requisition.getSalaryMax()
-                : (requisition.getSalaryMin() != null ? requisition.getSalaryMin() : 0L);
+                : requisition.getSalaryMin();
+        if (proposedSalary <= 0) {
+            throw new BadRequestException("Mức lương đề xuất phải lớn hơn 0 để xác định cấp phê duyệt.");
+        }
 
         List<RequisitionApprovalConfigurationStep> applicableSteps = configurationSteps
                 .findAllByConfigurationIdOrderByStepOrderAsc(configuration.getId())
@@ -181,6 +187,12 @@ public class RequisitionApprovalWorkflowService {
                 .findAllByRequisitionIdOrderByStepOrderAsc(req.getId());
 
         if (existingSnapshots.isEmpty()) {
+            return;
+        }
+
+        Integer snapshotVersion = existingSnapshots.get(0).getConfigurationVersion();
+        if (snapshotVersion != null && !snapshotVersion.equals(activeConfig.getVersion())) {
+            // Snapshot belongs to an earlier frozen configuration version (S3-01 immutability rule)
             return;
         }
 
@@ -328,7 +340,7 @@ public class RequisitionApprovalWorkflowService {
                     .build());
         }
 
-        boolean isCompleted = (completedCount == snapshotList.size() && !snapshotList.isEmpty());
+        boolean isCompleted = "APPROVED".equalsIgnoreCase(req.getStatus()) || (completedCount == snapshotList.size() && !snapshotList.isEmpty());
         boolean isRejected = "REJECTED".equalsIgnoreCase(req.getStatus());
 
         return RequisitionApprovalTimelineResponse.builder()

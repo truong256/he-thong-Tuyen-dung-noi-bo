@@ -25,6 +25,8 @@ const mockJobTitles = [
     level: 'L4',
     minSalary: 25000000,
     maxSalary: 40000000,
+    standardHeadcount: 5,
+    currentHeadcount: 4,
     active: true,
   },
   {
@@ -34,6 +36,8 @@ const mockJobTitles = [
     level: 'L3',
     minSalary: 15000000,
     maxSalary: 25000000,
+    standardHeadcount: 2,
+    currentHeadcount: 2,
     active: true,
   },
 ];
@@ -239,5 +243,44 @@ describe('RequisitionManagementPage (S2-10 - Yêu cầu Tuyển dụng)', () => 
 
     expect(window.confirm).toHaveBeenCalled();
     expect(requisitionApi.delete).toHaveBeenCalledWith(101);
+  });
+
+  it('hides standard salary range ("Khung chuẩn:") for HIRING_MANAGER role (S2-05)', async () => {
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0001')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Tạo yêu cầu mới/i }));
+
+    // User has role HIRING_MANAGER only, so "Khung chuẩn:" must NOT be visible
+    expect(screen.queryByText(/Khung chuẩn:/i)).not.toBeInTheDocument();
+  });
+
+  it('shows headcount quota info and warning badge when quantity exceeds quota (S3-04)', async () => {
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0001')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Tạo yêu cầu mới/i }));
+
+    // For jobTitle id 10 (std: 5, curr: 4 -> remaining: 1)
+    // When quantity is 2 (> 1), warning badge should appear
+    const quantityInput = screen.getByDisplayValue('1');
+    fireEvent.change(quantityInput, { target: { value: '3' } });
+
+    expect(screen.getByText(/Cảnh báo vượt chỉ tiêu headcount/i)).toBeInTheDocument();
+    expect(screen.getByText(/vượt chỉ tiêu headcount còn lại/i)).toBeInTheDocument();
   });
 });

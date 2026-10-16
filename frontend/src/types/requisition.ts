@@ -10,7 +10,8 @@ export interface Requisition {
   targetDate?: string;
   neededDate?: string;
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-  reason: 'REPLACEMENT' | 'NEW_HEADCOUNT';
+  reason?: string;
+  recruitmentType?: 'REPLACEMENT' | 'NEW_HEADCOUNT' | string;
   proposedMinSalary?: number;
   proposedMaxSalary?: number;
   salaryMin?: number;
@@ -30,13 +31,18 @@ export interface RequisitionPayload {
   departmentId: number;
   jobTitleId: number;
   quantity: number;
-  reason: 'REPLACEMENT' | 'NEW_HEADCOUNT';
+  reason?: string;
+  recruitmentType?: 'REPLACEMENT' | 'NEW_HEADCOUNT' | string;
   proposedMinSalary?: number;
   proposedMaxSalary?: number;
+  salaryMin?: number;
+  salaryMax?: number;
   salaryExplanation?: string;
   targetDate?: string;
+  neededDate?: string;
   jobDescription?: string;
   requirements?: string;
+  candidateRequirements?: string;
   isDraft?: boolean;
 }
 

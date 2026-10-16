@@ -85,8 +85,10 @@ function mapToBackendPayload(payload: any) {
   const maxSal = payload.salaryMax !== undefined ? payload.salaryMax : (payload.proposedMaxSalary !== undefined ? payload.proposedMaxSalary : undefined);
   const nDate = payload.neededDate || payload.targetDate || undefined;
   const reqs = payload.candidateRequirements || payload.requirements || undefined;
-  const rType = payload.recruitmentType || (payload.reason === 'REPLACEMENT' ? 'REPLACEMENT' : 'NEW_HEADCOUNT');
-  const rReason = payload.reason || (rType === 'REPLACEMENT' ? 'Thay thế nhân sự' : 'Tăng mới theo kế hoạch định biên');
+  const rType = payload.recruitmentType || (payload.reason === 'REPLACEMENT' || payload.reason === 'NEW_HEADCOUNT' ? payload.reason : 'NEW_HEADCOUNT');
+  const rReason = (payload.reason && payload.reason !== 'REPLACEMENT' && payload.reason !== 'NEW_HEADCOUNT')
+    ? payload.reason
+    : (payload.recruitmentDemandExplanation || (payload.isDraft ? (payload.reason || undefined) : payload.reason || ''));
 
   return {
     ...payload,
@@ -106,7 +108,11 @@ function mapFromBackendResponse(item: any): Requisition {
     proposedMinSalary: item.salaryMin !== undefined ? item.salaryMin : item.proposedMinSalary,
     proposedMaxSalary: item.salaryMax !== undefined ? item.salaryMax : item.proposedMaxSalary,
     targetDate: item.neededDate || item.targetDate,
+    neededDate: item.neededDate || item.targetDate,
     requirements: item.candidateRequirements || item.requirements,
+    candidateRequirements: item.candidateRequirements || item.requirements,
+    recruitmentType: item.recruitmentType || item.reason,
+    reason: item.reason,
   };
 }
 

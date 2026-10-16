@@ -283,20 +283,48 @@ public class RequisitionService {
             throw new BadRequestException("Chức danh đã tạm ngưng, không thể tạo yêu cầu tuyển dụng");
         }
 
+        if (request.title() == null || request.title().trim().isBlank()) {
+            throw new BadRequestException("Vui lòng nhập tiêu đề yêu cầu tuyển dụng");
+        }
+
         if (request.quantity() == null || request.quantity() < 1) {
             throw new BadRequestException("Số lượng tuyển dụng phải lớn hơn 0");
         }
 
-        if (request.neededDate() != null && request.neededDate().isBefore(LocalDate.now())) {
+        if (request.recruitmentType() == null || request.recruitmentType().isBlank()) {
+            throw new BadRequestException("Vui lòng chọn loại nhu cầu tuyển dụng (Tuyển mới hoặc Tuyển thay thế)");
+        }
+
+        if (request.reason() == null || request.reason().isBlank()) {
+            throw new BadRequestException("Vui lòng nhập giải trình nhu cầu tuyển dụng");
+        }
+
+        if (request.neededDate() == null) {
+            throw new BadRequestException("Vui lòng chọn ngày cần người");
+        }
+
+        if (request.neededDate().isBefore(LocalDate.now())) {
             throw new BadRequestException("Ngày cần người không được ở quá khứ.");
         }
 
-        if ((request.salaryMin() != null && request.salaryMin() < 0) || (request.salaryMax() != null && request.salaryMax() < 0)) {
+        if (request.salaryMin() == null || request.salaryMax() == null) {
+            throw new BadRequestException("Dải lương đề xuất không được để trống khi gửi yêu cầu tuyển dụng");
+        }
+
+        if (request.salaryMin() < 0 || request.salaryMax() < 0) {
             throw new BadRequestException("Mức lương không được là số âm");
         }
 
-        if (request.salaryMin() != null && request.salaryMax() != null && request.salaryMin() > request.salaryMax()) {
+        if (request.salaryMin() > request.salaryMax()) {
             throw new BadRequestException("Lương tối đa phải lớn hơn hoặc bằng lương tối thiểu");
+        }
+
+        if (request.jobDescription() == null || request.jobDescription().isBlank()) {
+            throw new BadRequestException("Vui lòng nhập mô tả công việc");
+        }
+
+        if (request.candidateRequirements() == null || request.candidateRequirements().isBlank()) {
+            throw new BadRequestException("Vui lòng nhập yêu cầu ứng viên");
         }
 
         // Kiểm tra khung lương tiêu chuẩn của chức danh
@@ -372,6 +400,9 @@ public class RequisitionService {
         if (!dept.isActive()) {
             throw new BadRequestException("Phòng ban đã ngừng áp dụng");
         }
+        if (!hasManageAll && (dept.getManagerUserId() == null || !dept.getManagerUserId().equals(currentUser.getId()))) {
+            throw new AccessDeniedException("Bạn không có quyền tạo hoặc gửi yêu cầu tuyển dụng cho phòng ban này.");
+        }
 
         if (req.getJobTitleId() == null) {
             throw new BadRequestException("Vui lòng chọn chức danh trước khi gửi phê duyệt");
@@ -404,11 +435,15 @@ public class RequisitionService {
             throw new BadRequestException("Vui lòng nhập yêu cầu ứng viên");
         }
 
-        if ((req.getSalaryMin() != null && req.getSalaryMin() < 0) || (req.getSalaryMax() != null && req.getSalaryMax() < 0)) {
+        if (req.getSalaryMin() == null || req.getSalaryMax() == null) {
+            throw new BadRequestException("Dải lương đề xuất không được để trống khi gửi phê duyệt");
+        }
+
+        if (req.getSalaryMin() < 0 || req.getSalaryMax() < 0) {
             throw new BadRequestException("Mức lương không được là số âm");
         }
 
-        if (req.getSalaryMin() != null && req.getSalaryMax() != null && req.getSalaryMin() > req.getSalaryMax()) {
+        if (req.getSalaryMin() > req.getSalaryMax()) {
             throw new BadRequestException("Lương tối đa phải lớn hơn hoặc bằng lương tối thiểu");
         }
 
@@ -544,12 +579,8 @@ public class RequisitionService {
         }
 
         if (outside && (salaryExplanation == null || salaryExplanation.trim().isEmpty())) {
-            String jobMinStr = job.getMinSalary() != null ? String.format("%,d", job.getMinSalary()) : "Không giới hạn";
-            String jobMaxStr = job.getMaxSalary() != null ? String.format("%,d", job.getMaxSalary()) : "Không giới hạn";
             throw new BadRequestException(
-                    "Dải lương đề xuất nằm ngoài khung chuẩn của chức danh, bắt buộc nhập giải trình. " +
-                    "Dải lương nằm ngoài khung lương tiêu chuẩn của chức danh (" + jobMinStr + " – " + jobMaxStr + " VND). " +
-                    "Vui lòng nhập giải trình dải lương."
+                    "Dải lương nằm ngoài khung lương tiêu chuẩn của chức danh. Vui lòng nhập lý do giải trình dải lương."
             );
         }
     }
