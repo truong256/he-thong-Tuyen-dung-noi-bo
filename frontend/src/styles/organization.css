@@ -305,7 +305,8 @@
   margin-bottom: 0;
 }
 
-.card-title-row {
+.overview-card .card-title-row,
+.org-card-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -314,7 +315,8 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
-.card-title-row h3 {
+.overview-card .card-title-row h3,
+.org-card-title-row h3 {
   font-size: 1.12rem;
   font-weight: 700;
   color: #0f172a;
@@ -323,23 +325,27 @@
   gap: 10px;
 }
 
-.card-title-icon {
+.overview-card .card-title-icon,
+.org-card-title-icon {
   color: var(--primary-600);
 }
 
-.info-data-grid {
+.overview-card .info-data-grid,
+.org-info-data-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px 24px;
 }
 
-.info-item {
+.overview-card .info-item,
+.org-info-item {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.info-item-label {
+.overview-card .info-item-label,
+.org-info-item-label {
   font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -347,14 +353,16 @@
   letter-spacing: 0.03em;
 }
 
-.info-item-value {
+.overview-card .info-item-value,
+.org-info-item-value {
   font-size: 0.94rem;
   font-weight: 500;
   color: #1e293b;
   word-break: break-word;
 }
 
-.info-item-value a {
+.overview-card .info-item-value a,
+.org-info-item-value a {
   color: var(--primary-600);
   text-decoration: none;
 }
@@ -1461,7 +1469,8 @@
   margin-top: 12px;
 }
 
-.benefit-item {
+.overview-card .benefit-item,
+.org-benefit-item {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -1470,16 +1479,18 @@
   line-height: 1.5;
 }
 
-.benefit-check-icon {
+.overview-card .benefit-check-icon,
+.org-benefit-check-icon {
   color: #059669;
   flex-shrink: 0;
   margin-top: 2px;
 }
 
 /* ==========================================================================
-   MODAL DIALOG STYLES
+   MODAL DIALOG STYLES (SCOPED TO ORGANIZATION MODULE)
    ========================================================================== */
-.modal-backdrop {
+.org-modal-backdrop,
+.modal-backdrop.org-modal-backdrop {
   position: fixed;
   top: 0;
   left: 0;
@@ -1494,7 +1505,8 @@
   padding: 16px;
 }
 
-.modal-dialog {
+.org-modal-dialog,
+.modal-dialog.org-modal-dialog {
   background: #ffffff;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
@@ -1519,7 +1531,8 @@
   }
 }
 
-.modal-header {
+.org-modal-header,
+.org-modal-dialog .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1528,24 +1541,25 @@
   background: #f8fafc;
 }
 
-.modal-title-wrap {
+.org-modal-title-wrap {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.modal-title-wrap h3 {
+.org-modal-title-wrap h3 {
   font-size: 1.15rem;
   font-weight: 700;
   color: #0f172a;
   margin: 0;
 }
 
-.modal-title-icon {
+.org-modal-title-icon {
   color: var(--primary-600);
 }
 
-.modal-close-btn {
+.org-modal-close-btn,
+.org-modal-dialog .modal-close-btn {
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -1558,17 +1572,20 @@
   transition: all var(--motion-fast) ease;
 }
 
-.modal-close-btn:hover {
+.org-modal-close-btn:hover,
+.org-modal-dialog .modal-close-btn:hover {
   background: #e2e8f0;
   color: var(--text-main);
 }
 
-.modal-body {
+.org-modal-body,
+.org-modal-dialog .modal-body {
   padding: 24px;
   overflow-y: auto;
 }
 
-.modal-footer {
+.org-modal-footer,
+.org-modal-dialog .modal-footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1578,7 +1595,7 @@
   background: #fafbfc;
 }
 
-.modal-alert-error {
+.org-modal-alert-error {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1591,29 +1608,32 @@
   margin-bottom: 20px;
 }
 
-.form-grid-2 {
+.org-form-grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 
-.form-grid-2 .span-2 {
+.org-form-grid-2 .span-2 {
   grid-column: span 2;
 }
 
-.form-group {
+.org-form-group,
+.org-modal-dialog .form-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.form-group label {
+.org-form-group label,
+.org-modal-dialog .form-group label {
   font-size: 0.84rem;
   font-weight: 600;
   color: #334155;
 }
 
-.form-control {
+.org-form-control,
+.org-modal-dialog .form-control {
   height: 40px;
   padding: 0 14px;
   border: 1px solid var(--border-color);
@@ -1626,29 +1646,32 @@
   transition: border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
 }
 
-textarea.form-control {
+textarea.org-form-control,
+.org-modal-dialog textarea.form-control {
   height: auto;
   padding: 10px 14px;
 }
 
-.form-control:focus {
+.org-form-control:focus,
+.org-modal-dialog .form-control:focus {
   outline: none;
   border-color: #94a3b8;
   box-shadow: none;
 }
 
-.form-control:focus-visible {
+.org-form-control:focus-visible,
+.org-modal-dialog .form-control:focus-visible {
   outline: none;
   border-color: #94a3b8;
   box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
-.field-hint {
+.org-field-hint {
   font-size: 0.74rem;
   color: var(--text-light);
 }
 
-.checkbox-custom-label {
+.org-checkbox-custom-label {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1658,33 +1681,33 @@ textarea.form-control {
   cursor: pointer;
 }
 
-.toggle-group {
+.org-toggle-group {
   display: flex;
   flex-direction: column;
   justify-content: center;
 }
 
-.toggle-label {
+.org-toggle-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
 }
 
-.toggle-switch-wrapper {
+.org-toggle-switch-wrapper {
   position: relative;
   display: inline-block;
   width: 44px;
   height: 24px;
 }
 
-.toggle-checkbox {
+.org-toggle-checkbox {
   opacity: 0;
   width: 0;
   height: 0;
 }
 
-.toggle-slider {
+.org-toggle-slider {
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -1696,7 +1719,7 @@ textarea.form-control {
   border-radius: 24px;
 }
 
-.toggle-slider:before {
+.org-toggle-slider:before {
   position: absolute;
   content: "";
   height: 18px;
@@ -1708,11 +1731,11 @@ textarea.form-control {
   border-radius: 50%;
 }
 
-.toggle-checkbox:checked + .toggle-slider {
+.org-toggle-checkbox:checked + .org-toggle-slider {
   background-color: var(--primary);
 }
 
-.toggle-checkbox:checked + .toggle-slider:before {
+.org-toggle-checkbox:checked + .org-toggle-slider:before {
   transform: translateX(20px);
 }
 
@@ -1746,10 +1769,12 @@ textarea.form-control {
     justify-content: flex-start;
   }
 
+  .org-form-grid-2,
   .form-grid-2 {
     grid-template-columns: 1fr;
   }
 
+  .org-form-grid-2 .span-2,
   .form-grid-2 .span-2 {
     grid-column: span 1;
   }
