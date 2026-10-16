@@ -1,7 +1,7 @@
 {
-  "commitSha": "b5d4df6",
+  "commitSha": "bc325e6",
   "mode": "after",
-  "updatedAt": "2026-10-16T07:43:21.789Z",
+  "updatedAt": "2026-10-16T08:45:36.877Z",
   "screenshots": {
     "dashboard-1440x900": {
       "page": "dashboard",
@@ -9,7 +9,7 @@
       "filename": "dashboard-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:45.142Z",
+      "capturedAt": "2026-10-16T08:45:13.679Z",
       "url": "http://localhost:5173/dashboard"
     },
     "login-1440x900": {
@@ -18,7 +18,7 @@
       "filename": "login-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:45.209Z",
+      "capturedAt": "2026-10-16T08:45:13.678Z",
       "url": "http://localhost:5173/login"
     },
     "profile-1440x900": {
@@ -27,7 +27,7 @@
       "filename": "profile-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:48.899Z",
+      "capturedAt": "2026-10-16T08:45:18.314Z",
       "url": "http://localhost:5173/profile"
     },
     "admin-users-1440x900": {
@@ -36,7 +36,7 @@
       "filename": "admin-users-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:50.032Z",
+      "capturedAt": "2026-10-16T08:45:18.290Z",
       "url": "http://localhost:5173/admin/users"
     },
     "admin-permission-matrix-1440x900": {
@@ -45,7 +45,7 @@
       "filename": "admin-permission-matrix-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:53.297Z",
+      "capturedAt": "2026-10-16T08:45:22.505Z",
       "url": "http://localhost:5173/admin/permission-matrix"
     },
     "organization-1440x900": {
@@ -54,7 +54,7 @@
       "filename": "organization-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:54.242Z",
+      "capturedAt": "2026-10-16T08:45:22.652Z",
       "url": "http://localhost:5173/organization"
     },
     "job-titles-1440x900": {
@@ -63,7 +63,7 @@
       "filename": "job-titles-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:58.349Z",
+      "capturedAt": "2026-10-16T08:45:27.045Z",
       "url": "http://localhost:5173/job-titles"
     },
     "requisitions-1440x900": {
@@ -72,7 +72,7 @@
       "filename": "requisitions-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:41:59.466Z",
+      "capturedAt": "2026-10-16T08:45:27.178Z",
       "url": "http://localhost:5173/recruitment/requisitions"
     },
     "job-postings-1440x900": {
@@ -81,7 +81,7 @@
       "filename": "job-postings-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:42:02.827Z",
+      "capturedAt": "2026-10-16T08:45:31.317Z",
       "url": "http://localhost:5173/recruitment/job-postings"
     },
     "questions-1440x900": {
@@ -90,7 +90,7 @@
       "filename": "questions-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:42:03.809Z",
+      "capturedAt": "2026-10-16T08:45:32.469Z",
       "url": "http://localhost:5173/questions"
     },
     "approval-configurations-1440x900": {
@@ -99,7 +99,7 @@
       "filename": "approval-configurations-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:42:07.381Z",
+      "capturedAt": "2026-10-16T08:45:36.014Z",
       "url": "http://localhost:5173/recruitment/approval-configurations"
     },
     "competencies-1440x900": {
@@ -108,7 +108,7 @@
       "filename": "competencies-1440x900.png",
       "width": 1440,
       "height": 900,
-      "capturedAt": "2026-10-16T07:42:08.129Z",
+      "capturedAt": "2026-10-16T08:45:36.877Z",
       "url": "http://localhost:5173/competencies"
     },
     "login-768x1024": {

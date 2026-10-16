@@ -172,12 +172,14 @@ export const RequisitionManagementPage: React.FC = () => {
     setJobTitleId(req.jobTitleId);
     setQuantity(req.quantity);
     setReason(req.reason);
-    setProposedMinSalary(req.proposedMinSalary ? String(req.proposedMinSalary) : '');
-    setProposedMaxSalary(req.proposedMaxSalary ? String(req.proposedMaxSalary) : '');
+    const minSal = req.proposedMinSalary ?? req.salaryMin;
+    const maxSal = req.proposedMaxSalary ?? req.salaryMax;
+    setProposedMinSalary(minSal !== undefined && minSal !== null ? String(minSal) : '');
+    setProposedMaxSalary(maxSal !== undefined && maxSal !== null ? String(maxSal) : '');
     setSalaryExplanation(req.salaryExplanation || '');
-    setTargetDate(req.targetDate || '');
+    setTargetDate(req.targetDate || req.neededDate || '');
     setJobDescription(req.jobDescription || '');
-    setRequirements(req.requirements || '');
+    setRequirements(req.requirements || req.candidateRequirements || '');
     setFormErrors({});
     setIsModalOpen(true);
   };

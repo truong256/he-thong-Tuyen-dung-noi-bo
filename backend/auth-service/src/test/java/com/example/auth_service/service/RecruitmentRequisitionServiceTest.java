@@ -457,6 +457,39 @@ class RecruitmentRequisitionServiceTest {
         assertThat(cloned.title()).isEqualTo("Kỹ sư phần mềm Java");
         assertThat(cloned.departmentId()).isEqualTo(itDept.getId());
         assertThat(cloned.jobTitleId()).isEqualTo(devJob.getId());
+        assertThat(cloned.salaryMin()).isEqualTo(18_000_000L);
+        assertThat(cloned.salaryMax()).isEqualTo(28_000_000L);
         assertThat(cloned.requisitionCode()).isNotEqualTo("REQ-ORIGINAL-001");
+    }
+
+    @Test
+    @DisplayName("SCRUM-128: clone sao chép chính xác khi bản ghi gốc dùng các trường proposedMinSalary, proposedMaxSalary, requirements")
+    void clone_fallbackFields_copiedCorrectly() {
+        RecruitmentRequisition original = new RecruitmentRequisition();
+        original.setId(51L);
+        original.setRequisitionCode("REQ-FALLBACK-002");
+        original.setTitle("QA Automation Lead");
+        original.setDepartmentId(itDept.getId());
+        original.setJobTitleId(devJob.getId());
+        original.setQuantity(1);
+        original.setProposedMinSalary(12_000_000L);
+        original.setProposedMaxSalary(20_000_000L);
+        original.setRequirements("Kinh nghiệm kiểm thử tự động với Playwright");
+        original.setNeededDate(LocalDate.now().plusMonths(2));
+        original.setStatus("APPROVED");
+        original.setCreatedByUserId(hiringManager.getId());
+
+        when(requisitionRepository.findById(51L)).thenReturn(Optional.of(original));
+        when(departmentRepository.findById(itDept.getId())).thenReturn(Optional.of(itDept));
+        when(jobTitleRepository.findById(devJob.getId())).thenReturn(Optional.of(devJob));
+        when(requisitionRepository.save(any(RecruitmentRequisition.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        RequisitionResponse cloned = service.clone(51L, hiringManager);
+
+        assertThat(cloned).isNotNull();
+        assertThat(cloned.status()).isEqualTo("DRAFT");
+        assertThat(cloned.salaryMin()).isEqualTo(12_000_000L);
+        assertThat(cloned.salaryMax()).isEqualTo(20_000_000L);
+        assertThat(cloned.candidateRequirements()).isEqualTo("Kinh nghiệm kiểm thử tự động với Playwright");
     }
 }
