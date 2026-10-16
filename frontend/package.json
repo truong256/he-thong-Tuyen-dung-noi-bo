@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:visual": "playwright test e2e/visual-baselines.spec.ts",
+    "validate": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "@fontsource/be-vietnam-pro": "^5.3.0",
