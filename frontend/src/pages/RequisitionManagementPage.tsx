@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Search,
   AlertTriangle,
@@ -26,6 +27,7 @@ import { Requisition, RequisitionPayload, RequisitionAssignments, AssignableRecr
 import { Department } from '../types/organization';
 import { JobTitle } from '../types/jobTitle';
 import { PageHeader } from '../components/common/PageHeader';
+import { Pagination } from '../components/common';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import { AssignRecruiterModal } from '../components/requisition/AssignRecruiterModal';
 import { formatNumberWithCommas, handleNumberInputChange, parseNumberFromCommas } from '../utils/numberFormat';
@@ -50,12 +52,30 @@ export const RequisitionManagementPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [timelineReqId, setTimelineReqId] = useState<number | null>(null);
 
-  // Filters
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
-  const [deptFilter, setDeptFilter] = useState<number | undefined>(undefined);
-  const [recruiterFilter, setRecruiterFilter] = useState<string>('ALL');
-  const [slaFilter, setSlaFilter] = useState<'ALL' | 'OVERDUE' | 'WARNING'>('ALL');
+  // URL Query Parameters (S3-08: Giữ nguyên bộ lọc khi chuyển trang, phân trang backend)
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
+  const sizeFromUrl = parseInt(searchParams.get('size') || '10', 10);
+  const searchParam = searchParams.get('search') || '';
+  const statusFilter = searchParams.get('status') || 'ALL';
+  const deptFilter = searchParams.get('dept') ? Number(searchParams.get('dept')) : undefined;
+  const recruiterFilter = searchParams.get('recruiter') || 'ALL';
+  const slaFilter = (searchParams.get('sla') || 'ALL') as 'ALL' | 'OVERDUE' | 'WARNING' | 'SAFE' | 'INACTIVE';
+  const fromDateFilter = searchParams.get('fromDate') || '';
+  const toDateFilter = searchParams.get('toDate') || '';
+
+  const currentPage = Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1;
+  const pageSize = [10, 20, 50].includes(sizeFromUrl) ? sizeFromUrl : 10;
+
+  const [dateError, setDateError] = useState<string>('');
+  const [totalElements, setTotalElements] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [searchInput, setSearchInput] = useState(searchParam);
+
+  useEffect(() => {
+    setSearchInput(searchParam);
+  }, [searchParam]);
 
   // Modal create/edit
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -106,25 +126,104 @@ export const RequisitionManagementPage: React.FC = () => {
     setTimeout(() => setToast(null), 4000);
   };
 
+  // Cập nhật bộ lọc và tự động quay về trang 1 mà không mất các bộ lọc khác
+  const updateFilter = useCallback((updates: Record<string, string | number | undefined | null>) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('page', '1');
+
+      Object.entries(updates).forEach(([key, val]) => {
+        if (val === undefined || val === null || val === '' || val === 'ALL') {
+          next.delete(key);
+        } else {
+          next.set(key, String(val));
+        }
+      });
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
+  // Handle date range change with validation
+  const handleDateRangeChange = (from: string, to: string) => {
+    if (from && to && from > to) {
+      setDateError('Ngày bắt đầu không được lớn hơn ngày kết thúc.');
+      return;
+    }
+    setDateError('');
+    updateFilter({ fromDate: from || undefined, toDate: to || undefined });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('page', String(newPage));
+      return next;
+    });
+  };
+
+  const handlePageSizeChange = (newSize: number) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('size', String(newSize));
+      next.set('page', '1');
+      return next;
+    });
+  };
+
+  // Debounce search update
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchInput !== searchParam) {
+        updateFilter({ search: searchInput.trim() || undefined });
+      }
+    }, 350);
+    return () => clearTimeout(handler);
+  }, [searchInput, searchParam, updateFilter]);
+
+  // Load reference catalogs once on mount
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      organizationApi.getDepartments(),
+      jobTitleApi.getJobTitles(),
+      Promise.resolve(requisitionApi.getAssignableRecruiters?.()).then((r) => r || []).catch(() => []),
+    ]).then(([deptRes, jtRes, recList]) => {
+      if (mounted) {
+        setDepartments(deptRes || []);
+        setJobTitles(jtRes || []);
+        setRecruiters(Array.isArray(recList) ? recList : []);
+      }
+    }).catch((err) => {
+      console.error('Failed to load reference catalogs:', err);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Load requisitions & reference catalogs
   const loadData = useCallback(async () => {
+    if (fromDateFilter && toDateFilter && fromDateFilter > toDateFilter) {
+      return;
+    }
     setIsLoading(true);
     try {
-      const [reqRes, deptRes, jtRes, recList] = await Promise.all([
-        requisitionApi.list({
-          search: search.trim() || undefined,
-          status: statusFilter !== 'ALL' ? statusFilter : undefined,
-          departmentId: deptFilter,
-        }),
-        organizationApi.getDepartments(),
-        jobTitleApi.getJobTitles(),
-        Promise.resolve(requisitionApi.getAssignableRecruiters?.()).then((r) => r || []).catch(() => []),
-      ]);
+      const reqRes = await requisitionApi.list({
+        search: searchParam.trim() || undefined,
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        departmentId: deptFilter,
+        recruiterId: recruiterFilter !== 'ALL' ? Number(recruiterFilter) : undefined,
+        sla: slaFilter !== 'ALL' ? slaFilter : undefined,
+        fromDate: fromDateFilter || undefined,
+        toDate: toDateFilter || undefined,
+        page: currentPage - 1,
+        size: pageSize,
+      });
+
       const items = reqRes?.content || [];
       setRequisitions(items);
-      setDepartments(deptRes || []);
-      setJobTitles(jtRes || []);
-      setRecruiters(Array.isArray(recList) ? recList : []);
+      setTotalElements(reqRes?.totalElements || 0);
+      setTotalPages(reqRes?.totalPages || 1);
 
       // Load assignments for visible requisitions
       if (items.length > 0 && typeof requisitionApi.getAssignments === 'function') {
@@ -139,6 +238,8 @@ export const RequisitionManagementPage: React.FC = () => {
           });
           setAssignmentMap(map);
         });
+      } else {
+        setAssignmentMap({});
       }
     } catch (err: any) {
       console.error('Failed to load requisitions:', err);
@@ -146,7 +247,17 @@ export const RequisitionManagementPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [search, statusFilter, deptFilter]);
+  }, [
+    searchParam,
+    statusFilter,
+    deptFilter,
+    recruiterFilter,
+    slaFilter,
+    fromDateFilter,
+    toDateFilter,
+    currentPage,
+    pageSize,
+  ]);
 
   useEffect(() => {
     loadData();
@@ -160,27 +271,8 @@ export const RequisitionManagementPage: React.FC = () => {
     return departments;
   }, [departments, isHiringManagerOnly, user]);
 
-  const filteredRequisitions = useMemo(() => {
-    return requisitions.filter((req) => {
-      // Recruiter filter
-      if (recruiterFilter !== 'ALL') {
-        const targetRecId = Number(recruiterFilter);
-        const assign = assignmentMap[req.id];
-        const isPrimary = assign?.primaryRecruiter?.userId === targetRecId;
-        const isSupport = assign?.supportRecruiters?.some((sr) => sr.userId === targetRecId);
-        if (!isPrimary && !isSupport) return false;
-      }
-      // SLA filter
-      if (slaFilter !== 'ALL') {
-        const timing = requisitionTiming(req.createdAt, req.targetDate || req.neededDate, req.status);
-        if (slaFilter === 'OVERDUE' && !timing.overdue) return false;
-        if (slaFilter === 'WARNING') {
-          if (timing.daysRemaining === null || timing.daysRemaining > 3 || timing.overdue) return false;
-        }
-      }
-      return true;
-    });
-  }, [requisitions, recruiterFilter, slaFilter, assignmentMap]);
+  // Bộ lọc đã được áp dụng toàn diện ở backend trước khi phân trang
+  const filteredRequisitions = requisitions;
 
   // Selected Job Title for standard salary validation & headcount
   const selectedJobTitleObj = useMemo(() => {
@@ -566,15 +658,20 @@ export const RequisitionManagementPage: React.FC = () => {
             type="text"
             className="req-search-input"
             placeholder="Tìm theo mã yêu cầu hoặc tiêu đề..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                updateFilter({ search: searchInput.trim() || undefined });
+              }
+            }}
           />
         </div>
 
         <select
           className="req-select"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          onChange={(e) => updateFilter({ status: e.target.value })}
         >
           <option value="ALL">Tất cả trạng thái</option>
           <option value="DRAFT">Lưu nháp (DRAFT)</option>
@@ -588,11 +685,11 @@ export const RequisitionManagementPage: React.FC = () => {
 
         <select
           className="req-select"
-          value={deptFilter || ''}
-          onChange={(e) => setDeptFilter(e.target.value ? Number(e.target.value) : undefined)}
+          value={deptFilter !== undefined ? String(deptFilter) : ''}
+          onChange={(e) => updateFilter({ dept: e.target.value ? Number(e.target.value) : undefined })}
         >
           <option value="">Tất cả phòng ban</option>
-          {departments.map((d) => (
+          {availableDepartments.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
             </option>
@@ -602,7 +699,7 @@ export const RequisitionManagementPage: React.FC = () => {
         <select
           className="req-select"
           value={recruiterFilter}
-          onChange={(e) => setRecruiterFilter(e.target.value)}
+          onChange={(e) => updateFilter({ recruiter: e.target.value })}
         >
           <option value="ALL">Tất cả Recruiter phụ trách</option>
           {recruiters.map((r) => (
@@ -615,13 +712,52 @@ export const RequisitionManagementPage: React.FC = () => {
         <select
           className="req-select"
           value={slaFilter}
-          onChange={(e) => setSlaFilter(e.target.value as any)}
+          onChange={(e) => updateFilter({ sla: e.target.value })}
         >
           <option value="ALL">Tất cả hạn SLA</option>
           <option value="OVERDUE">⚠️ Đã quá hạn (Overdue)</option>
-          <option value="WARNING">⏳ Sắp đến hạn (≤ 3 ngày)</option>
+          <option value="WARNING">⏳ Sắp đến hạn (≤ 7 ngày)</option>
+          <option value="SAFE">✅ Còn hạn an toàn (&gt; 7 ngày)</option>
+          <option value="INACTIVE">⏹️ Đã kết thúc / Không áp dụng</option>
         </select>
+
+        {/* Date Range Filter (S3-08: Từ ngày - Đến ngày) */}
+        <div className="req-filter-date-group">
+          <label className="req-filter-date-label">Từ:</label>
+          <input
+            type="date"
+            className="req-date-input"
+            aria-label="Từ ngày tạo"
+            value={fromDateFilter}
+            onChange={(e) => handleDateRangeChange(e.target.value, toDateFilter)}
+          />
+          <label className="req-filter-date-label">Đến:</label>
+          <input
+            type="date"
+            className="req-date-input"
+            aria-label="Đến ngày tạo"
+            value={toDateFilter}
+            onChange={(e) => handleDateRangeChange(fromDateFilter, e.target.value)}
+          />
+          {(fromDateFilter || toDateFilter) && (
+            <button
+              type="button"
+              className="req-date-clear-btn"
+              title="Xóa bộ lọc ngày"
+              onClick={() => handleDateRangeChange('', '')}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
+
+      {dateError && (
+        <div className="req-filter-error-banner" role="alert">
+          <AlertTriangle size={15} />
+          <span>{dateError}</span>
+        </div>
+      )}
 
       {/* Table Card */}
       <div className="req-table-card">
@@ -669,39 +805,65 @@ export const RequisitionManagementPage: React.FC = () => {
                   </td>
                   <td>
                     {(() => {
-                      const timing = requisitionTiming(req.createdAt, req.targetDate || req.neededDate, req.status);
-                      if (['CLOSED', 'CANCELLED', 'REJECTED', 'DRAFT'].includes(req.status)) {
-                        return (
-                          <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
-                            <div>{req.targetDate || '—'}</div>
-                            <span className="req-sla-badge inactive">Đã kết thúc</span>
-                          </div>
+                      const timing = requisitionTiming(
+                        req.createdAt,
+                        req.targetDate || req.neededDate,
+                        req.status,
+                        new Date(),
+                        req.approvedAt
+                      );
+
+                      let slaBadge = null;
+                      if (['CLOSED', 'CANCELLED', 'REJECTED'].includes(req.status)) {
+                        slaBadge = <span className="req-sla-badge inactive">Đã kết thúc</span>;
+                      } else if (timing.daysRemaining === null) {
+                        slaBadge = <span className="req-sla-badge inactive">Chưa có hạn</span>;
+                      } else if (timing.overdue) {
+                        slaBadge = (
+                          <span className="req-sla-badge overdue" title={`Quá hạn ${timing.daysOverdue} ngày`}>
+                            <AlertCircle size={11} />
+                            {timing.remainingLabel}
+                          </span>
+                        );
+                      } else if (timing.daysRemaining === 0) {
+                        slaBadge = (
+                          <span className="req-sla-badge warning" title="Đến hạn hôm nay">
+                            <Clock size={11} />
+                            Hạn hôm nay
+                          </span>
+                        );
+                      } else if (timing.daysRemaining <= 7) {
+                        slaBadge = (
+                          <span className="req-sla-badge warning" title={`Sắp đến hạn (${timing.daysRemaining} ngày)`}>
+                            <Clock size={11} />
+                            {timing.remainingLabel}
+                          </span>
+                        );
+                      } else {
+                        slaBadge = (
+                          <span className="req-sla-badge ok" title={`Còn hạn an toàn (${timing.daysRemaining} ngày)`}>
+                            <Clock size={11} />
+                            {timing.remainingLabel}
+                          </span>
                         );
                       }
-                      if (timing.overdue) {
-                        return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <div style={{ fontSize: '0.8125rem', color: '#0f172a' }}>{req.targetDate || '—'}</div>
-                            <span className="req-sla-badge overdue">
-                              <AlertCircle size={11} />
-                              Trễ {timing.daysOverdue} ngày
+
+                      return (
+                        <div className={`req-sla-cell-content ${timing.overdue ? 'is-overdue' : ''}`}>
+                          <div className="req-deadline-date">
+                            {req.targetDate || req.neededDate || '—'}
+                          </div>
+                          <div className="req-sla-badge-row">
+                            {slaBadge}
+                            <span
+                              className={`req-days-open-badge ${timing.daysOpen !== null ? 'opened' : 'unopened'}`}
+                              title={timing.daysOpen !== null ? `Đã mở ${timing.daysOpen} ngày` : 'Yêu cầu chưa mở chính thức'}
+                            >
+                              {timing.openLabel}
                             </span>
                           </div>
-                        );
-                      }
-                      if (timing.daysRemaining !== null) {
-                        const isUrgent = timing.daysRemaining <= 3;
-                        return (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <div style={{ fontSize: '0.8125rem', color: '#0f172a' }}>{req.targetDate || '—'}</div>
-                            <span className={`req-sla-badge ${isUrgent ? 'warning' : 'ok'}`}>
-                              <Clock size={11} />
-                              {timing.daysRemaining === 0 ? 'Hôm nay đến hạn' : `Còn ${timing.daysRemaining} ngày`}
-                            </span>
-                          </div>
-                        );
-                      }
-                      return <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>{req.targetDate || '—'}</span>;
+                        </div>
+                      );
                     })()}
                   </td>
                   <td>
@@ -877,6 +1039,22 @@ export const RequisitionManagementPage: React.FC = () => {
               ))}
             </tbody>
           </table>
+        )}
+
+        {/* S3-08: Phân trang chuẩn giao diện Enterprise */}
+        {!isLoading && requisitions.length > 0 && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalElements}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              itemUnitLabel="yêu cầu"
+            />
+          </div>
         )}
       </div>
 

@@ -1136,6 +1136,52 @@
   margin: 0 3px;
 }
 
+.pagination-numbers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--motion-fast) ease;
+}
+
+.pagination-number:hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.pagination-number.is-active {
+  background: var(--color-primary, #2563eb);
+  border-color: var(--color-primary, #2563eb);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 34px;
+  color: var(--text-muted, #94a3b8);
+  font-size: 0.82rem;
+}
+
 /* ==========================================================================
    8. STANDARDIZED MODAL & DIALOGS
    ========================================================================== */

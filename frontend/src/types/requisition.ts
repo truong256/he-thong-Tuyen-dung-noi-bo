@@ -23,6 +23,8 @@ export interface Requisition {
   candidateRequirements?: string;
   createdByUserId?: number;
   createdByName?: string;
+  approvedByUserId?: number;
+  approvedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -49,10 +51,16 @@ export interface RequisitionPayload {
 
 export interface RequisitionFilterParams {
   search?: string;
+  keyword?: string;
   status?: string;
   departmentId?: number;
+  fromDate?: string;
+  toDate?: string;
+  recruiterId?: number;
+  sla?: string;
   page?: number;
   size?: number;
+  sort?: string;
 }
 
 export interface RequisitionPageResponse {

@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
@@ -505,12 +506,73 @@ public class RequisitionService {
      */
     @Transactional(readOnly = true)
     public Page<RequisitionResponse> list(String status, Long departmentId, String keyword, Pageable pageable) {
+        return list(status, departmentId, keyword, null, null, null, null, pageable);
+    }
+
+    /**
+     * Danh sách yêu cầu tuyển dụng phân trang kèm lọc trạng thái, phòng ban, từ khóa, khoảng thời gian, recruiter phụ trách, SLA.
+     */
+    @Transactional(readOnly = true)
+    public Page<RequisitionResponse> list(
+            String status,
+            Long departmentId,
+            String keyword,
+            LocalDate fromDate,
+            LocalDate toDate,
+            Long recruiterId,
+            String sla,
+            Pageable pageable
+    ) {
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new BadRequestException("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
+        }
+
+        ZoneId vnZone = ZoneId.of("Asia/Ho_Chi_Minh");
+        Instant fromInstant = fromDate != null ? fromDate.atStartOfDay(vnZone).toInstant() : null;
+        Instant toInstant = toDate != null ? toDate.plusDays(1).atStartOfDay(vnZone).toInstant() : null;
+
+        LocalDate today = LocalDate.now(vnZone);
+        LocalDate warningDate = today.plusDays(7);
+
+        boolean hasRecruiterFilter = recruiterId != null;
+        java.util.List<Long> recruiterReqIds = java.util.List.of(-1L);
+        if (hasRecruiterFilter && assignments != null) {
+            recruiterReqIds = assignments.findByUserId(recruiterId).stream()
+                    .map(com.example.auth_service.entity.RequisitionAssignment::getRequisitionId)
+                    .toList();
+            if (recruiterReqIds.isEmpty()) {
+                recruiterReqIds = java.util.List.of(-1L);
+            }
+        }
+
+        String normalizedSla = (sla != null && !sla.trim().isEmpty() && !sla.equalsIgnoreCase("ALL"))
+                ? sla.trim().toUpperCase()
+                : null;
+
+        boolean hasExtraFilters = fromInstant != null || toInstant != null || hasRecruiterFilter || normalizedSla != null;
+
         User currentUser = getCurrentUser();
         boolean canReadAll = currentUser.getRoles().stream()
                 .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
 
         if (canReadAll) {
-            return requisitions.search(null, status, departmentId, keyword, pageable).map(this::toResponse);
+            if (!hasExtraFilters) {
+                return requisitions.search(null, status, departmentId, keyword, pageable).map(this::toResponse);
+            }
+            return requisitions.searchWithFilters(
+                    null,
+                    status,
+                    departmentId,
+                    keyword,
+                    fromInstant,
+                    toInstant,
+                    hasRecruiterFilter,
+                    recruiterReqIds,
+                    normalizedSla,
+                    today,
+                    warningDate,
+                    pageable
+            ).map(this::toResponse);
         }
 
         java.util.Set<Long> assignedIds = new java.util.HashSet<>();
@@ -536,7 +598,21 @@ public class RequisitionService {
             managedDeptIds = java.util.List.of(-1L);
         }
 
-        Page<RecruitmentRequisition> page = requisitions.searchScoped(
+        if (!hasExtraFilters) {
+            Page<RecruitmentRequisition> page = requisitions.searchScoped(
+                    false,
+                    currentUser.getId(),
+                    assignedIds,
+                    managedDeptIds,
+                    status,
+                    departmentId,
+                    keyword,
+                    pageable
+            );
+            return page.map(this::toResponse);
+        }
+
+        Page<RecruitmentRequisition> page = requisitions.searchScopedWithFilters(
                 false,
                 currentUser.getId(),
                 assignedIds,
@@ -544,6 +620,13 @@ public class RequisitionService {
                 status,
                 departmentId,
                 keyword,
+                fromInstant,
+                toInstant,
+                hasRecruiterFilter,
+                recruiterReqIds,
+                normalizedSla,
+                today,
+                warningDate,
                 pageable
         );
         return page.map(this::toResponse);

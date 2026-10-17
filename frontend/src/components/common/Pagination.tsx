@@ -10,6 +10,7 @@ export interface PaginationProps {
   onPageChange: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
   className?: string;
+  itemUnitLabel?: string;
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -21,6 +22,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
   onPageSizeChange,
   className = '',
+  itemUnitLabel = 'bản ghi',
 }) => {
   if (totalItems === 0) return null;
 
@@ -54,7 +56,7 @@ export const Pagination: React.FC<PaginationProps> = ({
       <div className="pagination-info">
         <span>
           Hiển thị <strong>{startItem}</strong> - <strong>{endItem}</strong> trong tổng số{' '}
-          <strong>{totalItems.toLocaleString('vi-VN')}</strong> bản ghi
+          <strong>{totalItems.toLocaleString('vi-VN')}</strong> {itemUnitLabel}
         </span>
 
         {onPageSizeChange && (

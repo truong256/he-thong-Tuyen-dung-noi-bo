@@ -117,12 +117,17 @@ function mapFromBackendResponse(item: any): Requisition {
 }
 
 export const requisitionApi = {
-  list: async (params?: RequisitionFilterParams | { status?: string; departmentId?: number; search?: string; keyword?: string; page?: number; size?: number }): Promise<RequisitionPageResponse> => {
+  list: async (params?: RequisitionFilterParams): Promise<RequisitionPageResponse> => {
     const query = new URLSearchParams();
     if ((params as any)?.search) query.append('search', (params as any).search);
     if ((params as any)?.keyword) query.append('search', (params as any).keyword);
     if (params?.status && params.status !== 'ALL') query.append('status', params.status);
     if (params?.departmentId) query.append('departmentId', String(params.departmentId));
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
+    if (params?.recruiterId) query.append('recruiterId', String(params.recruiterId));
+    if (params?.sla && params.sla !== 'ALL') query.append('sla', params.sla);
+    if (params?.sort) query.append('sort', params.sort);
     if (params?.page !== undefined) query.append('page', String(params.page));
     if (params?.size !== undefined) query.append('size', String(params.size));
 

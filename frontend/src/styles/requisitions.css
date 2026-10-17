@@ -482,3 +482,111 @@
   color: #ef4444;
   margin-top: 2px;
 }
+
+/* S3-08: SLA & Open Days Enhancements */
+.req-sla-cell-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.req-sla-cell-content.is-overdue {
+  padding: 4px 6px;
+  background: #fef2f2;
+  border-radius: 6px;
+  border-left: 3px solid #ef4444;
+}
+
+.req-deadline-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.req-sla-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.req-days-open-badge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.req-days-open-badge.opened {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.req-days-open-badge.unopened {
+  background: #f8fafc;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+/* S3-08: Date Range Filter Toolbar */
+.req-filter-date-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+}
+
+.req-filter-date-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.req-date-input {
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 0.82rem;
+  color: #334155;
+  outline: none;
+}
+
+.req-date-input:focus {
+  border-color: #2563eb;
+}
+
+.req-date-clear-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.req-date-clear-btn:hover {
+  color: #ef4444;
+}
+
+.req-filter-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 4px;
+  width: 100%;
+}
+
