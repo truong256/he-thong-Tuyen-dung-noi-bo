@@ -1,6 +1,7 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.dto.JobPostingPublicResponse;
+import com.example.auth_service.dto.PublicJobDepartmentResponse;
 import com.example.auth_service.service.JobPostingService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -8,6 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/public/job-postings")
@@ -17,6 +19,11 @@ public class PublicJobPostingController {
 
     public PublicJobPostingController(JobPostingService jobPostingService) {
         this.jobPostingService = jobPostingService;
+    }
+
+    @GetMapping("/departments")
+    public ResponseEntity<List<PublicJobDepartmentResponse>> getPublicDepartments() {
+        return ResponseEntity.ok(jobPostingService.getPublicDepartments());
     }
 
     /**

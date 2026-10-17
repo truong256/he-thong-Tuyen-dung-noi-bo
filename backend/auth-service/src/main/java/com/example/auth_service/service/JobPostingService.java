@@ -403,10 +403,13 @@ public class JobPostingService {
         return page.map(this::mapToPublicResponse);
     }
 
-    /**
-     * SCRUM-150: Xem chi tiết tin tuyển dụng công khai.
-     * Nếu tin bị gỡ hoặc quá hạn, ném ngoại lệ không tìm thấy.
-     */
+    /** Department filter options drawn exclusively from visible public postings. */
+    @Transactional(readOnly = true)
+    public List<PublicJobDepartmentResponse> getPublicDepartments() {
+        return jobPostings.findPublicDepartments(LocalDate.now());
+    }
+
+    /** Public detail returns 404 for unpublished or expired postings. */
     @Transactional(readOnly = true)
     public JobPostingPublicResponse getPublicJobPostingDetail(Long id) {
         LocalDate today = LocalDate.now();

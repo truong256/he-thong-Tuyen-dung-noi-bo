@@ -13,14 +13,12 @@ import {
 } from 'lucide-react';
 import { JobPostingPublic } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';
-import organizationApi from '../api/organization';
-import { Department } from '../types/organization';
 import '../styles/job-postings.css';
 
 export const PublicCareerPage: React.FC = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<JobPostingPublic[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(false);
 
   // Filters
@@ -50,7 +48,7 @@ export const PublicCareerPage: React.FC = () => {
   }, [keyword, departmentId, workingModel]);
 
   useEffect(() => {
-    organizationApi.getDepartments().then((data) => {
+    jobPostingApi.getPublicDepartments().then((data) => {
       if (Array.isArray(data)) setDepartments(data);
     }).catch(() => {});
   }, []);

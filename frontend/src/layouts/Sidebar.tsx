@@ -303,16 +303,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="sidebar-title">ỨNG VIÊN NỘI BỘ</span>
               <ul className="sidebar-menu">
                 <li>
-                  <a
-                    href="#jobs-candidate"
-                    className="sidebar-link-upcoming"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Việc làm đang mở');
-                    }}
-                  >
+                  <NavLink to="/careers" onClick={handleLinkClick}>
                     <span>Việc làm đang mở</span>
-                  </a>
+                  </NavLink>
                 </li>
                 <li>
                   <a
