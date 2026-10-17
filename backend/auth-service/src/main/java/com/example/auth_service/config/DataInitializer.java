@@ -77,6 +77,15 @@ public class DataInitializer {
             createUserIfMissing(userRepository, passwordEncoder, "recruiter@company.com", defaultSeedPassword,
                     "Chuyên viên Tuyển dụng", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.RECRUITER)));
 
+            createUserIfMissing(userRepository, passwordEncoder, "recruiter1@company.com", defaultSeedPassword,
+                    "Nguyễn Văn Tuyển (Recruiter Lead)", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.RECRUITER)));
+
+            createUserIfMissing(userRepository, passwordEncoder, "recruiter2@company.com", defaultSeedPassword,
+                    "Trần Thị Dụng (Recruiter Senior)", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.RECRUITER)));
+
+            createUserIfMissing(userRepository, passwordEncoder, "recruiter3@company.com", defaultSeedPassword,
+                    "Lê Hoàng Tài (Recruiter Sourcing)", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.RECRUITER)));
+
             User hrManagerUser = createUserIfMissing(userRepository, passwordEncoder, "hr_manager@company.com", defaultSeedPassword,
                     "Trưởng phòng Nhân sự", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.HR_MANAGER)));
 

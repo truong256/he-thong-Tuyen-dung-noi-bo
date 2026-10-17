@@ -234,4 +234,74 @@ class RequisitionAssignmentIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
     }
+    @Test
+    void unassignedRecruiterCannotReadAssignmentsOrHistory() throws Exception {
+        mvc.perform(get("/api/requisitions/" + req1.getId() + "/assignments")
+                .header("Authorization", token(otherRecruiter))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/requisitions/" + req1.getId() + "/assignments/history")
+                .header("Authorization", token(otherRecruiter))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void granularEndpointRejectsASecondPrimary() throws Exception {
+        String path = "/api/requisitions/" + req1.getId() + "/assignments/";
+        String body = "{\"role\":\"RECRUITER\",\"isPrimary\":true}";
+        mvc.perform(put(path + primaryRecruiter.getId()).header("Authorization", token(hrManager))
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNoContent());
+        mvc.perform(put(path + supportRecruiter.getId()).header("Authorization", token(hrManager))
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
+        assertThat(assignments.findByRequisitionId(req1.getId()).stream()
+                .filter(RequisitionAssignment::isPrimary)).hasSize(1);
+    }
+
+    @Test
+    void duplicatesAreNormalizedAndAssignmentsSurviveReload() throws Exception {
+        var payload = new AssignRecruiterPayload(primaryRecruiter.getId(),
+                List.of(primaryRecruiter.getId(), supportRecruiter.getId(), supportRecruiter.getId(), otherRecruiter.getId()), null, null);
+        mvc.perform(put("/api/requisitions/" + req1.getId() + "/assignments")
+                .header("Authorization", token(hrManager)).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.supportRecruiters.length()").value(2));
+        assignments.flush();
+        mvc.perform(get("/api/requisitions/" + req1.getId() + "/assignments")
+                .header("Authorization", token(primaryRecruiter))).andExpect(status().isOk())
+                .andExpect(jsonPath("$.primaryRecruiter.userId").value(primaryRecruiter.getId()))
+                .andExpect(jsonPath("$.supportRecruiters.length()").value(2));
+        mvc.perform(get("/api/requisitions/" + req1.getId())
+                .header("Authorization", token(otherRecruiter))).andExpect(status().isOk());
+        mvc.perform(get("/api/requisitions/" + req2.getId())
+                .header("Authorization", token(otherRecruiter))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void invalidRecruitersAreRejectedWithoutPartialWrites() throws Exception {
+        for (String state : List.of("INACTIVE", "LOCKED")) {
+            otherRecruiter.setStatus(state);
+            users.saveAndFlush(otherRecruiter);
+            var payload = new AssignRecruiterPayload(primaryRecruiter.getId(), List.of(otherRecruiter.getId()), null, null);
+            mvc.perform(put("/api/requisitions/" + req1.getId() + "/assignments")
+                    .header("Authorization", token(hrManager)).contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(payload))).andExpect(status().isBadRequest());
+            assertThat(assignments.findByRequisitionId(req1.getId())).isEmpty();
+            assertThat(assignmentHistories.findByRequisitionIdOrderByCreatedAtDesc(req1.getId())).isEmpty();
+        }
+        var payload = new AssignRecruiterPayload(hrManager.getId(), List.of(), null, null);
+        mvc.perform(put("/api/requisitions/" + req1.getId() + "/assignments")
+                .header("Authorization", token(hrManager)).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))).andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void temporarilyLockedActiveRecruiterCannotBeAssigned() throws Exception {
+        otherRecruiter.setLockedUntil(java.time.Instant.now().plusSeconds(600));
+        users.saveAndFlush(otherRecruiter);
+        var payload = new AssignRecruiterPayload(otherRecruiter.getId(), List.of(), null, null);
+        mvc.perform(put("/api/requisitions/" + req1.getId() + "/assignments")
+                .header("Authorization", token(hrManager)).contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/requisitions/assignable-recruiters")
+                .header("Authorization", token(hrManager))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id == " + otherRecruiter.getId() + ")]").isEmpty());
+    }
+
 }

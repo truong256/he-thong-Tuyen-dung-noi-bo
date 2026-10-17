@@ -94,6 +94,7 @@ export const RecruitmentRequestPage: React.FC = () => {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClonedDraft, setIsClonedDraft] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   // Danh mục dữ liệu thật từ Backend
@@ -463,6 +464,7 @@ export const RecruitmentRequestPage: React.FC = () => {
         type: 'success',
       });
       setForm(EMPTY_FORM);
+      setIsClonedDraft(false);
       setErrors({});
       loadRequisitions();
       setActiveTab('list');
@@ -546,6 +548,7 @@ export const RecruitmentRequestPage: React.FC = () => {
         workingModel: cloned.workingModel || 'ONSITE',
       });
       setErrors({});
+      setIsClonedDraft(true);
       setMessage({
         text: `Đã sao chép thành công bản nháp mới (Mã: ${cloned.requisitionCode}). Đang mở form để chỉnh sửa...`,
         type: 'success',
@@ -690,25 +693,40 @@ export const RecruitmentRequestPage: React.FC = () => {
           <div className="rr-form-sections">
             {/* Draft Notice if Editing */}
             {form.requisitionCode && (
-              <div className="rr-draft-banner">
-                <div className="rr-draft-banner-info">
-                  <Info size={18} />
-                  <span>
-                    Đang làm việc trên bản nháp:{' '}
-                    <span className="rr-draft-code">{form.requisitionCode}</span>
-                  </span>
+              <>
+                <div className="rr-draft-banner">
+                  <div className="rr-draft-banner-info">
+                    <Info size={18} />
+                    <span>
+                      Đang làm việc trên bản nháp:{' '}
+                      <span className="rr-draft-code">{form.requisitionCode}</span>
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm(EMPTY_FORM);
+                      setIsClonedDraft(false);
+                      setMessage({ text: 'Đã chuyển sang chế độ soạn mới yêu cầu.', type: 'info' });
+                    }}
+                    className="rr-draft-new-btn"
+                  >
+                    + Soạn mới yêu cầu khác
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForm(EMPTY_FORM);
-                    setMessage({ text: 'Đã chuyển sang chế độ soạn mới yêu cầu.', type: 'info' });
-                  }}
-                  className="rr-draft-new-btn"
-                >
-                  + Soạn mới yêu cầu khác
-                </button>
-              </div>
+
+                {isClonedDraft && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                    <CheckCircle2 size={18} style={{ color: '#16a34a', marginTop: '2px', flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontWeight: 600, color: '#15803d', fontSize: '0.875rem' }}>Bản sao độc lập đã được tạo ở trạng thái Lưu nháp (DRAFT)</div>
+                      <div style={{ color: '#166534', fontSize: '0.85rem', marginTop: '2px' }}>
+                        Bản sao không kế thừa lịch sử duyệt, người duyệt hay quyết định cũ của yêu cầu gốc. Bạn có thể chỉnh sửa thông tin và bấm <strong>"Gửi phê duyệt"</strong> khi hoàn tất.
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {/* CARD 1: VỊ TRÍ & PHÒNG BAN */}
