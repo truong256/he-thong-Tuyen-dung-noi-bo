@@ -127,6 +127,12 @@ public class SecurityConfig {
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/approve", "/api/requisitions/{id}/reject")
                         .hasAnyAuthority("REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST,
+                        "/api/requisitions/{id}/hold",
+                        "/api/requisitions/{id}/resume",
+                        "/api/requisitions/{id}/close",
+                        "/api/requisitions/{id}/cancel")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/recruitment-requests", "/api/recruitment-requests/{id}/clone")
