@@ -80,7 +80,9 @@ public class RequisitionApprovalWorkflowService {
         }
 
         if (snapshots.existsByRequisitionId(requisition.getId())) {
-            if ("DRAFT".equalsIgnoreCase(requisition.getStatus())) {
+            if ("DRAFT".equalsIgnoreCase(requisition.getStatus())
+                    || "PENDING_APPROVAL".equalsIgnoreCase(requisition.getStatus())
+                    || "SUBMITTED".equalsIgnoreCase(requisition.getStatus())) {
                 snapshots.deleteAllByRequisitionId(requisition.getId());
             } else {
                 throw new BadRequestException("Yêu cầu tuyển dụng đã có snapshot luồng phê duyệt.");

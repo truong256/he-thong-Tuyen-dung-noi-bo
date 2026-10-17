@@ -232,6 +232,70 @@ class RequisitionIntegrationTest {
     }
 
     @Test
+    void putRequisitionsId_updatesAndSubmitsRequisitionDirectly() throws Exception {
+        // 1. Tạo bản nháp
+        RequisitionDraftRequest draft = new RequisitionDraftRequest(
+                "Bản nháp cần sửa",
+                dept.getId(),
+                job.getId(),
+                1,
+                "NEW_HEADCOUNT",
+                "Lý do ban đầu",
+                20_000_000L,
+                25_000_000L,
+                "VND",
+                null,
+                LocalDate.now().plusDays(10),
+                "JD ban đầu",
+                "Yêu cầu ban đầu",
+                null,
+                null,
+                "ONSITE"
+        );
+
+        String createdJson = mvc.perform(post("/api/requisitions/draft")
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(draft)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long id = mapper.readTree(createdJson).get("id").asLong();
+
+        // 2. PUT /api/requisitions/{id} với isDraft = false để cập nhật và nộp duyệt
+        CreateRequisitionRequest updateSubmitReq = new CreateRequisitionRequest(
+                "Yêu cầu sau khi cập nhật bổ sung",
+                dept.getId(),
+                job.getId(),
+                2,
+                "NEW_HEADCOUNT",
+                "Đã bổ sung lý do chi tiết",
+                20_000_000L,
+                28_000_000L,
+                "VND",
+                null,
+                LocalDate.now().plusDays(20),
+                "Mô tả công việc đã cập nhật đầy đủ",
+                "Yêu cầu ứng viên đã cập nhật",
+                "Bảo hiểm đầy đủ",
+                "Hồ Chí Minh",
+                "HYBRID"
+        );
+        updateSubmitReq.setIsDraft(false);
+
+        mvc.perform(put("/api/requisitions/" + id)
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(updateSubmitReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.title").value("Yêu cầu sau khi cập nhật bổ sung"))
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"))
+                .andExpect(jsonPath("$.quantity").value(2))
+                .andExpect(jsonPath("$.submittedAt").exists());
+    }
+
+    @Test
     void directCreateAndSubmit_EnforcesSalaryExplanationWhenOutsideRange() throws Exception {
         // Khung lương jobTitle: 15m - 30m. Đề xuất: 35m (vượt khung) nhưng không có giải trình -> 400
         CreateRequisitionRequest outsideNoExplanation = new CreateRequisitionRequest(
