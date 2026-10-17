@@ -107,14 +107,18 @@ function mapFromBackendResponse(item: any): Requisition {
     ...item,
     proposedMinSalary: item.salaryMin !== undefined ? item.salaryMin : item.proposedMinSalary,
     proposedMaxSalary: item.salaryMax !== undefined ? item.salaryMax : item.proposedMaxSalary,
-    targetDate: item.neededDate || item.targetDate,
-    neededDate: item.neededDate || item.targetDate,
-    requirements: item.candidateRequirements || item.requirements,
-    candidateRequirements: item.candidateRequirements || item.requirements,
+    targetDate: item.targetDate ?? item.neededDate,
+    neededDate: item.neededDate ?? item.targetDate,
+    requirements: item.candidateRequirements ?? item.requirements,
+    candidateRequirements: item.candidateRequirements ?? item.requirements,
     recruitmentType: item.recruitmentType || item.reason,
     reason: item.reason,
   };
 }
+
+// Keep rapid clicks on the same source in one browser on the same request.
+// Remove settled requests so deliberate later copies and retries still work.
+const pendingClones = new Map<number, Promise<RequisitionResponse>>();
 
 export const requisitionApi = {
   list: async (params?: RequisitionFilterParams | { status?: string; departmentId?: number; search?: string; keyword?: string; page?: number; size?: number }): Promise<RequisitionPageResponse> => {
@@ -207,24 +211,27 @@ export const requisitionApi = {
     await client.delete(`/api/requisitions/${id}`);
   },
 
-  clone: async (id: number): Promise<RequisitionResponse> => {
-    const res = await client.post<any>(`/api/recruitment-requests/${id}/clone`);
-    const item = res.data;
-    const minSal = item.salaryMin ?? item.proposedMinSalary ?? item.minSalary;
-    const maxSal = item.salaryMax ?? item.proposedMaxSalary ?? item.maxSalary;
-    const reqs = item.candidateRequirements ?? item.requirements;
-    const tDate = item.neededDate || item.targetDate;
-    return {
+  clone: (id: number): Promise<RequisitionResponse> => {
+    const pending = pendingClones.get(id);
+    if (pending) return pending;
+
+    const request = client.post<RequisitionResponse & {
+      proposedMinSalary?: number;
+      proposedMaxSalary?: number;
+      requirements?: string;
+    }>(`/api/recruitment-requests/${id}/clone`).then(({ data: item }) => ({
       ...item,
-      salaryMin: minSal,
-      proposedMinSalary: minSal,
-      salaryMax: maxSal,
-      proposedMaxSalary: maxSal,
-      targetDate: tDate,
-      neededDate: tDate,
-      candidateRequirements: reqs,
-      requirements: reqs,
-    };
+      salaryMin: item.salaryMin ?? item.proposedMinSalary,
+      proposedMinSalary: item.salaryMin ?? item.proposedMinSalary,
+      salaryMax: item.salaryMax ?? item.proposedMaxSalary,
+      proposedMaxSalary: item.salaryMax ?? item.proposedMaxSalary,
+      candidateRequirements: item.candidateRequirements ?? item.requirements,
+      requirements: item.candidateRequirements ?? item.requirements,
+      neededDate: item.neededDate ?? item.targetDate,
+      targetDate: item.targetDate ?? item.neededDate,
+    })).finally(() => pendingClones.delete(id));
+    pendingClones.set(id, request);
+    return request;
   },
 
   getApprovalTimeline: async (id: number) => {

@@ -335,6 +335,80 @@ class RecruitmentRequisitionIntegrationTest {
         org.junit.jupiter.api.Assertions.assertNotEquals(sourceId, clonedId);
         org.junit.jupiter.api.Assertions.assertNotEquals(sourceCode, clonedCode);
     }
+
+    @Autowired private com.example.auth_service.repository.RequisitionAssignmentRepository cloneAssignments;
+    @Autowired private com.example.auth_service.repository.RequisitionAssignmentHistoryRepository cloneAssignmentHistory;
+    @Autowired private com.example.auth_service.repository.RequisitionApprovalSnapshotRepository cloneSnapshots;
+    @Autowired private com.example.auth_service.repository.RequisitionApprovalHistoryRepository cloneApprovalHistory;
+
+    @Test
+    void cloneMissingAndOutOfScopeAreRejected() throws Exception {
+        mvc.perform(post("/api/recruitment-requests/999999999/clone")
+                .header("Authorization", token(hiringManager))).andExpect(status().isNotFound());
+        mvc.perform(post("/api/recruitment-requests/999999999/clone")
+                .header("Authorization", token(candidate))).andExpect(status().isForbidden());
+        var source = cloneSource();
+        mvc.perform(post("/api/recruitment-requests/" + source.getId() + "/clone")
+                .header("Authorization", token(otherManager))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void clonedDraftHasNoAssignmentsOrApprovalState_andEditingLeavesSourceUntouched() throws Exception {
+        var source = cloneSource();
+        var assignment = new com.example.auth_service.entity.RequisitionAssignment();
+        assignment.setRequisitionId(source.getId());
+        assignment.setUserId(hiringManager.getId());
+        assignment.setRole(RoleName.HIRING_MANAGER);
+        cloneAssignments.saveAndFlush(assignment);
+        cloneAssignmentHistory.saveAndFlush(com.example.auth_service.entity.RequisitionAssignmentHistory.builder()
+                .requisitionId(source.getId()).userId(hiringManager.getId()).role(RoleName.HIRING_MANAGER)
+                .assignmentType("SUPPORT").action("ASSIGNED").createdAt(java.time.Instant.now()).build());
+        cloneApprovalHistory.saveAndFlush(com.example.auth_service.domain.sprint3.RequisitionApprovalHistory.builder()
+                .requisitionId(source.getId()).stepOrder(1).stepName("HR approval").approverId(hrManager.getId())
+                .action("APPROVE").status("COMPLETED").actionAt(java.time.Instant.now()).build());
+        var snapshot = new com.example.auth_service.entity.RequisitionApprovalSnapshot();
+        snapshot.setRequisitionId(source.getId());
+        snapshot.setConfigurationId(configurations.findAll().stream()
+                .filter(c -> itDept.getId().equals(c.getDepartmentId())).findFirst().orElseThrow().getId());
+        snapshot.setConfigurationVersion(1);
+        snapshot.setStepOrder(1);
+        snapshot.setApproverUserId(hrManager.getId());
+        snapshot.setStatus("APPROVED");
+        cloneSnapshots.saveAndFlush(snapshot);
+        String result = mvc.perform(post("/api/recruitment-requests/" + source.getId() + "/clone")
+                .header("Authorization", token(hiringManager))).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DRAFT"))
+                .andReturn().getResponse().getContentAsString();
+        Long copyId = mapper.readTree(result).get("id").asLong();
+        org.assertj.core.api.Assertions.assertThat(copyId).isNotEqualTo(source.getId());
+        org.assertj.core.api.Assertions.assertThat(cloneAssignments.findByRequisitionId(copyId)).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(cloneAssignmentHistory.findByRequisitionIdOrderByCreatedAtDesc(copyId)).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(cloneSnapshots.findAllByRequisitionIdOrderByStepOrderAsc(copyId)).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(cloneApprovalHistory.findByRequisitionIdOrderByActionAtAsc(copyId)).isEmpty();
+        mvc.perform(put("/api/requisitions/" + copyId + "/draft")
+                .header("Authorization", token(hiringManager)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Edited cloned draft\"}")).andExpect(status().isOk());
+        requisitions.flush();
+        org.assertj.core.api.Assertions.assertThat(requisitions.findById(source.getId()).orElseThrow().getTitle())
+                .isEqualTo("Untouched clone source");
+        org.assertj.core.api.Assertions.assertThat(requisitions.findById(copyId).orElseThrow().getTitle())
+                .isEqualTo("Edited cloned draft");
+    }
+
+    private com.example.auth_service.domain.sprint2.RecruitmentRequisition cloneSource() {
+        var source = new com.example.auth_service.domain.sprint2.RecruitmentRequisition();
+        source.setRequisitionCode("S305-INTEGRATION");
+        source.setTitle("Untouched clone source");
+        source.setDepartmentId(itDept.getId());
+        source.setJobTitleId(devJob.getId());
+        source.setCreatedByUserId(hiringManager.getId());
+        source.setStatus("APPROVED");
+        source.setApprovedByUserId(hrManager.getId());
+        source.setApprovedAt(java.time.Instant.now());
+        source.setSubmittedAt(java.time.Instant.now());
+        return requisitions.saveAndFlush(source);
+    }
+
     private User createUser(String emailPrefix, RoleName roleName) {
         User user = new User(emailPrefix + "@test.local", "password123");
         user.setFullName("User " + emailPrefix);

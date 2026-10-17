@@ -81,15 +81,40 @@ public class RequisitionApprovalService {
         RecruitmentRequisition req = requisitions.findById(requisitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + requisitionId));
 
+        User currentUser = getCurrentUser();
+        verifyViewPermission(req, currentUser);
+
+        // Yêu cầu tuyển dụng ở trạng thái bản nháp (DRAFT) chưa gửi vào luồng phê duyệt:
+        // Tuyệt đối không tự động sinh chuỗi người duyệt hay lưu lịch sử duyệt giả lập vào DB
+        if ("DRAFT".equalsIgnoreCase(req.getStatus())) {
+            Department dept = req.getDepartmentId() != null
+                    ? departments.findById(req.getDepartmentId()).orElse(null)
+                    : null;
+            return RequisitionApprovalTimelineResponse.builder()
+                    .requisitionId(req.getId())
+                    .requisitionCode(req.getRequisitionCode())
+                    .title(req.getTitle())
+                    .departmentName(dept != null ? dept.getName() : null)
+                    .proposedSalary(req.getProposedMaxSalary() != null ? req.getProposedMaxSalary() : req.getSalaryMax())
+                    .status("DRAFT")
+                    .currentStepOrder(null)
+                    .currentWaitingOn("Bản nháp chưa gửi duyệt")
+                    .totalSteps(0)
+                    .completedSteps(0)
+                    .isCompleted(false)
+                    .isRejected(false)
+                    .rejectionReason(null)
+                    .submittedAt(null)
+                    .steps(List.of())
+                    .build();
+        }
+
         List<RequisitionApprovalHistory> historyList = historyRepository.findByRequisitionIdOrderByStepOrderAsc(requisitionId);
 
         // Nếu chưa có lịch sử (do dữ liệu khởi tạo trước đó), tự động sinh chuỗi cấp duyệt chuẩn và lưu nhật ký trước
         if (historyList.isEmpty()) {
             historyList = generateAndPersistDefaultApprovalChain(req);
         }
-
-        User currentUser = getCurrentUser();
-        verifyViewPermission(req, currentUser);
 
         return buildTimelineResponse(req, historyList);
     }

@@ -40,6 +40,9 @@ class RequisitionAssignmentServiceTest {
     @Mock
     private UserRepository users;
 
+    @Mock
+    private RequisitionService requisitionAccess;
+
     @InjectMocks
     private RequisitionAssignmentService service;
 
