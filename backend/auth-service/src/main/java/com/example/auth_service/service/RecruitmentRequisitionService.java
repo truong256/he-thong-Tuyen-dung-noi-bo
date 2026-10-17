@@ -406,6 +406,13 @@ public class RecruitmentRequisitionService {
         cloned.setCreatedAt(Instant.now());
         cloned.setUpdatedAt(Instant.now());
 
+        // Đảm bảo xóa sạch các mốc phê duyệt, người duyệt và phản hồi từ chối cũ
+        cloned.setSubmittedAt(null);
+        cloned.setApprovedByUserId(null);
+        cloned.setApprovedAt(null);
+        cloned.setRejectionReason(null);
+        cloned.setRejectionReasonId(null);
+
         // Không sao chép lịch sử phê duyệt hay bình luận cũ
         RecruitmentRequisition saved = requisitionRepository.save(cloned);
         return toResponse(saved, department, jobTitle, currentUser);

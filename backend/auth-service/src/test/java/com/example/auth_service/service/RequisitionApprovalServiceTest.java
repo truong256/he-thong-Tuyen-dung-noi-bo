@@ -288,6 +288,25 @@ class RequisitionApprovalServiceTest {
     }
 
     @Test
+    @DisplayName("When requisition is DRAFT, timeline returns clean empty steps without persisting chains")
+    void getApprovalTimeline_whenDraft_returnsCleanDraftTimelineWithoutPersisting() {
+        requisition.setStatus("DRAFT");
+        authenticateAs(creatorUser);
+        when(requisitions.findById(100L)).thenReturn(Optional.of(requisition));
+        when(departments.findById(dept.getId())).thenReturn(Optional.of(dept));
+
+        RequisitionApprovalTimelineResponse response = service.getApprovalTimeline(100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getStatus()).isEqualTo("DRAFT");
+        assertThat(response.getTotalSteps()).isEqualTo(0);
+        assertThat(response.getCompletedSteps()).isEqualTo(0);
+        assertThat(response.getSteps()).isEmpty();
+        assertThat(response.getCurrentWaitingOn()).isEqualTo("Bản nháp chưa gửi duyệt");
+        verify(historyRepository, never()).save(any(RequisitionApprovalHistory.class));
+    }
+
+    @Test
     @DisplayName("Approve requisition moves current pending step to next step")
     void approveRequisition_currentPendingStep_advancesToNext() {
         authenticateAs(deptManagerUser);

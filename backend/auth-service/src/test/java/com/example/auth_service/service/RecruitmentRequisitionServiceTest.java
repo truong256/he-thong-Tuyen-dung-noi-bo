@@ -540,6 +540,7 @@ class RecruitmentRequisitionServiceTest {
         assertThat(saved.getApprovedAt()).isNull();
         assertThat(saved.getApprovedByUserId()).isNull();
         assertThat(saved.getRejectionReason()).isNull();
+        assertThat(saved.getRejectionReasonId()).isNull();
         assertThat(source.getStatus()).isEqualTo("APPROVED");
         verifyNoInteractions(approvalWorkflow);
     }

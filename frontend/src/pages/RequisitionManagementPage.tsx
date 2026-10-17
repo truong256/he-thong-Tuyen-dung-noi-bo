@@ -60,6 +60,7 @@ export const RequisitionManagementPage: React.FC = () => {
   // Modal create/edit
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReq, setEditingReq] = useState<Requisition | null>(null);
+  const [isClonedModal, setIsClonedModal] = useState(false);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -217,6 +218,7 @@ export const RequisitionManagementPage: React.FC = () => {
 
   const openCreateModal = () => {
     setEditingReq(null);
+    setIsClonedModal(false);
     setTitle('');
     // If Hiring Manager, prefill or default to managed department if available
     const managedDept = departments.find((d: any) => d.managerUserId === user?.id) || availableDepartments[0];
@@ -242,8 +244,9 @@ export const RequisitionManagementPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const openEditModal = (req: Requisition) => {
+  const openEditModal = (req: Requisition, isCloned: boolean = false) => {
     setEditingReq(req);
+    setIsClonedModal(isCloned);
     setTitle(req.title || '');
     setDepartmentId(req.departmentId);
     setJobTitleId(req.jobTitleId);
@@ -401,7 +404,7 @@ export const RequisitionManagementPage: React.FC = () => {
       const cloned = await requisitionApi.clone(req.id);
       showToast(`Đã sao chép thành công bản nháp mới: ${cloned.requisitionCode}`);
       // Mở ngay modal form nháp để người dùng chỉnh sửa
-      openEditModal(cloned as any);
+      openEditModal(cloned as any, true);
       await loadData();
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Không thể sao chép yêu cầu tuyển dụng.', 'error');
@@ -885,7 +888,13 @@ export const RequisitionManagementPage: React.FC = () => {
         <div className="req-modal-backdrop">
           <div className="req-modal-content">
             <div className="req-modal-header">
-              <h2>{editingReq ? 'Cập nhật yêu cầu tuyển dụng' : 'Tạo yêu cầu tuyển dụng mới'}</h2>
+              <h2>
+                {isClonedModal
+                  ? `Bản sao yêu cầu tuyển dụng (Bản nháp - ${editingReq?.requisitionCode})`
+                  : editingReq
+                  ? 'Cập nhật yêu cầu tuyển dụng'
+                  : 'Tạo yêu cầu tuyển dụng mới'}
+              </h2>
               <button
                 type="button"
                 className="req-action-btn"
@@ -896,7 +905,19 @@ export const RequisitionManagementPage: React.FC = () => {
             </div>
 
             <div className="req-modal-body">
-              {editingReq?.rejectionReason && (
+              {isClonedModal && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <CheckCircle size={18} style={{ color: '#16a34a', marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#15803d', fontSize: '0.875rem' }}>Bản sao độc lập đã được tạo ở trạng thái Lưu nháp (DRAFT)</div>
+                    <div style={{ color: '#166534', fontSize: '0.85rem', marginTop: '2px' }}>
+                      Bản sao không kế thừa lịch sử duyệt, người duyệt hay quyết định cũ của yêu cầu gốc. Bạn có thể chỉnh sửa thông tin và bấm <strong>"Gửi phê duyệt"</strong> khi hoàn tất.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!isClonedModal && editingReq?.rejectionReason && (
                 <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <AlertCircle size={18} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
                   <div>

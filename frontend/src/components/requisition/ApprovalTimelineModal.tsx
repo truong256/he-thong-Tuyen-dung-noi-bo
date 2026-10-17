@@ -283,7 +283,19 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
           ) : timeline ? (
             <>
               {/* Highlight callout: "Hồ sơ đang ở bàn ai" */}
-              {isTimelineRejected ? (
+              {timeline.status === 'DRAFT' && (!timeline.steps || timeline.steps.length === 0) ? (
+                <div className="atl-desk-callout draft" style={{ borderLeftColor: '#64748b', background: '#f8fafc' }}>
+                  <div className="atl-desk-icon" style={{ color: '#64748b' }}>
+                    <Clock size={22} />
+                  </div>
+                  <div className="atl-desk-info">
+                    <h4 style={{ color: '#334155' }}>Bản nháp yêu cầu tuyển dụng</h4>
+                    <p style={{ color: '#64748b' }}>
+                      Yêu cầu đang ở trạng thái <strong>Lưu nháp</strong> và chưa được gửi vào luồng phê duyệt. Chưa có cấp phê duyệt nào được khởi tạo.
+                    </p>
+                  </div>
+                </div>
+              ) : isTimelineRejected ? (
                 <div className="atl-desk-callout rejected">
                   <div className="atl-desk-icon">
                     <XCircle size={22} />
@@ -334,92 +346,104 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
               )}
 
               {/* Progress overview */}
-              <div className="atl-progress-wrapper">
-                <div className="atl-progress-labels">
-                  <span>Tiến độ xét duyệt ({timeline.completedSteps}/{timeline.totalSteps} bước)</span>
-                  <span>{percentCompleted}%</span>
+              {timeline.totalSteps > 0 && (
+                <div className="atl-progress-wrapper">
+                  <div className="atl-progress-labels">
+                    <span>Tiến độ xét duyệt ({timeline.completedSteps}/{timeline.totalSteps} bước)</span>
+                    <span>{percentCompleted}%</span>
+                  </div>
+                  <div className="atl-progress-bar">
+                    <div
+                      className={`atl-progress-fill ${timeline.isRejected ? 'rejected' : ''}`}
+                      style={{ width: `${percentCompleted}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="atl-progress-bar">
-                  <div
-                    className={`atl-progress-fill ${timeline.isRejected ? 'rejected' : ''}`}
-                    style={{ width: `${percentCompleted}%` }}
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Timeline Chain */}
-              <div className="atl-chain">
-                {timeline.steps.map((step, idx) => {
-                  const isLast = idx === timeline.steps.length - 1;
-                  const isStepActive = step.isCurrentStep || step.status === 'PENDING';
-                  return (
-                    <div key={step.stepOrder} className="atl-step-row">
-                      <div className="atl-step-indicator">
-                        {renderStepDot(step)}
-                        {!isLast && (
-                          <div
-                            className={`atl-step-line ${
-                              step.status === 'COMPLETED' ? 'completed' : ''
-                            }`}
-                          />
-                        )}
-                      </div>
-
-                      <div className={`atl-step-card ${isStepActive ? 'active-card' : ''}`}>
-                        <div className="atl-step-card-header">
-                          <h4 className="atl-step-title">
-                            Bước {step.stepOrder}: {step.stepName}
-                          </h4>
-                          <span className={`atl-step-badge ${getStepBadgeClass(step)}`}>
-                            {getStepBadgeText(step)}
-                          </span>
+              {timeline.steps && timeline.steps.length > 0 ? (
+                <div className="atl-chain">
+                  {timeline.steps.map((step, idx) => {
+                    const isLast = idx === timeline.steps.length - 1;
+                    const isStepActive = step.isCurrentStep || step.status === 'PENDING';
+                    return (
+                      <div key={step.stepOrder} className="atl-step-row">
+                        <div className="atl-step-indicator">
+                          {renderStepDot(step)}
+                          {!isLast && (
+                            <div
+                              className={`atl-step-line ${
+                                step.status === 'COMPLETED' ? 'completed' : ''
+                              }`}
+                            />
+                          )}
                         </div>
 
-                        <div className="atl-step-meta">
-                          <div className="atl-step-meta-item">
-                            <UserCheck size={14} />
-                            <span>
-                              Người duyệt: <strong>{step.approverName || 'Chưa chỉ định'}</strong>
-                              {step.approverEmail && (
-                                <span style={{ color: '#64748b', fontSize: '0.78rem', marginLeft: '6px', fontWeight: 400 }}>
-                                  ({step.approverEmail})
-                                </span>
-                              )}
+                        <div className={`atl-step-card ${isStepActive ? 'active-card' : ''}`}>
+                          <div className="atl-step-card-header">
+                            <h4 className="atl-step-title">
+                              Bước {step.stepOrder}: {step.stepName}
+                            </h4>
+                            <span className={`atl-step-badge ${getStepBadgeClass(step)}`}>
+                              {getStepBadgeText(step)}
                             </span>
-                            {step.approverRole && (
-                              <span className="atl-step-role-badge">{step.approverRole}</span>
+                          </div>
+
+                          <div className="atl-step-meta">
+                            <div className="atl-step-meta-item">
+                              <UserCheck size={14} />
+                              <span>
+                                Người duyệt: <strong>{step.approverName || 'Chưa chỉ định'}</strong>
+                                {step.approverEmail && (
+                                  <span style={{ color: '#64748b', fontSize: '0.78rem', marginLeft: '6px', fontWeight: 400 }}>
+                                    ({step.approverEmail})
+                                  </span>
+                                )}
+                              </span>
+                              {step.approverRole && (
+                                <span className="atl-step-role-badge">{step.approverRole}</span>
+                              )}
+                            </div>
+                            {step.minimumSalary != null && step.minimumSalary > 0 && (
+                              <div className="atl-step-meta-item">
+                                <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                                  Hạn mức: <strong>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(step.minimumSalary)}</strong>
+                                </span>
+                              </div>
+                            )}
+                            {step.actionAt && (
+                              <div className="atl-step-meta-item">
+                                <Calendar size={14} />
+                                <span>{formatTimestamp(step.actionAt)}</span>
+                              </div>
                             )}
                           </div>
-                          {step.minimumSalary != null && step.minimumSalary > 0 && (
-                            <div className="atl-step-meta-item">
-                              <span style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                                Hạn mức: <strong>{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(step.minimumSalary)}</strong>
-                              </span>
-                            </div>
-                          )}
-                          {step.actionAt && (
-                            <div className="atl-step-meta-item">
-                              <Calendar size={14} />
-                              <span>{formatTimestamp(step.actionAt)}</span>
+
+                          {step.comments && (
+                            <div
+                              className={`atl-step-comments ${
+                                step.status === 'REJECTED' ? 'rejected' : ''
+                              }`}
+                            >
+                              <span style={{ fontWeight: 600 }}>Ý kiến phản hồi:</span> "
+                              {step.comments}"
                             </div>
                           )}
                         </div>
-
-                        {step.comments && (
-                          <div
-                            className={`atl-step-comments ${
-                              step.status === 'REJECTED' ? 'rejected' : ''
-                            }`}
-                          >
-                            <span style={{ fontWeight: 600 }}>Ý kiến phản hồi:</span> "
-                            {step.comments}"
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '36px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', marginTop: '16px' }}>
+                  <FileCheck size={32} style={{ margin: '0 auto 10px', color: '#94a3b8' }} />
+                  <div style={{ fontWeight: 600, color: '#334155', fontSize: '1rem' }}>Bản nháp chưa khởi tạo luồng phê duyệt</div>
+                  <div style={{ fontSize: '0.875rem', marginTop: '6px', color: '#64748b', maxWidth: '440px', marginInline: 'auto' }}>
+                    Yêu cầu tuyển dụng này đang ở trạng thái bản nháp. Sau khi bạn hoàn thiện thông tin và bấm <strong>Gửi yêu cầu</strong>, hệ thống sẽ tự động khởi tạo các cấp duyệt theo định biên và khung lương.
+                  </div>
+                </div>
+              )}
 
               {/* Quick Actions (chỉ hiển thị cho người duyệt được phân công ở cấp hiện tại theo đúng luồng S3-01 / S3-02) */}
               {(() => {
