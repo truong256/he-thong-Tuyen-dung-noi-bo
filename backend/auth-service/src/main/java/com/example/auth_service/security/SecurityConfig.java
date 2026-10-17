@@ -118,30 +118,41 @@ public class SecurityConfig {
                         .hasRole("HR_MANAGER")
                 // S2-10: Recruitment Requisition (Yêu cầu tuyển dụng)
                 .requestMatchers(HttpMethod.POST, "/api/requisitions/draft", "/api/requisitions")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/draft", "/api/requisitions/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/submit")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/approve", "/api/requisitions/{id}/reject")
+                        .hasAnyAuthority("REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
-                .requestMatchers(HttpMethod.POST, "/api/recruitment-requests")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/recruitment-requests", "/api/recruitment-requests/{id}/clone")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/recruitment-requests/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/recruitment-requests/{id}/submit")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.GET, "/api/recruitment-requests", "/api/recruitment-requests/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/recruitment-requests/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions/assignable-recruiters")
+                        .hasAuthority("RECRUITER_ASSIGN")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions/{id}/assignments", "/api/requisitions/{id}/assignments/history")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "REQUISITION_READ_OWN", "RECRUITER_ASSIGN", "REQUISITION_APPROVE")
+                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/assignments")
+                        .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/assignments/{userId}")
                         .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}/assignments/{userId}")
                         .hasAuthority("RECRUITER_ASSIGN")
-                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/approve")
+                .requestMatchers(HttpMethod.PUT,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/reject",
+                        "/api/requisitions/{id}/request-changes")
                         .hasAuthority("REQUISITION_APPROVE")
                 .requestMatchers(HttpMethod.POST,
                         "/api/requisitions/{id}/approve",
@@ -151,19 +162,14 @@ public class SecurityConfig {
                         "/api/requisitions/{id}/approval-action")
                         .hasAuthority("REQUISITION_APPROVE")
                 .requestMatchers(HttpMethod.GET,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/approve/**",
+                        "/api/requisitions/{id}/timeline",
                         "/api/requisitions/{id}/approval-logs",
                         "/api/requisitions/{id}/approval-history",
                         "/api/requisitions/{id}/approve/logs",
                         "/api/requisitions/{id}/approve/history")
-                        .hasAnyAuthority("REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
-                .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
-                        .hasAnyAuthority("REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_CREATE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
-                .requestMatchers(HttpMethod.POST, "/api/requisitions", "/api/requisitions/{id}/submit")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
-                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
-                .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}")
-                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.GET, "/api/departments", "/api/departments/tree", "/api/departments/{id}")
                         .hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.POST, "/api/departments").hasAuthority("DEPARTMENT_MANAGE")
@@ -173,6 +179,21 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.POST, "/api/organization/profile/logo", "/api/organization/profile/image").hasAuthority("CATALOG_MANAGE")
+                // S3-10 / SCRUM-150: API công khai việc làm cho ứng viên
+                .requestMatchers(HttpMethod.GET, "/api/public/job-postings", "/api/public/job-postings/**").permitAll()
+                // S3-10 / SCRUM-149: Duyệt và xuất bản tin tuyển dụng - Chỉ HR Manager
+                .requestMatchers(HttpMethod.POST,
+                        "/api/job-postings/{id}/approve",
+                        "/api/job-postings/{id}/publish",
+                        "/api/job-postings/{id}/approve-and-publish",
+                        "/api/job-postings/{id}/reject")
+                        .hasRole("HR_MANAGER")
+                // S3-10 / S3-09: Quản lý tin tuyển dụng nội bộ
+                .requestMatchers("/api/job-postings", "/api/job-postings/**")
+                        .hasAnyAuthority("JOB_MANAGE", "ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_RECRUITER")
+                // S3-04 / SCRUM-101: Quản lý ngân sách headcount & lương phòng ban
+                .requestMatchers("/api/headcount-budgets", "/api/headcount-budgets/**")
+                        .hasAnyAuthority("ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_APPROVER", "ROLE_HIRING_MANAGER", "ROLE_RECRUITER")
                 .anyRequest().denyAll()
             )
             .exceptionHandling(errors -> errors.authenticationEntryPoint(securityErrorHandler)

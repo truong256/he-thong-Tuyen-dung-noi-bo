@@ -1,12 +1,9 @@
 package com.example.auth_service.domain.sprint2;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 
 /**
  * Sprint 2 & 3 Entity: RecruitmentRequisition (Yêu cầu tuyển dụng)
@@ -15,10 +12,8 @@ import java.time.LocalDate;
  */
 @Entity
 @Table(name = "recruitment_requisitions")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class RecruitmentRequisition {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -100,9 +95,25 @@ public class RecruitmentRequisition {
 
     private Instant approvedAt;
 
+    @Column(name = "budget_overridden", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean budgetOverridden = false;
+
+    @Column(name = "budget_override_reason", columnDefinition = "TEXT")
+    private String budgetOverrideReason;
+
     private Instant createdAt = Instant.now();
 
     private Instant updatedAt = Instant.now();
+
+    public RecruitmentRequisition() {
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+        this.status = "DRAFT";
+        this.currency = "VND";
+        this.workingModel = "ONSITE";
+        this.quantity = 1;
+        this.budgetOverridden = false;
+    }
 
     @PrePersist
     protected void onCreate() {
@@ -120,5 +131,298 @@ public class RecruitmentRequisition {
         updatedAt = Instant.now();
         if (neededDate == null && targetDate != null) neededDate = targetDate;
         if (targetDate == null && neededDate != null) targetDate = neededDate;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getRequisitionCode() {
+        return requisitionCode;
+    }
+
+    public void setRequisitionCode(String requisitionCode) {
+        this.requisitionCode = requisitionCode;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public Long getDepartmentId() {
+        return departmentId;
+    }
+
+    public void setDepartmentId(Long departmentId) {
+        this.departmentId = departmentId;
+    }
+
+    public Long getJobTitleId() {
+        return jobTitleId;
+    }
+
+    public void setJobTitleId(Long jobTitleId) {
+        this.jobTitleId = jobTitleId;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public void setQuantity(int quantity) {
+        this.quantity = quantity;
+    }
+
+    public String getRecruitmentType() {
+        return recruitmentType;
+    }
+
+    public void setRecruitmentType(String recruitmentType) {
+        this.recruitmentType = recruitmentType;
+    }
+
+    public Long getSalaryMin() {
+        return salaryMin;
+    }
+
+    public void setSalaryMin(Long salaryMin) {
+        this.salaryMin = salaryMin;
+    }
+
+    public Long getSalaryMax() {
+        return salaryMax;
+    }
+
+    public void setSalaryMax(Long salaryMax) {
+        this.salaryMax = salaryMax;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public String getSalaryExplanation() {
+        return salaryExplanation;
+    }
+
+    public void setSalaryExplanation(String salaryExplanation) {
+        this.salaryExplanation = salaryExplanation;
+    }
+
+    public LocalDate getNeededDate() {
+        return neededDate;
+    }
+
+    public void setNeededDate(LocalDate neededDate) {
+        this.neededDate = neededDate;
+    }
+
+    public LocalDate getTargetDate() {
+        return targetDate;
+    }
+
+    public void setTargetDate(LocalDate targetDate) {
+        this.targetDate = targetDate;
+    }
+
+    public String getJobDescription() {
+        return jobDescription;
+    }
+
+    public void setJobDescription(String jobDescription) {
+        this.jobDescription = jobDescription;
+    }
+
+    public String getCandidateRequirements() {
+        return candidateRequirements;
+    }
+
+    public void setCandidateRequirements(String candidateRequirements) {
+        this.candidateRequirements = candidateRequirements;
+    }
+
+    public String getBenefits() {
+        return benefits;
+    }
+
+    public void setBenefits(String benefits) {
+        this.benefits = benefits;
+    }
+
+    public String getWorkLocation() {
+        return workLocation;
+    }
+
+    public void setWorkLocation(String workLocation) {
+        this.workLocation = workLocation;
+    }
+
+    public Long getWorkLocationId() {
+        return workLocationId;
+    }
+
+    public void setWorkLocationId(Long workLocationId) {
+        this.workLocationId = workLocationId;
+    }
+
+    public Long getEmploymentTypeId() {
+        return employmentTypeId;
+    }
+
+    public void setEmploymentTypeId(Long employmentTypeId) {
+        this.employmentTypeId = employmentTypeId;
+    }
+
+    public String getWorkingModel() {
+        return workingModel;
+    }
+
+    public void setWorkingModel(String workingModel) {
+        this.workingModel = workingModel;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
+    }
+
+    public Long getProposedMinSalary() {
+        return proposedMinSalary;
+    }
+
+    public void setProposedMinSalary(Long proposedMinSalary) {
+        this.proposedMinSalary = proposedMinSalary;
+    }
+
+    public Long getProposedMaxSalary() {
+        return proposedMaxSalary;
+    }
+
+    public void setProposedMaxSalary(Long proposedMaxSalary) {
+        this.proposedMaxSalary = proposedMaxSalary;
+    }
+
+    public String getRequirements() {
+        return requirements;
+    }
+
+    public void setRequirements(String requirements) {
+        this.requirements = requirements;
+    }
+
+    public String getRejectionReason() {
+        return rejectionReason;
+    }
+
+    public void setRejectionReason(String rejectionReason) {
+        this.rejectionReason = rejectionReason;
+    }
+
+    public Long getRejectionReasonId() {
+        return rejectionReasonId;
+    }
+
+    public void setRejectionReasonId(Long rejectionReasonId) {
+        this.rejectionReasonId = rejectionReasonId;
+    }
+
+    public Long getCreatedByUserId() {
+        return createdByUserId;
+    }
+
+    public void setCreatedByUserId(Long createdByUserId) {
+        this.createdByUserId = createdByUserId;
+    }
+
+    public Instant getSubmittedAt() {
+        return submittedAt;
+    }
+
+    public void setSubmittedAt(Instant submittedAt) {
+        this.submittedAt = submittedAt;
+    }
+
+    public Long getApprovedByUserId() {
+        return approvedByUserId;
+    }
+
+    public void setApprovedByUserId(Long approvedByUserId) {
+        this.approvedByUserId = approvedByUserId;
+    }
+
+    public Instant getApprovedAt() {
+        return approvedAt;
+    }
+
+    public void setApprovedAt(Instant approvedAt) {
+        this.approvedAt = approvedAt;
+    }
+
+    public boolean isBudgetOverridden() {
+        return budgetOverridden;
+    }
+
+    public void setBudgetOverridden(boolean budgetOverridden) {
+        this.budgetOverridden = budgetOverridden;
+    }
+
+    public String getBudgetOverrideReason() {
+        return budgetOverrideReason;
+    }
+
+    public void setBudgetOverrideReason(String budgetOverrideReason) {
+        this.budgetOverrideReason = budgetOverrideReason;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RecruitmentRequisition that = (RecruitmentRequisition) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id);
     }
 }

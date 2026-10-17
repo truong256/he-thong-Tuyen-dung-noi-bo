@@ -1,0 +1,21 @@
+.rsd-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; padding: 12px; z-index: 1000; }
+.rsd-dialog { background: #fff; width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; border-radius: 12px; padding: 20px 16px; box-sizing: border-box; font-family: system-ui, sans-serif; }
+.rsd-title { margin: 0 0 4px; font-size: 1.15rem; }
+.rsd-subtitle { margin: 0 0 8px; color: #555; font-size: .9rem; overflow-wrap: anywhere; }
+.rsd-desc { margin: 0 0 12px; font-size: .95rem; }
+.rsd-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-size: .95rem; }
+.rsd-field select, .rsd-field textarea { width: 100%; box-sizing: border-box; font: inherit; padding: 10px; min-height: 44px; border: 1px solid #bbb; border-radius: 8px; }
+.rsd-field [aria-invalid="true"] { border-color: #c62828; }
+.rsd-error { color: #c62828; font-size: .85rem; }
+.rsd-warning { background: #fff4e5; border: 1px solid #f0a030; border-radius: 8px; padding: 12px; margin-bottom: 12px; font-size: .95rem; }
+.rsd-warning ul { margin: 6px 0 6px 18px; padding: 0; }
+.rsd-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.rsd-btn { min-height: 44px; padding: 0 16px; border-radius: 8px; border: 1px solid #bbb; background: #fff; font: inherit; cursor: pointer; }
+.rsd-btn:disabled { opacity: .6; cursor: not-allowed; }
+.rsd-btn-primary { background: #1565c0; border-color: #1565c0; color: #fff; }
+.rsd-btn-danger { background: #c62828; border-color: #c62828; color: #fff; }
+/* Khổ 360px: nút xếp dọc, full chiều rộng */
+@media (max-width: 480px) {
+  .rsd-actions { flex-direction: column-reverse; }
+  .rsd-btn { width: 100%; }
+}

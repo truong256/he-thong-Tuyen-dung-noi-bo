@@ -83,6 +83,29 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
             Pageable pageable
     );
 
+    @Query("""
+        SELECT r FROM RecruitmentRequisition r
+        WHERE ((:canReadAll = true)
+               OR (r.createdByUserId = :userId)
+               OR (r.id IN :assignedIds)
+               OR (r.departmentId IN :managedDepartmentIds))
+          AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+          AND (:departmentId IS NULL OR r.departmentId = :departmentId)
+          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        ORDER BY r.createdAt DESC
+        """)
+    Page<RecruitmentRequisition> searchScoped(
+            @Param("canReadAll") boolean canReadAll,
+            @Param("userId") Long userId,
+            @Param("assignedIds") Collection<Long> assignedIds,
+            @Param("managedDepartmentIds") Collection<Long> managedDepartmentIds,
+            @Param("status") String status,
+            @Param("departmentId") Long departmentId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
     Page<RecruitmentRequisition> findByDepartmentIdIn(Collection<Long> departmentIds, Pageable pageable);
 
     Page<RecruitmentRequisition> findByCreatedByUserId(Long createdByUserId, Pageable pageable);
@@ -142,4 +165,8 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
                         @Param("createdByUserId") Long createdByUserId,
                         Pageable pageable
         );
+
+        List<RecruitmentRequisition> findByDepartmentIdAndStatusIn(Long departmentId, Collection<String> statuses);
+
+        List<RecruitmentRequisition> findByStatusIn(Collection<String> statuses);
 }

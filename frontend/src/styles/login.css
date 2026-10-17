@@ -317,6 +317,14 @@
   padding-right: 48px;
 }
 
+/* Disable Microsoft Edge native reveal button on auth password inputs */
+.auth-text-input::-ms-reveal,
+.auth-text-input::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 .auth-text-input::placeholder {
   color: #94A3B8;
   font-size: 14px;
@@ -679,5 +687,402 @@
   .auth-form-title {
     font-size: 24px;
   }
+}
+
+/* ==========================================================================
+   AUTH SIMPLE PAGES (FORGOT PASSWORD, RESET PASSWORD, FIRST LOGIN)
+   Modern Soft UI for single-card authentication flows
+   ========================================================================== */
+.auth-simple-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-page);
+  padding: 24px 16px;
+  font-family: inherit;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  padding: 38px 34px;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 24px 18px;
+    border-radius: var(--radius-md);
+  }
+}
+
+.auth-card .card-header {
+  text-align: center;
+  margin-bottom: 26px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.auth-card-icon-wrap {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+.auth-card-icon {
+  color: var(--primary);
+  stroke-width: 1.85;
+}
+
+.auth-card .card-header h2 {
+  font-size: 1.55rem;
+  color: #0f172a;
+  margin: 0 0 8px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.auth-card .card-header p {
+  color: #64748b;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  margin: 0 auto;
+  max-width: 320px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* Input Wrappers with Leading and Trailing Icons */
+.input-wrap,
+.input-with-eye {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.input-wrap .input-icon,
+.input-with-eye .input-icon-left {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+  z-index: 2;
+  transition: color 150ms ease;
+}
+
+.input-wrap:focus-within .input-icon,
+.input-with-eye:focus-within .input-icon-left {
+  color: var(--primary);
+}
+
+.input-wrap input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px 0 42px;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: all 180ms ease;
+  box-sizing: border-box;
+}
+
+.input-with-eye input {
+  width: 100%;
+  height: 44px;
+  padding: 0 44px 0 14px !important;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: all 180ms ease;
+  box-sizing: border-box;
+}
+
+.input-with-eye input.has-left-icon {
+  padding-left: 42px !important;
+  padding-right: 44px !important;
+}
+
+.input-wrap input:hover,
+.input-with-eye input:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.input-wrap input:focus,
+.input-with-eye input:focus {
+  outline: none;
+  border-color: #94a3b8;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.input-wrap input:focus-visible,
+.input-with-eye input:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
+}
+
+.input-wrap input.has-error,
+.input-with-eye input.has-error {
+  border-color: #ef4444;
+  background: #fffdfd;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+.eye-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 150ms ease, background 150ms ease;
+}
+
+.eye-toggle-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+/* Submit Button */
+.btn-submit {
+  width: 100%;
+  height: 44px;
+  background-color: var(--primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.94rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--primary);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-submit:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-submit:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.auth-btn-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.auth-spinner {
+  display: inline-block;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Footer & Back Link */
+.auth-card-footer {
+  margin-top: 22px;
+  text-align: center;
+}
+
+.auth-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+.auth-back-link:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
+}
+
+/* Success Block */
+.forgot-success-block {
+  text-align: center;
+  padding: 10px 0 6px;
+}
+
+.forgot-success-icon-wrap {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.forgot-success-block h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 10px;
+}
+
+.forgot-success-text {
+  font-size: 0.88rem;
+  color: #334155;
+  line-height: 1.5;
+  margin: 0 0 8px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.forgot-hint-text {
+  font-size: 0.82rem;
+  color: #64748b;
+  margin: 0 0 20px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+/* Password meter & criteria */
+.pwd-strength-container {
+  margin-top: 8px;
+}
+
+.pwd-strength-bar-bg {
+  width: 100%;
+  height: 5px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.pwd-strength-bar {
+  height: 100%;
+  transition: width 240ms ease, background-color 240ms ease;
+  border-radius: 999px;
+}
+
+.pwd-strength-text {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.pwd-match-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.pwd-match-indicator.match {
+  color: #16a34a;
+}
+
+.pwd-match-indicator.mismatch {
+  color: #dc2626;
+}
+
+.pwd-criteria-list {
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 14px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pwd-criteria-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+
+.pwd-criteria-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: #64748b;
+  transition: color 150ms ease;
+}
+
+.pwd-criteria-item.met {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.pwd-criteria-item .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  display: inline-block;
+  margin-left: 3px;
+  margin-right: 4px;
 }
 

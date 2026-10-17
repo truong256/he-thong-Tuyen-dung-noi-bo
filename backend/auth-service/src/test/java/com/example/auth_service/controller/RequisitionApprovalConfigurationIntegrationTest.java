@@ -60,8 +60,8 @@ class RequisitionApprovalConfigurationIntegrationTest {
     @Autowired private RequisitionApprovalConfigurationRepository configurations;
     @Autowired private RequisitionApprovalConfigurationStepRepository configurationSteps;
     @Autowired private RequisitionApprovalSnapshotRepository snapshots;
-        @Autowired private RequisitionAssignmentRepository assignments;
-        @Autowired private RecruitmentRequisitionRepository requisitions;
+    @Autowired private RequisitionAssignmentRepository assignments;
+    @Autowired private RecruitmentRequisitionRepository requisitions;
 
     private User hrManager;
     private User hiringManager;
@@ -161,7 +161,7 @@ class RequisitionApprovalConfigurationIntegrationTest {
                         .header("Authorization", token(hrManager))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(request(
-                                new ApprovalConfigurationRequest.ApprovalStepRequest(1_000_000L, approverOne.getId())
+                                new ApprovalConfigurationRequest.ApprovalStepRequest(-1_000_000L, approverOne.getId())
                         ))))
                 .andExpect(status().isBadRequest());
 
@@ -378,12 +378,18 @@ class RequisitionApprovalConfigurationIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("REJECTED"));
 
-        mvc.perform(get("/api/requisitions/" + rejectedRequisitionId + "/approval-history")
+        mvc.perform(get("/api/requisitions/" + rejectedRequisitionId + "/approval-logs")
                         .header("Authorization", token(hiringManager)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].action").value("REJECT"))
                 .andExpect(jsonPath("$[0].comment").value("Không phù hợp ngân sách."));
+
+        mvc.perform(get("/api/requisitions/" + rejectedRequisitionId + "/approval-history")
+                        .header("Authorization", token(hiringManager)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect(jsonPath("$.rejectionReason").value("Không phù hợp ngân sách."));
     }
 
     private Long createSubmittedRequisition() throws Exception {

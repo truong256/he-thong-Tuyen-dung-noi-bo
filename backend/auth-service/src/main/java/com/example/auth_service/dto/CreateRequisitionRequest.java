@@ -134,7 +134,8 @@ public class CreateRequisitionRequest {
 
     public void setReason(String reason) {
         this.reason = reason;
-        if (this.recruitmentType == null || "NEW".equals(this.recruitmentType)) {
+        if (this.recruitmentType == null && reason != null && 
+            ("NEW".equalsIgnoreCase(reason) || "NEW_HEADCOUNT".equalsIgnoreCase(reason) || "REPLACEMENT".equalsIgnoreCase(reason))) {
             this.recruitmentType = reason;
         }
     }
@@ -148,10 +149,10 @@ public class CreateRequisitionRequest {
         if (recruitmentType != null && !recruitmentType.isBlank()) {
             return recruitmentType;
         }
-        if (reason != null && !reason.isBlank()) {
+        if (reason != null && ("NEW".equalsIgnoreCase(reason) || "NEW_HEADCOUNT".equalsIgnoreCase(reason) || "REPLACEMENT".equalsIgnoreCase(reason))) {
             return reason;
         }
-        return "NEW";
+        return "NEW_HEADCOUNT";
     }
     public String reason() { return reason; }
     public Long salaryMin() { return salaryMin; }

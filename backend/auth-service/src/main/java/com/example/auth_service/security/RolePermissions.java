@@ -56,6 +56,7 @@ public final class RolePermissions {
         // RECRUITER – vận hành tuyển dụng hằng ngày
         //   Danh mục: R  →  CATALOG_READ
         //   Dải lương: Theo Jira S2-05 chỉ HR_MANAGER xem dải lương chuẩn (GAP 02: Bỏ SALARY_READ)
+        //   Yêu cầu tuyển dụng: W  →  REQUISITION_CREATE, REQUISITION_READ_OWN (phạm vi được phân công)
         //   Tin tuyển dụng: W  →  JOB_MANAGE
         //   Hồ sơ & pipeline: Theo Jira S1-05 giới hạn vị trí phụ trách (GAP 01: CANDIDATE_READ_ASSIGNED, PIPELINE_MANAGE)
         //   Lịch phỏng vấn: F  →  INTERVIEW_MANAGE
@@ -67,6 +68,8 @@ public final class RolePermissions {
         // ----------------------------------------------------------------
         roles.put(RoleName.RECRUITER, permissions(
                 CATALOG_READ,
+                REQUISITION_CREATE,
+                REQUISITION_READ_OWN,
                 JOB_MANAGE,
                 CANDIDATE_READ_ASSIGNED,
                 PIPELINE_MANAGE,
@@ -93,6 +96,7 @@ public final class RolePermissions {
                 CATALOG_READ,
                 REQUISITION_CREATE,
                 REQUISITION_READ_OWN,
+                REQUISITION_APPROVE,
                 CANDIDATE_READ_ASSIGNED,
                 INTERVIEW_READ_ASSIGNED,
                 EVALUATION_READ,
@@ -161,7 +165,7 @@ public final class RolePermissions {
         // APPROVER – ban giám đốc, phê duyệt theo hạn mức
         //   Danh mục: R  →  CATALOG_READ
         //   Dải lương: GAP 02 Bỏ SALARY_READ (S2-05: chỉ HR_MANAGER)
-        //   Yêu cầu tuyển dụng: W*  →  REQUISITION_APPROVE
+        //   Yêu cầu tuyển dụng: W*  →  REQUISITION_APPROVE, REQUISITION_READ_OWN
         //   Hồ sơ ứng viên: R  →  CANDIDATE_READ_ALL (read-only tổng quan)
         //   Phiếu đánh giá: R  →  EVALUATION_READ
         //   Offer: W*  →  OFFER_APPROVE
@@ -169,6 +173,7 @@ public final class RolePermissions {
         // ----------------------------------------------------------------
         roles.put(RoleName.APPROVER, permissions(
                 CATALOG_READ,
+                REQUISITION_READ_OWN,
                 REQUISITION_APPROVE,
                 CANDIDATE_READ_ALL,
                 EVALUATION_READ,

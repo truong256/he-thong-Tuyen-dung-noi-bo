@@ -36,6 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const canReadCatalog = checkPerm('CATALOG_READ', ['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER', 'APPROVER']);
   const canReadUsers = checkPerm('USER_READ', ['ADMIN', 'HR_MANAGER']);
   const canManageUsers = checkPerm('USER_MANAGE', ['ADMIN']);
+  const canReadRoles = checkPerm('ROLE_READ', ['ADMIN', 'HR_MANAGER']);
   const canReadAudit = checkPerm('AUDIT_READ', ['ADMIN', 'HR_MANAGER']);
 
   return (
@@ -135,7 +136,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* User Administration Section */}
-          {(canReadUsers || canManageUsers) && (
+          {(canReadUsers || canManageUsers || canReadRoles) && (
             <div className="sidebar-section">
               <span className="sidebar-title">QUẢN TRỊ TÀI KHOẢN</span>
               <ul className="sidebar-menu">
@@ -147,6 +148,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       onClick={handleLinkClick}
                     >
                       <span>{canManageUsers ? 'Quản lý Tài khoản' : 'Danh sách tài khoản'}</span>
+                    </NavLink>
+                  </li>
+                )}
+
+                {canReadRoles && (
+                  <li>
+                    <NavLink
+                      to="/admin/permission-matrix"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Ma trận phân quyền</span>
                     </NavLink>
                   </li>
                 )}
@@ -171,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <div className="sidebar-section">
               <span className="sidebar-title">QUY TRÌNH TUYỂN DỤNG</span>
               <ul className="sidebar-menu">
-                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']) || (hasPermission && hasPermission('REQUISITION_CREATE'))) ? (
+                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN', 'RECRUITER', 'APPROVER']) || (hasPermission && (hasPermission('REQUISITION_CREATE') || hasPermission('REQUISITION_READ_OWN') || hasPermission('REQUISITION_READ_ALL') || hasPermission('REQUISITION_APPROVE')))) && (
                   <li>
                     <NavLink
                       to="/recruitment/requisitions"
@@ -180,19 +193,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     >
                       <span>Yêu cầu tuyển dụng</span>
                     </NavLink>
-                  </li>
-                ) : (
-                  <li>
-                    <a
-                      href="#requisitions"
-                      className="sidebar-link-upcoming"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleUpcomingClick('Yêu cầu tuyển dụng');
-                      }}
-                    >
-                      <span>Yêu cầu tuyển dụng</span>
-                    </a>
                   </li>
                 )}
 
@@ -208,19 +208,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </li>
                 )}
 
+                {hasAnyRole(['HR_MANAGER', 'ADMIN', 'APPROVER', 'HIRING_MANAGER', 'RECRUITER']) && (
+                  <li>
+                    <NavLink
+                      to="/headcount-budgets"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Ngân sách Headcount</span>
+                    </NavLink>
+                  </li>
+                )}
+
                 {hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN']) && (
                   <>
                     <li>
-                      <a
-                        href="#jobs"
-                        className="sidebar-link-upcoming"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleUpcomingClick('Tin tuyển dụng');
-                        }}
+                      <NavLink
+                        to="/recruitment/job-postings"
+                        className={({ isActive }) => (isActive ? 'active' : '')}
+                        onClick={handleLinkClick}
                       >
                         <span>Tin tuyển dụng</span>
-                      </a>
+                      </NavLink>
                     </li>
                     <li>
                       <a

@@ -169,4 +169,128 @@ describe('ApprovalConfigurationPage (S3-01)', () => {
     expect(await screen.findByText('Đã ngừng áp dụng cấu hình.')).toBeInTheDocument();
     expect(screen.getByText('Phiên bản cũ')).toBeInTheDocument();
   });
+
+  it('allows resuming a deactivated configuration with "Sử dụng tiếp"', async () => {
+    const deactivatedConfig = {
+      ...activeConfiguration,
+      id: 31,
+      version: 1,
+      active: false,
+      deactivatedAt: '2026-10-02T10:00:00Z',
+    };
+    vi.mocked(approvalConfigurationApi.list).mockResolvedValue([deactivatedConfig] as any);
+    vi.mocked(approvalConfigurationApi.create).mockResolvedValue({
+      ...deactivatedConfig,
+      id: 32,
+      version: 2,
+      active: true,
+      deactivatedAt: null,
+    } as any);
+
+    renderPage();
+
+    const resumeBtn = await screen.findByRole('button', { name: 'Sử dụng tiếp' });
+    expect(resumeBtn).toBeInTheDocument();
+
+    fireEvent.click(resumeBtn);
+
+    await waitFor(() => expect(approvalConfigurationApi.create).toHaveBeenCalledWith({
+      departmentId: 17,
+      steps: [
+        { minimumSalary: 0, approverUserId: 21 },
+        { minimumSalary: 50_000_000, approverUserId: 22 },
+      ],
+    }));
+    expect(await screen.findByText('Đã kích hoạt lại cấu hình và áp dụng phiên bản 2.')).toBeInTheDocument();
+  });
+
+  it('allows rolling back to an older version with "Quay lại phiên bản này"', async () => {
+    const v1Inactive = {
+      ...activeConfiguration,
+      id: 30,
+      version: 1,
+      active: false,
+      steps: [
+        { stepOrder: 1, minimumSalary: 0, approverUserId: 21, approverName: 'Nguyễn An' },
+      ],
+    };
+    const v2Active = {
+      ...activeConfiguration,
+      id: 31,
+      version: 2,
+      active: true,
+    };
+    vi.mocked(approvalConfigurationApi.list).mockResolvedValue([v2Active, v1Inactive] as any);
+    vi.mocked(approvalConfigurationApi.update).mockResolvedValue({
+      ...v1Inactive,
+      id: 32,
+      version: 3,
+      active: true,
+    } as any);
+
+    renderPage();
+
+    // Click on Version 1 in history
+    const v1Btn = await screen.findByRole('button', { name: /Phiên bản 1/i });
+    fireEvent.click(v1Btn);
+
+    // Rollback button appears
+    const rollbackBtn = await screen.findByRole('button', { name: 'Quay lại phiên bản này' });
+    expect(rollbackBtn).toBeInTheDocument();
+
+    fireEvent.click(rollbackBtn);
+
+    // Editor is populated with Version 1 steps
+    expect(await screen.findByText(/Khôi phục từ phiên bản 1/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu phiên bản' }));
+
+    await waitFor(() => expect(approvalConfigurationApi.update).toHaveBeenCalledWith(31, {
+      departmentId: 17,
+      steps: [{ minimumSalary: 0, approverUserId: 21 }],
+    }));
+    expect(await screen.findByText('Đã lưu cấu hình phiên bản 3.')).toBeInTheDocument();
+  });
+
+  it('prevents entering negative values in salary threshold', async () => {
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Chỉnh sửa' }));
+    const thresholds = screen.getAllByLabelText('Từ mức lương', { selector: 'input' });
+
+    // Try pressing '-' key -> default is prevented
+    const notCancelled = fireEvent.keyDown(thresholds[1], { key: '-' });
+    expect(notCancelled).toBe(false);
+
+    // If negative value is pasted or entered, negative sign is stripped and formatted cleanly
+    fireEvent.change(thresholds[1], { target: { value: '-70000000' } });
+    expect(thresholds[1]).toHaveValue('70,000,000');
+  });
+
+  it('allows immediately editing step 1 salary when creating a configuration', async () => {
+    vi.mocked(approvalConfigurationApi.list).mockResolvedValue([]);
+    vi.mocked(approvalConfigurationApi.create).mockResolvedValue({
+      ...activeConfiguration,
+      id: 50,
+      version: 1,
+      steps: [{ stepOrder: 1, minimumSalary: 10_000_000, approverUserId: 21, approverName: 'Nguyễn An' }],
+    } as any);
+
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Tạo cấu hình' }));
+    const step1Input = await screen.findByLabelText('Từ mức lương', { selector: 'input' });
+    expect(step1Input).not.toBeDisabled();
+
+    fireEvent.change(step1Input, { target: { value: '10000000' } });
+    expect(step1Input).toHaveValue('10,000,000');
+
+    fireEvent.change(screen.getByLabelText('Người phê duyệt'), { target: { value: '21' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu phiên bản' }));
+
+    await waitFor(() => expect(approvalConfigurationApi.create).toHaveBeenCalledWith({
+      departmentId: 17,
+      steps: [{ minimumSalary: 10_000_000, approverUserId: 21 }],
+    }));
+    expect(await screen.findByText('Đã lưu cấu hình phiên bản 1.')).toBeInTheDocument();
+  });
 });

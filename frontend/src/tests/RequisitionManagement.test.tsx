@@ -25,6 +25,8 @@ const mockJobTitles = [
     level: 'L4',
     minSalary: 25000000,
     maxSalary: 40000000,
+    standardHeadcount: 5,
+    currentHeadcount: 4,
     active: true,
   },
   {
@@ -34,6 +36,8 @@ const mockJobTitles = [
     level: 'L3',
     minSalary: 15000000,
     maxSalary: 25000000,
+    standardHeadcount: 2,
+    currentHeadcount: 2,
     active: true,
   },
 ];
@@ -110,6 +114,14 @@ describe('RequisitionManagementPage (S2-10 - Yêu cầu Tuyển dụng)', () => 
       totalPages: 1,
       size: 20,
       number: 0,
+    });
+    vi.mocked(requisitionApi.getAssignableRecruiters).mockResolvedValue([]);
+    vi.mocked(requisitionApi.getAssignments).mockResolvedValue({
+      requisitionId: 101,
+      requisitionCode: 'REQ-2026-0001',
+      requisitionTitle: 'Tuyển dụng Senior Backend Java',
+      supportRecruiters: [],
+      hiringManagers: [],
     });
   });
 
@@ -239,5 +251,150 @@ describe('RequisitionManagementPage (S2-10 - Yêu cầu Tuyển dụng)', () => 
 
     expect(window.confirm).toHaveBeenCalled();
     expect(requisitionApi.delete).toHaveBeenCalledWith(101);
+  });
+
+  it('hides standard salary range ("Khung chuẩn:") for HIRING_MANAGER role (S2-05)', async () => {
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0001')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Tạo yêu cầu mới/i }));
+
+    // User has role HIRING_MANAGER only, so "Khung chuẩn:" must NOT be visible
+    expect(screen.queryByText(/Khung chuẩn:/i)).not.toBeInTheDocument();
+  });
+
+  it('shows headcount quota info and warning badge when quantity exceeds quota (S3-04)', async () => {
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0001')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Tạo yêu cầu mới/i }));
+
+    // For jobTitle id 10 (std: 5, curr: 4 -> remaining: 1)
+    // When quantity is 2 (> 1), warning badge should appear
+    const quantityInput = screen.getByDisplayValue('1');
+    fireEvent.change(quantityInput, { target: { value: '3' } });
+
+    expect(screen.getByText(/Cảnh báo vượt chỉ tiêu headcount/i)).toBeInTheDocument();
+    expect(screen.getByText(/vượt chỉ tiêu headcount còn lại/i)).toBeInTheDocument();
+  });
+
+  it('renders approve and reject buttons for APPROVER on PENDING_APPROVAL requisitions and allows approval', async () => {
+    vi.mocked(useAuthModule.useAuth).mockReturnValue({
+      user: {
+        id: 6,
+        email: 'approver@company.com',
+        fullName: 'Người Phê duyệt Tuyển dụng',
+        department: 'BOD',
+        role: 'APPROVER',
+        roles: ['APPROVER'],
+        status: 'ACTIVE',
+      },
+      token: 'fake-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      hasRole: (r: string) => r === 'APPROVER',
+      hasAnyRole: (roles: string[]) => roles.includes('APPROVER'),
+      permissions: ['REQUISITION_APPROVE', 'CATALOG_READ'],
+      hasPermission: (p: string) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some((p) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p)),
+    } as any);
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    vi.mocked(requisitionApi.approve).mockResolvedValue({
+      id: 102,
+      requisitionCode: 'REQ-2026-0002',
+      status: 'APPROVED',
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0002')).toBeInTheDocument();
+    });
+
+    const approveBtn = screen.getByTitle('Phê duyệt yêu cầu tuyển dụng');
+    expect(approveBtn).toBeInTheDocument();
+    fireEvent.click(approveBtn);
+
+    expect(window.confirm).toHaveBeenCalled();
+    expect(requisitionApi.approve).toHaveBeenCalledWith(102);
+  });
+
+  it('allows APPROVER to reject a PENDING_APPROVAL requisition with reason', async () => {
+    vi.mocked(useAuthModule.useAuth).mockReturnValue({
+      user: {
+        id: 6,
+        email: 'approver@company.com',
+        fullName: 'Người Phê duyệt Tuyển dụng',
+        department: 'BOD',
+        role: 'APPROVER',
+        roles: ['APPROVER'],
+        status: 'ACTIVE',
+      },
+      token: 'fake-token',
+      isAuthenticated: true,
+      isLoading: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      refreshUser: vi.fn(),
+      hasRole: (r: string) => r === 'APPROVER',
+      hasAnyRole: (roles: string[]) => roles.includes('APPROVER'),
+      permissions: ['REQUISITION_APPROVE', 'CATALOG_READ'],
+      hasPermission: (p: string) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p),
+      hasAnyPermission: (perms: string[]) => perms.some((p) => ['REQUISITION_APPROVE', 'CATALOG_READ'].includes(p)),
+    } as any);
+
+    vi.mocked(requisitionApi.reject).mockResolvedValue({
+      id: 102,
+      requisitionCode: 'REQ-2026-0002',
+      status: 'REJECTED',
+    } as any);
+
+    render(
+      <MemoryRouter>
+        <RequisitionManagementPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('REQ-2026-0002')).toBeInTheDocument();
+    });
+
+    const rejectBtn = screen.getByTitle('Từ chối yêu cầu tuyển dụng');
+    expect(rejectBtn).toBeInTheDocument();
+    fireEvent.click(rejectBtn);
+
+    expect(screen.getByText('Từ chối yêu cầu tuyển dụng')).toBeInTheDocument();
+
+    const textarea = screen.getByPlaceholderText(/Nhập lý do từ chối để người tạo yêu cầu nắm thông tin điều chỉnh.../i);
+    fireEvent.change(textarea, { target: { value: 'Chưa đủ ngân sách tuyển thêm vị trí này' } });
+
+    const confirmRejectBtn = screen.getByRole('button', { name: /Xác nhận từ chối/i });
+    fireEvent.click(confirmRejectBtn);
+
+    await waitFor(() => {
+      expect(requisitionApi.reject).toHaveBeenCalledWith(102, 'Chưa đủ ngân sách tuyển thêm vị trí này');
+    });
   });
 });

@@ -18,16 +18,22 @@ import {
   ChevronRight,
   ShieldAlert,
   Zap,
+  Copy,
+  Clock,
 } from 'lucide-react';
 import { apiClient } from '../api/client';
 import { requisitionApi, RequisitionResponse } from '../api/requisition';
 import { PageHeader } from '../components/common/PageHeader';
+import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
+import { useAuth } from '../hooks/useAuth';
+import { formatNumberWithCommas, handleNumberInputChange, parseNumberFromCommas } from '../utils/numberFormat';
 import '../styles/recruitment-request.css';
 
 interface DepartmentItem {
   id: number;
   name: string;
   code: string;
+  managerUserId?: number;
 }
 
 interface JobTitleItem {
@@ -37,6 +43,8 @@ interface JobTitleItem {
   minSalary?: number;
   maxSalary?: number;
   departmentId?: number;
+  standardHeadcount?: number;
+  currentHeadcount?: number;
 }
 
 interface FormState {
@@ -78,6 +86,10 @@ const EMPTY_FORM: FormState = {
 };
 
 export const RecruitmentRequestPage: React.FC = () => {
+  const { user, hasPermission, hasAnyRole } = useAuth();
+  const isHrOrAdmin = hasAnyRole(['HR_MANAGER', 'ADMIN']) || (user?.roles || []).some((r: any) => r === 'HR_MANAGER' || r === 'ADMIN');
+  const isHiringManagerOnly = !isHrOrAdmin && (hasAnyRole(['HIRING_MANAGER']) || (user?.roles || []).some((r: any) => r === 'HIRING_MANAGER'));
+  const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER', 'ADMIN']);
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -91,6 +103,7 @@ export const RecruitmentRequestPage: React.FC = () => {
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [timelineReqId, setTimelineReqId] = useState<number | null>(null);
 
   // Ngày hôm nay theo chuẩn ISO YYYY-MM-DD
   const todayStr = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -126,14 +139,36 @@ export const RecruitmentRequestPage: React.FC = () => {
     loadRequisitions();
   }, [loadMetadata, loadRequisitions]);
 
+  // Danh sách phòng ban khả dụng theo phân quyền (Hiring Manager chỉ tạo trong phòng ban quản lý)
+  const availableDepartments = useMemo(() => {
+    if (isHiringManagerOnly) {
+      const filtered = departments.filter((d) => d.managerUserId === user?.id);
+      return filtered.length > 0 ? filtered : departments;
+    }
+    return departments;
+  }, [departments, isHiringManagerOnly, user]);
+
   // Chức danh và phòng ban đang chọn
   const selectedJob = jobTitles.find((j) => String(j.id) === form.jobTitleId);
   const selectedDept = departments.find((d) => String(d.id) === form.departmentId);
 
+  // Thông tin định biên headcount & cảnh báo vượt chỉ tiêu
+  const jobHeadcountInfo = useMemo(() => {
+    if (!selectedJob) return null;
+    const std = selectedJob.standardHeadcount;
+    const curr = selectedJob.currentHeadcount || 0;
+    if (std === undefined || std === null) return null;
+    const remaining = Math.max(0, std - curr);
+    const isOverQuota = Number(form.quantity || 1) > remaining;
+    return { std, curr, remaining, isOverQuota };
+  }, [selectedJob, form.quantity]);
+
   // --- REAL-TIME VALIDATION CHO DẢI LƯƠNG ---
   const salaryValidation = useMemo(() => {
-    const minNum = form.salaryMin !== '' && !isNaN(Number(form.salaryMin)) ? Number(form.salaryMin) : null;
-    const maxNum = form.salaryMax !== '' && !isNaN(Number(form.salaryMax)) ? Number(form.salaryMax) : null;
+    const cleanMin = parseNumberFromCommas(form.salaryMin);
+    const cleanMax = parseNumberFromCommas(form.salaryMax);
+    const minNum = cleanMin !== '' && !isNaN(Number(cleanMin)) ? Number(cleanMin) : null;
+    const maxNum = cleanMax !== '' && !isNaN(Number(cleanMax)) ? Number(cleanMax) : null;
 
     let minError: string | null = null;
     let maxError: string | null = null;
@@ -219,9 +254,9 @@ export const RecruitmentRequestPage: React.FC = () => {
     }
   };
 
-  // Nút tiện ích: Tự động điền dải lương chuẩn của Chức danh
+  // Nút tiện ích: Tự động điền dải lương chuẩn của Chức danh (Chỉ HR/Admin)
   const handleApplyStandardSalary = () => {
-    if (selectedJob) {
+    if (isHrOrAdmin && selectedJob) {
       if (selectedJob.minSalary) updateField('salaryMin', String(selectedJob.minSalary));
       if (selectedJob.maxSalary) updateField('salaryMax', String(selectedJob.maxSalary));
       setMessage({
@@ -242,11 +277,13 @@ export const RecruitmentRequestPage: React.FC = () => {
       if (j.departmentId && !form.departmentId) {
         updateField('departmentId', String(j.departmentId));
       }
-      if (j.minSalary && !form.salaryMin) {
-        updateField('salaryMin', String(j.minSalary));
-      }
-      if (j.maxSalary && !form.salaryMax) {
-        updateField('salaryMax', String(j.maxSalary));
+      if (isHrOrAdmin) {
+        if (j.minSalary && !form.salaryMin) {
+          updateField('salaryMin', String(j.minSalary));
+        }
+        if (j.maxSalary && !form.salaryMax) {
+          updateField('salaryMax', String(j.maxSalary));
+        }
       }
     }
   };
@@ -254,14 +291,24 @@ export const RecruitmentRequestPage: React.FC = () => {
   // 1. Thao tác Lưu Bản Nháp
   const handleSaveDraft = async () => {
     // Kiểm tra tính hợp lệ tức thời của dải lương & ngày nếu có nhập
-    if (!salaryValidation.isValid) {
-      setMessage({
-        text: salaryValidation.maxError || salaryValidation.minError || 'Dải lương không hợp lệ. Vui lòng kiểm tra lại.',
-        type: 'error',
-      });
+    const cleanMin = parseNumberFromCommas(form.salaryMin);
+    const cleanMax = parseNumberFromCommas(form.salaryMax);
+    const minNum = cleanMin !== '' && !isNaN(Number(cleanMin)) ? Number(cleanMin) : null;
+    const maxNum = cleanMax !== '' && !isNaN(Number(cleanMax)) ? Number(cleanMax) : null;
+
+    if (minNum !== null && minNum < 0) {
+      setMessage({ text: 'Lương tối thiểu không được là số âm.', type: 'error' });
       return;
     }
-    if (dateValidation.isPast) {
+    if (maxNum !== null && maxNum < 0) {
+      setMessage({ text: 'Lương tối đa không được là số âm.', type: 'error' });
+      return;
+    }
+    if (minNum !== null && maxNum !== null && minNum > maxNum) {
+      setMessage({ text: 'Lương tối đa phải lớn hơn hoặc bằng lương tối thiểu.', type: 'error' });
+      return;
+    }
+    if (form.neededDate && dateValidation.isPast) {
       setMessage({
         text: dateValidation.error || 'Ngày cần người không được ở trong quá khứ.',
         type: 'error',
@@ -279,8 +326,8 @@ export const RecruitmentRequestPage: React.FC = () => {
       quantity: form.quantity ? Number(form.quantity) : 1,
       recruitmentType: form.recruitmentType || undefined,
       reason: form.reason || undefined,
-      salaryMin: form.salaryMin ? Number(form.salaryMin) : undefined,
-      salaryMax: form.salaryMax ? Number(form.salaryMax) : undefined,
+      salaryMin: form.salaryMin ? Number(parseNumberFromCommas(form.salaryMin)) : undefined,
+      salaryMax: form.salaryMax ? Number(parseNumberFromCommas(form.salaryMax)) : undefined,
       currency: 'VND',
       salaryExplanation: form.salaryExplanation || undefined,
       neededDate: form.neededDate || undefined,
@@ -328,9 +375,18 @@ export const RecruitmentRequestPage: React.FC = () => {
     if (!form.departmentId) newErrors.departmentId = 'Vui lòng chọn phòng ban';
     if (!form.jobTitleId) newErrors.jobTitleId = 'Vui lòng chọn chức danh';
     if (!form.quantity || Number(form.quantity) < 1) newErrors.quantity = 'Số lượng tuyển dụng phải lớn hơn 0';
-    if (!form.reason.trim()) newErrors.reason = 'Vui lòng nhập lý do tuyển dụng';
+    if (!form.recruitmentType) newErrors.recruitmentType = 'Vui lòng chọn loại nhu cầu tuyển dụng';
+    if (!form.reason.trim()) newErrors.reason = 'Vui lòng nhập lý do & căn cứ giải trình nhu cầu tuyển dụng';
     if (!form.jobDescription.trim()) newErrors.jobDescription = 'Vui lòng nhập mô tả công việc';
     if (!form.candidateRequirements.trim()) newErrors.candidateRequirements = 'Vui lòng nhập yêu cầu ứng viên';
+
+    // KIỂM TRA PHÒNG BAN QUẢN LÝ CHO HIRING MANAGER
+    if (isHiringManagerOnly && form.departmentId) {
+      const isAllowed = availableDepartments.some((d) => d.id === Number(form.departmentId));
+      if (!isAllowed) {
+        newErrors.departmentId = 'Bạn chỉ có quyền tạo yêu cầu tuyển dụng cho phòng ban mình quản lý.';
+      }
+    }
 
     // KIỂM TRA NGÀY CẦN NGƯỜI
     if (!form.neededDate) {
@@ -339,10 +395,20 @@ export const RecruitmentRequestPage: React.FC = () => {
       newErrors.neededDate = dateValidation.error || 'Ngày cần người không được ở trong quá khứ';
     }
 
-    // KIỂM TRA DẢI LƯƠNG
-    if (!salaryValidation.isValid) {
-      if (salaryValidation.minError) newErrors.salaryMin = salaryValidation.minError;
-      if (salaryValidation.maxError) newErrors.salaryMax = salaryValidation.maxError;
+    // KIỂM TRA DẢI LƯƠNG BẮT BUỘC ĐẦY ĐỦ KHI GỬI DUYỆT
+    const cleanMin = parseNumberFromCommas(form.salaryMin);
+    const cleanMax = parseNumberFromCommas(form.salaryMax);
+    const minNum = cleanMin !== '' && !isNaN(Number(cleanMin)) ? Number(cleanMin) : null;
+    const maxNum = cleanMax !== '' && !isNaN(Number(cleanMax)) ? Number(cleanMax) : null;
+
+    if (minNum === null || minNum <= 0) {
+      newErrors.salaryMin = 'Vui lòng nhập mức lương tối thiểu đề xuất lớn hơn 0';
+    }
+    if (maxNum === null || maxNum <= 0) {
+      newErrors.salaryMax = 'Vui lòng nhập mức lương tối đa đề xuất lớn hơn 0';
+    }
+    if (minNum !== null && maxNum !== null && minNum > maxNum) {
+      newErrors.salaryMax = `Lương tối đa (${maxNum.toLocaleString('vi-VN')} đ) phải lớn hơn hoặc bằng lương tối thiểu (${minNum.toLocaleString('vi-VN')} đ)`;
     }
 
     // KIỂM TRA BẮT BUỘC GIẢI TRÌNH KHI VƯỢT KHUNG LƯƠNG CHỨC DANH
@@ -370,8 +436,8 @@ export const RecruitmentRequestPage: React.FC = () => {
       quantity: Number(form.quantity),
       recruitmentType: form.recruitmentType,
       reason: form.reason.trim(),
-      salaryMin: form.salaryMin ? Number(form.salaryMin) : undefined,
-      salaryMax: form.salaryMax ? Number(form.salaryMax) : undefined,
+      salaryMin: form.salaryMin ? Number(parseNumberFromCommas(form.salaryMin)) : undefined,
+      salaryMax: form.salaryMax ? Number(parseNumberFromCommas(form.salaryMax)) : undefined,
       currency: 'VND',
       salaryExplanation: form.salaryExplanation.trim() || undefined,
       neededDate: form.neededDate,
@@ -446,6 +512,52 @@ export const RecruitmentRequestPage: React.FC = () => {
       }
     } catch {
       setMessage({ text: 'Không thể xóa bản nháp này.', type: 'error' });
+    }
+  };
+
+  // Thao tác sao chép yêu cầu tuyển dụng (SCRUM-129)
+  const handleClone = async (id: number) => {
+    try {
+      setIsLoadingList(true);
+      const cloned = await requisitionApi.clone(id);
+
+      const minSal = cloned.salaryMin ?? (cloned as any).proposedMinSalary;
+      const maxSal = cloned.salaryMax ?? (cloned as any).proposedMaxSalary;
+      const reqs = cloned.candidateRequirements || (cloned as any).requirements || '';
+      const nDate = cloned.neededDate || cloned.targetDate || '';
+
+      setForm({
+        id: cloned.id,
+        requisitionCode: cloned.requisitionCode,
+        title: cloned.title || '',
+        departmentId: cloned.departmentId ? String(cloned.departmentId) : '',
+        jobTitleId: cloned.jobTitleId ? String(cloned.jobTitleId) : '',
+        quantity: String(cloned.quantity || 1),
+        recruitmentType: cloned.recruitmentType || 'NEW',
+        reason: cloned.reason || '',
+        salaryMin: minSal ? String(minSal) : '',
+        salaryMax: maxSal ? String(maxSal) : '',
+        salaryExplanation: cloned.salaryExplanation || '',
+        neededDate: nDate,
+        jobDescription: cloned.jobDescription || '',
+        candidateRequirements: reqs,
+        benefits: cloned.benefits || '',
+        workLocation: cloned.workLocation || 'Trụ sở chính',
+        workingModel: cloned.workingModel || 'ONSITE',
+      });
+      setErrors({});
+      setMessage({
+        text: `Đã sao chép thành công bản nháp mới (Mã: ${cloned.requisitionCode}). Đang mở form để chỉnh sửa...`,
+        type: 'success',
+      });
+      setActiveTab('create');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      await loadRequisitions();
+    } catch (err: any) {
+      const errText = err.response?.data?.message || 'Có lỗi xảy ra khi sao chép yêu cầu tuyển dụng.';
+      setMessage({ text: errText, type: 'error' });
+    } finally {
+      setIsLoadingList(false);
     }
   };
 
@@ -633,6 +745,18 @@ export const RecruitmentRequestPage: React.FC = () => {
                   </select>
                   {errors.jobTitleId && <p className="rr-error-text">{errors.jobTitleId}</p>}
                   <p className="rr-helper-text">Khung năng lực sẽ được đồng bộ từ Danh mục chức danh</p>
+                  {selectedJob && jobHeadcountInfo && (
+                    <div style={{ fontSize: '0.8125rem', marginTop: '6px', color: '#64748b', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <span>Định biên: <strong>{jobHeadcountInfo.std}</strong></span>
+                      <span>• Hiện có: <strong>{jobHeadcountInfo.curr}</strong></span>
+                      <span>• Còn lại: <strong style={{ color: jobHeadcountInfo.remaining > 0 ? '#10b981' : '#ef4444' }}>{jobHeadcountInfo.remaining}</strong></span>
+                    </div>
+                  )}
+                  {jobHeadcountInfo?.isOverQuota && (
+                    <div style={{ marginTop: '8px', backgroundColor: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '8px 12px', borderRadius: '8px', fontSize: '0.82rem' }}>
+                      <strong>⚠️ Cảnh báo vượt chỉ tiêu headcount:</strong> Số lượng tuyển ({form.quantity}) vượt chỉ tiêu headcount còn lại ({jobHeadcountInfo.remaining}) của chức danh này.
+                    </div>
+                  )}
                 </div>
 
                 {/* Phòng ban */}
@@ -648,7 +772,7 @@ export const RecruitmentRequestPage: React.FC = () => {
                     className={`rr-select ${errors.departmentId ? 'error' : ''}`}
                   >
                     <option value="">-- Chọn phòng ban --</option>
-                    {departments.map((d) => (
+                    {availableDepartments.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name} ({d.code})
                       </option>
@@ -746,8 +870,8 @@ export const RecruitmentRequestPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Thông tin dải lương chuẩn của Chức danh nếu có */}
-              {selectedJob && (
+              {/* Thông tin dải lương chuẩn của Chức danh nếu có (Chỉ HR/Admin) */}
+              {isHrOrAdmin && selectedJob && (selectedJob.minSalary || selectedJob.maxSalary) && (
                 <div className="rr-salary-standard-box">
                   <div className="rr-salary-standard-label">
                     <Check size={16} />
@@ -777,19 +901,20 @@ export const RecruitmentRequestPage: React.FC = () => {
                 {/* Lương min */}
                 <div className="rr-field">
                   <label className="rr-label">
-                    <span>Lương tối thiểu (Min)</span>
-                    {salaryValidation.isMinBelowStandard && (
+                    <span>
+                      Lương tối thiểu (Min) <span className="rr-req">*</span>
+                    </span>
+                    {isHrOrAdmin && salaryValidation.isMinBelowStandard && (
                       <span className="rr-status-chip-warn">⚠️ Dưới sàn</span>
                     )}
                   </label>
                   <div className="rr-input-wrapper">
                     <input
-                      type="number"
-                      step="500000"
-                      min="0"
-                      placeholder="Ví dụ: 15000000"
-                      value={form.salaryMin}
-                      onChange={(e) => updateField('salaryMin', e.target.value)}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ví dụ: 15,000,000"
+                      value={formatNumberWithCommas(form.salaryMin)}
+                      onChange={(e) => handleNumberInputChange(e, (raw) => updateField('salaryMin', raw))}
                       className={`rr-input ${salaryValidation.minError || errors.salaryMin ? 'error' : ''}`}
                     />
                     <span className="rr-unit-badge">VND</span>
@@ -814,12 +939,14 @@ export const RecruitmentRequestPage: React.FC = () => {
                 {/* Lương max */}
                 <div className="rr-field">
                   <label className="rr-label">
-                    <span>Lương tối đa (Max)</span>
+                    <span>
+                      Lương tối đa (Max) <span className="rr-req">*</span>
+                    </span>
                     {salaryValidation.isMinGreaterThanMax ? (
                       <span style={{ color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: 600 }}>
                         ❌ Min &gt; Max
                       </span>
-                    ) : salaryValidation.isMaxAboveStandard ? (
+                    ) : (isHrOrAdmin && salaryValidation.isMaxAboveStandard) ? (
                       <span className="rr-status-chip-warn">⚠️ Vượt trần</span>
                     ) : form.salaryMin && form.salaryMax && salaryValidation.isValid && !salaryValidation.isOutsideSalaryRange ? (
                       <span className="rr-status-chip-ok">✓ Hợp lệ</span>
@@ -827,12 +954,11 @@ export const RecruitmentRequestPage: React.FC = () => {
                   </label>
                   <div className="rr-input-wrapper">
                     <input
-                      type="number"
-                      step="500000"
-                      min="0"
-                      placeholder="Ví dụ: 30000000"
-                      value={form.salaryMax}
-                      onChange={(e) => updateField('salaryMax', e.target.value)}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Ví dụ: 30,000,000"
+                      value={formatNumberWithCommas(form.salaryMax)}
+                      onChange={(e) => handleNumberInputChange(e, (raw) => updateField('salaryMax', raw))}
                       className={`rr-input ${salaryValidation.maxError || errors.salaryMax ? 'error' : ''}`}
                     />
                     <span className="rr-unit-badge">VND</span>
@@ -901,14 +1027,22 @@ export const RecruitmentRequestPage: React.FC = () => {
                     <span>Dải lương đề xuất nằm ngoài khung lương tiêu chuẩn của chức danh</span>
                   </div>
                   <div style={{ fontSize: '0.82rem', color: '#92400e', lineHeight: 1.5 }}>
-                    {salaryValidation.isMinBelowStandard && (
+                    {isHrOrAdmin ? (
+                      <>
+                        {salaryValidation.isMinBelowStandard && (
+                          <p style={{ margin: '0 0 4px' }}>
+                            • Lương tối thiểu <strong>{formatMoney(form.salaryMin)}</strong> thấp hơn mức sàn chuẩn (<strong>{formatMoney(selectedJob?.minSalary)}</strong>).
+                          </p>
+                        )}
+                        {salaryValidation.isMaxAboveStandard && (
+                          <p style={{ margin: '0 0 4px' }}>
+                            • Lương tối đa <strong>{formatMoney(form.salaryMax)}</strong> vượt mức trần chuẩn (<strong>{formatMoney(selectedJob?.maxSalary)}</strong>).
+                          </p>
+                        )}
+                      </>
+                    ) : (
                       <p style={{ margin: '0 0 4px' }}>
-                        • Lương tối thiểu <strong>{formatMoney(form.salaryMin)}</strong> thấp hơn mức sàn chuẩn (<strong>{formatMoney(selectedJob?.minSalary)}</strong>).
-                      </p>
-                    )}
-                    {salaryValidation.isMaxAboveStandard && (
-                      <p style={{ margin: '0 0 4px' }}>
-                        • Lương tối đa <strong>{formatMoney(form.salaryMax)}</strong> vượt mức trần chuẩn (<strong>{formatMoney(selectedJob?.maxSalary)}</strong>).
+                        • Mức lương đề xuất nằm ngoài khung tiêu chuẩn của chức danh đã chọn. Vui lòng nhập lý do giải trình.
                       </p>
                     )}
                     <p style={{ margin: 0, fontWeight: 500 }}>
@@ -1076,7 +1210,7 @@ export const RecruitmentRequestPage: React.FC = () => {
                   <span className="rr-preview-salary-label">Mức lương dự kiến</span>
                   {salaryValidation.isOutsideSalaryRange ? (
                     <span style={{ fontSize: '0.72rem', color: '#b45309', fontWeight: 600 }}>Ngoài khung chuẩn</span>
-                  ) : form.salaryMin || form.salaryMax ? (
+                  ) : (form.salaryMin || form.salaryMax) && isHrOrAdmin ? (
                     <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>Khung chuẩn</span>
                   ) : null}
                 </div>
@@ -1297,10 +1431,37 @@ export const RecruitmentRequestPage: React.FC = () => {
                               </button>
                             </>
                           ) : (
-                            <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                              Đang xử lý
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setTimelineReqId(item.id)}
+                              className="rr-btn-table-edit"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                color: '#b45309',
+                                background: '#fef3c7',
+                                borderColor: '#fde68a',
+                                padding: '4px 8px',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                              }}
+                              title="Theo dõi tiến độ & lịch sử phê duyệt"
+                            >
+                              <Clock size={13} />
+                              Tiến độ duyệt
+                            </button>
                           )}
+                          <button
+                            type="button"
+                            onClick={() => handleClone(item.id)}
+                            className="rr-btn-table-edit"
+                            style={{ color: '#0284c7', borderColor: '#bae6fd', backgroundColor: '#f0f9ff' }}
+                            title="Sao chép yêu cầu này"
+                          >
+                            <Copy size={13} />
+                            Sao chép
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1310,6 +1471,17 @@ export const RecruitmentRequestPage: React.FC = () => {
             </table>
           </div>
         </div>
+      )}
+
+      {/* Modal Theo dõi trạng thái & Lịch sử phê duyệt (S3-03) */}
+      {timelineReqId !== null && (
+        <ApprovalTimelineModal
+          requisitionId={timelineReqId}
+          isOpen={true}
+          canApprove={canApprove}
+          onClose={() => setTimelineReqId(null)}
+          onStatusChange={loadRequisitions}
+        />
       )}
     </div>
   );

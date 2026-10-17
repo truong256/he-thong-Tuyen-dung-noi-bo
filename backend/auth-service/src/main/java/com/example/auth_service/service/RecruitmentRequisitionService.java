@@ -14,6 +14,9 @@ import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,7 +39,28 @@ public class RecruitmentRequisitionService {
     private final JobTitleRepository jobTitleRepository;
     private final UserRepository userRepository;
     private final RequisitionApprovalWorkflowService approvalWorkflow;
+    private final RequisitionAssignmentRepository assignments;
+    private final RequisitionApprovalSnapshotRepository snapshots;
     private final Random random = new Random();
+
+    @Autowired
+    public RecruitmentRequisitionService(
+            RecruitmentRequisitionRepository requisitionRepository,
+            DepartmentRepository departmentRepository,
+            JobTitleRepository jobTitleRepository,
+            UserRepository userRepository,
+            RequisitionApprovalWorkflowService approvalWorkflow,
+            @Autowired(required = false) RequisitionAssignmentRepository assignments,
+            @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots
+    ) {
+        this.requisitionRepository = requisitionRepository;
+        this.departmentRepository = departmentRepository;
+        this.jobTitleRepository = jobTitleRepository;
+        this.userRepository = userRepository;
+        this.approvalWorkflow = approvalWorkflow;
+        this.assignments = assignments;
+        this.snapshots = snapshots;
+    }
 
     public RecruitmentRequisitionService(
             RecruitmentRequisitionRepository requisitionRepository,
@@ -45,11 +69,7 @@ public class RecruitmentRequisitionService {
             UserRepository userRepository,
             RequisitionApprovalWorkflowService approvalWorkflow
     ) {
-        this.requisitionRepository = requisitionRepository;
-        this.departmentRepository = departmentRepository;
-        this.jobTitleRepository = jobTitleRepository;
-        this.userRepository = userRepository;
-        this.approvalWorkflow = approvalWorkflow;
+        this(requisitionRepository, departmentRepository, jobTitleRepository, userRepository, approvalWorkflow, null, null);
     }
 
     public RequisitionResponse create(RequisitionRequest request, User currentUser) {
@@ -323,6 +343,68 @@ public class RecruitmentRequisitionService {
         requisitionRepository.delete(requisition);
     }
 
+    public RequisitionResponse clone(Long sourceId, User currentUser) {
+        RecruitmentRequisition source = requisitionRepository.findById(sourceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng gốc với ID: " + sourceId));
+
+        Department department = source.getDepartmentId() != null
+                ? departmentRepository.findById(source.getDepartmentId()).orElse(null)
+                : null;
+        checkViewPermission(currentUser, source, department);
+
+        if (department != null) {
+            if (!department.isActive()) {
+                throw new BadRequestException("Phòng ban của yêu cầu gốc đã ngừng áp dụng, không thể sao chép.");
+            }
+            checkDepartmentManagerScope(currentUser, department);
+        }
+
+        JobTitle jobTitle = source.getJobTitleId() != null
+                ? jobTitleRepository.findById(source.getJobTitleId()).orElse(null)
+                : null;
+
+        String newCode = resolveRequisitionCode(null, null);
+
+        Long minSalary = source.getSalaryMin() != null ? source.getSalaryMin() : source.getProposedMinSalary();
+        Long maxSalary = source.getSalaryMax() != null ? source.getSalaryMax() : source.getProposedMaxSalary();
+        String reqs = (source.getCandidateRequirements() != null && !source.getCandidateRequirements().isBlank())
+                ? source.getCandidateRequirements()
+                : source.getRequirements();
+
+        RecruitmentRequisition cloned = new RecruitmentRequisition();
+        cloned.setRequisitionCode(newCode);
+        cloned.setTitle(source.getTitle());
+        cloned.setDepartmentId(source.getDepartmentId());
+        cloned.setJobTitleId(source.getJobTitleId());
+        cloned.setQuantity(source.getQuantity() > 0 ? source.getQuantity() : 1);
+        cloned.setRecruitmentType(source.getRecruitmentType());
+        cloned.setReason(source.getReason());
+        cloned.setSalaryMin(minSalary);
+        cloned.setProposedMinSalary(minSalary);
+        cloned.setSalaryMax(maxSalary);
+        cloned.setProposedMaxSalary(maxSalary);
+        cloned.setSalaryExplanation(source.getSalaryExplanation());
+        cloned.setTargetDate(source.getTargetDate());
+        cloned.setNeededDate(source.getNeededDate() != null ? source.getNeededDate() : source.getTargetDate());
+
+        // Sao chép toàn bộ mô tả công việc (JD) và yêu cầu ứng viên
+        cloned.setJobDescription(source.getJobDescription());
+        cloned.setCandidateRequirements(reqs);
+        cloned.setRequirements(reqs);
+
+        // Gán trạng thái mới là Draft (Nháp)
+        cloned.setStatus("DRAFT");
+
+        // Gán người tạo mới và mốc thời gian
+        cloned.setCreatedByUserId(currentUser.getId());
+        cloned.setCreatedAt(Instant.now());
+        cloned.setUpdatedAt(Instant.now());
+
+        // Không sao chép lịch sử phê duyệt hay bình luận cũ
+        RecruitmentRequisition saved = requisitionRepository.save(cloned);
+        return toResponse(saved, department, jobTitle, currentUser);
+    }
+
     // --- Validation & Permission Helper Methods ---
 
     public boolean isSalaryOutsideRange(JobTitle jobTitle, Long proposedMin, Long proposedMax) {
@@ -439,7 +521,11 @@ public class RecruitmentRequisitionService {
         }
         boolean isCreator = Objects.equals(req.getCreatedByUserId(), user.getId());
         boolean isDeptManager = dept != null && Objects.equals(dept.getManagerUserId(), user.getId());
-        if (!isCreator && !isDeptManager) {
+        boolean isAssignedRecruiter = assignments != null && assignments.findByRequisitionIdAndUserId(req.getId(), user.getId()).isPresent();
+        boolean isAssignedApprover = snapshots != null && snapshots.findAllByRequisitionIdOrderByStepOrderAsc(req.getId()).stream()
+                .anyMatch(s -> Objects.equals(s.getApproverUserId(), user.getId()));
+
+        if (!isCreator && !isDeptManager && !isAssignedRecruiter && !isAssignedApprover) {
             throw new AccessDeniedException("Bạn không có quyền truy cập yêu cầu tuyển dụng này.");
         }
     }
@@ -534,7 +620,15 @@ public class RecruitmentRequisitionService {
             JobTitle jt,
             User creator
     ) {
-        boolean outside = isSalaryOutsideRange(jt, req.getSalaryMin(), req.getSalaryMax());
+        Long minSalary = req.getSalaryMin() != null ? req.getSalaryMin() : req.getProposedMinSalary();
+        Long maxSalary = req.getSalaryMax() != null ? req.getSalaryMax() : req.getProposedMaxSalary();
+        String reqs = (req.getCandidateRequirements() != null && !req.getCandidateRequirements().isBlank())
+                ? req.getCandidateRequirements()
+                : req.getRequirements();
+        LocalDate neededDate = req.getNeededDate() != null ? req.getNeededDate() : req.getTargetDate();
+        LocalDate targetDate = req.getTargetDate() != null ? req.getTargetDate() : req.getNeededDate();
+        boolean outside = isSalaryOutsideRange(jt, minSalary, maxSalary);
+
         return new RequisitionResponse(
                 req.getId(),
                 req.getRequisitionCode(),
@@ -550,14 +644,14 @@ public class RecruitmentRequisitionService {
                 req.getQuantity(),
                 req.getRecruitmentType(),
                 req.getReason(),
-                req.getSalaryMin(),
-                req.getSalaryMax(),
+                minSalary,
+                maxSalary,
                 req.getSalaryExplanation(),
-                req.getTargetDate(),
-                req.getTargetDate(),
+                neededDate,
+                targetDate,
                 outside,
                 req.getJobDescription(),
-                req.getCandidateRequirements(),
+                reqs,
                 req.getStatus(),
                 req.getCreatedByUserId(),
                 creator != null ? creator.getFullName() : null,

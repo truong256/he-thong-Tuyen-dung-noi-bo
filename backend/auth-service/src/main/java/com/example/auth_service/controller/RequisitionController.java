@@ -3,9 +3,7 @@ package com.example.auth_service.controller;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionDraftRequest;
 import com.example.auth_service.dto.RequisitionResponse;
-import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.service.RequisitionService;
-import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -44,6 +42,24 @@ public class RequisitionController {
     ) {
         RequisitionResponse updated = service.updateDraft(id, request);
         return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * API cập nhật và gửi phê duyệt yêu cầu tuyển dụng.
+     * Hỗ trợ lưu nháp nếu payload truyền isDraft = true, ngược lại cập nhật và nộp phê duyệt.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<RequisitionResponse> update(
+            @PathVariable Long id,
+            @RequestBody CreateRequisitionRequest request
+    ) {
+        if (Boolean.TRUE.equals(request.isDraft())) {
+            RequisitionResponse updated = service.updateDraft(id, request.toDraftRequest());
+            return ResponseEntity.ok(updated);
+        }
+        service.updateDraft(id, request.toDraftRequest());
+        RequisitionResponse submitted = service.submitDraft(id);
+        return ResponseEntity.ok(submitted);
     }
 
     /**
@@ -109,4 +125,50 @@ public class RequisitionController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * API tạm dừng yêu cầu tuyển dụng (S3-07).
+     */
+    @PostMapping("/{id}/hold")
+    public ResponseEntity<RequisitionResponse> hold(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(service.hold(id, reason));
+    }
+
+    /**
+     * API tiếp tục yêu cầu tuyển dụng đang tạm dừng (S3-07).
+     */
+    @PostMapping("/{id}/resume")
+    public ResponseEntity<RequisitionResponse> resume(@PathVariable Long id) {
+        return ResponseEntity.ok(service.resume(id));
+    }
+
+    /**
+     * API đóng yêu cầu tuyển dụng (S3-07).
+     */
+    @PostMapping("/{id}/close")
+    public ResponseEntity<RequisitionResponse> close(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(service.close(id, reason));
+    }
+
+    /**
+     * API hủy yêu cầu tuyển dụng (S3-07).
+     */
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<RequisitionResponse> cancel(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(service.cancel(id, reason));
+    }
+
 }
+

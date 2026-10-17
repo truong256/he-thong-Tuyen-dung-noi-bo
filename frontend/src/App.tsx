@@ -23,12 +23,27 @@ import RequisitionManagementPage from './pages/RequisitionManagementPage';
 import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
 import ApprovalConfigurationPage from './pages/ApprovalConfigurationPage';
+import JobPostingManagementPage from './pages/JobPostingManagementPage';
+import HeadcountBudgetPage from './pages/HeadcountBudgetPage';
+import PublicCareerPage from './pages/PublicCareerPage';
+import PublicJobDetailPage from './pages/PublicJobDetailPage';
+import PermissionMatrixPage from './pages/PermissionMatrixPage';
 
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <Routes>
+          {/* Cổng tuyển dụng công khai dành cho ứng viên (S3-10 / SCRUM-150) */}
+          <Route path="/careers" element={<PublicCareerPage />} />
+          <Route path="/careers/:id" element={<PublicJobDetailPage />} />
+          <Route path="/jobs" element={<Navigate to="/careers" replace />} />
+
           {/* Các trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -171,14 +186,14 @@ export const App: React.FC = () => {
             />
 
             {/*
-              Requisitions – S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL)
-              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F)
+              Requisitions – S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL, REQUISITION_APPROVE)
+              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F), APPROVER (W*)
             */}
             <Route
               path="recruitment/requisitions"
               element={
                 <PermissionGuard
-                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL']}
+                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE']}
                   requireAny
                 >
                   <RequisitionManagementPage />
@@ -203,6 +218,32 @@ export const App: React.FC = () => {
                   <ApprovalConfigurationPage />
                 </RoleGuard>
               }
+            />
+            {/* Quản lý Ngân sách Headcount (S3-04 / SCRUM-101) */}
+            <Route
+              path="headcount-budgets"
+              element={
+                <RoleGuard allowedRoles={['HR_MANAGER', 'ADMIN', 'APPROVER', 'HIRING_MANAGER', 'RECRUITER']}>
+                  <HeadcountBudgetPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="recruitment/headcount-budgets"
+              element={<Navigate to="/headcount-budgets" replace />}
+            />
+            {/* Tin tuyển dụng (S3-10 / SCRUM-151) – RECRUITER, HR_MANAGER, ADMIN */}
+            <Route
+              path="recruitment/job-postings"
+              element={
+                <PermissionGuard requiredPermissions={['JOB_MANAGE']}>
+                  <JobPostingManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/jobs"
+              element={<Navigate to="/recruitment/job-postings" replace />}
             />
             <Route
               path="requisitions"
@@ -251,6 +292,19 @@ export const App: React.FC = () => {
               element={
                 <PermissionGuard requiredPermissions={['USER_READ']}>
                   <UserManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Permission Matrix – ROLE_READ (ADMIN + HR_MANAGER)
+              Standalone dynamic view of the RBAC permission matrix fetched from /api/admin/roles.
+            */}
+            <Route
+              path="admin/permission-matrix"
+              element={
+                <PermissionGuard requiredPermissions={['ROLE_READ']}>
+                  <PermissionMatrixPage />
                 </PermissionGuard>
               }
             />
