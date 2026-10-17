@@ -12,6 +12,7 @@ import {
   Briefcase,
   Copy,
   UserCheck,
+  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import requisitionApi from '../api/requisition';
@@ -614,6 +615,16 @@ export const RequisitionManagementPage: React.FC = () => {
             </div>
 
             <div className="req-modal-body">
+              {editingReq?.rejectionReason && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <AlertCircle size={18} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 600, color: '#b45309', fontSize: '0.875rem' }}>Ý kiến yêu cầu bổ sung / phản hồi từ người duyệt:</div>
+                    <div style={{ color: '#92400e', fontSize: '0.875rem', marginTop: '2px', whiteSpace: 'pre-wrap' }}>{editingReq.rejectionReason}</div>
+                  </div>
+                </div>
+              )}
+
               <div className="req-form-group">
                 <label className="req-label">
                   Tiêu đề yêu cầu <span className="required">*</span>
@@ -933,6 +944,16 @@ export const RequisitionManagementPage: React.FC = () => {
                   </div>
                 )}
               </div>
+
+              {detailReq.rejectionReason && (
+                <div style={{ background: '#fffbeb', padding: '12px', borderRadius: '8px', border: '1px solid #fde68a', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <AlertCircle size={16} style={{ color: '#d97706', marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#b45309' }}>Ý kiến yêu cầu bổ sung / phản hồi:</span>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.875rem', color: '#92400e', whiteSpace: 'pre-wrap' }}>{detailReq.rejectionReason}</p>
+                  </div>
+                </div>
+              )}
 
               {detailReq.salaryExplanation && (
                 <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>

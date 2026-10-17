@@ -295,6 +295,18 @@ export const ApprovalTimelineModal: React.FC<ApprovalTimelineModalProps> = ({
                     </p>
                   </div>
                 </div>
+              ) : timeline.rejectionReason && (timeline.status === 'DRAFT' || timeline.steps?.some(s => s.status === 'REQUEST_CHANGES')) ? (
+                <div className="atl-desk-callout request-changes" style={{ borderLeftColor: '#f59e0b', background: '#fffbeb' }}>
+                  <div className="atl-desk-icon" style={{ color: '#d97706' }}>
+                    <AlertCircle size={22} />
+                  </div>
+                  <div className="atl-desk-info">
+                    <h4 style={{ color: '#b45309' }}>Yêu cầu cần bổ sung thông tin</h4>
+                    <p style={{ color: '#92400e' }}>
+                      <strong>Ý kiến phản hồi từ người duyệt:</strong> {timeline.rejectionReason}
+                    </p>
+                  </div>
+                </div>
               ) : isTimelineCompleted ? (
                 <div className="atl-desk-callout approved">
                   <div className="atl-desk-icon">
