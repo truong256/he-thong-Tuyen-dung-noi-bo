@@ -190,15 +190,15 @@ describe('ApprovalTimelineModal Component (S3-03)', () => {
 
   it('allows approver to request changes with mandatory comments (S3-02)', async () => {
     vi.mocked(approvalApi.getTimeline).mockResolvedValueOnce(mockTimelineData);
-    const updatedMock = {
+    const updatedMock: RequisitionApprovalTimeline = {
       ...mockTimelineData,
       status: 'DRAFT',
       steps: [
         mockTimelineData.steps[0],
         {
           ...mockTimelineData.steps[1],
-          status: 'REQUEST_CHANGES' as const,
-          action: 'REQUEST_CHANGES' as const,
+          status: 'REQUEST_CHANGES',
+          action: 'REQUEST_CHANGES',
           comments: 'Cần bổ sung JD chi tiết và mức kinh nghiệm tối thiểu',
           isCurrentStep: false,
         },
@@ -282,7 +282,7 @@ describe('ApprovalTimelineModal Component (S3-03)', () => {
   });
 
   it('does NOT render approval buttons when requisition is already completed', async () => {
-    const completedMock = {
+    const completedMock: RequisitionApprovalTimeline = {
       ...mockTimelineData,
       status: 'APPROVED',
       isCompleted: true,

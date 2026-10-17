@@ -5,11 +5,12 @@ export interface ApprovalStep {
   approverName?: string;
   approverEmail?: string;
   approverRole?: string;
-  action: 'SUBMIT' | 'APPROVE' | 'REJECT' | 'WAITING' | 'PENDING' | 'NOT_STARTED';
-  status: 'COMPLETED' | 'PENDING' | 'UPCOMING' | 'REJECTED';
+  action: 'SUBMIT' | 'APPROVE' | 'REJECT' | 'WAITING' | 'PENDING' | 'NOT_STARTED' | 'REQUEST_CHANGES';
+  status: 'COMPLETED' | 'PENDING' | 'UPCOMING' | 'REJECTED' | 'REQUEST_CHANGES';
   actionAt?: string;
   comments?: string;
   isCurrentStep: boolean;
+  minimumSalary?: number;
 }
 
 export interface RequisitionApprovalTimeline {

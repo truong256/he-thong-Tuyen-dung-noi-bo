@@ -10,6 +10,7 @@ export interface Requisition {
   targetDate?: string;
   neededDate?: string;
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  rejectionReason?: string;
   reason?: string;
   recruitmentType?: 'REPLACEMENT' | 'NEW_HEADCOUNT' | string;
   proposedMinSalary?: number;
