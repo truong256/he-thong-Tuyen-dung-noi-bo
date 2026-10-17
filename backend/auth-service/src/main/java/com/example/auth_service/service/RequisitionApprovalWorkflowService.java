@@ -84,6 +84,7 @@ public class RequisitionApprovalWorkflowService {
                     || "PENDING_APPROVAL".equalsIgnoreCase(requisition.getStatus())
                     || "SUBMITTED".equalsIgnoreCase(requisition.getStatus())) {
                 snapshots.deleteAllByRequisitionId(requisition.getId());
+                snapshots.flush();
             } else {
                 throw new BadRequestException("Yêu cầu tuyển dụng đã có snapshot luồng phê duyệt.");
             }

@@ -15,7 +15,9 @@ public interface RequisitionApprovalSnapshotRepository extends JpaRepository<Req
 
     boolean existsByRequisitionId(Long requisitionId);
 
-    void deleteAllByRequisitionId(Long requisitionId);
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM RequisitionApprovalSnapshot s WHERE s.requisitionId = :requisitionId")
+    void deleteAllByRequisitionId(@Param("requisitionId") Long requisitionId);
 
     List<RequisitionApprovalSnapshot> findAllByApproverUserId(Long approverUserId);
 
