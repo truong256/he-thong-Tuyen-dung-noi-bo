@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ATS · Ngân sách headcount</title>
+<style>
+:root{--bg:#f4f6fa;--card:#fff;--tx:#1b2433;--mut:#6b7587;--bd:#dfe4ec;--pri:#2457d6;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--okbg:#e8f7ee;--warnbg:#fff4e0;--badbg:#fdecec}
+@media(prefers-color-scheme:dark){:root{--bg:#10141b;--card:#1a2029;--tx:#e8ecf3;--mut:#93a0b4;--bd:#2b3442;--pri:#6b94ff;--okbg:#12301f;--warnbg:#3a2b0e;--badbg:#3d1717}}
+*{box-sizing:border-box}body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0}header .who{font-size:13px;color:var(--mut)}
+nav{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--bd)}
+nav button{white-space:nowrap;background:none;border:0;padding:8px 12px;border-radius:8px;color:var(--mut);font:inherit;cursor:pointer}
+nav button.on{background:var(--pri);color:#fff}
+main{max-width:1100px;margin:0 auto;padding:14px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.card h2{font-size:16px;margin:0 0 10px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr))}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}.row>*{flex:1 1 140px}
+label{display:block;font-size:12px;color:var(--mut);margin-bottom:3px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+textarea{min-height:80px;resize:vertical}
+button.btn{padding:9px 14px;border:0;border-radius:8px;background:var(--pri);color:#fff;font:inherit;cursor:pointer}
+button.btn.sec{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+button.btn.bad{background:var(--bad)}button.btn.sm{padding:5px 10px;font-size:13px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;margin:4px 0 2px}
+.bar i{display:block;height:100%;background:var(--ok)}.bar.warn i{background:var(--warn)}.bar.bad i{background:var(--bad)}
+.kv{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--mut)}.kv b{color:var(--tx)}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.tag.ok{background:var(--okbg);color:var(--ok)}.tag.warn{background:var(--warnbg);color:var(--warn)}.tag.bad{background:var(--badbg);color:var(--bad)}.tag.gray{background:var(--bd);color:var(--mut)}
+.alert{padding:10px 12px;border-radius:10px;margin-bottom:10px;font-size:14px;border:1px solid}
+.alert.warn{background:var(--warnbg);border-color:var(--warn)}.alert.bad{background:var(--badbg);border-color:var(--bad)}.alert.ok{background:var(--okbg);border-color:var(--ok)}
+.tw{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 6px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:top}th{color:var(--mut);font-weight:600}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:12px;z-index:20}
+.modal .box{background:var(--card);border-radius:14px;padding:16px;width:100%;max-width:480px;max-height:92vh;overflow:auto}
+#toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#1b2433;color:#fff;padding:10px 16px;border-radius:10px;z-index:30;max-width:92vw;display:none}
+.login{max-width:380px;margin:8vh auto}
+.mut{color:var(--mut);font-size:13px}.hide{display:none}.acts{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="toast"></div>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const vnd=n=>new Intl.NumberFormat('vi-VN').format(Math.round(Number(n)||0))+' ₫';
+const num=n=>new Intl.NumberFormat('vi-VN').format(Number(n)||0);
+const WARN_AT=80; // % đã dùng bắt đầu cảnh báo vàng
+const S={token:sessionStorage.getItem('tk')||'',user:JSON.parse(sessionStorage.getItem('us')||'null'),depts:[],year:new Date().getFullYear(),tab:'budget',budgets:[],reqs:[],logs:[],edit:null,rf:{q:'',status:'',departmentId:'',dueFrom:'',dueTo:'',overdue:false}};
+const has=(...r)=>S.user&&S.user.roles.some(x=>r.includes(x));
+const isWriter=()=>has('HR_MANAGER','ADMIN'), isFull=()=>has('HR_MANAGER','ADMIN','APPROVER');
+const STATUS={DRAFT:['Nháp','gray'],PENDING_APPROVAL:['Chờ duyệt','warn'],APPROVED:['Đã duyệt','ok'],REJECTED:['Từ chối','bad'],ON_HOLD:['Tạm dừng','gray'],CANCELLED:['Đã huỷ','gray'],CLOSED:['Đã đóng','gray'],FILLED:['Đã tuyển đủ','ok']};
+const REASON_LABEL={ON_HOLD:'Lý do tạm dừng',CLOSED:'Lý do đóng',CANCELLED:'Lý do huỷ'};
+const ACTION={BUDGET_CREATED:'Tạo ngân sách',BUDGET_UPDATED:'Sửa ngân sách',BUDGET_DELETED:'Xoá ngân sách',BUDGET_OVERRIDE:'Ghi đè vượt chỉ tiêu'};
+
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(()=>t.style.display='none',3800)}
+async function api(path,opt={}){
+  const r=await fetch(path,{method:opt.method||'GET',headers:{'Content-Type':'application/json',...(S.token?{Authorization:'Bearer '+S.token}:{})},body:opt.body?JSON.stringify(opt.body):undefined});
+  let b=null;try{b=await r.json()}catch{}
+  if(r.status===401&&S.token&&path!=='/auth/login'){logout();throw {status:401,body:b}}
+  if(!r.ok)throw {status:r.status,body:b};
+  return b;
+}
+function errMsg(e){const b=e.body||{};const m=b.message;
+  if(b.details&&Array.isArray(b.details)&&b.code==='VALIDATION_ERROR')return b.details.map(d=>d.errors.join(', ')).join('; ');
+  return (Array.isArray(m)?m.join('; '):m)||'Có lỗi xảy ra ('+(e.status||'mạng')+').'}
+const deptName=id=>{const d=S.depts.find(x=>x.id===id);return d?d.name:'Phòng ban #'+id};
+function pct(used,quota){return quota>0?Math.round(used/quota*100):(used>0?999:0)}
+function level(p,hasBudget){return !hasBudget||p>=100?'bad':p>=WARN_AT?'warn':'ok'}
+function meter(label,used,quota,fmt){const p=pct(used,quota),lv=level(p,quota>0||used>0);
+  return `<div><div class="kv"><span>${label}</span><b>${fmt(used)} / ${fmt(quota)} (${p>=999?'∞':p}%)</b></div><div class="bar ${lv==='ok'?'':lv}"><i style="width:${Math.min(100,p)}%"></i></div></div>`}
+
+function login(){
+  $('#app').innerHTML=`<div class="login card"><h2>ATS · Đăng nhập</h2>
+  <form id="lf"><label>Email</label><input id="em" type="email" value="hr.manager@company.vn" required>
+  <div style="height:8px"></div><label>Mật khẩu</label><input id="pw" type="password" value="Passw0rd!" required>
+  <div style="height:12px"></div><button class="btn" style="width:100%">Đăng nhập</button></form>
+  <p class="mut">Demo: hr.manager · admin · approver · recruiter · hm.it · hm.mkt @company.vn</p></div>`;
+  $('#lf').onsubmit=async e=>{e.preventDefault();try{
+    const r=await api('/auth/login',{method:'POST',body:{email:$('#em').value,password:$('#pw').value}});
+    S.token=r.accessToken;S.user=r.user;sessionStorage.setItem('tk',S.token);sessionStorage.setItem('us',JSON.stringify(S.user));boot();
+  }catch(er){toast(errMsg(er))}}
+}
+function logout(){S.token='';S.user=null;sessionStorage.clear();login()}
+
+async function boot(){
+  if(!S.token)return login();
+  try{S.depts=await api('/departments')}catch(e){if(e.status===403){S.depts=[]}else return}
+  S.tab=isFull()||has('HIRING_MANAGER','RECRUITER')?'budget':'none';
+  shell();await load();
+}
+function shell(){
+  const tabs=[['budget','Ngân sách & cảnh báo']];
+  if(has('HIRING_MANAGER','RECRUITER','HR_MANAGER','ADMIN','APPROVER'))tabs.push(['reqs','Yêu cầu tuyển dụng']);
+  if(isWriter())tabs.push(['logs','Nhật ký ghi đè']);
+  $('#app').innerHTML=`<header><h1>ATS · Ngân sách headcount</h1><div class="who">${esc(S.user.fullName||S.user.email)} · ${esc(S.user.roles.join(', '))} <button class="btn sec sm" id="lo">Đăng xuất</button></div></header>
+  <nav>${tabs.map(t=>`<button data-t="${t[0]}" class="${S.tab===t[0]?'on':''}">${t[1]}</button>`).join('')}</nav><main id="main"></main><div id="md"></div>`;
+  $('#lo').onclick=logout;
+  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{S.tab=b.dataset.t;shell();load()});
+}
+async function load(){
+  const m=$('#main');if(!m)return;m.innerHTML='<p class="mut">Đang tải…</p>';
+  try{
+    if(S.tab==='budget')await loadBudget();
+    else if(S.tab==='reqs')await loadReqs();
+    else if(S.tab==='logs')await loadLogs();
+    else m.innerHTML='<div class="card">Vai trò của bạn không có quyền xem ngân sách headcount.</div>';
+  }catch(e){m.innerHTML=`<div class="alert bad">${esc(errMsg(e))}</div>`}
+}
+
+/* ---------------- NGÂN SÁCH ---------------- */
+async function loadBudget(){
+  if(isFull()){
+    S.budgets=await api('/headcount-budgets?year='+S.year);
+  }else{ // Hiring Manager: chỉ xem phòng ban mình, không có số liệu lương
+    if(!S.user.departmentId){S.budgets=[];return renderBudget('Tài khoản chưa gắn phòng ban nên không có số liệu để hiển thị.')}
+    const s=await api(`/headcount-budgets/remaining?departmentId=${S.user.departmentId}&year=${S.year}`);
+    S.budgets=[s];
+  }
+  renderBudget();
+}
+function renderBudget(note){
+  const items=S.budgets.map(b=>({...b,hp:pct(b.headcountUsed,b.headcountQuota),sp:b.salaryBudgetVnd!=null?pct(b.salaryUsedVnd,b.salaryBudgetVnd):0}));
+  const full=items.filter(b=>b.hasBudget&&(b.hp>=100||b.sp>=100));
+  const near=items.filter(b=>b.hasBudget&&!full.includes(b)&&(b.hp>=WARN_AT||b.sp>=WARN_AT));
+  const missing=isFull()?S.depts.filter(d=>d.active!==false&&!S.budgets.some(b=>b.departmentId===d.id)):[];
+  let alerts='';
+  full.forEach(b=>alerts+=`<div class="alert bad">⛔ <b>${esc(deptName(b.departmentId))}</b> đã dùng hết chỉ tiêu năm ${b.year}. Yêu cầu mới sẽ bị chặn khi duyệt; chỉ HR Manager được ghi đè kèm lý do.</div>`);
+  near.forEach(b=>alerts+=`<div class="alert warn">⚠️ <b>${esc(deptName(b.departmentId))}</b> sắp hết chỉ tiêu: còn ${num(b.headcountRemaining)} headcount${b.salaryRemainingVnd!=null?`, còn ${vnd(b.salaryRemainingVnd)} ngân sách lương`:''}.</div>`);
+  missing.forEach(d=>alerts+=`<div class="alert warn">ℹ️ <b>${esc(d.name)}</b> chưa khai báo ngân sách năm ${S.year} (chỉ tiêu = 0, mọi yêu cầu sẽ bị chặn).</div>`);
+  const cards=items.map(b=>{const lv=!b.hasBudget?'bad':(b.hp>=100||b.sp>=100)?'bad':(b.hp>=WARN_AT||b.sp>=WARN_AT)?'warn':'ok';
+    const tg={ok:['Trong chỉ tiêu','ok'],warn:['Sắp hết','warn'],bad:[b.hasBudget?'Hết / vượt chỉ tiêu':'Chưa có ngân sách','bad']}[lv];
+    return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:start"><h2>${esc(deptName(b.departmentId))} · ${b.year}</h2><span class="tag ${tg[1]}">${tg[0]}</span></div>
+    ${meter('Headcount',b.headcountUsed,b.headcountQuota,num)}
+    <div class="kv"><span>Còn lại</span><b>${num(b.headcountRemaining)} headcount</b></div>
+    ${b.salaryBudgetVnd!=null?`<div style="height:8px"></div>${meter('Ngân sách lương (năm)',b.salaryUsedVnd,b.salaryBudgetVnd,vnd)}<div class="kv"><span>Còn lại</span><b>${vnd(b.salaryRemainingVnd)}</b></div>`:''}
+    ${isWriter()&&b.id?`<div class="acts" style="margin-top:10px"><button class="btn sec sm" data-edit="${b.id}">Sửa</button><button class="btn sec sm" data-del="${b.id}">Xoá</button></div>`:''}</div>`}).join('');
+  $('#main').innerHTML=`<div class="row" style="margin-bottom:12px"><div style="max-width:160px"><label>Năm ngân sách</label><input id="yr" type="number" min="2000" max="2100" value="${S.year}"></div></div>
+  ${note?`<div class="alert warn">${esc(note)}</div>`:''}${alerts||(items.length?'<div class="alert ok">✅ Không có phòng ban nào vượt hoặc sắp vượt chỉ tiêu.</div>':'')}
+  <div class="grid">${cards||(note?'':'<div class="card mut">Chưa có ngân sách nào cho năm này.</div>')}</div>
+  ${isWriter()?budgetForm():''}`;
+  $('#yr').onchange=e=>{S.year=Number(e.target.value)||S.year;S.edit=null;load()};
+  document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{S.edit=S.budgets.find(x=>x.id==b.dataset.edit);renderBudget();$('#bf').scrollIntoView({behavior:'smooth'})});
+  document.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(!confirm('Xoá ngân sách này?'))return;try{await api('/headcount-budgets/'+b.dataset.del,{method:'DELETE'});toast('Đã xoá');load()}catch(e){toast(errMsg(e))}});
+  const f=$('#bf');if(f)f.onsubmit=saveBudget;
+}
+function budgetForm(){const e=S.edit;
+  return `<form id="bf" class="card"><h2>${e?'Sửa':'Khai báo'} chỉ tiêu & ngân sách lương</h2><div class="row">
+  <div><label>Phòng ban</label><select id="bd" ${e?'disabled':''}>${S.depts.map(d=>`<option value="${d.id}" ${e&&e.departmentId===d.id?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>
+  <div><label>Năm</label><input id="by" type="number" value="${e?e.year:S.year}" ${e?'disabled':''}></div>
+  <div><label>Chỉ tiêu headcount</label><input id="bq" type="number" min="0" step="1" required value="${e?e.headcountQuota:''}"></div>
+  <div><label>Ngân sách lương cả năm (VND)</label><input id="bs" type="number" min="0" step="1" required value="${e?e.salaryBudgetVnd:''}"></div></div>
+  <div class="acts" style="margin-top:12px"><button class="btn">${e?'Cập nhật':'Lưu ngân sách'}</button>${e?'<button type="button" class="btn sec" id="bc">Huỷ sửa</button>':''}</div></form>`}
+async function saveBudget(ev){ev.preventDefault();
+  const body={headcountQuota:Number($('#bq').value),salaryBudgetVnd:Number($('#bs').value)};
+  try{
+    if(S.edit)await api('/headcount-budgets/'+S.edit.id,{method:'PUT',body});
+    else await api('/headcount-budgets',{method:'POST',body:{...body,departmentId:Number($('#bd').value),year:Number($('#by').value)}});
+    S.edit=null;toast('Đã lưu ngân sách');S.year=S.year;load();
+  }catch(e){toast(errMsg(e))}
+}
+document.addEventListener('click',e=>{if(e.target.id==='bc'){S.edit=null;renderBudget()}});
+
+/* ---------------- YÊU CẦU TUYỂN DỤNG ---------------- */
+const fdate=d=>d?new Date(String(d).slice(0,10)+'T00:00:00').toLocaleDateString('vi-VN'):'—';
+async function loadReqs(){
+  if(!$('#rtable'))renderReqs();      // dựng khung 1 lần (giữ nguyên ô nhập khi lọc)
+  await loadReqList();
+}
+async function loadReqList(){
+  const q=new URLSearchParams();
+  Object.entries(S.rf).forEach(([k,v])=>{if(v!==''&&v!==false&&v!=null)q.set(k,v)});
+  try{S.reqs=await api('/requisitions'+(q.toString()?'?'+q:''));renderReqTable()}
+  catch(e){$('#rtable').innerHTML=`<div class="alert bad">${esc(errMsg(e))}</div>`}
+}
+function dueCell(r){
+  if(!r.dueDate)return '<span class="mut">—</span>';
+  return `${fdate(r.dueDate)}${r.isOverdue?`<div><span class="tag bad" title="Quá hạn tuyển ${r.daysOverdue} ngày">⏰ Trễ ${num(r.daysOverdue)} ngày</span></div>`:''}`;
+}
+function renderReqs(){
+  const canCreate=has('HIRING_MANAGER','RECRUITER','HR_MANAGER','ADMIN');
+  const myDepts=has('HIRING_MANAGER')&&!isWriter()&&S.user.departmentId?S.depts.filter(d=>d.id===S.user.departmentId):S.depts;
+  const f=S.rf, scoped=has('HIRING_MANAGER')&&!isFull()&&!has('RECRUITER');
+  $('#main').innerHTML=`${canCreate?`<form id="rf" class="card"><h2>Tạo yêu cầu tuyển dụng</h2><div class="row">
+  <div style="flex-basis:220px"><label>Tiêu đề</label><input id="rt" required maxlength="255" placeholder="Backend Developer"></div>
+  <div><label>Phòng ban</label><select id="rd">${myDepts.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join('')}</select></div>
+  <div><label>Năm ngân sách</label><input id="ry" type="number" value="${S.year}"></div>
+  <div><label>Số lượng</label><input id="rq" type="number" min="1" step="1" value="1" required></div>
+  <div><label>Lương đề xuất / tháng / người (VND)</label><input id="rs" type="number" min="1" step="1" required value="25000000"></div>
+  <div><label>Hạn tuyển (không bắt buộc)</label><input id="rdue" type="date"></div></div>
+  <div id="prev" style="margin-top:12px"></div><div class="acts" style="margin-top:8px"><button class="btn">Tạo yêu cầu (nháp)</button></div></form>`:''}
+  <div class="card"><h2>Danh sách yêu cầu</h2>
+  <div class="row" id="fbar" style="margin-bottom:10px">
+    <div style="flex-basis:180px"><label>Tìm theo tiêu đề</label><input id="fq" value="${esc(f.q)}" placeholder="VD: Backend"></div>
+    <div><label>Trạng thái</label><select id="fs"><option value="">Tất cả</option>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${f.status===k?'selected':''}>${v[0]}</option>`).join('')}</select></div>
+    ${scoped?'':`<div><label>Phòng ban</label><select id="fd"><option value="">Tất cả</option>${S.depts.map(d=>`<option value="${d.id}" ${String(f.departmentId)===String(d.id)?'selected':''}>${esc(d.name)}</option>`).join('')}</select></div>`}
+    <div><label>Hạn tuyển từ</label><input id="ff" type="date" value="${esc(f.dueFrom)}"></div>
+    <div><label>Hạn tuyển đến</label><input id="ft" type="date" value="${esc(f.dueTo)}"></div>
+    <div style="flex:0 0 auto"><label style="display:flex;gap:6px;align-items:center;margin:0 0 9px;color:var(--tx);font-size:14px"><input id="fo" type="checkbox" style="width:auto" ${f.overdue?'checked':''}> Chỉ yêu cầu trễ hạn</label></div>
+    <div style="flex:0 0 auto"><button type="button" class="btn sec" id="fclr">Xoá lọc</button></div>
+  </div>
+  <div id="rtable"><p class="mut">Đang tải…</p></div></div>`;
+  const f2=$('#rf');if(f2){f2.onsubmit=createReq;['rd','ry','rq','rs'].forEach(i=>$('#'+i).oninput=debPreview);preview()}
+  let fh;const apply=()=>{S.rf={q:$('#fq').value.trim(),status:$('#fs').value,departmentId:$('#fd')?$('#fd').value:'',dueFrom:$('#ff').value,dueTo:$('#ft').value,overdue:$('#fo').checked};loadReqList()};
+  ['fs','fd','ff','ft','fo'].forEach(i=>{const el=$('#'+i);if(el)el.onchange=apply});
+  $('#fq').oninput=()=>{clearTimeout(fh);fh=setTimeout(apply,350)};
+  $('#fclr').onclick=()=>{S.rf={q:'',status:'',departmentId:'',dueFrom:'',dueTo:'',overdue:false};renderReqs();loadReqList()};
+}
+function renderReqTable(){
+  const filtered=Object.values(S.rf).some(v=>v!==''&&v!==false);
+  const late=S.reqs.filter(r=>r.isOverdue).length;
+  const rows=S.reqs.map(r=>{const st=STATUS[r.status]||[r.status,'gray'],b=r.budget||{};
+    const over=r.status==='PENDING_APPROVAL'||r.status==='DRAFT'?b.exceeds:false;
+    const actions=[],canW=has('HIRING_MANAGER','RECRUITER','HR_MANAGER','ADMIN'),canA=has('APPROVER','HR_MANAGER','ADMIN');
+    if(r.status==='DRAFT'&&canW)actions.push(`<button class="btn sec sm" data-act="submit" data-id="${r.id}">Gửi duyệt</button>`);
+    if(r.status==='PENDING_APPROVAL'&&canA)actions.push(`<button class="btn sm" data-act="approve" data-id="${r.id}">Duyệt</button>`);
+    if(r.status==='APPROVED'&&canW)actions.push(`<button class="btn sec sm" data-act="hold" data-id="${r.id}">Tạm dừng</button>`);
+    if(r.status==='ON_HOLD'&&canA)actions.push(`<button class="btn sm" data-act="resume" data-id="${r.id}">Tiếp tục</button>`);
+    if(['APPROVED','ON_HOLD'].includes(r.status)&&canW)actions.push(`<button class="btn sec sm" data-act="close" data-id="${r.id}">Đóng</button>`);
+    if(['DRAFT','PENDING_APPROVAL','APPROVED','ON_HOLD'].includes(r.status)&&canW)actions.push(`<button class="btn sec sm" data-act="cancel" data-id="${r.id}">Huỷ</button>`);
+    const why=r.statusReason&&REASON_LABEL[r.status]?`<div class="mut">${REASON_LABEL[r.status]}: ${esc(r.statusReason)}</div>`:'';
+    return `<tr><td>#${r.id}</td><td><b>${esc(r.title)}</b><div class="mut">${esc(deptName(r.departmentId))} · ${r.budgetYear}</div></td>
+    <td>${num(r.quantity)} × ${vnd(r.proposedSalaryVnd)}/tháng</td>
+    <td>${dueCell(r)}</td>
+    <td><span class="tag ${st[1]}">${st[0]}</span>${r.budgetOverridden?'<div><span class="tag bad">Đã ghi đè</span></div>':''}${why}</td>
+    <td>Còn ${num(b.headcountRemaining)} HC${over?'<div><span class="tag bad">Sẽ vượt chỉ tiêu</span></div>':''}</td><td><div class="acts">${actions.join('')}</div></td></tr>`}).join('');
+  $('#rtable').innerHTML=`${late?`<div class="alert bad">⏰ Có <b>${num(late)}</b> yêu cầu đã trễ hạn tuyển${filtered?' (trong kết quả lọc)':''}.</div>`:''}
+  <div class="tw"><table><thead><tr><th>Mã</th><th>Vị trí</th><th>Số lượng × lương</th><th>Hạn tuyển</th><th>Trạng thái</th><th>Headcount còn lại</th><th></th></tr></thead><tbody>${rows||`<tr><td colspan="7" class="mut">${filtered?'Không có yêu cầu nào khớp bộ lọc.':'Chưa có yêu cầu.'}</td></tr>`}</tbody></table></div>`;
+  document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>reqAction(b.dataset.act,Number(b.dataset.id)));
+}
+let ph;function debPreview(){clearTimeout(ph);ph=setTimeout(preview,350)}
+async function preview(){
+  const box=$('#prev');if(!box)return;
+  const body={departmentId:Number($('#rd').value),year:Number($('#ry').value),quantity:Number($('#rq').value),proposedSalaryVnd:Number($('#rs').value)};
+  if(!(body.departmentId>0&&body.year>=2000&&body.quantity>=1&&body.proposedSalaryVnd>=1)){box.innerHTML='';return}
+  try{const ev=await api('/headcount-budgets/check',{method:'POST',body});box.innerHTML=evalBanner(ev)}catch(e){box.innerHTML=`<div class="alert warn">${esc(errMsg(e))}</div>`}
+}
+function evalBanner(ev){
+  const info=`Headcount còn lại: <b>${num(ev.headcountRemaining)}</b> / ${num(ev.headcountQuota)}`+(ev.salaryRemainingVnd!=null?` · Ngân sách lương còn lại: <b>${vnd(ev.salaryRemainingVnd)}</b>`:'');
+  if(!ev.exceeds)return `<div class="alert ok">✅ Trong chỉ tiêu. ${info}</div>`;
+  const why=[];if(!ev.hasBudget)why.push('Phòng ban chưa có ngân sách năm này.');
+  if(ev.exceedsHeadcount)why.push(`Vượt <b>${num(ev.headcountOver)}</b> headcount.`);
+  if(ev.exceedsSalary)why.push(`Vượt <b>${vnd(ev.salaryOverVnd)}</b> ngân sách lương (chi phí yêu cầu ${vnd(ev.requestedSalaryCostVnd)}/năm).`);
+  return `<div class="alert bad">⛔ <b>Vượt chỉ tiêu</b> — ${why.join(' ')}<br>${info}<br>${ev.canOverride?'Bạn là HR Manager: có thể ghi đè khi duyệt (bắt buộc nhập lý do).':'Yêu cầu sẽ bị chặn khi duyệt; chỉ HR Manager được ghi đè.'}</div>`;
+}
+async function createReq(e){e.preventDefault();
+  try{await api('/requisitions',{method:'POST',body:{title:$('#rt').value.trim(),departmentId:Number($('#rd').value),budgetYear:Number($('#ry').value),quantity:Number($('#rq').value),proposedSalaryVnd:Number($('#rs').value),...($('#rdue').value?{dueDate:$('#rdue').value}:{})}});
+  toast('Đã tạo yêu cầu (nháp)');$('#rt').value='';loadReqList()}catch(er){toast(errMsg(er))}}
+const REASON_ACT={hold:['Tạm dừng yêu cầu','Tạm dừng','Headcount của yêu cầu sẽ được trả lại ngân sách trong lúc tạm dừng.'],close:['Đóng yêu cầu','Đóng yêu cầu','Yêu cầu đóng sẽ không còn chiếm headcount.'],cancel:['Huỷ yêu cầu','Huỷ yêu cầu','Headcount được trả lại ngân sách.']};
+async function reqAction(act,id){
+  if(act==='approve')return approve(id);
+  if(REASON_ACT[act])return reasonModal(act,id);
+  if(act==='resume')return resume(id);
+  try{await api(`/requisitions/${id}/${act}`,{method:'POST'});toast('Thành công');loadReqList()}catch(e){toast(errMsg(e))}
+}
+function reasonModal(act,id){
+  const [title,btn,note]=REASON_ACT[act];
+  $('#md').innerHTML=`<div class="modal"><div class="box"><h2 style="margin-top:0">${title} #${id}</h2>
+  <label>Lý do (bắt buộc, 5–500 ký tự)</label><textarea id="rsn" maxlength="500" placeholder="VD: Dự án tạm hoãn đến quý sau."></textarea>
+  <p class="mut">${note}</p><div class="acts"><button class="btn ${act==='cancel'?'bad':''}" id="rsy">${btn}</button><button class="btn sec" id="rsn2">Đóng</button></div></div></div>`;
+  $('#rsn2').onclick=closeModal;
+  $('#rsy').onclick=async()=>{const reason=$('#rsn').value.trim();if(reason.length<5)return toast('Lý do phải có tối thiểu 5 ký tự.');
+    try{await api(`/requisitions/${id}/${act}`,{method:'POST',body:{reason}});closeModal();toast('Thành công');loadReqList()}catch(e){toast(errMsg(e))}};
+}
+async function resume(id,override){
+  try{await api(`/requisitions/${id}/resume`,{method:'POST',body:override?{override}:{}});closeModal();toast('Đã tiếp tục yêu cầu');loadReqList()}
+  catch(e){if(e.status===409)return blockModal(id,e.body||{},'resume');toast(errMsg(e))}
+}
+async function approve(id,override){
+  try{await api(`/requisitions/${id}/approve`,{method:'POST',body:override?{override}:{}});closeModal();toast(override?'Đã duyệt (ghi đè) và ghi nhật ký':'Đã duyệt');loadReqList()}
+  catch(e){
+    if(e.status===409)return blockModal(id,e.body||{});
+    toast(errMsg(e));
+  }
+}
+function closeModal(){$('#md').innerHTML=''}
+function blockModal(id,b,mode){
+  const d=b.details||{};
+  $('#md').innerHTML=`<div class="modal"><div class="box"><h2 style="margin-top:0">⛔ Vượt chỉ tiêu — đã chặn duyệt</h2>
+  <div class="alert bad">${esc(b.message||'Yêu cầu vượt chỉ tiêu headcount.')}</div>${d.requestedQuantity!=null?evalBanner({...d,canOverride:b.canOverride}):''}
+  ${b.canOverride?`<label>Lý do ghi đè (bắt buộc, 10–500 ký tự)</label><textarea id="ov" maxlength="500" placeholder="VD: Dự án khách hàng X ký thêm, cần bổ sung nhân sự gấp."></textarea><p class="mut">Thao tác ghi đè sẽ được lưu vào nhật ký (người thực hiện, thời điểm, lý do).</p>
+  <div class="acts"><button class="btn bad" id="ovy">Ghi đè & duyệt</button><button class="btn sec" id="ovn">Đóng</button></div>`
+  :`<p><b>Bạn không có quyền ghi đè.</b> Chỉ Trưởng phòng Nhân sự (HR Manager) được ghi đè khi vượt chỉ tiêu.</p><div class="acts"><button class="btn sec" id="ovn">Đóng</button></div>`}
+  </div></div>`;
+  $('#ovn').onclick=closeModal;
+  const y=$('#ovy');if(y)y.onclick=()=>{const r=$('#ov').value.trim();if(r.length<10)return toast('Lý do phải có tối thiểu 10 ký tự.');(mode==='resume'?resume:approve)(id,{reason:r})};
+}
+
+/* ---------------- NHẬT KÝ ---------------- */
+async function loadLogs(){S.logs=await api('/headcount-budgets/override-logs?year='+S.year);
+  const rows=S.logs.map(l=>`<tr><td>${new Date(l.createdAt).toLocaleString('vi-VN')}</td><td>${l.action==='BUDGET_OVERRIDE'?'<span class="tag bad">':'<span class="tag gray">'}${esc(ACTION[l.action]||l.action)}</span></td>
+  <td>${esc(deptName(l.departmentId))} · ${l.year}</td><td>${l.requisitionId?'#'+l.requisitionId:'—'}</td><td>${esc(l.userEmail)}</td><td>${esc(l.reason||'')}</td></tr>`).join('');
+  $('#main').innerHTML=`<div class="card"><div class="row" style="margin-bottom:10px"><div style="max-width:160px"><label>Năm</label><input id="ly" type="number" value="${S.year}"></div></div>
+  <div class="tw"><table><thead><tr><th>Thời gian</th><th>Hành động</th><th>Phòng ban</th><th>Yêu cầu</th><th>Người thực hiện</th><th>Lý do</th></tr></thead><tbody>${rows||'<tr><td colspan="6" class="mut">Chưa có nhật ký.</td></tr>'}</tbody></table></div>
+  <p class="mut">Nhật ký chỉ-thêm: không thể sửa hoặc xoá.</p></div>`;
+  $('#ly').onchange=e=>{S.year=Number(e.target.value)||S.year;loadLogs()};
+}
+boot();
+</script>
+</body>
+</html>
