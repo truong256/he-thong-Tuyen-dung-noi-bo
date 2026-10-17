@@ -12,6 +12,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RecruitmentRequisitionRepository extends JpaRepository<RecruitmentRequisition, Long> {
+    // Serialize all assignment writers, including the first assignment with no child rows yet.
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM RecruitmentRequisition r WHERE r.id = :id")
+    Optional<RecruitmentRequisition> findForAssignmentUpdate(@Param("id") Long id);
+
     boolean existsByDepartmentId(Long departmentId);
 
     boolean existsByJobTitleId(Long jobTitleId);

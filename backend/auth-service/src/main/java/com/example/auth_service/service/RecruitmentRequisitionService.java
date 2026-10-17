@@ -367,7 +367,7 @@ public class RecruitmentRequisitionService {
 
         Long minSalary = source.getSalaryMin() != null ? source.getSalaryMin() : source.getProposedMinSalary();
         Long maxSalary = source.getSalaryMax() != null ? source.getSalaryMax() : source.getProposedMaxSalary();
-        String reqs = (source.getCandidateRequirements() != null && !source.getCandidateRequirements().isBlank())
+        String reqs = (source.getCandidateRequirements() != null)
                 ? source.getCandidateRequirements()
                 : source.getRequirements();
 
@@ -388,6 +388,12 @@ public class RecruitmentRequisitionService {
         cloned.setNeededDate(source.getNeededDate() != null ? source.getNeededDate() : source.getTargetDate());
 
         // Sao chép toàn bộ mô tả công việc (JD) và yêu cầu ứng viên
+        cloned.setCurrency(source.getCurrency());
+        cloned.setBenefits(source.getBenefits());
+        cloned.setWorkLocation(source.getWorkLocation());
+        cloned.setWorkLocationId(source.getWorkLocationId());
+        cloned.setEmploymentTypeId(source.getEmploymentTypeId());
+        cloned.setWorkingModel(source.getWorkingModel());
         cloned.setJobDescription(source.getJobDescription());
         cloned.setCandidateRequirements(reqs);
         cloned.setRequirements(reqs);
@@ -622,7 +628,7 @@ public class RecruitmentRequisitionService {
     ) {
         Long minSalary = req.getSalaryMin() != null ? req.getSalaryMin() : req.getProposedMinSalary();
         Long maxSalary = req.getSalaryMax() != null ? req.getSalaryMax() : req.getProposedMaxSalary();
-        String reqs = (req.getCandidateRequirements() != null && !req.getCandidateRequirements().isBlank())
+        String reqs = (req.getCandidateRequirements() != null)
                 ? req.getCandidateRequirements()
                 : req.getRequirements();
         LocalDate neededDate = req.getNeededDate() != null ? req.getNeededDate() : req.getTargetDate();
@@ -638,26 +644,34 @@ public class RecruitmentRequisitionService {
                 dept != null ? dept.getCode() : null,
                 req.getJobTitleId(),
                 jt != null ? jt.getTitle() : null,
-                jt != null ? jt.getCode() : null,
-                jt != null ? jt.getMinSalary() : null,
-                jt != null ? jt.getMaxSalary() : null,
                 req.getQuantity(),
                 req.getRecruitmentType(),
-                req.getReason(),
                 minSalary,
                 maxSalary,
+                req.getCurrency(),
                 req.getSalaryExplanation(),
                 neededDate,
                 targetDate,
-                outside,
                 req.getJobDescription(),
                 reqs,
+                req.getBenefits(),
+                req.getWorkLocation(),
+                req.getWorkingModel(),
                 req.getStatus(),
+                req.getReason(),
+                req.getRejectionReason(),
                 req.getCreatedByUserId(),
                 creator != null ? creator.getFullName() : null,
-                creator != null ? creator.getEmail() : null,
+                req.getSubmittedAt(),
+                req.getApprovedByUserId(),
+                req.getApprovedAt(),
                 req.getCreatedAt(),
-                req.getUpdatedAt()
+                req.getUpdatedAt(),
+                jt != null ? jt.getCode() : null,
+                jt != null ? jt.getMinSalary() : null,
+                jt != null ? jt.getMaxSalary() : null,
+                outside,
+                creator != null ? creator.getEmail() : null
         );
     }
 }

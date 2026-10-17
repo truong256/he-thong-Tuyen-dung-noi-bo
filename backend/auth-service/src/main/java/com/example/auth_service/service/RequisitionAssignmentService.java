@@ -23,17 +23,20 @@ public class RequisitionAssignmentService {
     private final RequisitionAssignmentHistoryRepository assignmentHistories;
     private final RecruitmentRequisitionRepository requisitions;
     private final UserRepository users;
+    private final RequisitionService requisitionAccess;
 
     public RequisitionAssignmentService(
             RequisitionAssignmentRepository assignments,
             RequisitionAssignmentHistoryRepository assignmentHistories,
             RecruitmentRequisitionRepository requisitions,
-            UserRepository users
+            UserRepository users,
+            RequisitionService requisitionAccess
     ) {
         this.assignments = assignments;
         this.assignmentHistories = assignmentHistories;
         this.requisitions = requisitions;
         this.users = users;
+        this.requisitionAccess = requisitionAccess;
     }
 
     /**
@@ -51,6 +54,7 @@ public class RequisitionAssignmentService {
     @PreAuthorize("hasAuthority('RECRUITER_ASSIGN')")
     @Transactional
     public void assign(Long requisitionId, Long userId, String roleName, boolean isPrimary, String reason, String notes) {
+        requisitions.findForAssignmentUpdate(requisitionId);
         RoleName role;
         try {
             role = RoleName.valueOf(roleName);
@@ -65,8 +69,16 @@ public class RequisitionAssignmentService {
         }
         User user = users.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng."));
-        if (!"ACTIVE".equals(user.getStatus()) || user.getRoles().stream().noneMatch(r -> r.getName() == role)) {
+        if (!"ACTIVE".equals(user.getStatus()) || !user.isAccountNonLocked() || user.getRoles().stream().noneMatch(r -> r.getName() == role)) {
             throw new BadRequestException("Người dùng phải đang hoạt động và có vai trò tương ứng.");
+        }
+
+        if (isPrimary && role == RoleName.RECRUITER) {
+            assignments.findByRequisitionIdAndRoleAndIsPrimaryTrue(requisitionId, role)
+                    .filter(existing -> !existing.getUserId().equals(userId))
+                    .ifPresent(existing -> {
+                        throw new BadRequestException("Yêu cầu đã có recruiter chính. Vui lòng sử dụng chức năng chuyển giao.");
+                    });
         }
 
         Long performerId = getCurrentUserId();
@@ -96,6 +108,7 @@ public class RequisitionAssignmentService {
     @PreAuthorize("hasAuthority('RECRUITER_ASSIGN')")
     @Transactional
     public RequisitionAssignmentsResponse assignRecruiters(Long requisitionId, AssignRecruiterPayload payload) {
+        requisitions.findForAssignmentUpdate(requisitionId);
         requisitions.findById(requisitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng."));
 
@@ -188,6 +201,10 @@ public class RequisitionAssignmentService {
             );
         }
 
+        // Flush the old primary demotion/deletion before inserting/promoting its successor.
+        // Hibernate otherwise may insert before delete and violate the unique primary index.
+        assignments.flush();
+
         // Cập nhật hoặc thêm mới recruiter chính
         RequisitionAssignment primaryAssignment = assignments
                 .findByRequisitionIdAndUserId(requisitionId, payload.primaryRecruiterId())
@@ -273,6 +290,7 @@ public class RequisitionAssignmentService {
     @PreAuthorize("hasAuthority('RECRUITER_ASSIGN')")
     @Transactional
     public void unassign(Long requisitionId, Long userId, String reason) {
+        requisitions.findForAssignmentUpdate(requisitionId);
         Optional<RequisitionAssignment> opt = assignments.findByRequisitionIdAndUserId(requisitionId, userId);
         if (opt.isPresent()) {
             RequisitionAssignment assignment = opt.get();
@@ -301,6 +319,7 @@ public class RequisitionAssignmentService {
     @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_ALL', 'REQUISITION_READ_OWN', 'RECRUITER_ASSIGN', 'REQUISITION_APPROVE')")
     @Transactional(readOnly = true)
     public RequisitionAssignmentsResponse getAssignments(Long requisitionId) {
+        requisitionAccess.getById(requisitionId);
         RecruitmentRequisition req = requisitions.findById(requisitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng."));
 
@@ -352,6 +371,7 @@ public class RequisitionAssignmentService {
     @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_ALL', 'REQUISITION_READ_OWN', 'RECRUITER_ASSIGN', 'REQUISITION_APPROVE')")
     @Transactional(readOnly = true)
     public List<AssignmentHistoryDto> getAssignmentHistory(Long requisitionId) {
+        requisitionAccess.getById(requisitionId);
         if (!requisitions.existsById(requisitionId)) {
             throw new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng.");
         }
@@ -397,6 +417,7 @@ public class RequisitionAssignmentService {
     @Transactional(readOnly = true)
     public List<AssignableRecruiterDto> getAssignableRecruiters() {
         return users.findActiveUsersByRoleName(RoleName.RECRUITER).stream()
+                .filter(User::isAccountNonLocked)
                 .map(u -> new AssignableRecruiterDto(
                         u.getId(),
                         u.getFullName(),
@@ -434,7 +455,7 @@ public class RequisitionAssignmentService {
     }
 
     private void validateRecruiterUser(User user, String roleLabel) {
-        if (!"ACTIVE".equals(user.getStatus())) {
+        if (!"ACTIVE".equals(user.getStatus()) || !user.isAccountNonLocked()) {
             throw new BadRequestException(roleLabel + " phải ở trạng thái đang hoạt động (ACTIVE).");
         }
         boolean hasRecruiterRole = user.getRoles() != null &&

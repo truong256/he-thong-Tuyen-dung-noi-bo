@@ -492,4 +492,69 @@ class RecruitmentRequisitionServiceTest {
         assertThat(cloned.salaryMax()).isEqualTo(20_000_000L);
         assertThat(cloned.candidateRequirements()).isEqualTo("Kinh nghiệm kiểm thử tự động với Playwright");
     }
+    @Test
+    void clone_preservesBusinessFieldsAndDistinctDates_resetsApproval() {
+        RecruitmentRequisition source = new RecruitmentRequisition();
+        source.setId(60L);
+        source.setTitle("Clone complete business data");
+        source.setStatus("APPROVED");
+        source.setDepartmentId(itDept.getId());
+        source.setJobTitleId(devJob.getId());
+        source.setCreatedByUserId(hiringManager.getId());
+        source.setCurrency("USD");
+        source.setBenefits("Remote allowance");
+        source.setWorkLocation("Da Nang");
+        source.setWorkLocationId(71L);
+        source.setEmploymentTypeId(72L);
+        source.setWorkingModel("HYBRID");
+        source.setNeededDate(LocalDate.of(2027, 2, 1));
+        source.setTargetDate(LocalDate.of(2027, 1, 1));
+        source.setApprovedByUserId(99L);
+        source.setApprovedAt(java.time.Instant.now());
+        source.setSubmittedAt(java.time.Instant.now());
+        source.setRejectionReason("Old feedback");
+        when(requisitionRepository.findById(60L)).thenReturn(Optional.of(source));
+        when(departmentRepository.findById(itDept.getId())).thenReturn(Optional.of(itDept));
+        when(jobTitleRepository.findById(devJob.getId())).thenReturn(Optional.of(devJob));
+        when(requisitionRepository.save(any(RecruitmentRequisition.class))).thenAnswer(inv -> {
+            RecruitmentRequisition copy = inv.getArgument(0);
+            copy.setId(61L);
+            return copy;
+        });
+
+        RequisitionResponse copy = service.clone(60L, hiringManager);
+        assertThat(copy.id()).isEqualTo(61L);
+        assertThat(copy.status()).isEqualTo("DRAFT");
+        assertThat(copy.currency()).isEqualTo("USD");
+        assertThat(copy.benefits()).isEqualTo("Remote allowance");
+        assertThat(copy.workLocation()).isEqualTo("Da Nang");
+        assertThat(copy.workingModel()).isEqualTo("HYBRID");
+        assertThat(copy.neededDate()).isEqualTo(source.getNeededDate());
+        assertThat(copy.targetDate()).isEqualTo(source.getTargetDate());
+        var captor = org.mockito.ArgumentCaptor.forClass(RecruitmentRequisition.class);
+        verify(requisitionRepository).save(captor.capture());
+        RecruitmentRequisition saved = captor.getValue();
+        assertThat(saved.getWorkLocationId()).isEqualTo(71L);
+        assertThat(saved.getEmploymentTypeId()).isEqualTo(72L);
+        assertThat(saved.getSubmittedAt()).isNull();
+        assertThat(saved.getApprovedAt()).isNull();
+        assertThat(saved.getApprovedByUserId()).isNull();
+        assertThat(saved.getRejectionReason()).isNull();
+        assertThat(source.getStatus()).isEqualTo("APPROVED");
+        verifyNoInteractions(approvalWorkflow);
+    }
+
+    @Test
+    void clone_doesNotReplaceExplicitEmptyRequirementsWithLegacyText() {
+        RecruitmentRequisition source = new RecruitmentRequisition();
+        source.setId(62L);
+        source.setTitle("Draft with cleared requirements");
+        source.setCreatedByUserId(hrManager.getId());
+        source.setCandidateRequirements("");
+        source.setRequirements("Stale legacy requirements");
+        when(requisitionRepository.findById(62L)).thenReturn(Optional.of(source));
+        when(requisitionRepository.save(any(RecruitmentRequisition.class))).thenAnswer(inv -> inv.getArgument(0));
+        assertThat(service.clone(62L, hrManager).candidateRequirements()).isEmpty();
+    }
+
 }
