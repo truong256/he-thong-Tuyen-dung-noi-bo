@@ -198,7 +198,9 @@ dist/assets/index-D9GJvNZO.js                                    943.74 kB │ g
    - Lý do ghi đè, người thực hiện, thời gian, số liệu vượt được ghi lại đầy đủ và có nhật ký kiểm toán bất biến.
    - Luồng phê duyệt hoạt động chuẩn xác, không tự động tăng ngân sách gốc, không bỏ qua kiểm soát Headcount.
    - Không ảnh hưởng đến các chức năng của Sprint 1, 2 và các chức năng khác của Sprint 3.
-2. **Quy tắc Git tuân thủ**:
-   - Nhánh triển khai: `feature/s3-budget-override`.
-   - Không can thiệp nhánh `main`, bảo toàn toàn bộ dữ liệu.
-   - Sẵn sàng tạo Pull Request vào nhánh `dev` để người dùng phê duyệt.
+2. **Thông tin Git & Bàn giao**:
+   - **Nhánh triển khai:** `feature/s3-budget-override`
+   - **Nhánh đích:** `dev`
+   - **Commit Hash:** `40ed30f`
+   - **Pull Request URL:** https://github.com/truong256/he-thong-Tuyen-dung-noi-bo/pull/new/feature/s3-budget-override
+   - **Tuân thủ quy tắc:** Không can thiệp nhánh `main`, không force push, sẵn sàng để người dùng review và merge thủ công.
