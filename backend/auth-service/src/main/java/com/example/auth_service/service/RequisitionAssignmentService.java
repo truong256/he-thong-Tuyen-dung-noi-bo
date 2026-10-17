@@ -298,7 +298,7 @@ public class RequisitionAssignmentService {
     /**
      * Lấy thông tin phân công hiện tại của một yêu cầu tuyển dụng.
      */
-    @PreAuthorize("hasAnyAuthority('REQUISITION_READ_ALL', 'REQUISITION_READ_OWN', 'RECRUITER_ASSIGN')")
+    @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_ALL', 'REQUISITION_READ_OWN', 'RECRUITER_ASSIGN', 'REQUISITION_APPROVE')")
     @Transactional(readOnly = true)
     public RequisitionAssignmentsResponse getAssignments(Long requisitionId) {
         RecruitmentRequisition req = requisitions.findById(requisitionId)
@@ -349,7 +349,7 @@ public class RequisitionAssignmentService {
     /**
      * Lấy lịch sử chuyển giao và phân công của yêu cầu tuyển dụng.
      */
-    @PreAuthorize("hasAnyAuthority('REQUISITION_READ_ALL', 'REQUISITION_READ_OWN', 'RECRUITER_ASSIGN')")
+    @PreAuthorize("hasAnyAuthority('REQUISITION_CREATE', 'REQUISITION_READ_ALL', 'REQUISITION_READ_OWN', 'RECRUITER_ASSIGN', 'REQUISITION_APPROVE')")
     @Transactional(readOnly = true)
     public List<AssignmentHistoryDto> getAssignmentHistory(Long requisitionId) {
         if (!requisitions.existsById(requisitionId)) {

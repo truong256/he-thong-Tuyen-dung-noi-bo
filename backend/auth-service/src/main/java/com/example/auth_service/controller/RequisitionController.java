@@ -125,4 +125,26 @@ public class RequisitionController {
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    /**
+     * API phê duyệt yêu cầu tuyển dụng.
+     */
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<RequisitionResponse> approve(@PathVariable Long id) {
+        RequisitionResponse approved = service.approve(id);
+        return ResponseEntity.ok(approved);
+    }
+
+    /**
+     * API từ chối yêu cầu tuyển dụng.
+     */
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<RequisitionResponse> reject(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        RequisitionResponse rejected = service.reject(id, reason);
+        return ResponseEntity.ok(rejected);
+    }
 }

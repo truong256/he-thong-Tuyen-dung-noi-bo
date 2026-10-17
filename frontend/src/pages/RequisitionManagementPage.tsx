@@ -76,6 +76,12 @@ export const RequisitionManagementPage: React.FC = () => {
   const [assignModalReq, setAssignModalReq] = useState<Requisition | null>(null);
   const [assignmentMap, setAssignmentMap] = useState<Record<number, RequisitionAssignments>>({});
 
+  // Reject Modal (S2-10 Approval)
+  const [rejectModalReq, setRejectModalReq] = useState<Requisition | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejectError, setRejectError] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -361,6 +367,46 @@ export const RequisitionManagementPage: React.FC = () => {
     }
   };
 
+  const handleApprove = async (req: Requisition) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn phê duyệt yêu cầu tuyển dụng "${req.title}" (${req.requisitionCode})?`)) {
+      return;
+    }
+    try {
+      await requisitionApi.approve(req.id);
+      showToast(`Đã phê duyệt thành công yêu cầu tuyển dụng ${req.requisitionCode}.`);
+      if (detailReq?.id === req.id) {
+        setDetailReq((prev) => (prev ? { ...prev, status: 'APPROVED' } : null));
+      }
+      loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi phê duyệt yêu cầu.', 'error');
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectModalReq) return;
+    if (!rejectReason.trim()) {
+      setRejectError('Vui lòng nhập lý do từ chối yêu cầu tuyển dụng.');
+      return;
+    }
+    setIsRejecting(true);
+    try {
+      await requisitionApi.reject(rejectModalReq.id, rejectReason.trim());
+      showToast(`Đã từ chối yêu cầu tuyển dụng ${rejectModalReq.requisitionCode}.`);
+      if (detailReq?.id === rejectModalReq.id) {
+        setDetailReq((prev) => (prev ? { ...prev, status: 'REJECTED', rejectionReason: rejectReason.trim() } : null));
+      }
+      setRejectModalReq(null);
+      setRejectReason('');
+      setRejectError('');
+      loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi từ chối yêu cầu.', 'error');
+    } finally {
+      setIsRejecting(false);
+    }
+  };
+
   const formatCurrency = (val?: number) => {
     if (!val) return '—';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -544,6 +590,32 @@ export const RequisitionManagementPage: React.FC = () => {
                         >
                           <UserCheck size={16} />
                         </button>
+                      )}
+                      {canApprove && req.status === 'PENDING_APPROVAL' && (
+                        <>
+                          <button
+                            type="button"
+                            className="req-action-btn"
+                            title="Phê duyệt yêu cầu tuyển dụng"
+                            style={{ color: '#16a34a' }}
+                            onClick={() => handleApprove(req)}
+                          >
+                            <CheckCircle size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="req-action-btn delete"
+                            title="Từ chối yêu cầu tuyển dụng"
+                            style={{ color: '#dc2626' }}
+                            onClick={() => {
+                              setRejectReason('');
+                              setRejectError('');
+                              setRejectModalReq(req);
+                            }}
+                          >
+                            <XCircle size={16} />
+                          </button>
+                        </>
                       )}
                       <button
                         type="button"
@@ -979,6 +1051,15 @@ export const RequisitionManagementPage: React.FC = () => {
                   </p>
                 </div>
               )}
+
+              {detailReq.status === 'REJECTED' && (detailReq as any).rejectionReason && (
+                <div style={{ background: '#fef2f2', padding: '12px', borderRadius: '8px', border: '1px solid #fecaca' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#dc2626' }}>Lý do từ chối:</span>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.9rem', color: '#991b1b', whiteSpace: 'pre-wrap' }}>
+                    {(detailReq as any).rejectionReason}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="req-modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1011,10 +1092,37 @@ export const RequisitionManagementPage: React.FC = () => {
                     <span>Phân công Recruiter</span>
                   </button>
                 )}
+              {canApprove && detailReq.status === 'PENDING_APPROVAL' && (
+                <>
+                  <button
+                    type="button"
+                    className="req-btn-secondary"
+                    style={{ color: '#dc2626', borderColor: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => {
+                      const r = detailReq;
+                      setRejectReason('');
+                      setRejectError('');
+                      setRejectModalReq(r);
+                    }}
+                  >
+                    <XCircle size={16} />
+                    <span>Từ chối</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="req-btn-primary"
+                    style={{ backgroundColor: '#16a34a', borderColor: '#16a34a', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    onClick={() => handleApprove(detailReq)}
+                  >
+                    <CheckCircle size={16} />
+                    <span>Phê duyệt</span>
+                  </button>
+                </>
+              )}
               </div>
               <button
                 type="button"
-                className="req-btn-primary"
+                className="req-btn-secondary"
                 onClick={() => setDetailReq(null)}
               >
                 Đóng
@@ -1033,6 +1141,68 @@ export const RequisitionManagementPage: React.FC = () => {
           canApprove={canApprove}
           onStatusChange={loadData}
         />
+      )}
+
+      {/* Modal Từ chối Yêu cầu Tuyển dụng */}
+      {rejectModalReq && (
+        <div className="req-modal-backdrop">
+          <div className="req-modal-content" style={{ maxWidth: '520px' }}>
+            <div className="req-modal-header">
+              <h2>Từ chối yêu cầu tuyển dụng</h2>
+              <button
+                type="button"
+                className="req-action-btn"
+                onClick={() => setRejectModalReq(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="req-modal-body">
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569' }}>
+                Bạn đang từ chối yêu cầu: <strong>{rejectModalReq.title}</strong> (
+                <code>{rejectModalReq.requisitionCode}</code>)
+              </p>
+
+              <div className="req-form-group" style={{ marginTop: '16px' }}>
+                <label className="req-label">
+                  Lý do từ chối <span className="required">*</span>
+                </label>
+                <textarea
+                  className="req-textarea"
+                  placeholder="Nhập lý do từ chối để người tạo yêu cầu nắm thông tin điều chỉnh..."
+                  value={rejectReason}
+                  onChange={(e) => {
+                    setRejectReason(e.target.value);
+                    if (rejectError) setRejectError('');
+                  }}
+                  rows={4}
+                />
+                {rejectError && <span className="req-error-text">{rejectError}</span>}
+              </div>
+            </div>
+
+            <div className="req-modal-footer">
+              <button
+                type="button"
+                className="req-btn-secondary"
+                onClick={() => setRejectModalReq(null)}
+                disabled={isRejecting}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="req-btn-primary"
+                style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+                onClick={handleRejectConfirm}
+                disabled={isRejecting}
+              >
+                <span>{isRejecting ? 'Đang xử lý...' : 'Xác nhận từ chối'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal Phân công Recruiter (S3-06) */}

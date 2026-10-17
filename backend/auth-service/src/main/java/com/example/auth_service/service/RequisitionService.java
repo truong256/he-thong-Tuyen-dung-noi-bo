@@ -569,6 +569,52 @@ public class RequisitionService {
         requisitions.delete(req);
     }
 
+    /**
+     * Phê duyệt yêu cầu tuyển dụng (dành cho APPROVER, HR_MANAGER, ADMIN).
+     */
+    public RequisitionResponse approve(Long id) {
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+
+        if (!"PENDING_APPROVAL".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Chỉ có thể phê duyệt yêu cầu ở trạng thái Chờ phê duyệt (PENDING_APPROVAL). Trạng thái hiện tại: " + req.getStatus());
+        }
+
+        User currentUser = getCurrentUser();
+        req.setStatus("APPROVED");
+        req.setApprovedByUserId(currentUser.getId());
+        req.setApprovedAt(Instant.now());
+        req.setUpdatedAt(Instant.now());
+
+        RecruitmentRequisition saved = requisitions.save(req);
+        return toResponse(saved);
+    }
+
+    /**
+     * Từ chối yêu cầu tuyển dụng kèm lý do (dành cho APPROVER, HR_MANAGER, ADMIN).
+     */
+    public RequisitionResponse reject(Long id, String reason) {
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+
+        if (!"PENDING_APPROVAL".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Chỉ có thể từ chối yêu cầu ở trạng thái Chờ phê duyệt (PENDING_APPROVAL). Trạng thái hiện tại: " + req.getStatus());
+        }
+
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new BadRequestException("Vui lòng nhập lý do từ chối yêu cầu tuyển dụng");
+        }
+
+        User currentUser = getCurrentUser();
+        req.setStatus("REJECTED");
+        req.setRejectionReason(reason.trim());
+        req.setApprovedByUserId(currentUser.getId());
+        req.setUpdatedAt(Instant.now());
+
+        RecruitmentRequisition saved = requisitions.save(req);
+        return toResponse(saved);
+    }
+
     private void validateSalaryAgainstJobTitle(JobTitle job, Long salaryMin, Long salaryMax, String salaryExplanation) {
         boolean outside = false;
         if (salaryMin != null && job.getMinSalary() != null && salaryMin < job.getMinSalary()) {

@@ -31,7 +31,12 @@ import PermissionMatrixPage from './pages/PermissionMatrixPage';
 export const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <Routes>
           {/* Cổng tuyển dụng công khai dành cho ứng viên (S3-10 / SCRUM-150) */}
           <Route path="/careers" element={<PublicCareerPage />} />
@@ -180,8 +185,8 @@ export const App: React.FC = () => {
             />
 
             {/*
-              Requisitions – S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL)
-              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F)
+              Requisitions – S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL, REQUISITION_APPROVE)
+              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F), APPROVER (W*)
             */}
             <Route
               path="recruitment/requisitions"

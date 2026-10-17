@@ -232,13 +232,18 @@ export const requisitionApi = {
     return res.data;
   },
 
-  approve: async (id: number, comments?: string) => {
-    const res = await client.put<any>(`/api/requisitions/${id}/approve`, { comments });
+  approve: async (id: number, comments?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/approve`, comments ? { comments, comment: comments } : {});
     return res.data;
   },
 
-  reject: async (id: number, rejectionReason: string, comments?: string) => {
-    const res = await client.put<any>(`/api/requisitions/${id}/reject`, { rejectionReason, comments });
+  reject: async (id: number, rejectionReason: string, comments?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/reject`, {
+      rejectionReason,
+      reason: rejectionReason,
+      comments: comments || rejectionReason,
+      comment: comments || rejectionReason,
+    });
     return res.data;
   },
 
