@@ -11,6 +11,7 @@ import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -33,6 +34,26 @@ public class JobPostingService {
     private final DepartmentRepository departments;
     private final JobTitleRepository jobTitles;
     private final UserRepository users;
+    private final RequisitionAssignmentRepository assignments;
+
+    @Autowired
+    public JobPostingService(
+            JobPostingRepository jobPostings,
+            JobPostingAuditLogRepository auditLogs,
+            RecruitmentRequisitionRepository requisitions,
+            DepartmentRepository departments,
+            JobTitleRepository jobTitles,
+            UserRepository users,
+            @Autowired(required = false) RequisitionAssignmentRepository assignments
+    ) {
+        this.jobPostings = jobPostings;
+        this.auditLogs = auditLogs;
+        this.requisitions = requisitions;
+        this.departments = departments;
+        this.jobTitles = jobTitles;
+        this.users = users;
+        this.assignments = assignments;
+    }
 
     public JobPostingService(
             JobPostingRepository jobPostings,
@@ -42,12 +63,7 @@ public class JobPostingService {
             JobTitleRepository jobTitles,
             UserRepository users
     ) {
-        this.jobPostings = jobPostings;
-        this.auditLogs = auditLogs;
-        this.requisitions = requisitions;
-        this.departments = departments;
-        this.jobTitles = jobTitles;
-        this.users = users;
+        this(jobPostings, auditLogs, requisitions, departments, jobTitles, users, null);
     }
 
     /**
@@ -56,6 +72,15 @@ public class JobPostingService {
     @Transactional
     public JobPostingResponse createJobPosting(JobPostingRequest req, Long userId) {
         validateRequest(req);
+
+        if (req.getRequisitionId() != null) {
+            RecruitmentRequisition reqEntity = requisitions.findById(req.getRequisitionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng ID: " + req.getRequisitionId()));
+            if (!"APPROVED".equalsIgnoreCase(reqEntity.getStatus())) {
+                throw new BadRequestException("Chỉ yêu cầu tuyển dụng ở trạng thái 'Đã duyệt' mới có thể tạo tin tuyển dụng.");
+            }
+            checkRecruiterScope(userId, req.getRequisitionId());
+        }
 
         JobPosting posting = new JobPosting();
         applyRequestToEntity(posting, req);
@@ -84,6 +109,7 @@ public class JobPostingService {
         if (!"APPROVED".equalsIgnoreCase(req.getStatus())) {
             throw new BadRequestException("Chỉ yêu cầu tuyển dụng ở trạng thái 'Đã duyệt' mới có thể tạo tin tuyển dụng.");
         }
+        checkRecruiterScope(userId, requisitionId);
 
         JobPosting posting = new JobPosting();
         posting.setRequisitionId(req.getId());
@@ -124,8 +150,11 @@ public class JobPostingService {
         JobPosting posting = findPosting(id);
 
         if ("PUBLISHED".equals(posting.getStatus())) {
-            // Chỉ cập nhật được một số trường khi đã xuất bản (ví dụ hạn nộp, mô tả)
-            // hoặc phải gỡ tin trước. Ở đây cho phép cập nhật nội dung và ghi log UPDATE.
+            throw new BadRequestException("Không thể chỉnh sửa tin tuyển dụng đang ở trạng thái xuất bản (PUBLISHED). Vui lòng gỡ tin trước khi chỉnh sửa.");
+        }
+
+        if (posting.getRequisitionId() != null) {
+            checkRecruiterScope(userId, posting.getRequisitionId());
         }
 
         validateRequest(req);
@@ -144,6 +173,10 @@ public class JobPostingService {
     @Transactional
     public JobPostingResponse submitForApproval(Long id, Long userId) {
         JobPosting posting = findPosting(id);
+
+        if (posting.getRequisitionId() != null) {
+            checkRecruiterScope(userId, posting.getRequisitionId());
+        }
 
         if (!"DRAFT".equals(posting.getStatus()) && !"REJECTED".equals(posting.getStatus())) {
             throw new BadRequestException("Chỉ tin ở trạng thái 'Bản nháp' hoặc 'Bị từ chối' mới có thể gửi phê duyệt.");
@@ -413,6 +446,24 @@ public class JobPostingService {
 
         if (!isHrManager) {
             throw new AccessDeniedException("Chỉ Trưởng phòng Nhân sự (HR Manager) mới có quyền duyệt và xuất bản tin tuyển dụng.");
+        }
+    }
+
+    private void checkRecruiterScope(Long userId, Long requisitionId) {
+        if (userId == null || requisitionId == null || assignments == null) {
+            return;
+        }
+        User user = users.findById(userId).orElse(null);
+        if (user == null || user.getRoles() == null) {
+            return;
+        }
+        boolean isRecruiterOnly = user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.RECRUITER)
+                && user.getRoles().stream().noneMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
+        if (isRecruiterOnly) {
+            boolean isAssigned = assignments.existsByRequisitionIdAndUserId(requisitionId, userId);
+            if (!isAssigned) {
+                throw new AccessDeniedException("Chuyên viên tuyển dụng chỉ có quyền tạo và quản lý tin tuyển dụng trong phạm vi yêu cầu được phân công.");
+            }
         }
     }
 

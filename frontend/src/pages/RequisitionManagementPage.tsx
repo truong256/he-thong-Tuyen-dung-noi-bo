@@ -13,19 +13,26 @@ import {
   Copy,
   UserCheck,
   AlertCircle,
+  PauseCircle,
+  PlayCircle,
+  Archive,
+  Ban,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import requisitionApi from '../api/requisition';
 import organizationApi from '../api/organization';
 import jobTitleApi from '../api/jobTitle';
-import { Requisition, RequisitionPayload, RequisitionAssignments } from '../types/requisition';
+import { Requisition, RequisitionPayload, RequisitionAssignments, AssignableRecruiter } from '../types/requisition';
 import { Department } from '../types/organization';
 import { JobTitle } from '../types/jobTitle';
 import { PageHeader } from '../components/common/PageHeader';
 import { ApprovalTimelineModal } from '../components/requisition/ApprovalTimelineModal';
 import { AssignRecruiterModal } from '../components/requisition/AssignRecruiterModal';
 import { formatNumberWithCommas, handleNumberInputChange, parseNumberFromCommas } from '../utils/numberFormat';
+import { requisitionTiming } from '../utils/requisitionDates';
 import '../styles/requisitions.css';
+
+type LifecycleActionType = 'HOLD' | 'RESUME' | 'CLOSE' | 'CANCEL';
 
 export const RequisitionManagementPage: React.FC = () => {
   const { user, hasPermission, hasAnyRole } = useAuth();
@@ -39,6 +46,7 @@ export const RequisitionManagementPage: React.FC = () => {
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitle[]>([]);
+  const [recruiters, setRecruiters] = useState<AssignableRecruiter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [timelineReqId, setTimelineReqId] = useState<number | null>(null);
 
@@ -46,6 +54,8 @@ export const RequisitionManagementPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [deptFilter, setDeptFilter] = useState<number | undefined>(undefined);
+  const [recruiterFilter, setRecruiterFilter] = useState<string>('ALL');
+  const [slaFilter, setSlaFilter] = useState<'ALL' | 'OVERDUE' | 'WARNING'>('ALL');
 
   // Modal create/edit
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -82,6 +92,15 @@ export const RequisitionManagementPage: React.FC = () => {
   const [rejectError, setRejectError] = useState('');
   const [isRejecting, setIsRejecting] = useState(false);
 
+  // Lifecycle Action Modal (S3-07: HOLD, RESUME, CLOSE, CANCEL)
+  const [lifecycleAction, setLifecycleAction] = useState<{
+    type: LifecycleActionType;
+    req: Requisition;
+  } | null>(null);
+  const [lifecycleReason, setLifecycleReason] = useState('');
+  const [lifecycleError, setLifecycleError] = useState('');
+  const [isSubmittingLifecycle, setIsSubmittingLifecycle] = useState(false);
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -91,7 +110,7 @@ export const RequisitionManagementPage: React.FC = () => {
   const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [reqRes, deptRes, jtRes] = await Promise.all([
+      const [reqRes, deptRes, jtRes, recList] = await Promise.all([
         requisitionApi.list({
           search: search.trim() || undefined,
           status: statusFilter !== 'ALL' ? statusFilter : undefined,
@@ -99,16 +118,18 @@ export const RequisitionManagementPage: React.FC = () => {
         }),
         organizationApi.getDepartments(),
         jobTitleApi.getJobTitles(),
+        Promise.resolve(requisitionApi.getAssignableRecruiters?.()).then((r) => r || []).catch(() => []),
       ]);
-      const items = reqRes.content || [];
+      const items = reqRes?.content || [];
       setRequisitions(items);
       setDepartments(deptRes || []);
       setJobTitles(jtRes || []);
+      setRecruiters(Array.isArray(recList) ? recList : []);
 
       // Load assignments for visible requisitions
-      if (items.length > 0) {
+      if (items.length > 0 && typeof requisitionApi.getAssignments === 'function') {
         Promise.allSettled(
-          items.map((r) => requisitionApi.getAssignments(r.id))
+          items.map((r) => Promise.resolve(requisitionApi.getAssignments(r.id)).catch(() => null))
         ).then((results) => {
           const map: Record<number, RequisitionAssignments> = {};
           results.forEach((res) => {
@@ -138,6 +159,28 @@ export const RequisitionManagementPage: React.FC = () => {
     }
     return departments;
   }, [departments, isHiringManagerOnly, user]);
+
+  const filteredRequisitions = useMemo(() => {
+    return requisitions.filter((req) => {
+      // Recruiter filter
+      if (recruiterFilter !== 'ALL') {
+        const targetRecId = Number(recruiterFilter);
+        const assign = assignmentMap[req.id];
+        const isPrimary = assign?.primaryRecruiter?.userId === targetRecId;
+        const isSupport = assign?.supportRecruiters?.some((sr) => sr.userId === targetRecId);
+        if (!isPrimary && !isSupport) return false;
+      }
+      // SLA filter
+      if (slaFilter !== 'ALL') {
+        const timing = requisitionTiming(req.createdAt, req.targetDate || req.neededDate, req.status);
+        if (slaFilter === 'OVERDUE' && !timing.overdue) return false;
+        if (slaFilter === 'WARNING') {
+          if (timing.daysRemaining === null || timing.daysRemaining > 3 || timing.overdue) return false;
+        }
+      }
+      return true;
+    });
+  }, [requisitions, recruiterFilter, slaFilter, assignmentMap]);
 
   // Selected Job Title for standard salary validation & headcount
   const selectedJobTitleObj = useMemo(() => {
@@ -407,6 +450,41 @@ export const RequisitionManagementPage: React.FC = () => {
     }
   };
 
+  const handleLifecycleConfirm = async () => {
+    if (!lifecycleAction) return;
+    const { type, req } = lifecycleAction;
+
+    if ((type === 'CANCEL' || type === 'HOLD') && !lifecycleReason.trim()) {
+      setLifecycleError(`Vui lòng nhập lý do để ${type === 'CANCEL' ? 'hủy' : 'tạm hoãn'} yêu cầu.`);
+      return;
+    }
+
+    setIsSubmittingLifecycle(true);
+    try {
+      if (type === 'HOLD') {
+        await requisitionApi.hold(req.id, lifecycleReason.trim() || undefined);
+        showToast(`Đã tạm hoãn yêu cầu tuyển dụng ${req.requisitionCode}.`);
+      } else if (type === 'RESUME') {
+        await requisitionApi.resume(req.id, lifecycleReason.trim() || undefined);
+        showToast(`Đã tiếp tục triển khai yêu cầu tuyển dụng ${req.requisitionCode}.`);
+      } else if (type === 'CLOSE') {
+        await requisitionApi.close(req.id, lifecycleReason.trim() || undefined);
+        showToast(`Đã đóng yêu cầu tuyển dụng ${req.requisitionCode}.`);
+      } else if (type === 'CANCEL') {
+        await requisitionApi.cancel(req.id, lifecycleReason.trim());
+        showToast(`Đã hủy yêu cầu tuyển dụng ${req.requisitionCode}.`);
+      }
+      setLifecycleAction(null);
+      setLifecycleReason('');
+      setLifecycleError('');
+      loadData();
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Có lỗi xảy ra khi thực hiện thao tác.', 'error');
+    } finally {
+      setIsSubmittingLifecycle(false);
+    }
+  };
+
   const formatCurrency = (val?: number) => {
     if (!val) return '—';
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
@@ -422,6 +500,12 @@ export const RequisitionManagementPage: React.FC = () => {
         return <span className="req-badge req-badge-approved"><CheckCircle size={12} /> Đã duyệt</span>;
       case 'REJECTED':
         return <span className="req-badge req-badge-rejected"><XCircle size={12} /> Bị từ chối</span>;
+      case 'ON_HOLD':
+        return <span className="req-badge req-badge-on-hold"><PauseCircle size={12} /> Tạm hoãn</span>;
+      case 'CLOSED':
+        return <span className="req-badge req-badge-closed"><Archive size={12} /> Đã đóng</span>;
+      case 'CANCELLED':
+        return <span className="req-badge req-badge-cancelled"><Ban size={12} /> Đã hủy</span>;
       default:
         return <span className="req-badge req-badge-draft">{status}</span>;
     }
@@ -495,8 +579,11 @@ export const RequisitionManagementPage: React.FC = () => {
           <option value="ALL">Tất cả trạng thái</option>
           <option value="DRAFT">Lưu nháp (DRAFT)</option>
           <option value="PENDING_APPROVAL">Chờ phê duyệt</option>
-          <option value="APPROVED">Đã duyệt</option>
-          <option value="REJECTED">Từ chối</option>
+          <option value="APPROVED">Đã duyệt (APPROVED)</option>
+          <option value="ON_HOLD">Tạm hoãn (ON_HOLD)</option>
+          <option value="CLOSED">Đã đóng (CLOSED)</option>
+          <option value="CANCELLED">Đã hủy (CANCELLED)</option>
+          <option value="REJECTED">Từ chối (REJECTED)</option>
         </select>
 
         <select
@@ -511,17 +598,40 @@ export const RequisitionManagementPage: React.FC = () => {
             </option>
           ))}
         </select>
+
+        <select
+          className="req-select"
+          value={recruiterFilter}
+          onChange={(e) => setRecruiterFilter(e.target.value)}
+        >
+          <option value="ALL">Tất cả Recruiter phụ trách</option>
+          {recruiters.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.fullName}
+            </option>
+          ))}
+        </select>
+
+        <select
+          className="req-select"
+          value={slaFilter}
+          onChange={(e) => setSlaFilter(e.target.value as any)}
+        >
+          <option value="ALL">Tất cả hạn SLA</option>
+          <option value="OVERDUE">⚠️ Đã quá hạn (Overdue)</option>
+          <option value="WARNING">⏳ Sắp đến hạn (≤ 3 ngày)</option>
+        </select>
       </div>
 
       {/* Table Card */}
       <div className="req-table-card">
         {isLoading ? (
           <div className="req-empty-state">Đang tải danh sách yêu cầu tuyển dụng...</div>
-        ) : requisitions.length === 0 ? (
+        ) : filteredRequisitions.length === 0 ? (
           <div className="req-empty-state">
             <Briefcase size={48} className="req-empty-icon" />
-            <h3>Chưa có yêu cầu tuyển dụng nào</h3>
-            <p>Hãy tạo yêu cầu tuyển dụng mới cho phòng ban của bạn.</p>
+            <h3>Chưa có yêu cầu tuyển dụng phù hợp</h3>
+            <p>Không tìm thấy yêu cầu tuyển dụng nào theo bộ lọc đã chọn.</p>
           </div>
         ) : (
           <table className="req-table">
@@ -532,14 +642,14 @@ export const RequisitionManagementPage: React.FC = () => {
                 <th>Phòng Ban</th>
                 <th>Số Lượng</th>
                 <th>Lý Do Tuyển</th>
-                <th>Ngày Cần</th>
+                <th>Thời Hạn & SLA</th>
                 <th>Người Phụ Trách</th>
                 <th>Trạng Thái</th>
                 <th>Thao Tác</th>
               </tr>
             </thead>
             <tbody>
-              {requisitions.map((req) => (
+              {filteredRequisitions.map((req) => (
                 <tr key={req.id}>
                   <td>
                     <span className="req-code-badge">{req.requisitionCode}</span>
@@ -557,7 +667,43 @@ export const RequisitionManagementPage: React.FC = () => {
                       {req.reason === 'REPLACEMENT' ? 'Thay thế' : 'Tăng mới'}
                     </span>
                   </td>
-                  <td>{req.targetDate || '—'}</td>
+                  <td>
+                    {(() => {
+                      const timing = requisitionTiming(req.createdAt, req.targetDate || req.neededDate, req.status);
+                      if (['CLOSED', 'CANCELLED', 'REJECTED', 'DRAFT'].includes(req.status)) {
+                        return (
+                          <div style={{ fontSize: '0.8125rem', color: '#64748b' }}>
+                            <div>{req.targetDate || '—'}</div>
+                            <span className="req-sla-badge inactive">Đã kết thúc</span>
+                          </div>
+                        );
+                      }
+                      if (timing.overdue) {
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div style={{ fontSize: '0.8125rem', color: '#0f172a' }}>{req.targetDate || '—'}</div>
+                            <span className="req-sla-badge overdue">
+                              <AlertCircle size={11} />
+                              Trễ {timing.daysOverdue} ngày
+                            </span>
+                          </div>
+                        );
+                      }
+                      if (timing.daysRemaining !== null) {
+                        const isUrgent = timing.daysRemaining <= 3;
+                        return (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div style={{ fontSize: '0.8125rem', color: '#0f172a' }}>{req.targetDate || '—'}</div>
+                            <span className={`req-sla-badge ${isUrgent ? 'warning' : 'ok'}`}>
+                              <Clock size={11} />
+                              {timing.daysRemaining === 0 ? 'Hôm nay đến hạn' : `Còn ${timing.daysRemaining} ngày`}
+                            </span>
+                          </div>
+                        );
+                      }
+                      return <span style={{ fontSize: '0.8125rem', color: '#64748b' }}>{req.targetDate || '—'}</span>;
+                    })()}
+                  </td>
                   <td>
                     {assignmentMap[req.id]?.primaryRecruiter ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -617,6 +763,69 @@ export const RequisitionManagementPage: React.FC = () => {
                           </button>
                         </>
                       )}
+
+                      {/* S3-07 Lifecycle Controls for HR / Admin */}
+                      {isHrOrAdmin && (req.status === 'APPROVED' || req.status === 'OPEN') && (
+                        <button
+                          type="button"
+                          className="req-action-btn"
+                          title="Tạm hoãn yêu cầu tuyển dụng"
+                          style={{ color: '#d97706' }}
+                          onClick={() => {
+                            setLifecycleReason('');
+                            setLifecycleError('');
+                            setLifecycleAction({ type: 'HOLD', req });
+                          }}
+                        >
+                          <PauseCircle size={16} />
+                        </button>
+                      )}
+                      {isHrOrAdmin && req.status === 'ON_HOLD' && (
+                        <button
+                          type="button"
+                          className="req-action-btn"
+                          title="Tiếp tục triển khai yêu cầu"
+                          style={{ color: '#059669' }}
+                          onClick={() => {
+                            setLifecycleReason('');
+                            setLifecycleError('');
+                            setLifecycleAction({ type: 'RESUME', req });
+                          }}
+                        >
+                          <PlayCircle size={16} />
+                        </button>
+                      )}
+                      {isHrOrAdmin && (req.status === 'APPROVED' || req.status === 'ON_HOLD' || req.status === 'OPEN') && (
+                        <button
+                          type="button"
+                          className="req-action-btn"
+                          title="Đóng yêu cầu tuyển dụng (hoàn thành)"
+                          style={{ color: '#475569' }}
+                          onClick={() => {
+                            setLifecycleReason('');
+                            setLifecycleError('');
+                            setLifecycleAction({ type: 'CLOSE', req });
+                          }}
+                        >
+                          <Archive size={16} />
+                        </button>
+                      )}
+                      {isHrOrAdmin && req.status !== 'CLOSED' && req.status !== 'CANCELLED' && (
+                        <button
+                          type="button"
+                          className="req-action-btn delete"
+                          title="Hủy yêu cầu tuyển dụng"
+                          style={{ color: '#dc2626' }}
+                          onClick={() => {
+                            setLifecycleReason('');
+                            setLifecycleError('');
+                            setLifecycleAction({ type: 'CANCEL', req });
+                          }}
+                        >
+                          <Ban size={16} />
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         className="req-action-btn"
@@ -1199,6 +1408,94 @@ export const RequisitionManagementPage: React.FC = () => {
                 disabled={isRejecting}
               >
                 <span>{isRejecting ? 'Đang xử lý...' : 'Xác nhận từ chối'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Quản lý Vòng đời Tuyển dụng (S3-07: HOLD, RESUME, CLOSE, CANCEL) */}
+      {lifecycleAction && (
+        <div className="req-modal-backdrop">
+          <div className="req-modal-content" style={{ maxWidth: '520px' }}>
+            <div className="req-modal-header">
+              <h2>
+                {lifecycleAction.type === 'HOLD' && 'Tạm hoãn yêu cầu tuyển dụng'}
+                {lifecycleAction.type === 'RESUME' && 'Tiếp tục triển khai yêu cầu tuyển dụng'}
+                {lifecycleAction.type === 'CLOSE' && 'Đóng yêu cầu tuyển dụng (Hoàn tất)'}
+                {lifecycleAction.type === 'CANCEL' && 'Hủy yêu cầu tuyển dụng'}
+              </h2>
+              <button
+                type="button"
+                className="req-action-btn"
+                onClick={() => setLifecycleAction(null)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="req-modal-body">
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569' }}>
+                {lifecycleAction.type === 'HOLD' && 'Yêu cầu sẽ chuyển sang trạng thái Tạm hoãn (ON_HOLD). Các tin tuyển dụng đang đăng liên quan sẽ được tự động hạ đăng.'}
+                {lifecycleAction.type === 'RESUME' && 'Yêu cầu sẽ được kích hoạt lại trạng thái Đã duyệt (APPROVED) để tiếp tục quy trình tuyển dụng.'}
+                {lifecycleAction.type === 'CLOSE' && 'Yêu cầu sẽ được đóng (CLOSED) và giải phóng các hạn ngạch đang giữ. Tin tuyển dụng liên quan sẽ được hạ đăng.'}
+                {lifecycleAction.type === 'CANCEL' && 'Yêu cầu sẽ bị hủy bỏ (CANCELLED) và hoàn lại chỉ tiêu định biên. Tin tuyển dụng liên quan sẽ bị hạ đăng.'}
+              </p>
+              <div style={{ marginTop: '8px', fontSize: '0.875rem', color: '#1e293b', fontWeight: 600 }}>
+                {lifecycleAction.req.title} (<code>{lifecycleAction.req.requisitionCode}</code>)
+              </div>
+
+              <div className="req-form-group" style={{ marginTop: '16px' }}>
+                <label className="req-label">
+                  Lý do / Ghi chú {(lifecycleAction.type === 'CANCEL' || lifecycleAction.type === 'HOLD') && <span className="required">*</span>}
+                </label>
+                <textarea
+                  className="req-textarea"
+                  placeholder={
+                    lifecycleAction.type === 'CANCEL'
+                      ? 'Nhập lý do hủy yêu cầu...'
+                      : lifecycleAction.type === 'HOLD'
+                      ? 'Nhập lý do tạm hoãn tuyển dụng...'
+                      : 'Nhập ghi chú (không bắt buộc)...'
+                  }
+                  value={lifecycleReason}
+                  onChange={(e) => {
+                    setLifecycleReason(e.target.value);
+                    if (lifecycleError) setLifecycleError('');
+                  }}
+                  rows={3}
+                />
+                {lifecycleError && <span className="req-error-text">{lifecycleError}</span>}
+              </div>
+            </div>
+
+            <div className="req-modal-footer">
+              <button
+                type="button"
+                className="req-btn-secondary"
+                onClick={() => setLifecycleAction(null)}
+                disabled={isSubmittingLifecycle}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="req-btn-primary"
+                style={{
+                  backgroundColor:
+                    lifecycleAction.type === 'CANCEL'
+                      ? '#dc2626'
+                      : lifecycleAction.type === 'HOLD'
+                      ? '#d97706'
+                      : lifecycleAction.type === 'RESUME'
+                      ? '#059669'
+                      : '#2563eb',
+                  borderColor: 'transparent',
+                }}
+                onClick={handleLifecycleConfirm}
+                disabled={isSubmittingLifecycle}
+              >
+                <span>{isSubmittingLifecycle ? 'Đang xử lý...' : 'Xác nhận'}</span>
               </button>
             </div>
           </div>

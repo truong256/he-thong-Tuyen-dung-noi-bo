@@ -9,7 +9,7 @@ export interface Requisition {
   quantity: number;
   targetDate?: string;
   neededDate?: string;
-  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'ON_HOLD' | 'CLOSED' | 'OPEN' | string;
   rejectionReason?: string;
   reason?: string;
   recruitmentType?: 'REPLACEMENT' | 'NEW_HEADCOUNT' | string;

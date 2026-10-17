@@ -115,6 +115,14 @@ describe('RequisitionManagementPage (S2-10 - Yêu cầu Tuyển dụng)', () => 
       size: 20,
       number: 0,
     });
+    vi.mocked(requisitionApi.getAssignableRecruiters).mockResolvedValue([]);
+    vi.mocked(requisitionApi.getAssignments).mockResolvedValue({
+      requisitionId: 101,
+      requisitionCode: 'REQ-2026-0001',
+      requisitionTitle: 'Tuyển dụng Senior Backend Java',
+      supportRecruiters: [],
+      hiringManagers: [],
+    });
   });
 
   it('renders hero card, filters, and requisition table', async () => {

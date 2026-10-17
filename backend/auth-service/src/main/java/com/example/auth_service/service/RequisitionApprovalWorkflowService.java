@@ -165,7 +165,7 @@ public class RequisitionApprovalWorkflowService {
         if (req == null || req.getDepartmentId() == null) {
             return;
         }
-        if ("DRAFT".equalsIgnoreCase(req.getStatus()) || "CANCELLED".equalsIgnoreCase(req.getStatus())) {
+        if (!"PENDING_APPROVAL".equalsIgnoreCase(req.getStatus())) {
             return;
         }
 
@@ -234,19 +234,13 @@ public class RequisitionApprovalWorkflowService {
         }
 
         snapshots.saveAll(newSnapshots);
-
-        // Nếu trước đó yêu cầu bị đánh dấu là APPROVED do chỉ có 1 bước cũ,
-        // phục hồi trạng thái PENDING_APPROVAL để chuỗi phê duyệt đầy đủ các cấp phía sau
-        if ("APPROVED".equalsIgnoreCase(req.getStatus())) {
-            req.setStatus("PENDING_APPROVAL");
-            requisitions.save(req);
-        }
     }
 
     /**
      * Lấy cấu trúc timeline động chuẩn xác từ snapshot của yêu cầu, kiểm tra quyền theo từng yêu cầu.
+     * Đồng bộ với nhật ký phê duyệt thực tế và bảo đảm bất biến khi chỉ xem lịch sử.
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public RequisitionApprovalTimelineResponse getTimelineResponse(Long requisitionId, Long currentUserId) {
         RecruitmentRequisition req = requisitions.findById(requisitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + requisitionId));
@@ -258,11 +252,13 @@ public class RequisitionApprovalWorkflowService {
                 ? req.getSalaryMax()
                 : (req.getSalaryMin() != null ? req.getSalaryMin() : 0L);
 
-        // Tự động đồng bộ các tài khoản / cấp phê duyệt phía sau theo cấu hình đang hoạt động của phòng ban
-        syncMissingSubsequentSteps(req, proposedSalary);
-
-        // Lấy danh sách snapshot thực tế từ DB
+        // Lấy danh sách snapshot thực tế từ DB (bất biến, không mutate khi chỉ xem lịch sử)
         List<RequisitionApprovalSnapshot> snapshotList = snapshots.findAllByRequisitionIdOrderByStepOrderAsc(requisitionId);
+
+        // Lấy nhật ký phê duyệt thực tế để đồng bộ quyết định và ý kiến
+        List<RequisitionApprovalLog> logs = approvalLogs != null
+                ? approvalLogs.findAllByRequisitionIdOrderByCreatedAtAsc(requisitionId)
+                : List.of();
 
         // Kiểm tra quyền xem lịch sử theo từng yêu cầu
         boolean isCreator = req.getCreatedByUserId() != null && req.getCreatedByUserId().equals(currentUserId);
@@ -296,9 +292,17 @@ public class RequisitionApprovalWorkflowService {
                     ? approver.getRoles().iterator().next().getName().name()
                     : "APPROVER";
 
+            // Tìm nhật ký phê duyệt thực tế gần nhất cho cấp duyệt này
+            Optional<RequisitionApprovalLog> stepLog = logs.stream()
+                    .filter(l -> (l.getStepOrder() != null && l.getStepOrder() == s.getStepOrder())
+                            || (l.getApproverUserId() != null && l.getApproverUserId().equals(s.getApproverUserId())))
+                    .reduce((first, second) -> second);
+
             String stepStatus;
             String action;
-            Instant actionAt = s.getApprovedAt();
+            Instant actionAt = s.getApprovedAt() != null
+                    ? s.getApprovedAt()
+                    : stepLog.map(RequisitionApprovalLog::getCreatedAt).orElse(null);
             String comments;
             boolean isCurrent = false;
 
@@ -306,11 +310,19 @@ public class RequisitionApprovalWorkflowService {
                 stepStatus = "COMPLETED";
                 action = "APPROVE";
                 completedCount++;
-                comments = "Đã phê duyệt (Hạn mức từ " + formatCurrency(s.getMinimumSalary()) + ")";
+                String logComment = stepLog.map(RequisitionApprovalLog::getComment).filter(c -> !c.isBlank()).orElse(null);
+                comments = logComment != null ? logComment : ("Đã phê duyệt (Hạn mức từ " + formatCurrency(s.getMinimumSalary()) + ")");
             } else if ("REJECTED".equalsIgnoreCase(s.getStatus()) || "REJECTED".equalsIgnoreCase(req.getStatus())) {
                 stepStatus = "REJECTED";
                 action = "REJECT";
-                comments = req.getRejectionReason() != null ? req.getRejectionReason() : "Từ chối phê duyệt";
+                String logComment = stepLog.map(RequisitionApprovalLog::getComment).filter(c -> !c.isBlank()).orElse(null);
+                comments = logComment != null ? logComment : (req.getRejectionReason() != null ? req.getRejectionReason() : "Từ chối phê duyệt");
+            } else if ("REQUEST_CHANGES".equalsIgnoreCase(s.getStatus())
+                    || stepLog.filter(l -> "REQUEST_CHANGES".equalsIgnoreCase(l.getAction())).isPresent()) {
+                stepStatus = "REQUEST_CHANGES";
+                action = "REQUEST_CHANGES";
+                String logComment = stepLog.map(RequisitionApprovalLog::getComment).filter(c -> !c.isBlank()).orElse(null);
+                comments = logComment != null ? logComment : (req.getRejectionReason() != null ? req.getRejectionReason() : "Yêu cầu bổ sung thông tin");
             } else {
                 if (!foundFirstPending) {
                     stepStatus = "PENDING";

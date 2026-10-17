@@ -269,6 +269,26 @@ export const requisitionApi = {
     const res = await client.get<import('../types/requisition').AssignmentHistoryItem[]>(`/api/requisitions/${id}/assignments/history`);
     return res.data;
   },
+
+  hold: async (id: number, reason?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/hold`, { reason });
+    return res.data;
+  },
+
+  resume: async (id: number, reason?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/resume`, { reason });
+    return res.data;
+  },
+
+  close: async (id: number, reason?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/close`, { reason });
+    return res.data;
+  },
+
+  cancel: async (id: number, reason: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/cancel`, { reason });
+    return res.data;
+  },
 };
 
 export default requisitionApi;

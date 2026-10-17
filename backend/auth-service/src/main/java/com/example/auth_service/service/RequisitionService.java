@@ -47,6 +47,9 @@ public class RequisitionService {
     @Autowired(required = false)
     private RequisitionApprovalService approvalService;
 
+    @Autowired(required = false)
+    private com.example.auth_service.repository.JobPostingRepository jobPostings;
+
     @Autowired
     public RequisitionService(
             RecruitmentRequisitionRepository requisitions,
@@ -613,6 +616,153 @@ public class RequisitionService {
 
         RecruitmentRequisition saved = requisitions.save(req);
         return toResponse(saved);
+    }
+
+    /**
+     * Tạm dừng yêu cầu tuyển dụng (S3-07).
+     * Yêu cầu chuyển sang ON_HOLD, tạm dừng xuất bản tin tuyển dụng liên quan.
+     */
+    public RequisitionResponse hold(Long id, String reason) {
+        if (reason == null || reason.trim().length() < 5) {
+            throw new BadRequestException("Lý do tạm dừng yêu cầu phải có tối thiểu 5 ký tự.");
+        }
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+
+        User currentUser = getCurrentUser();
+        checkCanManageRequisitionLifecycle(req, currentUser);
+
+        if (!"APPROVED".equalsIgnoreCase(req.getStatus()) && !"OPEN".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Chỉ yêu cầu đang ở trạng thái 'Đã duyệt' hoặc 'Đang tuyển' mới có thể tạm dừng.");
+        }
+
+        req.setStatus("ON_HOLD");
+        req.setRejectionReason(reason.trim());
+        req.setUpdatedAt(Instant.now());
+        RecruitmentRequisition saved = requisitions.save(req);
+
+        // Ghi nhật ký chuyển trạng thái bất biến
+        approvalWorkflow.recordFallbackApprovalLog(id, currentUser.getId(), "HOLD", reason.trim());
+
+        // Đồng bộ tin tuyển dụng: Gỡ tin đang xuất bản
+        syncJobPostingsOnStatusChange(id, "ON_HOLD", "Yêu cầu tuyển dụng tạm dừng: " + reason.trim());
+
+        return toResponse(saved);
+    }
+
+    /**
+     * Tiếp tục yêu cầu tuyển dụng đang tạm dừng (S3-07).
+     * Yêu cầu chuyển từ ON_HOLD trở lại APPROVED.
+     */
+    public RequisitionResponse resume(Long id) {
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+
+        User currentUser = getCurrentUser();
+        checkCanManageRequisitionLifecycle(req, currentUser);
+
+        if (!"ON_HOLD".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Chỉ yêu cầu đang ở trạng thái 'Tạm dừng' mới có thể tiếp tục.");
+        }
+
+        req.setStatus("APPROVED");
+        req.setUpdatedAt(Instant.now());
+        RecruitmentRequisition saved = requisitions.save(req);
+
+        // Ghi nhật ký chuyển trạng thái bất biến
+        approvalWorkflow.recordFallbackApprovalLog(id, currentUser.getId(), "RESUME", "Tiếp tục thực hiện yêu cầu tuyển dụng");
+
+        return toResponse(saved);
+    }
+
+    /**
+     * Đóng yêu cầu tuyển dụng (S3-07).
+     * Áp dụng khi đã tuyển đủ hoặc kết thúc đợt tuyển (APPROVED hoặc ON_HOLD chuyển sang CLOSED).
+     */
+    public RequisitionResponse close(Long id, String reason) {
+        if (reason == null || reason.trim().length() < 5) {
+            throw new BadRequestException("Lý do đóng yêu cầu phải có tối thiểu 5 ký tự.");
+        }
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+
+        User currentUser = getCurrentUser();
+        checkCanManageRequisitionLifecycle(req, currentUser);
+
+        if ("CLOSED".equalsIgnoreCase(req.getStatus()) || "CANCELLED".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Yêu cầu tuyển dụng đã đóng hoặc đã hủy trước đó.");
+        }
+
+        req.setStatus("CLOSED");
+        req.setRejectionReason(reason.trim());
+        req.setUpdatedAt(Instant.now());
+        RecruitmentRequisition saved = requisitions.save(req);
+
+        // Ghi nhật ký chuyển trạng thái bất biến
+        approvalWorkflow.recordFallbackApprovalLog(id, currentUser.getId(), "CLOSE", reason.trim());
+
+        // Đồng bộ tin tuyển dụng: Gỡ tin đang xuất bản
+        syncJobPostingsOnStatusChange(id, "CLOSED", "Yêu cầu tuyển dụng đã đóng: " + reason.trim());
+
+        return toResponse(saved);
+    }
+
+    /**
+     * Hủy yêu cầu tuyển dụng (S3-07).
+     * Áp dụng cho các trạng thái chưa đóng/chưa hủy.
+     */
+    public RequisitionResponse cancel(Long id, String reason) {
+        if (reason == null || reason.trim().length() < 5) {
+            throw new BadRequestException("Lý do hủy yêu cầu phải có tối thiểu 5 ký tự.");
+        }
+        RecruitmentRequisition req = requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+
+        User currentUser = getCurrentUser();
+        checkCanManageRequisitionLifecycle(req, currentUser);
+
+        if ("CLOSED".equalsIgnoreCase(req.getStatus()) || "CANCELLED".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Yêu cầu tuyển dụng đã đóng hoặc đã hủy trước đó.");
+        }
+
+        req.setStatus("CANCELLED");
+        req.setRejectionReason(reason.trim());
+        req.setUpdatedAt(Instant.now());
+        RecruitmentRequisition saved = requisitions.save(req);
+
+        // Ghi nhật ký chuyển trạng thái bất biến
+        approvalWorkflow.recordFallbackApprovalLog(id, currentUser.getId(), "CANCEL", reason.trim());
+
+        // Đồng bộ tin tuyển dụng: Gỡ tin đang xuất bản
+        syncJobPostingsOnStatusChange(id, "CANCELLED", "Yêu cầu tuyển dụng đã hủy: " + reason.trim());
+
+        return toResponse(saved);
+    }
+
+    private void checkCanManageRequisitionLifecycle(RecruitmentRequisition req, User currentUser) {
+        boolean isHrOrAdmin = currentUser.getRoles().stream()
+                .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
+        boolean isCreator = req.getCreatedByUserId() != null && req.getCreatedByUserId().equals(currentUser.getId());
+        boolean isDeptManager = req.getDepartmentId() != null && departments.findById(req.getDepartmentId())
+                .map(d -> currentUser.getId().equals(d.getManagerUserId()))
+                .orElse(false);
+
+        if (!isHrOrAdmin && !isCreator && !isDeptManager) {
+            throw new AccessDeniedException("Bạn không có quyền thay đổi trạng thái vòng đời của yêu cầu tuyển dụng này.");
+        }
+    }
+
+    private void syncJobPostingsOnStatusChange(Long requisitionId, String newStatus, String reason) {
+        if (jobPostings == null) return;
+        java.util.List<com.example.auth_service.domain.sprint3.JobPosting> postings = jobPostings.findByRequisitionId(requisitionId);
+        for (var posting : postings) {
+            if ("PUBLISHED".equalsIgnoreCase(posting.getStatus())) {
+                posting.setStatus("UNPUBLISHED");
+                posting.setUnpublishReason(reason);
+                posting.setUnpublishedAt(Instant.now());
+                jobPostings.save(posting);
+            }
+        }
     }
 
     private void validateSalaryAgainstJobTitle(JobTitle job, Long salaryMin, Long salaryMax, String salaryExplanation) {

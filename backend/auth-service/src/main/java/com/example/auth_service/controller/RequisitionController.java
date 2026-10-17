@@ -127,24 +127,48 @@ public class RequisitionController {
     }
 
     /**
-     * API phê duyệt yêu cầu tuyển dụng.
+     * API tạm dừng yêu cầu tuyển dụng (S3-07).
      */
-    @PostMapping("/{id}/approve")
-    public ResponseEntity<RequisitionResponse> approve(@PathVariable Long id) {
-        RequisitionResponse approved = service.approve(id);
-        return ResponseEntity.ok(approved);
-    }
-
-    /**
-     * API từ chối yêu cầu tuyển dụng.
-     */
-    @PostMapping("/{id}/reject")
-    public ResponseEntity<RequisitionResponse> reject(
+    @PostMapping("/{id}/hold")
+    public ResponseEntity<RequisitionResponse> hold(
             @PathVariable Long id,
             @RequestBody(required = false) java.util.Map<String, String> body
     ) {
         String reason = body != null ? body.get("reason") : null;
-        RequisitionResponse rejected = service.reject(id, reason);
-        return ResponseEntity.ok(rejected);
+        return ResponseEntity.ok(service.hold(id, reason));
     }
+
+    /**
+     * API tiếp tục yêu cầu tuyển dụng đang tạm dừng (S3-07).
+     */
+    @PostMapping("/{id}/resume")
+    public ResponseEntity<RequisitionResponse> resume(@PathVariable Long id) {
+        return ResponseEntity.ok(service.resume(id));
+    }
+
+    /**
+     * API đóng yêu cầu tuyển dụng (S3-07).
+     */
+    @PostMapping("/{id}/close")
+    public ResponseEntity<RequisitionResponse> close(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(service.close(id, reason));
+    }
+
+    /**
+     * API hủy yêu cầu tuyển dụng (S3-07).
+     */
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<RequisitionResponse> cancel(
+            @PathVariable Long id,
+            @RequestBody(required = false) java.util.Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        return ResponseEntity.ok(service.cancel(id, reason));
+    }
+
 }
+
