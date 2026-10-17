@@ -316,7 +316,9 @@ export const JobPostingManagementPage: React.FC = () => {
               deptSelectRef.current?.focus();
               try {
                 deptSelectRef.current?.showPicker?.();
-              } catch {}
+              } catch (err) {
+                void err;
+              }
             }}
           >
             <Filter size={16} />
