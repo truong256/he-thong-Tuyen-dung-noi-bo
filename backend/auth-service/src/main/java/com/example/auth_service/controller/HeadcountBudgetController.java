@@ -155,23 +155,17 @@ public class HeadcountBudgetController {
     }
 
     /**
-     * POST /api/headcount-budgets/requisitions/{id}/override-approve
-     * Phê duyệt ghi đè vượt ngân sách - DUY NHẤT HR_MANAGER được thực hiện, bắt buộc có lý do.
+     * POST /api/headcount-budgets/requisitions/{id}/override và /override-approve
+     * Ghi đè ngoại lệ ngân sách/định biên cho YCTD - DUY NHẤT HR_MANAGER được thực hiện, bắt buộc có lý do.
+     * Cấp ngoại lệ để YCTD tiếp tục luồng duyệt bình thường theo quy định nghiệp vụ, KHÔNG tự động chuyển trạng thái thành APPROVED.
      */
-    @PostMapping("/requisitions/{id}/override-approve")
+    @PostMapping({"/requisitions/{id}/override", "/requisitions/{id}/override-approve"})
     @PreAuthorize("hasRole('HR_MANAGER')")
-    public ResponseEntity<?> overrideApprove(
+    public ResponseEntity<BudgetOverrideResponse> overrideBudget(
             @PathVariable Long id,
-            @Valid @RequestBody OverrideApprovalRequest request
+            @Valid @RequestBody BudgetOverrideRequest request
     ) {
         User currentUser = getCurrentUser();
-        boolean isHrManager = currentUser.getRoles().stream().anyMatch(r -> r.getName() == RoleName.HR_MANAGER)
-                || "HR_MANAGER".equalsIgnoreCase(currentUser.getRole());
-        if (!isHrManager) {
-            throw new AccessDeniedException("Chỉ Trưởng phòng Nhân sự (HR Manager) được quyền ghi đè phê duyệt vượt ngân sách.");
-        }
-
-        var res = approvalService.approveRequisition(id, "Phê duyệt ghi đè vượt ngân sách", request.reason());
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(budgetService.overrideBudget(id, request, currentUser));
     }
 }

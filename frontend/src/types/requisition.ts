@@ -25,6 +25,9 @@ export interface Requisition {
   createdByName?: string;
   budgetOverridden?: boolean;
   budgetOverrideReason?: string;
+  headcountOverridden?: boolean;
+  budgetOverrideByUserId?: number;
+  budgetOverrideAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }

@@ -453,7 +453,7 @@ class HeadcountBudgetOverrunIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(Map.of("action", "APPROVE"))))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message", containsString("Bạn không có quyền")));
+                .andExpect(jsonPath("$.message", containsString("người phê duyệt")));
 
         // Cấp 1 duyệt đúng quyền
         mvc.perform(put("/api/requisitions/" + req.getId() + "/approve")
@@ -660,7 +660,7 @@ class HeadcountBudgetOverrunIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(hmBody)))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message", containsString("Bạn không có quyền")));
+                .andExpect(jsonPath("$.message", containsString("Trưởng phòng Nhân sự")));
 
         // 2. Admin đơn thuần (không có role HR_MANAGER) gọi endpoint override-approve -> 403 Forbidden
         OverrideApprovalRequest overrideReq = new OverrideApprovalRequest("Lý do ghi đè bởi tài khoản Admin");
@@ -730,7 +730,7 @@ class HeadcountBudgetOverrunIntegrationTest {
     }
 
     @Test
-    @DisplayName("TC16: Phân tích lỗi Override-Approve Deadlock: HR Manager không thể ghi đè duyệt khi không phải approver cấp 1")
+    @DisplayName("TC16: Đã giải quyết Override Deadlock: HR Manager ghi đè thành công ngay cả khi không phải approver cấp 1")
     void tc16_overrideApprove_deadlockAnalysis_documentsArchitecturalMismatch() throws Exception {
         createBudget(10, 240_000_000L);
         RecruitmentRequisition req = createRequisition(12, 2_000_000L); // Vượt chỉ tiêu (12 > 10)
@@ -738,14 +738,18 @@ class HeadcountBudgetOverrunIntegrationTest {
         // HR Manager gọi endpoint chuyên biệt override-approve
         OverrideApprovalRequest hrReq = new OverrideApprovalRequest("Phê duyệt đặc cách mở rộng quy mô bộ phận");
 
-        // Lỗi kiến trúc: HeadcountBudgetController gọi RequisitionApprovalService (Sprint 2)
-        // tại line 144 kiểm tra currentStep.approverId == hrManager.getId().
-        // Do step 1 thuộc về hiringManager, backend thực tế ném 403 Forbidden thay vì 200 OK.
+        // Trước đây bị lỗi kiến trúc 403 Forbidden do RequisitionApprovalService kiểm tra currentStep.approverId.
+        // Hiện tại: Chức năng ghi đè độc lập đã xử lý thành công trả về 200 OK.
         mvc.perform(post("/api/headcount-budgets/requisitions/" + req.getId() + "/override-approve")
                         .header("Authorization", token(hrManager))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsString(hrReq)))
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.message", containsString("Bạn không có quyền")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.budgetOverridden").value(true))
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
+
+        RecruitmentRequisition overriddenReq = requisitions.findById(req.getId()).orElseThrow();
+        assertThat(overriddenReq.isBudgetOverridden()).isTrue();
+        assertThat(overriddenReq.getStatus()).isEqualTo("PENDING_APPROVAL");
     }
 }

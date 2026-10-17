@@ -332,14 +332,54 @@ public class HeadcountBudgetService {
                 req.getId()
         ));
 
+        boolean isHrManager = user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.HR_MANAGER)
+                || "HR_MANAGER".equalsIgnoreCase(user.getRole());
+
+        // Nếu yêu cầu đã được ghi đè ngoại lệ trước đó:
+        if (req.isBudgetOverridden()) {
+            // TC11: Ghi đè ngân sách nhưng vẫn vượt Headcount -> Không bỏ qua kiểm soát Headcount
+            if (eval.exceedsHeadcount() && !req.isHeadcountOverridden()) {
+                throw new BudgetExceededException(
+                        "HEADCOUNT_LIMIT_EXCEEDED",
+                        "Yêu cầu tuyển dụng vượt chỉ tiêu headcount phòng ban (" + eval.excessHeadcount() + " người) và chưa được chấp thuận ghi đè định biên.",
+                        isHrManager,
+                        eval
+                );
+            }
+
+            // TC12: Thay đổi ngân sách sau ghi đè -> Xử lý theo quy tắc tái kiểm tra
+            long previouslyApprovedExcess = req.getOverriddenExcessSalaryVnd() != null ? req.getOverriddenExcessSalaryVnd() : 0L;
+            if (eval.excessSalaryVnd() > previouslyApprovedExcess) {
+                throw new BudgetExceededException(
+                        "BUDGET_EXCEEDED_AFTER_OVERRIDE",
+                        String.format("Ngân sách hoặc chi phí lương đã thay đổi sau khi ghi đè, phần vượt mới phát sinh (%s VND) cần được HR Manager xem xét lại.",
+                                formatVnd(eval.excessSalaryVnd() - previouslyApprovedExcess)),
+                        isHrManager,
+                        eval
+                );
+            }
+
+            int previouslyApprovedHeadcountExcess = req.getOverriddenExcessHeadcount() != null ? req.getOverriddenExcessHeadcount() : 0;
+            if (eval.excessHeadcount() > previouslyApprovedHeadcountExcess) {
+                throw new BudgetExceededException(
+                        "HEADCOUNT_EXCEEDED_AFTER_OVERRIDE",
+                        String.format("Định biên headcount đã thay đổi sau khi ghi đè, phần vượt mới phát sinh (%d người) cần được HR Manager xem xét lại.",
+                                eval.excessHeadcount() - previouslyApprovedHeadcountExcess),
+                        isHrManager,
+                        eval
+                );
+            }
+
+            // Ngoại lệ hợp lệ bao phủ toàn bộ phần vượt -> Cho phép tiếp tục duyệt
+            return;
+        }
+
+        // Nếu chưa được ghi đè và không vượt hạn mức -> Cho phép duyệt
         if (!eval.requiresOverride()) {
             return;
         }
 
-        boolean isHrManager = user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.HR_MANAGER)
-                || "HR_MANAGER".equalsIgnoreCase(user.getRole());
-
-        // Nếu chưa gửi lý do ghi đè -> Từ chối duyệt bằng 409 Conflict kèm thông tin chi tiết
+        // Chưa được ghi đè và không gửi lý do ghi đè inline -> Ném 409 Conflict
         if (overrideReason == null || overrideReason.trim().isEmpty()) {
             String code = eval.budgetExists() ? "HEADCOUNT_BUDGET_EXCEEDED" : "BUDGET_NOT_DEFINED";
             throw new BudgetExceededException(code, eval.warningMessage(), isHrManager, eval);
@@ -363,8 +403,120 @@ public class HeadcountBudgetService {
         writeAuditLog("BUDGET_OVERRIDE", deptId, year, req.getId(), user, cleanReason, detail);
 
         req.setBudgetOverridden(true);
+        req.setHeadcountOverridden(eval.exceedsHeadcount());
         req.setBudgetOverrideReason(cleanReason);
+        req.setBudgetOverrideByUserId(user.getId());
+        req.setBudgetOverrideAt(Instant.now());
+        req.setOverriddenExcessHeadcount(eval.excessHeadcount());
+        req.setOverriddenExcessSalaryVnd(eval.excessSalaryVnd());
         requisitionRepository.save(req);
+    }
+
+    /**
+     * Nghiệp vụ Ghi đè Ngoại lệ Ngân sách chuyên biệt của HR Manager (S3-04 / SCRUM-101).
+     * Chấp thuận ngoại lệ cho một YCTD cụ thể, KHÔNG tự động chuyển trạng thái thành APPROVED.
+     */
+    @Transactional
+    public BudgetOverrideResponse overrideBudget(Long requisitionId, BudgetOverrideRequest request, User user) {
+        boolean isHrManager = user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.HR_MANAGER)
+                || "HR_MANAGER".equalsIgnoreCase(user.getRole());
+        if (!isHrManager) {
+            throw new AccessDeniedException("Chỉ Trưởng phòng Nhân sự (HR Manager) được quyền ghi đè ngân sách/định biên.");
+        }
+
+        if (request == null || request.reason() == null || request.reason().trim().length() < MIN_OVERRIDE_REASON_LENGTH) {
+            throw new BadRequestException("Phải nhập lý do ghi đè hợp lệ (tối thiểu " + MIN_OVERRIDE_REASON_LENGTH + " ký tự).");
+        }
+
+        RecruitmentRequisition req = requisitionRepository.findByIdForUpdate(requisitionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + requisitionId));
+
+        if ("APPROVED".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Yêu cầu tuyển dụng đã được phê duyệt, không thể ghi đè.");
+        }
+        if ("REJECTED".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Yêu cầu tuyển dụng đã bị từ chối, không thể ghi đè.");
+        }
+        if ("CANCELLED".equalsIgnoreCase(req.getStatus()) || "CLOSED".equalsIgnoreCase(req.getStatus())) {
+            throw new BadRequestException("Yêu cầu tuyển dụng đã đóng hoặc bị hủy, không thể ghi đè.");
+        }
+
+        if (req.isBudgetOverridden()) {
+            throw new BadRequestException("Yêu cầu tuyển dụng này đã được ghi đè ngân sách trước đó.");
+        }
+
+        if (req.getDepartmentId() == null) {
+            throw new BadRequestException("Yêu cầu tuyển dụng chưa được gắn phòng ban.");
+        }
+
+        int year = getBudgetYear(req);
+        Long deptId = req.getDepartmentId();
+
+        // Khóa bi quan chống thao tác đồng thời gây sai lệch dữ liệu (TC10)
+        budgetRepository.findByDepartmentIdAndYearForUpdate(deptId, year);
+
+        // Sau khi có khóa, tải lại requisition để kiểm tra trạng thái cập nhật nhất
+        req = requisitionRepository.findById(requisitionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + requisitionId));
+        if (req.isBudgetOverridden()) {
+            throw new BadRequestException("Yêu cầu tuyển dụng này đã được ghi đè ngân sách trước đó.");
+        }
+
+        long monthlySalary = getProposedMonthlySalary(req);
+        BudgetEvaluationResponse eval = evaluate(new BudgetEvaluationRequest(
+                deptId,
+                year,
+                req.getQuantity(),
+                monthlySalary,
+                req.getId()
+        ));
+
+        if (!eval.requiresOverride()) {
+            throw new BadRequestException("Yêu cầu tuyển dụng hiện không vượt chỉ tiêu headcount hoặc ngân sách lương, không cần ghi đè.");
+        }
+
+        String cleanReason = request.reason().trim();
+        boolean overrideHeadcount = Boolean.TRUE.equals(request.overrideHeadcount())
+                || (request.overrideHeadcount() == null && eval.exceedsHeadcount());
+        boolean overrideSalary = Boolean.TRUE.equals(request.overrideSalary())
+                || (request.overrideSalary() == null && eval.exceedsSalary());
+
+        req.setBudgetOverridden(overrideSalary || overrideHeadcount);
+        req.setHeadcountOverridden(overrideHeadcount);
+        req.setBudgetOverrideReason(cleanReason);
+        req.setBudgetOverrideByUserId(user.getId());
+        req.setBudgetOverrideAt(Instant.now());
+        req.setOverriddenExcessHeadcount(eval.excessHeadcount());
+        req.setOverriddenExcessSalaryVnd(eval.excessSalaryVnd());
+        // Bảo toàn trạng thái hiện tại (PENDING_APPROVAL), không tự động chuyển thành APPROVED
+        requisitionRepository.saveAndFlush(req);
+
+        String detail = String.format("Ghi đè ngoại lệ: Vượt %d headcount, %s VND lương. YCTD: %s (%s). Số lượng tuyển: %d, Lương dự kiến: %s VND/tháng.",
+                eval.excessHeadcount(), formatVnd(eval.excessSalaryVnd()), req.getTitle(), req.getRequisitionCode(), req.getQuantity(), formatVnd(monthlySalary));
+
+        writeAuditLog("BUDGET_OVERRIDE", deptId, year, req.getId(), user, cleanReason, detail);
+
+        String deptName = departmentRepository.findById(deptId).map(Department::getName).orElse("Phòng ban #" + deptId);
+        String userName = user.getFullName() != null ? user.getFullName() : user.getEmail();
+
+        return new BudgetOverrideResponse(
+                req.getId(),
+                req.getRequisitionCode(),
+                req.getTitle(),
+                deptId,
+                deptName,
+                req.getStatus(),
+                req.isBudgetOverridden(),
+                req.isHeadcountOverridden(),
+                cleanReason,
+                user.getId(),
+                user.getEmail(),
+                userName,
+                req.getBudgetOverrideAt(),
+                eval.excessHeadcount(),
+                eval.excessSalaryVnd(),
+                "Ghi đè ngoại lệ ngân sách thành công. Yêu cầu tuyển dụng có thể tiếp tục quy trình phê duyệt."
+        );
     }
 
     // =========================================================================

@@ -40,11 +40,15 @@ type LifecycleActionType = 'HOLD' | 'RESUME' | 'CLOSE' | 'CANCEL';
 export const RequisitionManagementPage: React.FC = () => {
   const { user, hasPermission, hasAnyRole } = useAuth();
   const isHrOrAdmin = hasAnyRole(['HR_MANAGER', 'ADMIN']) || (user?.roles || []).some((r: any) => r === 'HR_MANAGER' || r === 'ADMIN');
+  const isHrManager = hasAnyRole(['HR_MANAGER'])
+    || (user?.roles || []).some((r: any) => r === 'HR_MANAGER' || r?.name === 'HR_MANAGER')
+    || user?.role === 'HR_MANAGER';
   const isHiringManagerOnly = !isHrOrAdmin && (hasAnyRole(['HIRING_MANAGER']) || (user?.roles || []).some((r: any) => r === 'HIRING_MANAGER'));
 
   const canCreate = hasPermission ? hasPermission('REQUISITION_CREATE') : hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']);
   const canApprove = hasPermission ? hasPermission('REQUISITION_APPROVE') : hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER', 'ADMIN']);
   const canAssign = hasPermission ? hasPermission('RECRUITER_ASSIGN') : hasAnyRole(['HR_MANAGER', 'ADMIN']);
+  const canOverrideBudget = isHrManager;
 
   const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -482,24 +486,30 @@ export const RequisitionManagementPage: React.FC = () => {
   const handleOverrideConfirm = async () => {
     if (!overrideModalReq) return;
     if (!overrideReason.trim() || overrideReason.trim().length < 10) {
-      setOverrideError('Lý do phê duyệt ghi đè bắt buộc phải từ 10 ký tự trở lên.');
+      setOverrideError('Lý do ghi đè bắt buộc phải từ 10 ký tự trở lên.');
       return;
     }
     setIsOverriding(true);
     try {
-      await budgetApi.overrideApproveRequisition(overrideModalReq.id, {
+      const res = await budgetApi.overrideBudget(overrideModalReq.id, {
         reason: overrideReason.trim(),
       });
-      showToast(`Đã ghi đè phê duyệt thành công yêu cầu ${overrideModalReq.requisitionCode}.`);
+      showToast(`Đã ghi đè ngân sách thành công cho yêu cầu ${overrideModalReq.requisitionCode}.`);
       if (detailReq?.id === overrideModalReq.id) {
-        setDetailReq((prev) => (prev ? { ...prev, status: 'APPROVED', budgetOverridden: true, budgetOverrideReason: overrideReason.trim() } : null));
+        setDetailReq((prev) => (prev ? {
+          ...prev,
+          budgetOverridden: true,
+          budgetOverrideReason: overrideReason.trim(),
+          headcountOverridden: res.headcountOverridden,
+          budgetOverrideAt: res.overrideAt,
+        } : null));
       }
       setOverrideModalReq(null);
       setOverrideEvaluation(null);
       setOverrideReason('');
       loadData();
     } catch (err: any) {
-      setOverrideError(err.response?.data?.message || 'Không thể ghi đè phê duyệt yêu cầu.');
+      setOverrideError(err.response?.data?.message || 'Không thể ghi đè ngân sách cho yêu cầu.');
     } finally {
       setIsOverriding(false);
     }
@@ -1379,9 +1389,41 @@ export const RequisitionManagementPage: React.FC = () => {
                   </div>
 
                   {budgetEval.warningMessage && budgetEval.requiresOverride && !detailReq.budgetOverridden && (
-                    <div className="hb-eval-banner warning">
-                      <AlertTriangle size={16} />
-                      <span>{budgetEval.warningMessage}</span>
+                    <div className="hb-eval-banner warning" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                        <span>{budgetEval.warningMessage}</span>
+                      </div>
+                      {canOverrideBudget && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
+                          <button
+                            type="button"
+                            className="hb-btn-primary"
+                            style={{
+                              backgroundColor: '#7e22ce',
+                              borderColor: '#6b21a8',
+                              padding: '6px 14px',
+                              fontSize: '0.8125rem',
+                              fontWeight: 600,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              cursor: 'pointer',
+                              borderRadius: '6px',
+                              color: '#ffffff',
+                            }}
+                            onClick={() => {
+                              setOverrideModalReq(detailReq);
+                              setOverrideEvaluation(budgetEval);
+                              setOverrideReason('');
+                              setOverrideError('');
+                            }}
+                          >
+                            <AlertCircle size={14} />
+                            <span>Ghi đè ngân sách</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1663,13 +1705,13 @@ export const RequisitionManagementPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal Phê duyệt Ghi đè Vượt Ngân sách (S3-04 - HR Manager only) */}
+      {/* Modal Ghi đè Ngân sách (S3-04 - HR Manager only) */}
       {overrideModalReq && (
         <div className="req-modal-backdrop">
-          <div className="req-modal-content" style={{ maxWidth: '580px' }}>
+          <div className="req-modal-content" style={{ maxWidth: '620px' }}>
             <div className="req-modal-header">
-              <h2 style={{ color: '#b91c1c', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <AlertTriangle size={20} /> Phê duyệt Ghi đè Vượt Ngân sách
+              <h2 style={{ color: '#7e22ce', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={20} /> Ghi đè Ngân sách Tuyển dụng
               </h2>
               <button
                 type="button"
@@ -1686,24 +1728,46 @@ export const RequisitionManagementPage: React.FC = () => {
                 <p style={{ margin: 0, lineHeight: 1.45 }}>
                   {overrideEvaluation?.warningMessage || 'Yêu cầu tuyển dụng này vượt quá định mức chỉ tiêu headcount hoặc trần quỹ lương của phòng ban.'}
                 </p>
-                <div style={{ marginTop: '8px', fontSize: '0.8125rem', color: '#7f1d1d', background: '#fee2e2', padding: '8px 10px', borderRadius: '6px' }}>
-                  Hành động phê duyệt này sẽ được lưu trữ vĩnh viễn vào <strong>Nhật ký kiểm toán ngân sách</strong> cùng thông tin tài khoản và lý do giải trình.
+                <div style={{ marginTop: '8px', fontSize: '0.8125rem', color: '#7e22ce', background: '#faf5ff', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e9d5ff' }}>
+                  Thao tác này cấp ngoại lệ ngân sách cho yêu cầu tuyển dụng và ghi nhận bất biến vào <strong>Nhật ký kiểm toán ngân sách</strong>. Yêu cầu sẽ được phép tiếp tục luồng phê duyệt theo cấu hình.
                 </div>
               </div>
 
               {overrideEvaluation && (
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px', fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px', fontSize: '0.8125rem', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>Mã yêu cầu tuyển dụng:</span>
+                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{overrideModalReq.requisitionCode} ({overrideModalReq.title})</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
                     <span style={{ color: '#64748b' }}>Phòng ban:</span>
-                    <span style={{ fontWeight: 600 }}>{overrideEvaluation.departmentName} (Năm {overrideEvaluation.year})</span>
+                    <span style={{ fontWeight: 600, color: '#1e293b' }}>{overrideEvaluation.departmentName} (Năm ngân sách {overrideEvaluation.year})</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>Headcount hiện có & Còn lại:</span>
+                    <span style={{ fontWeight: 600 }}>{overrideEvaluation.headcountUsed} / {overrideEvaluation.headcountQuota} người (Còn lại: {overrideEvaluation.headcountRemaining} người)</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>Số lượng tuyển & Phần vượt Headcount:</span>
+                    <span style={{ fontWeight: 600, color: overrideEvaluation.exceedsHeadcount ? '#dc2626' : '#059669' }}>
+                      +{overrideEvaluation.proposedQuantity} người {overrideEvaluation.exceedsHeadcount ? `(Vượt ${overrideEvaluation.excessHeadcount} chỉ tiêu)` : '(Trong hạn mức)'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>Ngân sách lương còn lại:</span>
+                    <span style={{ fontWeight: 600 }}>{formatVnd(overrideEvaluation.salaryBudgetRemainingVnd)} VND</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>Chi phí lương dự kiến:</span>
+                    <span style={{ fontWeight: 600, color: '#2563eb' }}>
+                      {formatVnd(overrideEvaluation.proposedAnnualizedSalaryVnd)} VND ({formatVnd(overrideEvaluation.proposedMonthlySalaryVnd)} VND/tháng × 12)
+                    </span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Chỉ tiêu Headcount:</span>
-                    <span style={{ fontWeight: 600 }}>{overrideEvaluation.headcountUsed} / {overrideEvaluation.headcountQuota} (Đề xuất thêm: +{overrideEvaluation.proposedQuantity})</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: '#64748b' }}>Quy đổi ngân sách năm:</span>
-                    <span style={{ fontWeight: 600 }}>{formatVnd(overrideEvaluation.proposedAnnualizedSalaryVnd)}</span>
+                    <span style={{ color: '#64748b' }}>Số tiền vượt ngân sách:</span>
+                    <span style={{ fontWeight: 700, color: overrideEvaluation.exceedsSalary ? '#dc2626' : '#059669' }}>
+                      {overrideEvaluation.excessSalaryVnd > 0 ? `${formatVnd(overrideEvaluation.excessSalaryVnd)} VND` : 'Trong hạn mức'}
+                    </span>
                   </div>
                 </div>
               )}
@@ -1716,12 +1780,12 @@ export const RequisitionManagementPage: React.FC = () => {
 
               <div className="req-form-group">
                 <label className="req-label">
-                  Lý do giải trình phê duyệt vượt hạn mức <span className="required">*</span>
+                  Lý do ghi đè ngân sách <span className="required">*</span>
                 </label>
                 <textarea
                   className="req-textarea"
                   style={{ minHeight: '90px', width: '100%', boxSizing: 'border-box' }}
-                  placeholder="Nhập lý do chi tiết phê duyệt ghi đè vượt định mức ngân sách (tối thiểu 10 ký tự)..."
+                  placeholder="Nhập lý do chi tiết ghi đè ngoại lệ vượt định mức ngân sách/định biên (tối thiểu 10 ký tự)..."
                   value={overrideReason}
                   onChange={(e) => {
                     setOverrideReason(e.target.value);
@@ -1747,11 +1811,11 @@ export const RequisitionManagementPage: React.FC = () => {
               <button
                 type="button"
                 className="req-btn-primary"
-                style={{ backgroundColor: '#dc2626', borderColor: '#b91c1c' }}
+                style={{ backgroundColor: '#7e22ce', borderColor: '#6b21a8' }}
                 onClick={handleOverrideConfirm}
                 disabled={isOverriding || overrideReason.trim().length < 10}
               >
-                <span>{isOverriding ? 'Đang xử lý...' : 'Xác nhận ghi đè phê duyệt'}</span>
+                <span>{isOverriding ? 'Đang xử lý...' : 'Xác nhận ghi đè'}</span>
               </button>
             </div>
           </div>

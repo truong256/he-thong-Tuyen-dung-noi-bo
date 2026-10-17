@@ -7,6 +7,7 @@ import {
   EvaluateBudgetPayload,
   BudgetEvaluation,
   OverrideApprovalPayload,
+  BudgetOverrideResponse,
   BudgetAuditLog,
   PagedResponse,
   BudgetStatus,
@@ -115,11 +116,20 @@ export const budgetApi = {
   },
 
   /**
+   * POST /api/headcount-budgets/requisitions/{id}/override
+   * HR Manager ghi đè ngoại lệ ngân sách/định biên cho yêu cầu tuyển dụng (S3-04 / SCRUM-101)
+   */
+  overrideBudget: async (requisitionId: number, payload: OverrideApprovalPayload): Promise<BudgetOverrideResponse> => {
+    const res = await apiClient.post<BudgetOverrideResponse>(`/api/headcount-budgets/requisitions/${requisitionId}/override`, payload);
+    return res.data;
+  },
+
+  /**
    * POST /api/headcount-budgets/requisitions/{id}/override-approve
    * HR Manager phê duyệt ghi đè yêu cầu tuyển dụng vượt ngân sách
    */
   overrideApproveRequisition: async (requisitionId: number, payload: OverrideApprovalPayload): Promise<any> => {
-    const res = await apiClient.post(`/api/headcount-budgets/requisitions/${requisitionId}/override-approve`, payload);
+    const res = await apiClient.post(`/api/headcount-budgets/requisitions/${requisitionId}/override`, payload);
     return res.data;
   },
 };

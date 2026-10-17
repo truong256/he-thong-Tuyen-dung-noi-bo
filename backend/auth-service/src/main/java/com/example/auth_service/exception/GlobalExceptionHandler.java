@@ -104,10 +104,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        String message = (ex.getMessage() != null && !ex.getMessage().isBlank() && !"Access Denied".equalsIgnoreCase(ex.getMessage()))
+                ? ex.getMessage()
+                : "Bạn không có quyền truy cập chức năng này.";
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.FORBIDDEN.value(),
                 "FORBIDDEN",
-                "Bạn không có quyền truy cập chức năng này.",
+                message,
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
@@ -156,6 +159,7 @@ public class GlobalExceptionHandler {
         Map<String, Object> body = new HashMap<>();
         body.put("status", HttpStatus.CONFLICT.value());
         body.put("error", ex.getErrorCode());
+        body.put("code", ex.getErrorCode());
         body.put("message", ex.getMessage());
         body.put("path", request.getRequestURI());
         body.put("canOverride", ex.isCanOverride());

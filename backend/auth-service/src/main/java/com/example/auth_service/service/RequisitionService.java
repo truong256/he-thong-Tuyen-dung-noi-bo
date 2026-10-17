@@ -867,7 +867,12 @@ public class RequisitionService {
                 req.getApprovedByUserId(),
                 req.getApprovedAt(),
                 req.getCreatedAt(),
-                req.getUpdatedAt()
+                req.getUpdatedAt(),
+                req.isBudgetOverridden(),
+                req.getBudgetOverrideReason(),
+                req.isHeadcountOverridden(),
+                req.getBudgetOverrideByUserId(),
+                req.getBudgetOverrideAt()
         );
     }
 

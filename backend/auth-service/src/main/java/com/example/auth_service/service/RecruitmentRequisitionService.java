@@ -657,7 +657,12 @@ public class RecruitmentRequisitionService {
                 creator != null ? creator.getFullName() : null,
                 creator != null ? creator.getEmail() : null,
                 req.getCreatedAt(),
-                req.getUpdatedAt()
+                req.getUpdatedAt(),
+                req.isBudgetOverridden(),
+                req.getBudgetOverrideReason(),
+                req.isHeadcountOverridden(),
+                req.getBudgetOverrideByUserId(),
+                req.getBudgetOverrideAt()
         );
     }
 }

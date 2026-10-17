@@ -356,7 +356,7 @@ public class RequisitionApprovalController {
         }
 
         // S3-04: Chốt chặn kiểm tra ngân sách Headcount & Lương
-        if ("APPROVE".equals(action) && headcountBudgetService != null && !req.isBudgetOverridden()) {
+        if ("APPROVE".equals(action) && headcountBudgetService != null) {
             User currentUser = users != null ? users.findById(principal.getId()).orElse(null) : null;
             if (currentUser != null) {
                 headcountBudgetService.enforceOnApproval(req, currentUser, overrideReason);

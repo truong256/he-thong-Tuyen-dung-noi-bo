@@ -442,7 +442,7 @@ public class RequisitionApprovalWorkflowService {
 
         if ("APPROVE".equals(action)) {
             // S3-04: Chốt chặn kiểm tra ngân sách Headcount & Lương
-            if (headcountBudgetService != null && !requisition.isBudgetOverridden()) {
+            if (headcountBudgetService != null) {
                 headcountBudgetService.enforceOnApproval(requisition, currentUser, overrideReason);
             }
 

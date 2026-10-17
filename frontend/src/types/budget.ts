@@ -84,6 +84,27 @@ export interface BudgetEvaluation {
 
 export interface OverrideApprovalPayload {
   reason: string;
+  overrideHeadcount?: boolean;
+  overrideSalary?: boolean;
+}
+
+export interface BudgetOverrideResponse {
+  requisitionId: number;
+  requisitionCode: string;
+  title: string;
+  departmentId: number;
+  departmentName: string;
+  status: string;
+  budgetOverridden: boolean;
+  headcountOverridden: boolean;
+  overrideReason: string;
+  overrideByUserId: number;
+  overrideByUserEmail: string;
+  overrideByUserName: string;
+  overrideAt: string;
+  excessHeadcount: number;
+  excessSalaryVnd: number;
+  message: string;
 }
 
 export interface BudgetAuditLog {

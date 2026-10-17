@@ -98,8 +98,23 @@ public class RecruitmentRequisition {
     @Column(name = "budget_overridden", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean budgetOverridden = false;
 
+    @Column(name = "headcount_overridden", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean headcountOverridden = false;
+
     @Column(name = "budget_override_reason", columnDefinition = "TEXT")
     private String budgetOverrideReason;
+
+    @Column(name = "budget_override_by_user_id")
+    private Long budgetOverrideByUserId;
+
+    @Column(name = "budget_override_at")
+    private Instant budgetOverrideAt;
+
+    @Column(name = "overridden_excess_headcount")
+    private Integer overriddenExcessHeadcount = 0;
+
+    @Column(name = "overridden_excess_salary_vnd")
+    private Long overriddenExcessSalaryVnd = 0L;
 
     private Instant createdAt = Instant.now();
 
@@ -389,12 +404,52 @@ public class RecruitmentRequisition {
         this.budgetOverridden = budgetOverridden;
     }
 
+    public boolean isHeadcountOverridden() {
+        return headcountOverridden;
+    }
+
+    public void setHeadcountOverridden(boolean headcountOverridden) {
+        this.headcountOverridden = headcountOverridden;
+    }
+
     public String getBudgetOverrideReason() {
         return budgetOverrideReason;
     }
 
     public void setBudgetOverrideReason(String budgetOverrideReason) {
         this.budgetOverrideReason = budgetOverrideReason;
+    }
+
+    public Long getBudgetOverrideByUserId() {
+        return budgetOverrideByUserId;
+    }
+
+    public void setBudgetOverrideByUserId(Long budgetOverrideByUserId) {
+        this.budgetOverrideByUserId = budgetOverrideByUserId;
+    }
+
+    public Instant getBudgetOverrideAt() {
+        return budgetOverrideAt;
+    }
+
+    public void setBudgetOverrideAt(Instant budgetOverrideAt) {
+        this.budgetOverrideAt = budgetOverrideAt;
+    }
+
+    public Integer getOverriddenExcessHeadcount() {
+        return overriddenExcessHeadcount;
+    }
+
+    public void setOverriddenExcessHeadcount(Integer overriddenExcessHeadcount) {
+        this.overriddenExcessHeadcount = overriddenExcessHeadcount;
+    }
+
+    public Long getOverriddenExcessSalaryVnd() {
+        return overriddenExcessSalaryVnd;
+    }
+
+    public void setOverriddenExcessSalaryVnd(Long overriddenExcessSalaryVnd) {
+        this.overriddenExcessSalaryVnd = overriddenExcessSalaryVnd;
     }
 
     public Instant getCreatedAt() {
