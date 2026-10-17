@@ -15,6 +15,11 @@ export interface PageResponse<T> {
 }
 
 export const jobPostingApi = {
+  getPublicDepartments: async (): Promise<Array<{ id: number; name: string }>> => {
+    const response = await apiClient.get<Array<{ id: number; name: string }>>('/api/public/job-postings/departments');
+    return response.data;
+  },
+
   // 1. Quản lý nội bộ
   list: async (params?: {
     status?: string;

@@ -1,6 +1,7 @@
 package com.example.auth_service.repository;
 
 import com.example.auth_service.domain.sprint3.JobPosting;
+import com.example.auth_service.dto.PublicJobDepartmentResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -71,4 +72,14 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
     );
 
     long countByStatus(String status);
+
+    @Query("""
+        SELECT DISTINCT new com.example.auth_service.dto.PublicJobDepartmentResponse(d.id, d.name)
+        FROM Department d, JobPosting j
+        WHERE j.departmentId = d.id
+          AND j.status = 'PUBLISHED'
+          AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
+        ORDER BY d.name
+    """)
+    List<PublicJobDepartmentResponse> findPublicDepartments(@Param("currentDate") LocalDate currentDate);
 }
