@@ -220,7 +220,7 @@ export const JobPostingFormModal: React.FC<JobPostingFormModalProps> = ({
             <div className="jp-form-inherit-box">
               <div className="jp-inherit-header">
                 <Sparkles size={16} />
-                <span>Kế thừa từ Yêu cầu tuyển dụng đã duyệt (S3-09):</span>
+                <span>Kế thừa từ Yêu cầu tuyển dụng đã duyệt:</span>
               </div>
               <select
                 className="jp-select"

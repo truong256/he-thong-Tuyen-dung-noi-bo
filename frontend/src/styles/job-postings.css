@@ -190,18 +190,38 @@
   background: var(--bg-subtle, #F1F5F9);
   border: 1px solid var(--border-color, #E2E8F0);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 0 12px;
+  height: 38px;
   flex: 2;
   min-width: 240px;
+  cursor: text;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.jp-search-input-box:focus-within {
+  border-color: var(--primary, #2563EB);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #FFFFFF;
+}
+
+.jp-search-input-box svg {
+  color: var(--text-secondary, #64748B);
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .jp-search-input-box input {
   border: none;
   background: transparent;
   width: 100%;
+  height: 100%;
   font-size: 0.9rem;
   outline: none;
   color: var(--text-primary, #0F172A);
+  padding: 0;
+  margin: 0;
+  cursor: text;
 }
 
 .jp-dept-filter-box {
@@ -211,18 +231,38 @@
   background: var(--bg-subtle, #F1F5F9);
   border: 1px solid var(--border-color, #E2E8F0);
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 0 12px;
+  height: 38px;
   flex: 1;
   min-width: 200px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.jp-dept-filter-box:focus-within {
+  border-color: var(--primary, #2563EB);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  background: #FFFFFF;
+}
+
+.jp-dept-filter-box svg {
+  color: var(--text-secondary, #64748B);
+  flex-shrink: 0;
+  pointer-events: none;
 }
 
 .jp-dept-filter-box select {
   border: none;
   background: transparent;
   width: 100%;
+  height: 100%;
   font-size: 0.9rem;
   outline: none;
   color: var(--text-primary, #0F172A);
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
 }
 
 .jp-btn-refresh {
@@ -363,41 +403,138 @@
   display: flex;
   gap: 8px;
   justify-content: flex-end;
+  align-items: center;
 }
 
 .jp-action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 6px;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
+  background: transparent;
   border: 1px solid transparent;
   transition: all 0.2s ease;
+  padding: 0;
 }
 
-.jp-action-preview {
-  background: var(--primary-50, #EFF6FF);
-  color: var(--primary, #2563EB);
-  border-color: var(--primary-100, #DBEAFE);
+.jp-action-preview,
+.jp-action-view {
+  background: transparent;
+  color: var(--text-secondary, #64748B);
+  border-color: transparent;
 }
 
-.jp-action-preview:hover {
-  background: var(--primary-100, #DBEAFE);
-  color: var(--primary-hover, #1D4ED8);
+.jp-action-preview:hover,
+.jp-action-view:hover {
+  background: var(--bg-hover, #F8FAFC);
+  color: var(--text-primary, #0F172A);
+  transform: translateY(-1px);
+}
+
+.jp-action-approve {
+  background: transparent;
+  color: #16A34A;
+  border-color: transparent;
+}
+
+.jp-action-approve:hover {
+  background: #ECFDF5;
+  color: #15803D;
+  transform: translateY(-1px);
 }
 
 .jp-action-edit {
-  background: var(--bg-subtle, #F1F5F9);
+  background: transparent;
   color: var(--text-secondary, #64748B);
-  border-color: var(--border-color, #E2E8F0);
+  border-color: transparent;
 }
 
 .jp-action-edit:hover {
   background: var(--bg-hover, #F8FAFC);
   color: var(--text-primary, #0F172A);
+  transform: translateY(-1px);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Rounded Status Pills */
+.jp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.jp-status-pill-icon {
+  flex-shrink: 0;
+}
+
+.jp-status-draft {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
+}
+
+.jp-status-pending {
+  background: #FFFBEB;
+  color: #D97706;
+  border: 1px solid #FDE68A;
+}
+
+.jp-status-approved {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.jp-status-published {
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+}
+
+.jp-status-unpublished {
+  background: #F8FAFC;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.jp-status-rejected {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+}
+
+.jp-status-closed {
+  background: #F3F4F6;
+  color: #4B5563;
+  border: 1px solid #E5E7EB;
+}
+
+.jp-status-default {
+  background: #F1F5F9;
+  color: #475569;
+  border: 1px solid #E2E8F0;
 }
 
 /* Badges */
