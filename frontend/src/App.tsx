@@ -24,6 +24,7 @@ import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
 import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
 import ApprovalConfigurationPage from './pages/ApprovalConfigurationPage';
 import JobPostingManagementPage from './pages/JobPostingManagementPage';
+import HeadcountBudgetPage from './pages/HeadcountBudgetPage';
 import PublicCareerPage from './pages/PublicCareerPage';
 import PublicJobDetailPage from './pages/PublicJobDetailPage';
 import PermissionMatrixPage from './pages/PermissionMatrixPage';
@@ -217,6 +218,19 @@ export const App: React.FC = () => {
                   <ApprovalConfigurationPage />
                 </RoleGuard>
               }
+            />
+            {/* Quản lý Ngân sách Headcount (S3-04 / SCRUM-101) */}
+            <Route
+              path="headcount-budgets"
+              element={
+                <RoleGuard allowedRoles={['HR_MANAGER', 'ADMIN', 'APPROVER', 'HIRING_MANAGER', 'RECRUITER']}>
+                  <HeadcountBudgetPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="recruitment/headcount-budgets"
+              element={<Navigate to="/headcount-budgets" replace />}
             />
             {/* Tin tuyển dụng (S3-10 / SCRUM-151) – RECRUITER, HR_MANAGER, ADMIN */}
             <Route

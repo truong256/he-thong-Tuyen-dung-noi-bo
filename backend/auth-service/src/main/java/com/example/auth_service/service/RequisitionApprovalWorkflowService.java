@@ -20,6 +20,7 @@ import com.example.auth_service.repository.RequisitionApprovalConfigurationStepR
 import com.example.auth_service.repository.RequisitionApprovalLogRepository;
 import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
 import com.example.auth_service.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +45,7 @@ public class RequisitionApprovalWorkflowService {
     private final RecruitmentRequisitionRepository requisitions;
     private final UserRepository users;
     private final DepartmentRepository departments;
+    private final HeadcountBudgetService headcountBudgetService;
 
     public RequisitionApprovalWorkflowService(
             RequisitionApprovalConfigurationRepository configurations,
@@ -52,7 +54,8 @@ public class RequisitionApprovalWorkflowService {
             RequisitionApprovalLogRepository approvalLogs,
             RecruitmentRequisitionRepository requisitions,
             UserRepository users,
-            DepartmentRepository departments
+            DepartmentRepository departments,
+            @Autowired(required = false) HeadcountBudgetService headcountBudgetService
     ) {
         this.configurations = configurations;
         this.configurationSteps = configurationSteps;
@@ -61,6 +64,7 @@ public class RequisitionApprovalWorkflowService {
         this.requisitions = requisitions;
         this.users = users;
         this.departments = departments;
+        this.headcountBudgetService = headcountBudgetService;
     }
 
     /**
@@ -397,6 +401,16 @@ public class RequisitionApprovalWorkflowService {
             String rawAction,
             String comment
     ) {
+        return processApprovalAction(requisitionId, userId, rawAction, comment, null);
+    }
+
+    public Optional<RecruitmentRequisition> processApprovalAction(
+            Long requisitionId,
+            Long userId,
+            String rawAction,
+            String comment,
+            String overrideReason
+    ) {
         List<RequisitionApprovalSnapshot> allSteps = snapshots.findAllByRequisitionIdOrderByStepOrderAsc(requisitionId);
         if (allSteps.isEmpty()) {
             return Optional.empty();
@@ -427,6 +441,11 @@ public class RequisitionApprovalWorkflowService {
         String trimmedComment = comment != null && !comment.isBlank() ? comment.trim() : null;
 
         if ("APPROVE".equals(action)) {
+            // S3-04: Chốt chặn kiểm tra ngân sách Headcount & Lương
+            if (headcountBudgetService != null && !requisition.isBudgetOverridden()) {
+                headcountBudgetService.enforceOnApproval(requisition, currentUser, overrideReason);
+            }
+
             currentStep.setStatus("APPROVED");
             currentStep.setApprovedByUserId(userId);
             currentStep.setApprovedAt(Instant.now());

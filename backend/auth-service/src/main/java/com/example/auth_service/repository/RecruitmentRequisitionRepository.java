@@ -165,4 +165,8 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
                         @Param("createdByUserId") Long createdByUserId,
                         Pageable pageable
         );
+
+        List<RecruitmentRequisition> findByDepartmentIdAndStatusIn(Long departmentId, Collection<String> statuses);
+
+        List<RecruitmentRequisition> findByStatusIn(Collection<String> statuses);
 }

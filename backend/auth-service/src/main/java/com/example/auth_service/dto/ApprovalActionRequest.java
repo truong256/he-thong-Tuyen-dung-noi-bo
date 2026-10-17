@@ -7,8 +7,13 @@ public record ApprovalActionRequest(
         String comment,
         @JsonAlias("rejectionReason")
         String reason,
-        String note
+        String note,
+        String overrideReason
 ) {
+    public ApprovalActionRequest(String action, String comment, String reason, String note) {
+        this(action, comment, reason, note, null);
+    }
+
     public String effectiveComment() {
         if (comment != null && !comment.isBlank()) {
             return comment.trim();

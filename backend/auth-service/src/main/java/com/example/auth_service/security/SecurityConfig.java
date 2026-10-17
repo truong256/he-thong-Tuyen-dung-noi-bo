@@ -191,6 +191,9 @@ public class SecurityConfig {
                 // S3-10 / S3-09: Quản lý tin tuyển dụng nội bộ
                 .requestMatchers("/api/job-postings", "/api/job-postings/**")
                         .hasAnyAuthority("JOB_MANAGE", "ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_RECRUITER")
+                // S3-04 / SCRUM-101: Quản lý ngân sách headcount & lương phòng ban
+                .requestMatchers("/api/headcount-budgets", "/api/headcount-budgets/**")
+                        .hasAnyAuthority("ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_APPROVER", "ROLE_HIRING_MANAGER", "ROLE_RECRUITER")
                 .anyRequest().denyAll()
             )
             .exceptionHandling(errors -> errors.authenticationEntryPoint(securityErrorHandler)

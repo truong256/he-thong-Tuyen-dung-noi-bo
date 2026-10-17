@@ -23,6 +23,8 @@ export interface Requisition {
   candidateRequirements?: string;
   createdByUserId?: number;
   createdByName?: string;
+  budgetOverridden?: boolean;
+  budgetOverrideReason?: string;
   createdAt?: string;
   updatedAt?: string;
 }

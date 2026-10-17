@@ -208,6 +208,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </li>
                 )}
 
+                {hasAnyRole(['HR_MANAGER', 'ADMIN', 'APPROVER', 'HIRING_MANAGER', 'RECRUITER']) && (
+                  <li>
+                    <NavLink
+                      to="/headcount-budgets"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Ngân sách Headcount</span>
+                    </NavLink>
+                  </li>
+                )}
+
                 {hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN']) && (
                   <>
                     <li>

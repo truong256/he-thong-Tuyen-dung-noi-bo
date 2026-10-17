@@ -29,9 +29,12 @@ import java.util.Map;
 import java.util.Optional;
 
 import com.example.auth_service.domain.sprint3.RequisitionApprovalHistory;
+import com.example.auth_service.entity.User;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.RequisitionApprovalHistoryRepository;
 import com.example.auth_service.repository.RequisitionApprovalSnapshotRepository;
+import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.service.HeadcountBudgetService;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
@@ -48,6 +51,8 @@ public class RequisitionApprovalController {
     private final DepartmentRepository departments;
     private final RequisitionApprovalSnapshotRepository snapshots;
     private final RequisitionApprovalHistoryRepository historyRepository;
+    private final HeadcountBudgetService headcountBudgetService;
+    private final UserRepository users;
 
     @Autowired
     public RequisitionApprovalController(
@@ -57,7 +62,9 @@ public class RequisitionApprovalController {
             RequisitionApprovalService approvalService,
             @Autowired(required = false) DepartmentRepository departments,
             @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots,
-            @Autowired(required = false) RequisitionApprovalHistoryRepository historyRepository
+            @Autowired(required = false) RequisitionApprovalHistoryRepository historyRepository,
+            @Autowired(required = false) HeadcountBudgetService headcountBudgetService,
+            @Autowired(required = false) UserRepository users
     ) {
         this.requisitions = requisitions;
         this.assignments = assignments;
@@ -66,6 +73,8 @@ public class RequisitionApprovalController {
         this.departments = departments;
         this.snapshots = snapshots;
         this.historyRepository = historyRepository;
+        this.headcountBudgetService = headcountBudgetService;
+        this.users = users;
     }
 
     public RequisitionApprovalController(
@@ -74,7 +83,7 @@ public class RequisitionApprovalController {
             RequisitionApprovalWorkflowService approvalWorkflow,
             RequisitionApprovalService approvalService
     ) {
-        this(requisitions, assignments, approvalWorkflow, approvalService, null, null, null);
+        this(requisitions, assignments, approvalWorkflow, approvalService, null, null, null, null, null);
     }
 
     private void checkCanViewApprovalData(RecruitmentRequisition req, UserPrincipal principal) {
@@ -153,14 +162,18 @@ public class RequisitionApprovalController {
             @RequestBody(required = false) Map<String, Object> body
     ) {
         String comment = null;
+        String overrideReason = null;
         if (body != null) {
             if (body.get("comments") != null) {
                 comment = body.get("comments").toString();
             } else if (body.get("comment") != null) {
                 comment = body.get("comment").toString();
             }
+            if (body.get("overrideReason") != null) {
+                overrideReason = body.get("overrideReason").toString();
+            }
         }
-        return executeApprovalAction(id, "APPROVE", comment);
+        return executeApprovalAction(id, "APPROVE", comment, overrideReason);
     }
 
     /**
@@ -177,7 +190,7 @@ public class RequisitionApprovalController {
         if (request == null || request.rejectionReason() == null || request.rejectionReason().trim().isEmpty()) {
             throw new BadRequestException("Lý do từ chối không được để trống.");
         }
-        return executeApprovalAction(id, "REJECT", request.rejectionReason());
+        return executeApprovalAction(id, "REJECT", request.rejectionReason(), null);
     }
 
     /**
@@ -192,7 +205,8 @@ public class RequisitionApprovalController {
             @RequestBody(required = false) ApprovalActionRequest request
     ) {
         String comment = request != null ? request.effectiveComment() : null;
-        return executeApprovalAction(id, "APPROVE", comment);
+        String overrideReason = request != null ? request.overrideReason() : null;
+        return executeApprovalAction(id, "APPROVE", comment, overrideReason);
     }
 
     /**
@@ -207,7 +221,7 @@ public class RequisitionApprovalController {
             @RequestBody(required = false) ApprovalActionRequest request
     ) {
         String comment = request != null ? request.effectiveComment() : null;
-        return executeApprovalAction(id, "REJECT", comment);
+        return executeApprovalAction(id, "REJECT", comment, null);
     }
 
     /**
@@ -222,7 +236,7 @@ public class RequisitionApprovalController {
             @RequestBody(required = false) ApprovalActionRequest request
     ) {
         String comment = request != null ? request.effectiveComment() : null;
-        return executeApprovalAction(id, "REQUEST_CHANGES", comment);
+        return executeApprovalAction(id, "REQUEST_CHANGES", comment, null);
     }
 
     /**
@@ -237,7 +251,7 @@ public class RequisitionApprovalController {
             @RequestBody(required = false) ApprovalActionRequest request
     ) {
         String comment = request != null ? request.effectiveComment() : null;
-        return executeApprovalAction(id, "REQUEST_CHANGES", comment);
+        return executeApprovalAction(id, "REQUEST_CHANGES", comment, null);
     }
 
     /**
@@ -256,8 +270,10 @@ public class RequisitionApprovalController {
         }
         String action = request.normalizedAction();
         String comment = request.effectiveComment();
-        return executeApprovalAction(id, action, comment);
+        String overrideReason = request.overrideReason();
+        return executeApprovalAction(id, action, comment, overrideReason);
     }
+
 
     /**
      * GET /api/requisitions/{id}/approval-history
@@ -305,6 +321,15 @@ public class RequisitionApprovalController {
             String requestedAction,
             String comment
     ) {
+        return executeApprovalAction(id, requestedAction, comment, null);
+    }
+
+    private ResponseEntity<?> executeApprovalAction(
+            Long id,
+            String requestedAction,
+            String comment,
+            String overrideReason
+    ) {
         RecruitmentRequisition req = requisitions.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
 
@@ -318,7 +343,7 @@ public class RequisitionApprovalController {
 
         // Trường hợp 1: Có snapshot quy trình phê duyệt nhiều cấp (S3-01 / S3-02)
         Optional<RecruitmentRequisition> workflowResult = approvalWorkflow.processApprovalAction(
-                id, principal.getId(), action, comment
+                id, principal.getId(), action, comment, overrideReason
         );
         if (workflowResult.isPresent()) {
             RecruitmentRequisition wReq = workflowResult.get();
@@ -328,6 +353,14 @@ public class RequisitionApprovalController {
         // Trường hợp 2: Dự phòng cho yêu cầu chưa gắn luồng snapshot
         if (!"PENDING_APPROVAL".equalsIgnoreCase(req.getStatus())) {
             throw new BadRequestException("Yêu cầu tuyển dụng không ở trạng thái chờ phê duyệt.");
+        }
+
+        // S3-04: Chốt chặn kiểm tra ngân sách Headcount & Lương
+        if ("APPROVE".equals(action) && headcountBudgetService != null && !req.isBudgetOverridden()) {
+            User currentUser = users != null ? users.findById(principal.getId()).orElse(null) : null;
+            if (currentUser != null) {
+                headcountBudgetService.enforceOnApproval(req, currentUser, overrideReason);
+            }
         }
 
         boolean isAssigned = assignments.findByRequisitionIdAndUserId(id, principal.getId())

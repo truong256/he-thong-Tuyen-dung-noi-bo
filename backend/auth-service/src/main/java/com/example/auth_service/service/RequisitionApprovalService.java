@@ -39,6 +39,7 @@ public class RequisitionApprovalService {
     private final DepartmentRepository departments;
     private final UserRepository users;
     private final RequisitionApprovalSnapshotRepository snapshots;
+    private final HeadcountBudgetService headcountBudgetService;
 
     @Autowired
     public RequisitionApprovalService(
@@ -47,7 +48,8 @@ public class RequisitionApprovalService {
             RequisitionAssignmentRepository assignments,
             DepartmentRepository departments,
             UserRepository users,
-            @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots
+            @Autowired(required = false) RequisitionApprovalSnapshotRepository snapshots,
+            @Autowired(required = false) HeadcountBudgetService headcountBudgetService
     ) {
         this.requisitions = requisitions;
         this.historyRepository = historyRepository;
@@ -55,6 +57,7 @@ public class RequisitionApprovalService {
         this.departments = departments;
         this.users = users;
         this.snapshots = snapshots;
+        this.headcountBudgetService = headcountBudgetService;
     }
 
     /**
@@ -99,6 +102,10 @@ public class RequisitionApprovalService {
      * Ghi nhận lịch sử bất biến.
      */
     public RequisitionApprovalTimelineResponse approveRequisition(Long requisitionId, String comments) {
+        return approveRequisition(requisitionId, comments, null);
+    }
+
+    public RequisitionApprovalTimelineResponse approveRequisition(Long requisitionId, String comments, String overrideReason) {
         RecruitmentRequisition req = requisitions.findById(requisitionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + requisitionId));
 
@@ -110,6 +117,11 @@ public class RequisitionApprovalService {
         }
         if ("REJECTED".equalsIgnoreCase(req.getStatus())) {
             throw new BadRequestException("Yêu cầu tuyển dụng này đã bị từ chối, không thể phê duyệt.");
+        }
+
+        // S3-04: Chốt chặn kiểm tra ngân sách Headcount & Lương
+        if (headcountBudgetService != null && !req.isBudgetOverridden()) {
+            headcountBudgetService.enforceOnApproval(req, currentUser, overrideReason);
         }
 
         List<RequisitionApprovalHistory> historyList = historyRepository.findByRequisitionIdOrderByStepOrderAsc(requisitionId);

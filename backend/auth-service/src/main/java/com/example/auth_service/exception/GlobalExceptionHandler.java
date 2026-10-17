@@ -151,6 +151,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }
 
+    @ExceptionHandler(BudgetExceededException.class)
+    public ResponseEntity<Map<String, Object>> handleBudgetExceeded(BudgetExceededException ex, HttpServletRequest request) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", HttpStatus.CONFLICT.value());
+        body.put("error", ex.getErrorCode());
+        body.put("message", ex.getMessage());
+        body.put("path", request.getRequestURI());
+        body.put("canOverride", ex.isCanOverride());
+        body.put("details", ex.getEvaluation());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ApiErrorResponse> handleConflict(ConflictException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiErrorResponse(
@@ -174,3 +186,4 @@ public class GlobalExceptionHandler {
     }
 
 }
+
