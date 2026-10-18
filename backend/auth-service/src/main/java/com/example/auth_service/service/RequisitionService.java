@@ -680,7 +680,10 @@ public class RequisitionService {
      * Áp dụng khi đã tuyển đủ hoặc kết thúc đợt tuyển (APPROVED hoặc ON_HOLD chuyển sang CLOSED).
      */
     public RequisitionResponse close(Long id, String reason) {
-        if (reason == null || reason.trim().length() < 5) {
+        String effectiveReason = (reason != null && !reason.trim().isEmpty())
+                ? reason.trim()
+                : "Đóng yêu cầu tuyển dụng (Hoàn tất)";
+        if (effectiveReason.length() < 5) {
             throw new BadRequestException("Lý do đóng yêu cầu phải có tối thiểu 5 ký tự.");
         }
         RecruitmentRequisition req = requisitions.findById(id)
@@ -694,15 +697,15 @@ public class RequisitionService {
         }
 
         req.setStatus("CLOSED");
-        req.setRejectionReason(reason.trim());
+        req.setRejectionReason(effectiveReason);
         req.setUpdatedAt(Instant.now());
         RecruitmentRequisition saved = requisitions.save(req);
 
         // Ghi nhật ký chuyển trạng thái bất biến
-        approvalWorkflow.recordFallbackApprovalLog(id, currentUser.getId(), "CLOSE", reason.trim());
+        approvalWorkflow.recordFallbackApprovalLog(id, currentUser.getId(), "CLOSE", effectiveReason);
 
         // Đồng bộ tin tuyển dụng: Gỡ tin đang xuất bản
-        syncJobPostingsOnStatusChange(id, "CLOSED", "Yêu cầu tuyển dụng đã đóng: " + reason.trim());
+        syncJobPostingsOnStatusChange(id, "CLOSED", "Yêu cầu tuyển dụng đã đóng: " + effectiveReason);
 
         return toResponse(saved);
     }

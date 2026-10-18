@@ -1,15 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Briefcase,
   Plus,
   Search,
   Filter,
   Eye,
-  Edit,
+  CheckCircle2,
+  Edit2,
   Clock,
   CheckCircle,
   Globe,
   Lock,
+  FileText,
+  XCircle,
   AlertCircle,
   RefreshCw,
   ChevronLeft,
@@ -38,6 +41,10 @@ export const JobPostingManagementPage: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [page, setPage] = useState(0);
   const [size] = useState(10);
+
+  // Filter input refs
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const deptSelectRef = useRef<HTMLSelectElement>(null);
 
   // Modals state
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -114,21 +121,61 @@ export const JobPostingManagementPage: React.FC = () => {
   const renderStatusBadge = (status: JobPostingStatus) => {
     switch (status) {
       case 'DRAFT':
-        return <span className="jp-badge jp-badge-draft">Bản nháp</span>;
+        return (
+          <span className="jp-status-pill jp-status-draft">
+            <FileText size={13} className="jp-status-pill-icon" />
+            <span>Bản nháp</span>
+          </span>
+        );
       case 'PENDING_APPROVAL':
-        return <span className="jp-badge jp-badge-pending">Chờ HR duyệt</span>;
+        return (
+          <span className="jp-status-pill jp-status-pending">
+            <Clock size={13} className="jp-status-pill-icon" />
+            <span>Chờ HR duyệt</span>
+          </span>
+        );
       case 'APPROVED':
-        return <span className="jp-badge jp-badge-approved">Đã duyệt</span>;
+        return (
+          <span className="jp-status-pill jp-status-approved">
+            <CheckCircle2 size={13} className="jp-status-pill-icon" />
+            <span>Đã duyệt</span>
+          </span>
+        );
       case 'PUBLISHED':
-        return <span className="jp-badge jp-badge-published">Đang xuất bản</span>;
+        return (
+          <span className="jp-status-pill jp-status-published">
+            <Globe size={13} className="jp-status-pill-icon" />
+            <span>Đang xuất bản</span>
+          </span>
+        );
       case 'UNPUBLISHED':
-        return <span className="jp-badge jp-badge-unpublished">Đã gỡ tin</span>;
+        return (
+          <span className="jp-status-pill jp-status-unpublished">
+            <Lock size={13} className="jp-status-pill-icon" />
+            <span>Đã gỡ tin</span>
+          </span>
+        );
       case 'REJECTED':
-        return <span className="jp-badge jp-badge-rejected">Từ chối duyệt</span>;
+        return (
+          <span className="jp-status-pill jp-status-rejected">
+            <XCircle size={13} className="jp-status-pill-icon" />
+            <span>Từ chối duyệt</span>
+          </span>
+        );
       case 'CLOSED':
-        return <span className="jp-badge jp-badge-closed">Đã đóng</span>;
+        return (
+          <span className="jp-status-pill jp-status-closed">
+            <Lock size={13} className="jp-status-pill-icon" />
+            <span>Đã đóng</span>
+          </span>
+        );
       default:
-        return <span className="jp-badge">{status}</span>;
+        return (
+          <span className="jp-status-pill jp-status-default">
+            <AlertCircle size={13} className="jp-status-pill-icon" />
+            <span>{status}</span>
+          </span>
+        );
     }
   };
 
@@ -171,9 +218,6 @@ export const JobPostingManagementPage: React.FC = () => {
       {/* KPI Metrics Cards */}
       <div className="jp-stats-grid">
         <div className="jp-stat-card">
-          <div className="jp-stat-icon-wrapper jp-stat-icon-blue">
-            <Briefcase size={22} />
-          </div>
           <div className="jp-stat-content">
             <span className="jp-stat-label">Tổng tin tuyển dụng</span>
             <span className="jp-stat-value">{totalCount}</span>
@@ -181,9 +225,6 @@ export const JobPostingManagementPage: React.FC = () => {
         </div>
 
         <div className="jp-stat-card">
-          <div className="jp-stat-icon-wrapper jp-stat-icon-amber">
-            <Clock size={22} />
-          </div>
           <div className="jp-stat-content">
             <span className="jp-stat-label">Chờ HR Manager duyệt</span>
             <span className="jp-stat-value">{pendingCount}</span>
@@ -191,9 +232,6 @@ export const JobPostingManagementPage: React.FC = () => {
         </div>
 
         <div className="jp-stat-card">
-          <div className="jp-stat-icon-wrapper jp-stat-icon-green">
-            <Globe size={22} />
-          </div>
           <div className="jp-stat-content">
             <span className="jp-stat-label">Đang xuất bản công khai</span>
             <span className="jp-stat-value">{publishedCount}</span>
@@ -201,9 +239,6 @@ export const JobPostingManagementPage: React.FC = () => {
         </div>
 
         <div className="jp-stat-card">
-          <div className="jp-stat-icon-wrapper jp-stat-icon-gray">
-            <Lock size={22} />
-          </div>
           <div className="jp-stat-content">
             <span className="jp-stat-label">Đã gỡ hoặc đóng</span>
             <span className="jp-stat-value">{unpublishedCount}</span>
@@ -261,9 +296,13 @@ export const JobPostingManagementPage: React.FC = () => {
 
         {/* Inputs filter */}
         <div className="jp-filter-controls">
-          <div className="jp-search-input-box">
+          <div
+            className="jp-search-input-box"
+            onClick={() => searchInputRef.current?.focus()}
+          >
             <Search size={16} />
             <input
+              ref={searchInputRef}
               type="text"
               placeholder="Tìm theo tiêu đề hoặc mã tin (JP-...)"
               value={searchKeyword}
@@ -271,9 +310,20 @@ export const JobPostingManagementPage: React.FC = () => {
             />
           </div>
 
-          <div className="jp-dept-filter-box">
+          <div
+            className="jp-dept-filter-box"
+            onClick={() => {
+              deptSelectRef.current?.focus();
+              try {
+                deptSelectRef.current?.showPicker?.();
+              } catch (err) {
+                void err;
+              }
+            }}
+          >
             <Filter size={16} />
             <select
+              ref={deptSelectRef}
               value={departmentFilter}
               onChange={(e) => { setDepartmentFilter(e.target.value); setPage(0); }}
             >
@@ -400,12 +450,22 @@ export const JobPostingManagementPage: React.FC = () => {
                       <div className="jp-table-actions">
                         <button
                           type="button"
-                          className="jp-action-btn jp-action-preview"
+                          className="jp-action-btn jp-action-view"
                           onClick={() => handleOpenDetail(p.id)}
-                          title="Xem trước & Duyệt tin"
+                          title="Xem trước tin tuyển dụng"
                         >
-                          <Eye size={16} />
-                          <span>Xem trước & Duyệt</span>
+                          <Eye size={18} />
+                          <span className="sr-only">Xem trước</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="jp-action-btn jp-action-approve"
+                          onClick={() => handleOpenDetail(p.id)}
+                          title="Phê duyệt tin tuyển dụng"
+                        >
+                          <CheckCircle2 size={18} />
+                          <span className="sr-only">Xem trước & Duyệt</span>
                         </button>
 
                         {p.status !== 'PUBLISHED' && (
@@ -415,7 +475,8 @@ export const JobPostingManagementPage: React.FC = () => {
                             onClick={() => handleOpenEdit(p)}
                             title="Chỉnh sửa nội dung"
                           >
-                            <Edit size={16} />
+                            <Edit2 size={18} />
+                            <span className="sr-only">Chỉnh sửa</span>
                           </button>
                         )}
                       </div>
