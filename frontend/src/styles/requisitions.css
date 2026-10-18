@@ -167,12 +167,13 @@
   background: #ffffff;
   border: 1px solid var(--border-color, #e2e8f0);
   border-radius: var(--radius-lg, 12px);
-  overflow: hidden;
+  overflow-x: auto;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
 }
 
 .req-table {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -186,6 +187,7 @@
   letter-spacing: 0.03em;
   color: #64748b;
   border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 .req-table td {
@@ -215,46 +217,60 @@
 .req-badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 6px;
+  padding: 4px 12px;
   border-radius: 9999px;
   font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.25;
+  box-sizing: border-box;
+}
+
+.req-badge svg {
+  flex-shrink: 0;
 }
 
 .req-badge-draft {
   background: #f1f5f9;
   color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .req-badge-pending {
   background: #fef3c7;
   color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .req-badge-approved {
   background: #dcfce7;
   color: #15803d;
+  border: 1px solid #bbf7d0;
 }
 
 .req-badge-rejected {
   background: #fee2e2;
   color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
 .req-badge-on-hold {
   background: #fef3c7;
   color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .req-badge-closed {
   background: #f1f5f9;
   color: #475569;
+  border: 1px solid #e2e8f0;
 }
 
 .req-badge-cancelled {
   background: #ffe4e6;
   color: #be123c;
+  border: 1px solid #fecdd3;
 }
 
 /* SLA Badges */

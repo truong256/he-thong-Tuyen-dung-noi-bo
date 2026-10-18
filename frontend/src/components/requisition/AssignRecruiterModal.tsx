@@ -456,50 +456,53 @@ export const AssignRecruiterModal: React.FC<AssignRecruiterModalProps> = ({
                   borderRadius: '8px',
                   maxHeight: '380px',
                   overflowY: 'auto',
+                  overflowX: 'auto',
                 }}
               >
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+                <table style={{ width: '100%', minWidth: '680px', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
                   <thead>
                     <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                      <th style={{ padding: '10px 12px', color: '#475569' }}>Thời gian</th>
-                      <th style={{ padding: '10px 12px', color: '#475569' }}>Hành động</th>
-                      <th style={{ padding: '10px 12px', color: '#475569' }}>Người phụ trách</th>
-                      <th style={{ padding: '10px 12px', color: '#475569' }}>Người thực hiện</th>
-                      <th style={{ padding: '10px 12px', color: '#475569' }}>Lý do & Ghi chú</th>
+                      <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>Thời gian</th>
+                      <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>Hành động</th>
+                      <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>Người phụ trách</th>
+                      <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, whiteSpace: 'nowrap' }}>Người thực hiện</th>
+                      <th style={{ padding: '12px 14px', color: '#475569', fontWeight: 600, minWidth: '160px' }}>Lý do & Ghi chú</th>
                     </tr>
                   </thead>
                   <tbody>
                     {history.map((item) => (
                       <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', color: '#64748b' }}>
+                        <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', color: '#64748b' }}>
                           {formatDateTime(item.createdAt)}
                         </td>
-                        <td style={{ padding: '10px 12px' }}>
-                          {item.action === 'HANDOVER' ? (
-                            <Badge variant="warning">Chuyển giao</Badge>
-                          ) : item.action === 'ASSIGNED' ? (
-                            <Badge variant="success">Phân công</Badge>
-                          ) : item.action === 'UNASSIGNED' ? (
-                            <Badge variant="danger">Thu hồi</Badge>
-                          ) : (
-                            <Badge variant="neutral">{item.action}</Badge>
-                          )}
-                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                            {item.assignmentType === 'PRIMARY' ? 'Chính' : 'Hỗ trợ'}
+                        <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                            {item.action === 'HANDOVER' ? (
+                              <Badge variant="warning">Chuyển giao</Badge>
+                            ) : item.action === 'ASSIGNED' ? (
+                              <Badge variant="success">Phân công</Badge>
+                            ) : item.action === 'UNASSIGNED' ? (
+                              <Badge variant="danger">Thu hồi</Badge>
+                            ) : (
+                              <Badge variant="neutral">{item.action}</Badge>
+                            )}
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 500 }}>
+                              ({item.assignmentType === 'PRIMARY' ? 'Chính' : 'Hỗ trợ'})
+                            </span>
                           </div>
                         </td>
-                        <td style={{ padding: '10px 12px' }}>
+                        <td style={{ padding: '12px 14px', whiteSpace: 'nowrap' }}>
                           <div style={{ fontWeight: 600, color: '#1e293b' }}>{item.userFullName}</div>
                           {item.previousUserFullName && (
-                            <div style={{ fontSize: '0.75rem', color: '#b45309' }}>
+                            <div style={{ fontSize: '0.75rem', color: '#b45309', marginTop: '2px' }}>
                               Từ: {item.previousUserFullName}
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '10px 12px', color: '#475569' }}>
+                        <td style={{ padding: '12px 14px', whiteSpace: 'nowrap', color: '#475569' }}>
                           {item.performedByFullName || 'Hệ thống'}
                         </td>
-                        <td style={{ padding: '10px 12px' }}>
+                        <td style={{ padding: '12px 14px' }}>
                           <div style={{ color: '#334155' }}>{item.reason || '—'}</div>
                           {item.notes && (
                             <div style={{ fontSize: '0.75rem', color: '#64748b', fontStyle: 'italic', marginTop: '2px' }}>

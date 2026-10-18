@@ -1218,6 +1218,13 @@
   animation: modalEnter var(--motion-normal) var(--ease-enter);
 }
 
+.enterprise-modal.modal-sm, .modal-box.modal-sm { max-width: 440px; }
+.enterprise-modal.modal-md, .modal-box.modal-md { max-width: 540px; }
+.enterprise-modal.modal-lg, .modal-box.modal-lg { max-width: 680px; }
+.enterprise-modal.modal-xl, .modal-box.modal-xl { max-width: 860px; }
+.enterprise-modal.modal-2xl, .modal-box.modal-2xl { max-width: 1040px; }
+.enterprise-modal.modal-full, .modal-box.modal-full { max-width: 95vw; }
+
 @keyframes modalEnter {
   from { opacity: 0; transform: translateY(6px) scale(0.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
