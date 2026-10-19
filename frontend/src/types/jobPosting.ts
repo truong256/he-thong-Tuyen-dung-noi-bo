@@ -91,6 +91,7 @@ export interface JobPostingPublic {
   id: number;
   jobCode: string;
   title: string;
+  requisitionId?: number;
   departmentId?: number;
   departmentName?: string;
   jobTitleId?: number;

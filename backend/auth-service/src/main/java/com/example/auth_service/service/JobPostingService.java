@@ -612,6 +612,7 @@ public class JobPostingService {
 
         return JobPostingPublicResponse.builder()
                 .id(j.getId())
+                .requisitionId(j.getRequisitionId())
                 .jobCode(j.getJobCode())
                 .title(j.getTitle())
                 .departmentId(j.getDepartmentId())

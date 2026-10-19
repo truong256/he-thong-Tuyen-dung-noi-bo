@@ -111,8 +111,16 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/competency-frameworks/**")
                         .hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/salary-ranges", "/api/salary-ranges/{id}").hasAuthority("SALARY_READ")
-                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}")
+                // S4-04: Public candidate job application endpoint
+                .requestMatchers(HttpMethod.POST, "/api/public/candidates/apply").permitAll()
+                // S4-04: Candidate reading & CV viewing
+                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}", "/api/candidates/{id}/detail", "/api/candidates/{id}/cv", "/api/candidates/search")
                         .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "CANDIDATE_READ_OWN")
+                // S4-04: CV parsing preview, re-parsing, creation, and confirmation
+                .requestMatchers(HttpMethod.POST, "/api/candidates/parse-cv", "/api/candidates/{id}/reparse-cv", "/api/candidates")
+                        .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "ROLE_RECRUITER", "ROLE_HR_MANAGER", "ROLE_ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/candidates/{id}/confirm-parsed", "/api/candidates/{id}")
+                        .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "ROLE_RECRUITER", "ROLE_HR_MANAGER", "ROLE_ADMIN")
                 // S3-01: only HR managers can manage versioned approval configurations.
                 .requestMatchers("/api/requisition-approval-configurations", "/api/requisition-approval-configurations/**")
                         .hasRole("HR_MANAGER")

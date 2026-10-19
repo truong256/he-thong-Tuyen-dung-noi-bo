@@ -15,6 +15,7 @@ import java.time.LocalDate;
 public class JobPostingPublicResponse {
 
     private Long id;
+    private Long requisitionId;
     private String jobCode;
     private String title;
     private Long departmentId;

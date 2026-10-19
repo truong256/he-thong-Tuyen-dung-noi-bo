@@ -17,6 +17,10 @@ import com.example.auth_service.repository.InterviewQuestionRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
+import com.example.auth_service.entity.CandidateApplication;
+import com.example.auth_service.entity.RequisitionAssignment;
+import com.example.auth_service.repository.CandidateApplicationRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -46,6 +50,8 @@ public class DataInitializer {
                                       InterviewQuestionRepository interviewQuestionRepository,
                                       CommonCategoryRepository commonCategoryRepository,
                                       RecruitmentRequisitionRepository requisitionRepository,
+                                      CandidateApplicationRepository candidateApplicationRepository,
+                                      RequisitionAssignmentRepository requisitionAssignmentRepository,
                                       PasswordEncoder passwordEncoder,
                                       Environment env,
                                       org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
@@ -438,6 +444,106 @@ public class DataInitializer {
                         req2.setUpdatedAt(Instant.now());
                         requisitionRepository.save(req2);
                     }
+                }
+
+                // 8. Seed sample candidates and recruiter assignments for Sprint 4 (S4-04)
+                if (candidateApplicationRepository.count() == 0) {
+                    User recUser = userRepository.findByEmail("recruiter@company.com").orElse(null);
+                    var sampleReqOpt = requisitionRepository.findAll().stream().findFirst();
+                    Long reqId = sampleReqOpt.map(r -> r.getId()).orElse(1L);
+
+                    if (recUser != null && requisitionAssignmentRepository != null) {
+                        boolean alreadyAssigned = requisitionAssignmentRepository.findByRequisitionId(reqId).stream()
+                                .anyMatch(a -> a.getUserId().equals(recUser.getId()));
+                        if (!alreadyAssigned) {
+                            RequisitionAssignment assign = new RequisitionAssignment();
+                            assign.setRequisitionId(reqId);
+                            assign.setUserId(recUser.getId());
+                            assign.setRole(RoleName.RECRUITER);
+                            requisitionAssignmentRepository.save(assign);
+                        }
+                    }
+
+                    User candUser = userRepository.findByEmail("candidate@company.com").orElse(null);
+                    Long candUserId = candUser != null ? candUser.getId() : (recUser != null ? recUser.getId() : 1L);
+
+                    // Candidate 1: CV bóc tách thành công, chờ Recruiter xác nhận
+                    CandidateApplication cand1 = new CandidateApplication();
+                    cand1.setRequisitionId(reqId);
+                    cand1.setCandidateUserId(candUserId);
+                    cand1.setFullName("Nguyễn Văn An");
+                    cand1.setEmail("nguyen.an@email.com");
+                    cand1.setPhone("0912345678");
+                    cand1.setCvFileName("Nguyen_Van_An_CV.pdf");
+                    cand1.setParsedFullName("Nguyễn Văn An");
+                    cand1.setParsedEmail("nguyen.an@email.com");
+                    cand1.setParsedPhone("0912345678");
+                    cand1.setParsedStatus("SUCCESS");
+                    cand1.setParsedMessage("Bóc tách thông tin từ CV thành công.");
+                    cand1.setIsParsedConfirmed(false);
+                    cand1.setStage("APPLIED");
+                    cand1.setCreatedAt(Instant.now());
+                    cand1.setUpdatedAt(Instant.now());
+                    candidateApplicationRepository.save(cand1);
+
+                    // Candidate 2: CV dạng scan không có lớp văn bản (lỗi bóc tách an toàn)
+                    CandidateApplication cand2 = new CandidateApplication();
+                    cand2.setRequisitionId(reqId);
+                    cand2.setCandidateUserId(candUserId);
+                    cand2.setFullName("Trần Thị Mai");
+                    cand2.setEmail("tran.mai@email.com");
+                    cand2.setPhone("0385678901");
+                    cand2.setCvFileName("Tran_Thi_Mai_Scan.pdf");
+                    cand2.setParsedStatus("UNREADABLE_OR_EMPTY");
+                    cand2.setParsedMessage("Tệp PDF không có lớp văn bản (dạng scan/ảnh) hoặc nội dung rỗng. Recruiter có thể nhập tay thông tin.");
+                    cand2.setIsParsedConfirmed(false);
+                    cand2.setStage("SCREENING");
+                    cand2.setCreatedAt(Instant.now());
+                    cand2.setUpdatedAt(Instant.now());
+                    candidateApplicationRepository.save(cand2);
+
+                    // Candidate 3: Đã được recruiter xác nhận
+                    CandidateApplication cand3 = new CandidateApplication();
+                    cand3.setRequisitionId(reqId);
+                    cand3.setCandidateUserId(candUserId);
+                    cand3.setFullName("Lê Quốc Huy");
+                    cand3.setEmail("le.huy@email.com");
+                    cand3.setPhone("0978111222");
+                    cand3.setCvFileName("Le_Quoc_Huy_CV.pdf");
+                    cand3.setParsedFullName("Lê Quốc Huy");
+                    cand3.setParsedEmail("le.huy@email.com");
+                    cand3.setParsedPhone("0978111222");
+                    cand3.setParsedStatus("SUCCESS");
+                    cand3.setIsParsedConfirmed(true);
+                    cand3.setConfirmedByUserId(recUser != null ? recUser.getId() : 1L);
+                    cand3.setConfirmedAt(Instant.now());
+                    cand3.setStage("INTERVIEWING");
+                    cand3.setCreatedAt(Instant.now());
+                    cand3.setUpdatedAt(Instant.now());
+                    candidateApplicationRepository.save(cand3);
+                }
+
+                // S4-04 Fix: Ensure any candidate applications mistakenly submitted with jobPosting ID (66) are mapped to actual requisition ID (2)
+                candidateApplicationRepository.findAll().forEach(app -> {
+                    if (app.getRequisitionId() != null && app.getRequisitionId().equals(66L)) {
+                        app.setRequisitionId(2L);
+                        candidateApplicationRepository.save(app);
+                    }
+                });
+
+                User recUser = userRepository.findByEmail("recruiter@company.com").orElse(null);
+                if (recUser != null && requisitionAssignmentRepository != null) {
+                    requisitionRepository.findAll().forEach(req -> {
+                        boolean alreadyAssigned = requisitionAssignmentRepository.findByRequisitionId(req.getId()).stream()
+                                .anyMatch(a -> a.getUserId().equals(recUser.getId()));
+                        if (!alreadyAssigned) {
+                            RequisitionAssignment assign = new RequisitionAssignment();
+                            assign.setRequisitionId(req.getId());
+                            assign.setUserId(recUser.getId());
+                            assign.setRole(RoleName.RECRUITER);
+                            requisitionAssignmentRepository.save(assign);
+                        }
+                    });
                 }
             }
         };

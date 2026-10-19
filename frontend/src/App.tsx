@@ -27,6 +27,7 @@ import JobPostingManagementPage from './pages/JobPostingManagementPage';
 import PublicCareerPage from './pages/PublicCareerPage';
 import PublicJobDetailPage from './pages/PublicJobDetailPage';
 import PermissionMatrixPage from './pages/PermissionMatrixPage';
+import CandidateManagementPage from './pages/CandidateManagementPage';
 
 export const App: React.FC = () => {
   return (
@@ -230,6 +231,27 @@ export const App: React.FC = () => {
             <Route
               path="recruitment/jobs"
               element={<Navigate to="/recruitment/job-postings" replace />}
+            />
+
+            {/* Hồ sơ ứng viên & Pipeline (S4-04) */}
+            <Route
+              path="recruitment/candidates"
+              element={
+                <PermissionGuard
+                  requiredPermissions={['CANDIDATE_READ_ALL', 'CANDIDATE_READ_ASSIGNED', 'CANDIDATE_READ_OWN']}
+                  requireAny
+                >
+                  <CandidateManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/pipeline"
+              element={<Navigate to="/recruitment/candidates" replace />}
+            />
+            <Route
+              path="candidates"
+              element={<Navigate to="/recruitment/candidates" replace />}
             />
             <Route
               path="requisitions"

@@ -9,10 +9,16 @@ import {
   Briefcase,
   AlertCircle,
   CheckCircle,
+  Upload,
+  X,
+  FileText,
+  HelpCircle,
 } from 'lucide-react';
 import { JobPostingPublic } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';
+import candidateApi from '../api/candidate';
 import '../styles/job-postings.css';
+import '../styles/candidate-management.css';
 
 export const PublicJobDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -23,11 +29,78 @@ export const PublicJobDetailPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [applied, setApplied] = useState(false);
 
+  // S4-04: Candidate application & CV upload states
+  const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
+  const [applyFullName, setApplyFullName] = useState('');
+  const [applyEmail, setApplyEmail] = useState('');
+  const [applyPhone, setApplyPhone] = useState('');
+  const [applyFile, setApplyFile] = useState<File | null>(null);
+  const [isParsingCv, setIsParsingCv] = useState(false);
+  const [applySubmitting, setApplySubmitting] = useState(false);
+  const [parseNotice, setParseNotice] = useState<string | null>(null);
+  const [applyError, setApplyError] = useState<string | null>(null);
+
   useEffect(() => {
     if (id) {
       loadJobDetail(Number(id));
     }
   }, [id]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setApplyError('Chỉ chấp nhận tệp định dạng PDF.');
+      return;
+    }
+    setApplyFile(file);
+    setApplyError(null);
+    setParseNotice(null);
+    setIsParsingCv(true);
+
+    try {
+      const parsed = await candidateApi.parseCv(file);
+      if (parsed.status === 'SUCCESS' || parsed.status === 'PARTIAL') {
+        if (!applyFullName && parsed.fullName) setApplyFullName(parsed.fullName);
+        if (!applyEmail && parsed.email) setApplyEmail(parsed.email);
+        if (!applyPhone && parsed.phone) setApplyPhone(parsed.phone);
+        setParseNotice('Hệ thống đã nhận diện thông tin cơ bản từ CV của bạn. Vui lòng kiểm tra lại trước khi gửi.');
+      } else {
+        setParseNotice('Tệp PDF không có lớp văn bản (dạng scan/ảnh) hoặc không thể bóc tách tự động. Bạn vẫn có thể điền thông tin bên dưới để nộp hồ sơ.');
+      }
+    } catch {
+      setParseNotice('Không thể tự động bóc tách từ CV. Bạn có thể tự nhập thông tin để tiếp tục nộp hồ sơ.');
+    } finally {
+      setIsParsingCv(false);
+    }
+  };
+
+  const handleApplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!applyFullName.trim() || !applyEmail.trim()) {
+      setApplyError('Vui lòng nhập họ và tên cùng email.');
+      return;
+    }
+
+    setApplySubmitting(true);
+    setApplyError(null);
+    try {
+      const formData = new FormData();
+      formData.append('requisitionId', String(job?.requisitionId || job?.id || 1));
+      formData.append('fullName', applyFullName.trim());
+      formData.append('email', applyEmail.trim());
+      if (applyPhone.trim()) formData.append('phone', applyPhone.trim());
+      if (applyFile) formData.append('file', applyFile);
+
+      await candidateApi.applyPublic(formData);
+      setApplied(true);
+      setIsApplyModalOpen(false);
+    } catch (err: any) {
+      setApplyError(err?.response?.data?.message || 'Có lỗi xảy ra khi nộp hồ sơ. Vui lòng thử lại.');
+    } finally {
+      setApplySubmitting(false);
+    }
+  };
 
   const loadJobDetail = async (jobId: number) => {
     setLoading(true);
@@ -176,13 +249,13 @@ export const PublicJobDetailPage: React.FC = () => {
                 {applied ? (
                   <div className="jp-applied-success-box">
                     <CheckCircle size={24} style={{ color: 'var(--success)' }} />
-                    <p>Hồ sơ ứng tuyển của bạn đã được tiếp nhận!</p>
+                    <p>Hồ sơ ứng tuyển của bạn đã được tiếp nhận thành công!</p>
                   </div>
                 ) : (
                   <button
                     type="button"
                     className="jp-btn-sidebar-apply"
-                    onClick={() => setApplied(true)}
+                    onClick={() => setIsApplyModalOpen(true)}
                   >
                     <span>Nộp hồ sơ ứng tuyển ngay</span>
                   </button>
@@ -193,6 +266,124 @@ export const PublicJobDetailPage: React.FC = () => {
                 </p>
               </div>
             </aside>
+          </div>
+        )}
+
+        {/* Public Apply Modal */}
+        {isApplyModalOpen && (
+          <div className="modal-overlay" onClick={() => setIsApplyModalOpen(false)}>
+            <div
+              className="cv-confirm-modal"
+              style={{ maxWidth: '600px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="cv-modal-header">
+                <h2>
+                  <FileText size={20} className="text-blue-600" />
+                  Nộp hồ sơ ứng tuyển: {job?.title}
+                </h2>
+                <button
+                  type="button"
+                  className="cv-modal-close-btn"
+                  onClick={() => setIsApplyModalOpen(false)}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleApplySubmit}>
+                <div className="cv-modal-body">
+                  {/* File upload input */}
+                  <div className="cv-form-group">
+                    <label>
+                      Đính kèm CV (Định dạng PDF)
+                    </label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={handleFileChange}
+                        disabled={isParsingCv || applySubmitting}
+                      />
+                    </div>
+                    {isParsingCv && (
+                      <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#2563eb' }}>
+                        Đang đọc thông tin từ CV...
+                      </p>
+                    )}
+                  </div>
+
+                  {parseNotice && (
+                    <div className="cv-warning-banner">
+                      <HelpCircle size={16} style={{ flexShrink: 0 }} />
+                      <span>{parseNotice}</span>
+                    </div>
+                  )}
+
+                  {applyError && (
+                    <div className="cv-danger-banner">
+                      <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                      <span>{applyError}</span>
+                    </div>
+                  )}
+
+                  <div className="cv-form-group">
+                    <label>
+                      Họ và tên của bạn <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Nguyễn Văn A"
+                      value={applyFullName}
+                      onChange={(e) => setApplyFullName(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="cv-form-group">
+                    <label>
+                      Email liên hệ <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="nguyen.vana@example.com"
+                      value={applyEmail}
+                      onChange={(e) => setApplyEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="cv-form-group">
+                    <label>Số điện thoại</label>
+                    <input
+                      type="text"
+                      placeholder="0912345678"
+                      value={applyPhone}
+                      onChange={(e) => setApplyPhone(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="cv-modal-footer">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => setIsApplyModalOpen(false)}
+                    disabled={applySubmitting}
+                  >
+                    Hủy bỏ
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={applySubmitting}
+                  >
+                    <Upload size={16} />
+                    {applySubmitting ? 'Đang gửi...' : 'Gửi hồ sơ ứng tuyển'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
       </main>

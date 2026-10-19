@@ -220,16 +220,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </NavLink>
                     </li>
                     <li>
-                      <a
-                        href="#pipeline"
-                        className="sidebar-link-upcoming"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleUpcomingClick('Hồ sơ & Pipeline');
-                        }}
+                      <NavLink
+                        to="/recruitment/candidates"
+                        className={({ isActive }) => (isActive ? 'active' : '')}
+                        onClick={handleLinkClick}
                       >
                         <span>Hồ sơ & Pipeline</span>
-                      </a>
+                      </NavLink>
                     </li>
                     <li>
                       <a
