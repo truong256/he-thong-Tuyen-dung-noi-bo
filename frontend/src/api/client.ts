@@ -24,14 +24,15 @@ apiClient.interceptors.request.use(
       return config;
     }
     const url = config.url || '';
-    const isPublicAuthRoute =
+    const isPublicRoute =
+      url.includes('/api/public/') ||
       url.includes('/api/auth/login') ||
       url.includes('/api/auth/register') ||
       url.includes('/api/auth/forgot-password') ||
       url.includes('/api/auth/reset-password') ||
       url.includes('/api/auth/logout');
 
-    if (!isPublicAuthRoute && isIdleExpired()) {
+    if (!isPublicRoute && isIdleExpired()) {
       triggerIdleSessionExpired();
       return Promise.reject(new axios.Cancel('Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.'));
     }

@@ -26,6 +26,12 @@ import org.springframework.core.env.Environment;
 
 import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
+import com.example.auth_service.entity.CandidateApplication;
+import com.example.auth_service.entity.CandidateApplicationWithdrawToken;
+import com.example.auth_service.entity.RequisitionAssignment;
+import com.example.auth_service.repository.CandidateApplicationRepository;
+import com.example.auth_service.repository.CandidateApplicationWithdrawTokenRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
 import java.time.LocalDate;
 import java.time.Instant;
 import java.util.Arrays;
@@ -46,6 +52,9 @@ public class DataInitializer {
                                       InterviewQuestionRepository interviewQuestionRepository,
                                       CommonCategoryRepository commonCategoryRepository,
                                       RecruitmentRequisitionRepository requisitionRepository,
+                                      CandidateApplicationRepository applicationRepository,
+                                      CandidateApplicationWithdrawTokenRepository tokenRepository,
+                                      RequisitionAssignmentRepository assignmentRepository,
                                       PasswordEncoder passwordEncoder,
                                       Environment env,
                                       org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
@@ -438,6 +447,43 @@ public class DataInitializer {
                         req2.setUpdatedAt(Instant.now());
                         requisitionRepository.save(req2);
                     }
+                }
+            }
+
+            // 8. Seed sample candidate application and withdraw token for testing SCRUM-181 & SCRUM-182
+            if (!isTestProfile && applicationRepository.count() == 0) {
+                User candidateUser = userRepository.findByEmail("candidate@company.com").orElse(null);
+                User recruiterUser = userRepository.findByEmail("recruiter@company.com").orElse(null);
+                RecruitmentRequisition sampleReq = requisitionRepository.findAll().stream().findFirst().orElse(null);
+
+                if (sampleReq != null && recruiterUser != null) {
+                    if (assignmentRepository.findByRequisitionId(sampleReq.getId()).isEmpty()) {
+                        RequisitionAssignment assignment = new RequisitionAssignment();
+                        assignment.setRequisitionId(sampleReq.getId());
+                        assignment.setUserId(recruiterUser.getId());
+                        assignment.setRole(RoleName.RECRUITER);
+                        assignment.setPrimary(true);
+                        assignment.setAssignedAt(Instant.now());
+                        assignmentRepository.save(assignment);
+                    }
+                }
+
+                if (sampleReq != null && candidateUser != null) {
+                    CandidateApplication app = new CandidateApplication();
+                    app.setCandidateUserId(candidateUser.getId());
+                    app.setFullName(candidateUser.getFullName());
+                    app.setEmail(candidateUser.getEmail());
+                    app.setRequisitionId(sampleReq.getId());
+                    app.setStage("SCREENING");
+                    app = applicationRepository.save(app);
+
+                    CandidateApplicationWithdrawToken token = new CandidateApplicationWithdrawToken();
+                    token.setApplicationId(app.getId());
+                    token.setToken("demo-withdraw-token-123");
+                    token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+                    token.setUsed(false);
+                    token.setCreatedAt(Instant.now());
+                    tokenRepository.save(token);
                 }
             }
         };

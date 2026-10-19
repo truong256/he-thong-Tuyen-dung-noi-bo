@@ -13,9 +13,14 @@ public class RecruitmentReadController {
     public RecruitmentReadController(RecruitmentReadService service) { this.service = service; }
 
     @GetMapping("/candidates")
-    public Page<CandidateSummaryDto> candidates(@RequestParam(required = false) Long requisitionId,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return service.candidates(requisitionId, pageable(page, size));
+    public Page<CandidateSummaryDto> candidates(
+            @RequestParam(required = false) Long requisitionId,
+            @RequestParam(required = false) Boolean activePipelineOnly,
+            @RequestParam(required = false) String stage,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return service.candidates(requisitionId, activePipelineOnly, stage, pageable(page, size));
     }
     @GetMapping("/candidates/{id}")
     public CandidateSummaryDto candidate(@PathVariable Long id) { return service.candidate(id); }

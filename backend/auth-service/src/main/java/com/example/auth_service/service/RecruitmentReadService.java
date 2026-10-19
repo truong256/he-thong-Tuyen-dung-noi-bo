@@ -24,8 +24,27 @@ public class RecruitmentReadService {
 
     @PreAuthorize("hasAnyAuthority('CANDIDATE_READ_ALL', 'CANDIDATE_READ_ASSIGNED', 'CANDIDATE_READ_OWN')")
     public Page<CandidateSummaryDto> candidates(Long requisitionId, Pageable pageable) {
+        return candidates(requisitionId, null, null, pageable);
+    }
+
+    @PreAuthorize("hasAnyAuthority('CANDIDATE_READ_ALL', 'CANDIDATE_READ_ASSIGNED', 'CANDIDATE_READ_OWN')")
+    public Page<CandidateSummaryDto> candidates(Long requisitionId, Boolean activePipelineOnly, String stage, Pageable pageable) {
         var scope = CandidateScope.visibleTo(SecurityContextHolder.getContext().getAuthentication());
-        if (requisitionId != null) scope = scope.and((root, query, cb) -> cb.equal(root.get("requisitionId"), requisitionId));
+        if (requisitionId != null) {
+            scope = scope.and((root, query, cb) -> cb.equal(root.get("requisitionId"), requisitionId));
+        }
+        if (Boolean.TRUE.equals(activePipelineOnly)) {
+            scope = scope.and((root, query, cb) -> cb.or(
+                    cb.isNull(root.get("stage")),
+                    cb.not(root.get("stage").in(
+                            CandidateApplicationWithdrawalService.STAGE_WITHDRAWN,
+                            CandidateApplicationWithdrawalService.STAGE_WITHDRAWN_VI
+                    ))
+            ));
+        }
+        if (stage != null && !stage.isBlank()) {
+            scope = scope.and((root, query, cb) -> cb.equal(root.get("stage"), stage.trim()));
+        }
         return candidates.findAll(scope, pageable).map(CandidateSummaryDto::from);
     }
 
@@ -51,6 +70,12 @@ public class RecruitmentReadService {
         var scope = CandidateScope.visibleTo(SecurityContextHolder.getContext().getAuthentication());
         var app = candidates.findOne(scope.and((root, query, cb) -> cb.equal(root.get("id"), candidateId)))
                 .orElseThrow(() -> new AccessDeniedException("Bạn không có quyền quản lý pipeline của ứng viên này hoặc ứng viên ngoài phạm vi phụ trách."));
+
+        if (CandidateApplicationWithdrawalService.isWithdrawnStage(app.getStage())) {
+            throw new com.example.auth_service.exception.BadRequestException(
+                    "Hồ sơ đã được ứng viên rút và không thể tiếp tục chuyển giai đoạn trong pipeline.");
+        }
+
         app.setStage(stage != null ? stage.trim() : "APPLIED");
         return CandidateSummaryDto.from(candidates.save(app));
     }

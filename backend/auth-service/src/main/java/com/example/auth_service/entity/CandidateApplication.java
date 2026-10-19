@@ -29,4 +29,10 @@ public class CandidateApplication {
 
     @Column(name = "rejection_reason_id")
     private Long rejectionReasonId;
+
+    @Column(name = "withdrawn_at")
+    private java.time.Instant withdrawnAt;
+
+    @Column(name = "withdrawal_reason", columnDefinition = "TEXT")
+    private String withdrawalReason;
 }

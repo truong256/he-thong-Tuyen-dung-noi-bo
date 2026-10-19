@@ -27,6 +27,7 @@ import JobPostingManagementPage from './pages/JobPostingManagementPage';
 import PublicCareerPage from './pages/PublicCareerPage';
 import PublicJobDetailPage from './pages/PublicJobDetailPage';
 import PermissionMatrixPage from './pages/PermissionMatrixPage';
+import WithdrawApplicationPage from './pages/WithdrawApplicationPage';
 
 export const App: React.FC = () => {
   return (
@@ -42,6 +43,8 @@ export const App: React.FC = () => {
           <Route path="/careers" element={<PublicCareerPage />} />
           <Route path="/careers/:id" element={<PublicJobDetailPage />} />
           <Route path="/jobs" element={<Navigate to="/careers" replace />} />
+          <Route path="/candidate/withdraw" element={<WithdrawApplicationPage />} />
+          <Route path="/withdraw" element={<WithdrawApplicationPage />} />
 
           {/* Các trang đăng nhập */}
           <Route path="/login" element={<LoginPage />} />
