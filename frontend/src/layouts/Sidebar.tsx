@@ -84,6 +84,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span>Tổng quan</span>
                 </NavLink>
               </li>
+
+              {!hasRole('CANDIDATE') && (
+                <li>
+                  <NavLink
+                    to="/referrals"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <span>Giới thiệu ứng viên</span>
+                  </NavLink>
+                </li>
+              )}
             </ul>
           </div>
 

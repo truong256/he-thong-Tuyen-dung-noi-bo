@@ -27,6 +27,7 @@ import JobPostingManagementPage from './pages/JobPostingManagementPage';
 import PublicCareerPage from './pages/PublicCareerPage';
 import PublicJobDetailPage from './pages/PublicJobDetailPage';
 import PermissionMatrixPage from './pages/PermissionMatrixPage';
+import ReferralManagementPage from './pages/ReferralManagementPage';
 
 export const App: React.FC = () => {
   return (
@@ -230,6 +231,19 @@ export const App: React.FC = () => {
             <Route
               path="recruitment/jobs"
               element={<Navigate to="/recruitment/job-postings" replace />}
+            />
+            {/* Giới thiệu ứng viên nội bộ (S4-07 / SCRUM-185) */}
+            <Route
+              path="referrals"
+              element={
+                <RoleGuard allowedRoles={['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER', 'APPROVER']}>
+                  <ReferralManagementPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="recruitment/referrals"
+              element={<Navigate to="/referrals" replace />}
             />
             <Route
               path="requisitions"
