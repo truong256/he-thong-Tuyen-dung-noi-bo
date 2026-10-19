@@ -202,7 +202,14 @@
   background: #f8fafc;
 }
 
+.req-table th:first-child,
+.req-table td:first-child {
+  min-width: 145px;
+  white-space: nowrap;
+}
+
 .req-code-badge {
+  display: inline-block;
   font-family: monospace;
   font-size: 0.85rem;
   font-weight: 600;
@@ -211,6 +218,7 @@
   padding: 3px 8px;
   border-radius: 4px;
   border: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
 
 /* Status Badges */
