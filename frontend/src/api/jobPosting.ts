@@ -20,6 +20,11 @@ export const jobPostingApi = {
     return response.data;
   },
 
+  getPublicLocations: async (): Promise<string[]> => {
+    const response = await apiClient.get<string[]>('/api/public/job-postings/locations');
+    return response.data;
+  },
+
   // 1. Quản lý nội bộ
   list: async (params?: {
     status?: string;

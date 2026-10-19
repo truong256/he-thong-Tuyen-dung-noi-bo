@@ -236,10 +236,19 @@ public class JobPostingService {
 
         JobPosting posting = findPosting(id);
 
+        // Kiểm tra tính nhất quán vòng đời: Yêu cầu nguồn phải còn hiệu lực
+        if (posting.getRequisitionId() != null) {
+            RecruitmentRequisition req = requisitions.findById(posting.getRequisitionId()).orElse(null);
+            if (req != null && !"APPROVED".equalsIgnoreCase(req.getStatus()) && !"OPEN".equalsIgnoreCase(req.getStatus())) {
+                throw new BadRequestException("Không thể xuất bản tin tuyển dụng vì yêu cầu tuyển dụng gốc đang ở trạng thái '" + req.getStatus() + "'. Chỉ yêu cầu 'Đã duyệt' mới được xuất bản tin.");
+            }
+        }
+
         // Ràng buộc nghiêm ngặt: Tin phải qua trạng thái duyệt trước khi công khai
         if (!"APPROVED".equals(posting.getStatus())) {
             throw new BadRequestException("Tin tuyển dụng phải qua trạng thái phê duyệt trước khi công khai (trạng thái hiện tại: " + posting.getStatus() + ").");
         }
+
 
         String fromStatus = posting.getStatus();
         posting.setStatus("PUBLISHED");
@@ -266,6 +275,15 @@ public class JobPostingService {
         if ("PUBLISHED".equals(posting.getStatus())) {
             throw new BadRequestException("Tin tuyển dụng này đã ở trạng thái xuất bản công khai.");
         }
+
+        // Kiểm tra tính nhất quán vòng đời: Yêu cầu nguồn phải còn hiệu lực
+        if (posting.getRequisitionId() != null) {
+            RecruitmentRequisition req = requisitions.findById(posting.getRequisitionId()).orElse(null);
+            if (req != null && !"APPROVED".equalsIgnoreCase(req.getStatus()) && !"OPEN".equalsIgnoreCase(req.getStatus())) {
+                throw new BadRequestException("Không thể xuất bản tin tuyển dụng vì yêu cầu tuyển dụng gốc đang ở trạng thái '" + req.getStatus() + "'. Chỉ yêu cầu 'Đã duyệt' mới được xuất bản tin.");
+            }
+        }
+
 
         String fromStatus = posting.getStatus();
         Instant now = Instant.now();
@@ -396,7 +414,8 @@ public class JobPostingService {
         LocalDate today = LocalDate.now();
         String filterWorkingModel = (workingModel != null && !workingModel.isBlank() && !"ALL".equalsIgnoreCase(workingModel))
                 ? workingModel.trim() : null;
-        String filterLocation = (workLocation != null && !workLocation.isBlank()) ? workLocation.trim() : null;
+        String filterLocation = (workLocation != null && !workLocation.isBlank() && !"ALL".equalsIgnoreCase(workLocation))
+                ? workLocation.trim() : null;
         String filterKeyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
 
         Page<JobPosting> page = jobPostings.findPublicPostings(today, departmentId, filterWorkingModel, filterLocation, filterKeyword, pageable);
@@ -407,6 +426,12 @@ public class JobPostingService {
     @Transactional(readOnly = true)
     public List<PublicJobDepartmentResponse> getPublicDepartments() {
         return jobPostings.findPublicDepartments(LocalDate.now());
+    }
+
+    /** Location filter options drawn exclusively from visible public postings (SCRUM-163). */
+    @Transactional(readOnly = true)
+    public List<String> getPublicLocations() {
+        return jobPostings.findPublicLocations(LocalDate.now());
     }
 
     /** Public detail returns 404 for unpublished or expired postings. */

@@ -82,4 +82,15 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
         ORDER BY d.name
     """)
     List<PublicJobDepartmentResponse> findPublicDepartments(@Param("currentDate") LocalDate currentDate);
+
+    @Query("""
+        SELECT DISTINCT j.workLocation
+        FROM JobPosting j
+        WHERE j.status = 'PUBLISHED'
+          AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
+          AND j.workLocation IS NOT NULL
+          AND TRIM(j.workLocation) != ''
+        ORDER BY j.workLocation
+    """)
+    List<String> findPublicLocations(@Param("currentDate") LocalDate currentDate);
 }

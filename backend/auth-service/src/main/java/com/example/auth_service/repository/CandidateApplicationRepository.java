@@ -9,4 +9,9 @@ public interface CandidateApplicationRepository extends JpaRepository<CandidateA
     boolean existsByCandidateSourceId(Long candidateSourceId);
 
     boolean existsByRejectionReasonId(Long rejectionReasonId);
+
+    java.util.List<CandidateApplication> findByRequisitionId(Long requisitionId);
+
+    long countByRequisitionId(Long requisitionId);
 }
+

@@ -123,7 +123,7 @@ public class SecurityConfig {
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/submit")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
-                .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}", "/api/requisitions/{id}/pipeline-summary")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/approve", "/api/requisitions/{id}/reject")
                         .hasAnyAuthority("REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")

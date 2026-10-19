@@ -294,6 +294,22 @@ export const requisitionApi = {
     const res = await client.post<any>(`/api/requisitions/${id}/cancel`, { reason });
     return res.data;
   },
+
+  getPipelineSummary: async (id: number): Promise<{
+    requisitionId: number;
+    totalCount: number;
+    activeCount: number;
+    countByStage: Record<string, number>;
+  }> => {
+    const res = await client.get<{
+      requisitionId: number;
+      totalCount: number;
+      activeCount: number;
+      countByStage: Record<string, number>;
+    }>(`/api/requisitions/${id}/pipeline-summary`);
+    return res.data;
+  },
 };
+
 
 export default requisitionApi;

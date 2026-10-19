@@ -58,7 +58,7 @@ export function requisitionTiming(
   const approved = approvedAt ? vietnamDay(approvedAt) : null;
 
   const normalizedStatus = (status || '').toUpperCase();
-  const isInactive = ['CLOSED', 'CANCELLED', 'REJECTED'].includes(normalizedStatus);
+  const isInactive = ['CLOSED', 'CANCELLED', 'REJECTED', 'FILLED'].includes(normalizedStatus);
   const isDraft = normalizedStatus === 'DRAFT';
   const isPending = normalizedStatus === 'PENDING_APPROVAL';
 

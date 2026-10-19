@@ -407,4 +407,40 @@ class JobPostingServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("không tồn tại, đã hết hạn hoặc đã được gỡ xuống");
     }
+
+    @Test
+    @DisplayName("SCRUM-163: getPublicLocations trả danh sách các địa điểm công khai từ repository")
+    void testGetPublicLocations() {
+        when(jobPostingRepository.findPublicLocations(any(LocalDate.class)))
+                .thenReturn(List.of("Hà Nội - Trụ sở chính", "TP. Hồ Chí Minh"));
+
+        List<String> locations = service.getPublicLocations();
+
+        assertThat(locations).containsExactly("Hà Nội - Trụ sở chính", "TP. Hồ Chí Minh");
+    }
+
+    @Test
+    @DisplayName("SCRUM-163: getPublicJobPostings xử lý chính xác các nhánh lọc 'ALL', khoảng trắng và giá trị cụ thể")
+    void testGetPublicJobPostings_FilterBranches() {
+        when(jobPostingRepository.findPublicPostings(any(LocalDate.class), any(), any(), any(), any(), any(Pageable.class)))
+                .thenReturn(Page.empty());
+
+        // Nhánh 1: "ALL" cho workingModel và workLocation -> truyền null vào repository
+        service.getPublicJobPostings(10L, "ALL", "ALL", "  Java Developer  ", PageRequest.of(0, 10));
+        org.mockito.Mockito.verify(jobPostingRepository).findPublicPostings(
+                any(LocalDate.class), eq(10L), isNull(), isNull(), eq("Java Developer"), any(Pageable.class)
+        );
+
+        // Nhánh 2: Giá trị cụ thể
+        service.getPublicJobPostings(20L, "REMOTE", "Hà Nội", "React", PageRequest.of(0, 10));
+        org.mockito.Mockito.verify(jobPostingRepository).findPublicPostings(
+                any(LocalDate.class), eq(20L), eq("REMOTE"), eq("Hà Nội"), eq("React"), any(Pageable.class)
+        );
+
+        // Nhánh 3: Chuỗi rỗng hoặc khoảng trắng -> truyền null
+        service.getPublicJobPostings(null, "   ", "   ", "   ", PageRequest.of(0, 10));
+        org.mockito.Mockito.verify(jobPostingRepository).findPublicPostings(
+                any(LocalDate.class), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)
+        );
+    }
 }

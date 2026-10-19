@@ -220,4 +220,19 @@ class JobPostingControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Kỹ sư phần mềm Java"));
     }
+
+    @Test
+    @DisplayName("GET /api/public/job-postings/locations - Public API trả về danh sách địa điểm")
+    void testGetPublicLocations() throws Exception {
+        when(jobPostingService.getPublicLocations())
+                .thenReturn(List.of("Hà Nội", "Đà Nẵng", "TP. Hồ Chí Minh"));
+
+        publicMockMvc.perform(get("/api/public/job-postings/locations")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(3)))
+                .andExpect(jsonPath("$[0]").value("Hà Nội"))
+                .andExpect(jsonPath("$[1]").value("Đà Nẵng"))
+                .andExpect(jsonPath("$[2]").value("TP. Hồ Chí Minh"));
+    }
 }

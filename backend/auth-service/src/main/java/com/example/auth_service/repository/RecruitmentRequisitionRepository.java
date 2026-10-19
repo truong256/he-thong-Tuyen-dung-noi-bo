@@ -119,10 +119,10 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
           AND (:toInstant IS NULL OR r.createdAt < :toInstant)
           AND (:hasRecruiterFilter = false OR r.id IN :recruiterReqIds)
           AND (:sla IS NULL OR :sla = 'ALL' OR
-               (:sla = 'OVERDUE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED')) AND COALESCE(r.targetDate, r.neededDate) < :today) OR
-               (:sla = 'WARNING' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED')) AND COALESCE(r.targetDate, r.neededDate) >= :today AND COALESCE(r.targetDate, r.neededDate) <= :warningDate) OR
-               (:sla = 'SAFE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED')) AND COALESCE(r.targetDate, r.neededDate) > :warningDate) OR
-               (:sla = 'INACTIVE' AND (r.status IS NOT NULL AND UPPER(r.status) IN ('CLOSED', 'CANCELLED', 'REJECTED')))
+               (:sla = 'OVERDUE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) < :today) OR
+               (:sla = 'WARNING' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) >= :today AND COALESCE(r.targetDate, r.neededDate) <= :warningDate) OR
+               (:sla = 'SAFE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) > :warningDate) OR
+               (:sla = 'INACTIVE' AND (r.status IS NOT NULL AND UPPER(r.status) IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')))
           )
         ORDER BY r.createdAt DESC, r.id DESC
         """)
@@ -155,10 +155,10 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
           AND (:toInstant IS NULL OR r.createdAt < :toInstant)
           AND (:hasRecruiterFilter = false OR r.id IN :recruiterReqIds)
           AND (:sla IS NULL OR :sla = 'ALL' OR
-               (:sla = 'OVERDUE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED')) AND COALESCE(r.targetDate, r.neededDate) < :today) OR
-               (:sla = 'WARNING' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED')) AND COALESCE(r.targetDate, r.neededDate) >= :today AND COALESCE(r.targetDate, r.neededDate) <= :warningDate) OR
-               (:sla = 'SAFE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED')) AND COALESCE(r.targetDate, r.neededDate) > :warningDate) OR
-               (:sla = 'INACTIVE' AND (r.status IS NOT NULL AND UPPER(r.status) IN ('CLOSED', 'CANCELLED', 'REJECTED')))
+               (:sla = 'OVERDUE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) < :today) OR
+               (:sla = 'WARNING' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) >= :today AND COALESCE(r.targetDate, r.neededDate) <= :warningDate) OR
+               (:sla = 'SAFE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) > :warningDate) OR
+               (:sla = 'INACTIVE' AND (r.status IS NOT NULL AND UPPER(r.status) IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')))
           )
         ORDER BY r.createdAt DESC, r.id DESC
         """)

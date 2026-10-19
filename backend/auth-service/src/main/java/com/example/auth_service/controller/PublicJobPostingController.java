@@ -27,6 +27,15 @@ public class PublicJobPostingController {
     }
 
     /**
+     * GET /api/public/job-postings/locations
+     * SCRUM-163: Danh sách địa điểm công khai từ các tin đang hiệu lực.
+     */
+    @GetMapping("/locations")
+    public ResponseEntity<List<String>> getPublicLocations() {
+        return ResponseEntity.ok(jobPostingService.getPublicLocations());
+    }
+
+    /**
      * GET /api/public/job-postings
      * SCRUM-150: API công khai trả danh sách tin tuyển dụng cho ứng viên.
      * Acceptance Criteria:

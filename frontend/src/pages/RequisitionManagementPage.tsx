@@ -117,9 +117,13 @@ export const RequisitionManagementPage: React.FC = () => {
     type: LifecycleActionType;
     req: Requisition;
   } | null>(null);
+  const [lifecycleReasonCode, setLifecycleReasonCode] = useState('');
   const [lifecycleReason, setLifecycleReason] = useState('');
   const [lifecycleError, setLifecycleError] = useState('');
   const [isSubmittingLifecycle, setIsSubmittingLifecycle] = useState(false);
+  const [pipelineWarning, setPipelineWarning] = useState<{ activeCount: number; totalCount: number } | null>(null);
+  const [isLoadingPipeline, setIsLoadingPipeline] = useState(false);
+
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -542,33 +546,95 @@ export const RequisitionManagementPage: React.FC = () => {
     }
   };
 
+  const LIFECYCLE_REASONS: Record<string, { code: string; label: string }[]> = {
+    HOLD: [
+      { code: 'BUDGET_FREEZE', label: 'Đóng băng ngân sách' },
+      { code: 'PLAN_CHANGE', label: 'Thay đổi kế hoạch nhân sự' },
+      { code: 'WAITING_FOR_DECISION', label: 'Chờ quyết định từ cấp trên' },
+      { code: 'OTHER', label: 'Lý do khác' },
+    ],
+    CLOSE: [
+      { code: 'HEADCOUNT_REACHED', label: 'Đã tuyển đủ số lượng' },
+      { code: 'INTERNAL_TRANSFER', label: 'Đã bố trí nhân sự nội bộ' },
+      { code: 'OTHER', label: 'Lý do khác' },
+    ],
+    CANCEL: [
+      { code: 'NO_LONGER_NEEDED', label: 'Không còn nhu cầu tuyển' },
+      { code: 'BUDGET_CUT', label: 'Cắt giảm ngân sách' },
+      { code: 'DUPLICATE_REQUEST', label: 'Yêu cầu bị trùng' },
+      { code: 'OTHER', label: 'Lý do khác' },
+    ],
+  };
+
+  const openLifecycleModal = async (type: LifecycleActionType, req: Requisition) => {
+    setLifecycleAction({ type, req });
+    setLifecycleReason('');
+    setLifecycleReasonCode('');
+    setLifecycleError('');
+    setPipelineWarning(null);
+
+    if (type === 'CLOSE' || type === 'CANCEL' || type === 'HOLD') {
+      setIsLoadingPipeline(true);
+      try {
+        const summary = await requisitionApi.getPipelineSummary(req.id);
+        if (summary && summary.activeCount > 0) {
+          setPipelineWarning({ activeCount: summary.activeCount, totalCount: summary.totalCount });
+        }
+      } catch (err) {
+        console.error('Failed to load pipeline summary:', err);
+      } finally {
+        setIsLoadingPipeline(false);
+      }
+    }
+  };
+
   const handleLifecycleConfirm = async () => {
     if (!lifecycleAction) return;
     const { type, req } = lifecycleAction;
 
-    if ((type === 'CANCEL' || type === 'HOLD') && !lifecycleReason.trim()) {
-      setLifecycleError(`Vui lòng nhập lý do để ${type === 'CANCEL' ? 'hủy' : 'tạm hoãn'} yêu cầu.`);
-      return;
+    let effectiveReason = '';
+    if (type !== 'RESUME') {
+      const reasons = LIFECYCLE_REASONS[type] || [];
+      if (!lifecycleReasonCode) {
+        setLifecycleError('Vui lòng chọn lý do.');
+        return;
+      }
+      const selectedOption = reasons.find((r) => r.code === lifecycleReasonCode);
+      const label = selectedOption ? selectedOption.label : lifecycleReasonCode;
+
+      if (lifecycleReasonCode === 'OTHER') {
+        if (!lifecycleReason.trim() || lifecycleReason.trim().length < 5) {
+          setLifecycleError('Khi chọn "Lý do khác", vui lòng nhập nội dung chi tiết tối thiểu 5 ký tự.');
+          return;
+        }
+        effectiveReason = lifecycleReason.trim();
+      } else {
+        effectiveReason = lifecycleReason.trim()
+          ? `${label}: ${lifecycleReason.trim()}`
+          : label;
+      }
     }
 
     setIsSubmittingLifecycle(true);
     try {
       if (type === 'HOLD') {
-        await requisitionApi.hold(req.id, lifecycleReason.trim() || undefined);
+        await requisitionApi.hold(req.id, effectiveReason);
         showToast(`Đã tạm hoãn yêu cầu tuyển dụng ${req.requisitionCode}.`);
       } else if (type === 'RESUME') {
         await requisitionApi.resume(req.id, lifecycleReason.trim() || undefined);
         showToast(`Đã tiếp tục triển khai yêu cầu tuyển dụng ${req.requisitionCode}.`);
       } else if (type === 'CLOSE') {
-        await requisitionApi.close(req.id, lifecycleReason.trim() || undefined);
+        await requisitionApi.close(req.id, effectiveReason);
         showToast(`Đã đóng yêu cầu tuyển dụng ${req.requisitionCode}.`);
       } else if (type === 'CANCEL') {
-        await requisitionApi.cancel(req.id, lifecycleReason.trim());
+        await requisitionApi.cancel(req.id, effectiveReason);
         showToast(`Đã hủy yêu cầu tuyển dụng ${req.requisitionCode}.`);
       }
       setLifecycleAction(null);
       setLifecycleReason('');
+      setLifecycleReasonCode('');
       setLifecycleError('');
+      setPipelineWarning(null);
       loadData();
     } catch (err: any) {
       showToast(err.response?.data?.message || 'Có lỗi xảy ra khi thực hiện thao tác.', 'error');
@@ -596,12 +662,15 @@ export const RequisitionManagementPage: React.FC = () => {
         return <span className="req-badge req-badge-on-hold"><PauseCircle size={12} /> Tạm hoãn</span>;
       case 'CLOSED':
         return <span className="req-badge req-badge-closed"><Archive size={12} /> Đã đóng</span>;
+      case 'FILLED':
+        return <span className="req-badge req-badge-closed"><CheckCircle size={12} /> Đã tuyển đủ</span>;
       case 'CANCELLED':
         return <span className="req-badge req-badge-cancelled"><Ban size={12} /> Đã hủy</span>;
       default:
         return <span className="req-badge req-badge-draft">{status}</span>;
     }
   };
+
 
   return (
     <div className="req-container">
@@ -679,9 +748,11 @@ export const RequisitionManagementPage: React.FC = () => {
           <option value="APPROVED">Đã duyệt (APPROVED)</option>
           <option value="ON_HOLD">Tạm hoãn (ON_HOLD)</option>
           <option value="CLOSED">Đã đóng (CLOSED)</option>
+          <option value="FILLED">Đã tuyển đủ (FILLED)</option>
           <option value="CANCELLED">Đã hủy (CANCELLED)</option>
           <option value="REJECTED">Từ chối (REJECTED)</option>
         </select>
+
 
         <select
           className="req-select"
@@ -933,11 +1004,7 @@ export const RequisitionManagementPage: React.FC = () => {
                           className="req-action-btn"
                           title="Tạm hoãn yêu cầu tuyển dụng"
                           style={{ color: '#d97706' }}
-                          onClick={() => {
-                            setLifecycleReason('');
-                            setLifecycleError('');
-                            setLifecycleAction({ type: 'HOLD', req });
-                          }}
+                          onClick={() => openLifecycleModal('HOLD', req)}
                         >
                           <PauseCircle size={16} />
                         </button>
@@ -948,11 +1015,7 @@ export const RequisitionManagementPage: React.FC = () => {
                           className="req-action-btn"
                           title="Tiếp tục triển khai yêu cầu"
                           style={{ color: '#059669' }}
-                          onClick={() => {
-                            setLifecycleReason('');
-                            setLifecycleError('');
-                            setLifecycleAction({ type: 'RESUME', req });
-                          }}
+                          onClick={() => openLifecycleModal('RESUME', req)}
                         >
                           <PlayCircle size={16} />
                         </button>
@@ -963,30 +1026,23 @@ export const RequisitionManagementPage: React.FC = () => {
                           className="req-action-btn"
                           title="Đóng yêu cầu tuyển dụng (hoàn thành)"
                           style={{ color: '#475569' }}
-                          onClick={() => {
-                            setLifecycleReason('');
-                            setLifecycleError('');
-                            setLifecycleAction({ type: 'CLOSE', req });
-                          }}
+                          onClick={() => openLifecycleModal('CLOSE', req)}
                         >
                           <Archive size={16} />
                         </button>
                       )}
-                      {isHrOrAdmin && req.status !== 'CLOSED' && req.status !== 'CANCELLED' && (
+                      {isHrOrAdmin && req.status !== 'CLOSED' && req.status !== 'CANCELLED' && req.status !== 'FILLED' && (
                         <button
                           type="button"
                           className="req-action-btn delete"
                           title="Hủy yêu cầu tuyển dụng"
                           style={{ color: '#dc2626' }}
-                          onClick={() => {
-                            setLifecycleReason('');
-                            setLifecycleError('');
-                            setLifecycleAction({ type: 'CANCEL', req });
-                          }}
+                          onClick={() => openLifecycleModal('CANCEL', req)}
                         >
                           <Ban size={16} />
                         </button>
                       )}
+
 
                       <button
                         type="button"
@@ -1623,18 +1679,71 @@ export const RequisitionManagementPage: React.FC = () => {
                 {lifecycleAction.req.title} (<code>{lifecycleAction.req.requisitionCode}</code>)
               </div>
 
-              <div className="req-form-group" style={{ marginTop: '16px' }}>
+              {/* SCRUM-135 / SCRUM-139: Cảnh báo ứng viên còn trong pipeline */}
+              {isLoadingPipeline && (
+                <div style={{ marginTop: '12px', fontSize: '0.8125rem', color: '#64748b' }}>
+                  Đang kiểm tra dữ liệu pipeline ứng viên...
+                </div>
+              )}
+
+              {pipelineWarning && pipelineWarning.activeCount > 0 && (
+                <div
+                  className="req-pipeline-alert"
+                  role="alert"
+                  style={{
+                    marginTop: '12px',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: '#fffbeb',
+                    border: '1px solid #fde68a',
+                    color: '#92400e',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
+                    <AlertTriangle size={16} color="#d97706" />
+                    <span>Cảnh báo: Còn {pipelineWarning.activeCount} ứng viên đang trong pipeline</span>
+                  </div>
+                  <p style={{ margin: '6px 0 0 0', fontSize: '0.8125rem', color: '#78350f' }}>
+                    Yêu cầu tuyển dụng này vẫn còn {pipelineWarning.activeCount} ứng viên đang trong quy trình tuyển dụng. Hồ sơ ứng viên sẽ không bị tự động loại hay làm mất. Vui lòng xác nhận trước khi tiếp tục.
+                  </p>
+                </div>
+              )}
+
+              {lifecycleAction.type !== 'RESUME' && (
+                <div className="req-form-group" style={{ marginTop: '16px' }}>
+                  <label className="req-label">
+                    Lý do <span className="required">*</span>
+                  </label>
+                  <select
+                    className="req-select"
+                    style={{ width: '100%', marginTop: '4px' }}
+                    value={lifecycleReasonCode}
+                    onChange={(e) => {
+                      setLifecycleReasonCode(e.target.value);
+                      if (lifecycleError) setLifecycleError('');
+                    }}
+                  >
+                    <option value="">-- Chọn lý do --</option>
+                    {(LIFECYCLE_REASONS[lifecycleAction.type] || []).map((r) => (
+                      <option key={r.code} value={r.code}>
+                        {r.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="req-form-group" style={{ marginTop: '14px' }}>
                 <label className="req-label">
-                  Lý do / Ghi chú {(lifecycleAction.type === 'CANCEL' || lifecycleAction.type === 'HOLD') && <span className="required">*</span>}
+                  Ghi chú chi tiết {lifecycleReasonCode === 'OTHER' && <span className="required">*</span>}
                 </label>
                 <textarea
                   className="req-textarea"
                   placeholder={
-                    lifecycleAction.type === 'CANCEL'
-                      ? 'Nhập lý do hủy yêu cầu...'
-                      : lifecycleAction.type === 'HOLD'
-                      ? 'Nhập lý do tạm hoãn tuyển dụng...'
-                      : 'Nhập ghi chú (không bắt buộc)...'
+                    lifecycleReasonCode === 'OTHER'
+                      ? 'Nhập giải trình lý do chi tiết (tối thiểu 5 ký tự)...'
+                      : 'Nhập ghi chú bổ sung (không bắt buộc)...'
                   }
                   value={lifecycleReason}
                   onChange={(e) => {
@@ -1671,11 +1780,18 @@ export const RequisitionManagementPage: React.FC = () => {
                   borderColor: 'transparent',
                 }}
                 onClick={handleLifecycleConfirm}
-                disabled={isSubmittingLifecycle}
+                disabled={isSubmittingLifecycle || isLoadingPipeline}
               >
-                <span>{isSubmittingLifecycle ? 'Đang xử lý...' : 'Xác nhận'}</span>
+                <span>
+                  {isSubmittingLifecycle
+                    ? 'Đang xử lý...'
+                    : pipelineWarning && pipelineWarning.activeCount > 0
+                    ? 'Vẫn tiếp tục xác nhận'
+                    : 'Xác nhận'}
+                </span>
               </button>
             </div>
+
           </div>
         </div>
       )}

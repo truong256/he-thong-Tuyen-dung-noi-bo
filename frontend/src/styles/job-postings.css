@@ -1308,6 +1308,8 @@
   background: #F8FAFC;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 .jp-public-navbar {
@@ -1836,6 +1838,30 @@
   color: var(--text-muted, #94A3B8);
 }
 
+.jp-public-error-card {
+  background: var(--bg-surface, #FFFFFF);
+  border: 1px solid var(--danger-light, #FEE2E2);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.08);
+  margin: 20px 0;
+}
+
+.jp-error-icon {
+  color: var(--danger, #EF4444);
+  margin-bottom: 8px;
+}
+
+.jp-retry-btn {
+  margin-top: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.jp-clear-filters-btn {
+  margin-top: 16px;
+}
+
 /* ==========================================================================
    RESPONSIVE DESIGN (Breakpoints: 1024px, 768px, 480px, 360px)
    ========================================================================== */
@@ -1884,6 +1910,31 @@
   .jp-dept-filter-box {
     width: 100%;
     min-width: unset;
+  }
+  /* Public portal S4-01 mobile 768px adaptations */
+  .jp-public-portal .jp-banner-search-box {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .jp-public-portal .jp-search-field {
+    width: 100%;
+    min-width: 0 !important;
+  }
+  .jp-public-portal .jp-public-nav-container {
+    padding: 0 4px;
+  }
+  .jp-public-portal .jp-public-banner {
+    padding: 40px 16px 32px 16px;
+  }
+  .jp-public-portal .jp-public-main-content {
+    padding: 24px 16px 48px 16px;
+  }
+  .jp-public-portal .jp-banner-title {
+    font-size: 1.6rem;
+  }
+  .jp-public-portal .jp-banner-sub {
+    font-size: 0.95rem;
+    margin-bottom: 24px;
   }
 }
 
@@ -1940,5 +1991,47 @@
   }
   .jp-public-title {
     font-size: 1.2rem;
+  }
+
+  /* Public portal S4-01 mobile 360px adaptations */
+  .jp-public-portal .jp-public-navbar {
+    padding: 10px 12px;
+  }
+  .jp-public-portal .jp-brand-text {
+    font-size: 0.82rem;
+    letter-spacing: 0;
+  }
+  .jp-public-portal .jp-btn-portal-login {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  .jp-public-portal .jp-public-banner {
+    padding: 32px 10px 24px 10px;
+  }
+  .jp-public-portal .jp-banner-title {
+    font-size: 1.35rem;
+  }
+  .jp-public-portal .jp-banner-sub {
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+  }
+  .jp-public-portal .jp-banner-search-box {
+    padding: 6px;
+    gap: 6px;
+  }
+  .jp-public-portal .jp-search-field {
+    min-width: 0 !important;
+    width: 100%;
+    padding: 8px 10px;
+    box-sizing: border-box;
+  }
+  .jp-public-portal .jp-public-main-content {
+    padding: 20px 10px 48px 10px;
+  }
+  .jp-public-portal .jp-public-job-card {
+    padding: 14px 12px;
+  }
+  .jp-public-portal .jp-job-card-title {
+    font-size: 1.05rem;
   }
 }

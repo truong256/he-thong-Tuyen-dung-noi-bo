@@ -25,7 +25,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.core.env.Environment;
 
 import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
+import com.example.auth_service.domain.sprint3.JobPosting;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
+import com.example.auth_service.repository.JobPostingRepository;
 import com.example.auth_service.entity.CandidateApplication;
 import com.example.auth_service.entity.CandidateApplicationWithdrawToken;
 import com.example.auth_service.entity.RequisitionAssignment;
@@ -55,6 +57,7 @@ public class DataInitializer {
                                       CandidateApplicationRepository applicationRepository,
                                       CandidateApplicationWithdrawTokenRepository tokenRepository,
                                       RequisitionAssignmentRepository assignmentRepository,
+                                      JobPostingRepository jobPostingRepository,
                                       PasswordEncoder passwordEncoder,
                                       Environment env,
                                       org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
@@ -486,6 +489,73 @@ public class DataInitializer {
                     tokenRepository.save(token);
                 }
             }
+            // 9. Seed sample public job postings for S4-01 / SCRUM-154
+            if (!isTestProfile && jobPostingRepository.count() == 0) {
+                Department itDept = departmentRepository.findAll().stream()
+                        .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()) || (d.getName() != null && d.getName().contains("Kỹ thuật")))
+                        .findFirst().orElseGet(() -> departmentRepository.findAll().stream().findFirst().orElse(null));
+                Long itDeptId = itDept != null ? itDept.getId() : null;
+
+                Department hrDept = departmentRepository.findAll().stream()
+                        .filter(d -> "HR".equalsIgnoreCase(d.getCode()) || (d.getName() != null && d.getName().contains("Nhân sự")))
+                        .findFirst().orElseGet(() -> departmentRepository.findAll().stream().findFirst().orElse(null));
+                Long hrDeptId = hrDept != null ? hrDept.getId() : itDeptId;
+
+                JobPosting jp1 = new JobPosting();
+                jp1.setTitle("Kỹ sư Phần mềm Senior Java (Backend)");
+                jp1.setJobCode("JP-2026-0001");
+                jp1.setStatus("PUBLISHED");
+                jp1.setWorkingModel("HYBRID");
+                jp1.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                jp1.setQuantity(2);
+                jp1.setJobDescription("Tham gia thiết kế, phát triển và tối ưu hóa hệ thống backend tuyển dụng nội bộ phục vụ hàng nghìn nhân sự.");
+                jp1.setRequirements("Tối thiểu 3 năm kinh nghiệm lập trình Java, thành thạo Spring Boot, PostgreSQL, Docker.");
+                jp1.setBenefits("Mức lương cạnh tranh, thưởng dự án, bảo hiểm sức khỏe PTI, 15 ngày phép/năm.");
+                jp1.setSalaryVisible(true);
+                jp1.setSalaryMin(25000000L);
+                jp1.setSalaryMax(40000000L);
+                jp1.setCurrency("VND");
+                jp1.setApplicationDeadline(LocalDate.now().plusMonths(2));
+                jp1.setPublishedAt(Instant.now());
+                jp1.setDepartmentId(itDeptId);
+                jobPostingRepository.save(jp1);
+
+                JobPosting jp2 = new JobPosting();
+                jp2.setTitle("Chuyên viên Tuyển dụng & Đào tạo (HR Recruiter)");
+                jp2.setJobCode("JP-2026-0002");
+                jp2.setStatus("PUBLISHED");
+                jp2.setWorkingModel("ONSITE");
+                jp2.setWorkLocation("TP. Hồ Chí Minh - Chi nhánh Quận 1");
+                jp2.setQuantity(1);
+                jp2.setJobDescription("Tìm nguồn và thu hút nhân tài, điều phối quy trình phỏng vấn và hỗ trợ onboard nhân viên mới.");
+                jp2.setRequirements("Từ 2 năm kinh nghiệm tuyển dụng trong ngành công nghệ / tài chính.");
+                jp2.setBenefits("Môi trường trẻ trung, du lịch công ty hàng năm, phụ cấp ăn trưa và gửi xe.");
+                jp2.setSalaryVisible(false);
+                jp2.setApplicationDeadline(LocalDate.now().plusMonths(3));
+                jp2.setPublishedAt(Instant.now());
+                jp2.setDepartmentId(hrDeptId);
+                jobPostingRepository.save(jp2);
+
+                JobPosting jp3 = new JobPosting();
+                jp3.setTitle("Lập trình viên Frontend React (Remote)");
+                jp3.setJobCode("JP-2026-0003");
+                jp3.setStatus("PUBLISHED");
+                jp3.setWorkingModel("REMOTE");
+                jp3.setWorkLocation("Đà Nẵng - Trung tâm R&D");
+                jp3.setQuantity(3);
+                jp3.setJobDescription("Xây dựng các giao diện web responsive, hiện đại, tối ưu trải nghiệm người dùng.");
+                jp3.setRequirements("Thành thạo React, TypeScript, CSS hiện đại và Responsive Design.");
+                jp3.setBenefits("Làm việc từ xa linh hoạt, cung cấp laptop Macbook Pro, gói bảo hiểm toàn diện.");
+                jp3.setSalaryVisible(true);
+                jp3.setSalaryMin(20000000L);
+                jp3.setSalaryMax(35000000L);
+                jp3.setCurrency("VND");
+                jp3.setApplicationDeadline(LocalDate.now().plusMonths(1));
+                jp3.setPublishedAt(Instant.now());
+                jp3.setDepartmentId(itDeptId);
+                jobPostingRepository.save(jp3);
+            }
+
         };
     }
 
