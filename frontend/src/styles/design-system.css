@@ -30,6 +30,26 @@
   --accent-light: #38BDF8;
 
   /* ==========================================================================
+     UI-UX-PRO-MAX MASTER DESIGN SYSTEM TOKENS
+     ========================================================================== */
+  --color-primary: var(--primary);
+  --color-on-primary: #FFFFFF;
+  --color-secondary: var(--primary-500);
+  --color-on-secondary: #FFFFFF;
+  --color-accent: #EA580C;
+  --color-on-accent: #FFFFFF;
+  --color-background: var(--bg-main);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--bg-card);
+  --color-card-foreground: var(--text-primary);
+  --color-muted: var(--bg-subtle);
+  --color-muted-foreground: var(--text-secondary);
+  --color-border: var(--border-color);
+  --color-destructive: var(--danger);
+  --color-on-destructive: #FFFFFF;
+  --color-ring: var(--primary);
+
+  /* ==========================================================================
      SURFACES & BACKGROUNDS
      ========================================================================== */
   --bg-page: #F5F7FB;
@@ -91,6 +111,15 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+
+  /* UI-UX-PRO-MAX Spacing Aliases */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
 
   /* ==========================================================================
      BORDER RADII
