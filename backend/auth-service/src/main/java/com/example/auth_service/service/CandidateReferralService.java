@@ -98,6 +98,31 @@ public class CandidateReferralService {
             }
         }
 
+        // Nếu tin tuyển dụng chưa gắn requisition_id, tự động liên kết với requisition phù hợp
+        if (effectiveReqId == null && jobPosting != null) {
+            Long deptId = jobPosting.getDepartmentId();
+            Long titleId = jobPosting.getJobTitleId();
+            List<RecruitmentRequisition> allReqs = requisitionRepository.findAll();
+
+            effectiveReqId = allReqs.stream()
+                    .filter(r -> deptId != null && deptId.equals(r.getDepartmentId()) && (titleId == null || titleId.equals(r.getJobTitleId())))
+                    .map(RecruitmentRequisition::getId)
+                    .findFirst()
+                    .orElseGet(() -> allReqs.stream()
+                            .filter(r -> deptId != null && deptId.equals(r.getDepartmentId()))
+                            .map(RecruitmentRequisition::getId)
+                            .findFirst()
+                            .orElseGet(() -> allReqs.isEmpty() ? null : allReqs.get(0).getId()));
+
+            if (effectiveReqId != null) {
+                jobPosting.setRequisitionId(effectiveReqId);
+                if (!"PUBLISHED".equalsIgnoreCase(jobPosting.getStatus())) {
+                    jobPosting.setStatus("PUBLISHED");
+                }
+                jobPostingRepository.save(jobPosting);
+            }
+        }
+
         if (effectiveReqId != null) {
             final Long lookupReqId = effectiveReqId;
             requisition = requisitionRepository.findById(lookupReqId)
@@ -276,9 +301,29 @@ public class CandidateReferralService {
             String deptName = jp.getDepartmentId() != null && deptMap.containsKey(jp.getDepartmentId())
                     ? deptMap.get(jp.getDepartmentId()).getName() : null;
 
+            Long reqId = jp.getRequisitionId();
+            if (reqId == null) {
+                Long deptId = jp.getDepartmentId();
+                Long titleId = jp.getJobTitleId();
+                List<RecruitmentRequisition> allReqs = requisitionRepository.findAll();
+                reqId = allReqs.stream()
+                        .filter(r -> deptId != null && deptId.equals(r.getDepartmentId()) && (titleId == null || titleId.equals(r.getJobTitleId())))
+                        .map(RecruitmentRequisition::getId)
+                        .findFirst()
+                        .orElseGet(() -> allReqs.stream()
+                                .filter(r -> deptId != null && deptId.equals(r.getDepartmentId()))
+                                .map(RecruitmentRequisition::getId)
+                                .findFirst()
+                                .orElseGet(() -> allReqs.isEmpty() ? null : allReqs.get(0).getId()));
+                if (reqId != null) {
+                    jp.setRequisitionId(reqId);
+                    jobPostingRepository.save(jp);
+                }
+            }
+
             positions.add(ReferralActivePositionResponse.builder()
                     .jobPostingId(jp.getId())
-                    .requisitionId(jp.getRequisitionId())
+                    .requisitionId(reqId)
                     .jobCode(jp.getJobCode())
                     .title(jp.getTitle())
                     .departmentId(jp.getDepartmentId())
