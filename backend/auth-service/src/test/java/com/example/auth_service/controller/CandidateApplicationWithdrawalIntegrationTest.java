@@ -20,7 +20,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -49,7 +48,6 @@ class CandidateApplicationWithdrawalIntegrationTest {
     @Autowired private RecruitmentRequisitionRepository requisitions;
     @Autowired private RequisitionAssignmentRepository assignments;
     @Autowired private CandidateApplicationRepository applications;
-    @Autowired private CandidateApplicationWithdrawTokenRepository tokens;
     @Autowired private NotificationRepository notifications;
     @Autowired private CandidateApplicationWithdrawalService withdrawalService;
 

@@ -7,7 +7,6 @@ import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
-import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.JwtUtils;
