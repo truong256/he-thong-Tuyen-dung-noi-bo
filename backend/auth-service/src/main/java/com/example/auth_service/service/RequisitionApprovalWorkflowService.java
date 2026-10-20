@@ -417,9 +417,8 @@ public class RequisitionApprovalWorkflowService {
         }
         RequisitionApprovalSnapshot currentStep = pending.getFirst();
 
-        if (!users.existsById(userId)) {
-            throw new AccessDeniedException("Người dùng không tồn tại.");
-        }
+        users.findById(userId)
+                .orElseThrow(() -> new AccessDeniedException("Người dùng không tồn tại."));
 
         if (!currentStep.getApproverUserId().equals(userId)) {
             throw new AccessDeniedException("Bạn không phải người phê duyệt ở cấp hiện tại.");
