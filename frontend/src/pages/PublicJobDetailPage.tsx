@@ -18,7 +18,6 @@ import {
   Mail,
   Phone,
   Link as LinkIcon,
-  HelpCircle,
 } from 'lucide-react';
 import { JobPostingPublic } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';
@@ -46,7 +45,6 @@ export const PublicJobDetailPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [applied, setApplied] = useState(false);
-  const [appliedResult, setAppliedResult] = useState<{ applicationId?: number; message?: string } | null>(null);
 
   const applySectionRef = useRef<HTMLDivElement>(null);
   const fullNameInputRef = useRef<HTMLInputElement>(null);
@@ -60,8 +58,8 @@ export const PublicJobDetailPage: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      if (user.fullName && !fullName) setFullName(user.fullName);
-      if (user.email && !email) setEmail(user.email);
+      if (user.fullName) setFullName((prev) => prev || user.fullName || '');
+      if (user.email) setEmail((prev) => prev || user.email || '');
     }
   }, [user]);
 
@@ -135,7 +133,7 @@ export const PublicJobDetailPage: React.FC = () => {
 
     setSubmitting(true);
     try {
-      const result = await jobPostingApi.applyPublic(job.id, {
+      await jobPostingApi.applyPublic(job.id, {
         fullName: fullName.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
@@ -144,10 +142,6 @@ export const PublicJobDetailPage: React.FC = () => {
       });
 
       setApplied(true);
-      setAppliedResult({
-        applicationId: result.applicationId,
-        message: result.message || 'Hồ sơ của bạn đã được chuyển tới bộ phận tuyển dụng!',
-      });
     } catch (err: any) {
       setSubmitError(
         err?.response?.data?.message ||
