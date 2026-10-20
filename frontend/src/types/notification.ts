@@ -6,7 +6,8 @@ export interface NotificationItem {
   type: string;
   referenceType?: string;
   referenceId?: number;
-  isRead: boolean;
+  isRead?: boolean;
+  read?: boolean;
   createdAt: string;
 }
 

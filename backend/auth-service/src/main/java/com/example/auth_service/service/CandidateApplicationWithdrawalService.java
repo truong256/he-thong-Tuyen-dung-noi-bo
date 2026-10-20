@@ -17,7 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -267,68 +269,83 @@ public class CandidateApplicationWithdrawalService {
         Long requisitionId = app.getRequisitionId();
         String positionTitle = "Vị trí tuyển dụng";
         String requisitionCode = "";
-        Optional<RecruitmentRequisition> reqOpt = requisitionRepository.findById(requisitionId);
-        if (reqOpt.isPresent()) {
-            RecruitmentRequisition req = reqOpt.get();
-            positionTitle = req.getTitle();
-            requisitionCode = req.getRequisitionCode();
+        if (requisitionId != null) {
+            Optional<RecruitmentRequisition> reqOpt = requisitionRepository.findById(requisitionId);
+            if (reqOpt.isPresent()) {
+                RecruitmentRequisition req = reqOpt.get();
+                positionTitle = req.getTitle();
+                requisitionCode = req.getRequisitionCode();
+            }
         }
 
         // AC3: Identify assigned recruiter
-        List<RequisitionAssignment> recruiterAssignments =
-                assignmentRepository.findByRequisitionIdAndRole(requisitionId, RoleName.RECRUITER);
+        List<RequisitionAssignment> recruiterAssignments = requisitionId != null
+                ? assignmentRepository.findByRequisitionIdAndRole(requisitionId, RoleName.RECRUITER)
+                : Collections.emptyList();
 
-        if (recruiterAssignments.isEmpty()) {
-            logger.warn("Không xác định được recruiter phụ trách cho yêu cầu tuyển dụng ID: {} khi ứng viên rút hồ sơ ID: {}. Không gửi thông báo tùy tiện.",
-                    requisitionId, app.getId());
+        List<User> targetRecruiters = new ArrayList<>();
+
+        if (!recruiterAssignments.isEmpty()) {
+            // Prioritize primary recruiter if defined; otherwise all assigned recruiters
+            List<RequisitionAssignment> primaries = recruiterAssignments.stream()
+                    .filter(RequisitionAssignment::isPrimary)
+                    .toList();
+            List<RequisitionAssignment> assignmentsToUse = primaries.isEmpty() ? recruiterAssignments : primaries;
+            for (RequisitionAssignment assignment : assignmentsToUse) {
+                userRepository.findById(assignment.getUserId()).ifPresent(targetRecruiters::add);
+            }
+        }
+
+        // Fallback: If no recruiter assigned specifically to this requisition, notify all active recruiters
+        if (targetRecruiters.isEmpty()) {
+            logger.info("Yêu cầu tuyển dụng ID: {} chưa có Recruiter phân công cụ thể. Chuyển tiếp thông báo rút hồ sơ tới toàn bộ Recruiter đang hoạt động.", requisitionId);
+            List<User> activeRecruiters = userRepository.findActiveUsersByRoleName(RoleName.RECRUITER);
+            if (!activeRecruiters.isEmpty()) {
+                targetRecruiters.addAll(activeRecruiters);
+            } else {
+                List<User> activeHrManagers = userRepository.findActiveUsersByRoleName(RoleName.HR_MANAGER);
+                targetRecruiters.addAll(activeHrManagers);
+            }
+        }
+
+        if (targetRecruiters.isEmpty()) {
+            logger.warn("Không tìm thấy bất kỳ tài khoản recruiter hoặc HR manager nào trong hệ thống khi ứng viên rút hồ sơ ID: {}.", app.getId());
             return;
         }
 
-        // Prioritize primary recruiter if defined; otherwise take the assigned recruiter
-        RequisitionAssignment targetAssignment = recruiterAssignments.stream()
-                .filter(RequisitionAssignment::isPrimary)
-                .findFirst()
-                .orElse(recruiterAssignments.get(0));
+        String notifTitle = "Ứng viên đã rút hồ sơ";
+        String codeSuffix = (requisitionCode != null && !requisitionCode.isBlank()) ? " (Mã: " + requisitionCode + ")" : "";
+        String notifContent = String.format("Ứng viên %s (%s) đã rút hồ sơ ứng tuyển vị trí %s%s.",
+                app.getFullName(), app.getEmail(), positionTitle, codeSuffix);
 
-        Long recruiterUserId = targetAssignment.getUserId();
-        Optional<User> recruiterUserOpt = userRepository.findById(recruiterUserId);
-        if (recruiterUserOpt.isEmpty()) {
-            logger.warn("Không tìm thấy thông tin tài khoản recruiter ID: {} được phân công cho yêu cầu ID: {}.",
-                    recruiterUserId, requisitionId);
-            return;
-        }
+        for (User recruiter : targetRecruiters) {
+            Long recruiterUserId = recruiter.getId();
+            // Prevent duplicate notification
+            boolean alreadyNotified = notificationRepository.existsByUserIdAndRelatedEntityTypeAndRelatedEntityIdAndType(
+                    recruiterUserId, "CANDIDATE_APPLICATION", app.getId(), "CANDIDATE_WITHDRAWAL");
 
-        User recruiter = recruiterUserOpt.get();
+            if (!alreadyNotified) {
+                Notification notif = new Notification();
+                notif.setUserId(recruiterUserId);
+                notif.setTitle(notifTitle);
+                notif.setContent(notifContent);
+                notif.setType("CANDIDATE_WITHDRAWAL");
+                notif.setRelatedEntityId(app.getId());
+                notif.setRelatedEntityType("CANDIDATE_APPLICATION");
+                notif.setRead(false);
+                notif.setCreatedAt(Instant.now());
+                notificationRepository.save(notif);
 
-        // Prevent duplicate notification
-        boolean alreadyNotified = notificationRepository.existsByUserIdAndRelatedEntityTypeAndRelatedEntityIdAndType(
-                recruiterUserId, "CANDIDATE_APPLICATION", app.getId(), "CANDIDATE_WITHDRAWAL");
-
-        if (!alreadyNotified) {
-            String notifTitle = "Ứng viên đã rút hồ sơ";
-            String notifContent = String.format("Ứng viên %s (%s) đã rút hồ sơ ứng tuyển vị trí %s (Mã: %s).",
-                    app.getFullName(), app.getEmail(), positionTitle, requisitionCode);
-
-            Notification notif = new Notification();
-            notif.setUserId(recruiterUserId);
-            notif.setTitle(notifTitle);
-            notif.setContent(notifContent);
-            notif.setType("CANDIDATE_WITHDRAWAL");
-            notif.setRelatedEntityId(app.getId());
-            notif.setRelatedEntityType("CANDIDATE_APPLICATION");
-            notif.setRead(false);
-            notif.setCreatedAt(Instant.now());
-            notificationRepository.save(notif);
-
-            try {
-                mailService.sendCandidateWithdrawnNotification(
-                        recruiter.getEmail(),
-                        app.getFullName(),
-                        positionTitle,
-                        app.getId()
-                );
-            } catch (Exception e) {
-                logger.error("Lỗi khi gửi email thông báo rút hồ sơ tới recruiter {}: {}", recruiter.getEmail(), e.getMessage());
+                try {
+                    mailService.sendCandidateWithdrawnNotification(
+                            recruiter.getEmail(),
+                            app.getFullName(),
+                            positionTitle,
+                            app.getId()
+                    );
+                } catch (Exception e) {
+                    logger.error("Lỗi khi gửi email thông báo rút hồ sơ tới recruiter {}: {}", recruiter.getEmail(), e.getMessage());
+                }
             }
         }
     }
