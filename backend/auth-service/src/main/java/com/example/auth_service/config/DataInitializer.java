@@ -39,6 +39,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Configuration
@@ -453,7 +454,23 @@ public class DataInitializer {
                 }
             }
 
-            // 8. Seed sample candidate application and withdraw token for testing SCRUM-181 & SCRUM-182
+            // 8. Seed/Reset sample candidate application and withdraw token for testing SCRUM-181 & SCRUM-182
+            if (!isTestProfile) {
+                tokenRepository.findByToken("demo-withdraw-token-123").ifPresent(token -> {
+                    token.setUsed(false);
+                    token.setUsedAt(null);
+                    token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+                    tokenRepository.save(token);
+
+                    applicationRepository.findById(token.getApplicationId()).ifPresent(app -> {
+                        app.setStage("SCREENING");
+                        app.setWithdrawnAt(null);
+                        app.setWithdrawalReason(null);
+                        applicationRepository.save(app);
+                    });
+                });
+            }
+
             if (!isTestProfile && applicationRepository.count() == 0) {
                 User candidateUser = userRepository.findByEmail("candidate@company.com").orElse(null);
                 User recruiterUser = userRepository.findByEmail("recruiter@company.com").orElse(null);
@@ -472,21 +489,37 @@ public class DataInitializer {
                 }
 
                 if (sampleReq != null && candidateUser != null) {
-                    CandidateApplication app = new CandidateApplication();
-                    app.setCandidateUserId(candidateUser.getId());
-                    app.setFullName(candidateUser.getFullName());
-                    app.setEmail(candidateUser.getEmail());
-                    app.setRequisitionId(sampleReq.getId());
-                    app.setStage("SCREENING");
-                    app = applicationRepository.save(app);
+                    Optional<CandidateApplicationWithdrawToken> existingToken = tokenRepository.findByToken("demo-withdraw-token-123");
+                    if (existingToken.isPresent()) {
+                        CandidateApplicationWithdrawToken token = existingToken.get();
+                        token.setUsed(false);
+                        token.setUsedAt(null);
+                        token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+                        tokenRepository.save(token);
 
-                    CandidateApplicationWithdrawToken token = new CandidateApplicationWithdrawToken();
-                    token.setApplicationId(app.getId());
-                    token.setToken("demo-withdraw-token-123");
-                    token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
-                    token.setUsed(false);
-                    token.setCreatedAt(Instant.now());
-                    tokenRepository.save(token);
+                        applicationRepository.findById(token.getApplicationId()).ifPresent(app -> {
+                            app.setStage("SCREENING");
+                            app.setWithdrawnAt(null);
+                            app.setWithdrawalReason(null);
+                            applicationRepository.save(app);
+                        });
+                    } else {
+                        CandidateApplication app = new CandidateApplication();
+                        app.setCandidateUserId(candidateUser.getId());
+                        app.setFullName(candidateUser.getFullName());
+                        app.setEmail(candidateUser.getEmail());
+                        app.setRequisitionId(sampleReq.getId());
+                        app.setStage("SCREENING");
+                        app = applicationRepository.save(app);
+
+                        CandidateApplicationWithdrawToken token = new CandidateApplicationWithdrawToken();
+                        token.setApplicationId(app.getId());
+                        token.setToken("demo-withdraw-token-123");
+                        token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+                        token.setUsed(false);
+                        token.setCreatedAt(Instant.now());
+                        tokenRepository.save(token);
+                    }
                 }
             }
             // 9. Seed sample public job postings for S4-01 / SCRUM-154

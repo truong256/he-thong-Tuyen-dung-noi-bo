@@ -22,3 +22,18 @@ export interface WithdrawalResultResponse {
   stage: string;
   withdrawnAt?: string;
 }
+
+export interface CandidateApplicationPortalItem {
+  id: number;
+  requisitionId: number;
+  positionTitle: string;
+  requisitionCode: string;
+  fullName: string;
+  email: string;
+  stage: string;
+  withdrawn: boolean;
+  withdrawnAt?: string;
+  withdrawalReason?: string;
+  withdrawToken?: string;
+}
+

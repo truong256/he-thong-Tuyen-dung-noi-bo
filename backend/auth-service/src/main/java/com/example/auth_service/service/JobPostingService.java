@@ -41,6 +41,7 @@ public class JobPostingService {
     private final CandidateApplicationRepository candidateApplications;
     private final RoleRepository roles;
     private final PasswordEncoder passwordEncoder;
+    private final CandidateApplicationWithdrawalService withdrawalService;
 
     @Autowired
     public JobPostingService(
@@ -53,7 +54,8 @@ public class JobPostingService {
             @Autowired(required = false) RequisitionAssignmentRepository assignments,
             @Autowired(required = false) CandidateApplicationRepository candidateApplications,
             @Autowired(required = false) RoleRepository roles,
-            @Autowired(required = false) PasswordEncoder passwordEncoder
+            @Autowired(required = false) PasswordEncoder passwordEncoder,
+            @Autowired(required = false) CandidateApplicationWithdrawalService withdrawalService
     ) {
         this.jobPostings = jobPostings;
         this.auditLogs = auditLogs;
@@ -65,6 +67,7 @@ public class JobPostingService {
         this.candidateApplications = candidateApplications;
         this.roles = roles;
         this.passwordEncoder = passwordEncoder;
+        this.withdrawalService = withdrawalService;
     }
 
     public JobPostingService(
@@ -75,7 +78,7 @@ public class JobPostingService {
             JobTitleRepository jobTitles,
             UserRepository users
     ) {
-        this(jobPostings, auditLogs, requisitions, departments, jobTitles, users, null, null, null, null);
+        this(jobPostings, auditLogs, requisitions, departments, jobTitles, users, null, null, null, null, null);
     }
 
     /**
@@ -558,6 +561,13 @@ public class JobPostingService {
         CandidateApplication savedApp;
         if (candidateApplications != null) {
             savedApp = candidateApplications.save(app);
+            if (withdrawalService != null) {
+                try {
+                    withdrawalService.sendApplicationConfirmationWithWithdrawLink(savedApp);
+                } catch (Exception ex) {
+                    // Non-blocking: application submission succeeds even if email fails
+                }
+            }
         } else {
             savedApp = app;
             savedApp.setId(101L);

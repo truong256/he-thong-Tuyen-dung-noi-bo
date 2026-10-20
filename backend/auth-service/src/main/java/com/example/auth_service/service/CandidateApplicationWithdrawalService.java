@@ -1,6 +1,7 @@
 package com.example.auth_service.service;
 
 import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
+import com.example.auth_service.dto.CandidateApplicationPortalDto;
 import com.example.auth_service.dto.WithdrawalResultResponse;
 import com.example.auth_service.dto.WithdrawalValidationResponse;
 import com.example.auth_service.entity.*;
@@ -200,6 +201,39 @@ public class CandidateApplicationWithdrawalService {
                 STAGE_WITHDRAWN,
                 now
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<CandidateApplicationPortalDto> getCandidateApplications(Long candidateUserId) {
+        if (candidateUserId == null) return List.of();
+        List<CandidateApplication> apps = applicationRepository.findByCandidateUserId(candidateUserId);
+        return apps.stream().map(app -> {
+            String positionTitle = "Vị trí tuyển dụng";
+            String requisitionCode = "";
+            Optional<RecruitmentRequisition> reqOpt = requisitionRepository.findById(app.getRequisitionId());
+            if (reqOpt.isPresent()) {
+                RecruitmentRequisition req = reqOpt.get();
+                positionTitle = req.getTitle();
+                requisitionCode = req.getRequisitionCode();
+            }
+            boolean isWithdrawn = isWithdrawnStage(app.getStage());
+            String tokenStr = tokenRepository.findTopByApplicationIdAndUsedFalseOrderByCreatedAtDesc(app.getId())
+                    .map(CandidateApplicationWithdrawToken::getToken)
+                    .orElse(null);
+            return new CandidateApplicationPortalDto(
+                    app.getId(),
+                    app.getRequisitionId(),
+                    positionTitle,
+                    requisitionCode,
+                    app.getFullName(),
+                    app.getEmail(),
+                    app.getStage(),
+                    isWithdrawn,
+                    app.getWithdrawnAt(),
+                    app.getWithdrawalReason(),
+                    tokenStr
+            );
+        }).toList();
     }
 
     public CandidateApplicationWithdrawToken createWithdrawalToken(Long applicationId) {

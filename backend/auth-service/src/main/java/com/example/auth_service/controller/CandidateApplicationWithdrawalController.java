@@ -1,5 +1,6 @@
 package com.example.auth_service.controller;
 
+import com.example.auth_service.dto.CandidateApplicationPortalDto;
 import com.example.auth_service.dto.WithdrawApplicationRequest;
 import com.example.auth_service.dto.WithdrawalResultResponse;
 import com.example.auth_service.dto.WithdrawalValidationResponse;
@@ -11,6 +12,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,6 +23,18 @@ public class CandidateApplicationWithdrawalController {
 
     public CandidateApplicationWithdrawalController(CandidateApplicationWithdrawalService withdrawalService) {
         this.withdrawalService = withdrawalService;
+    }
+
+    /**
+     * S4-06: Danh sách các hồ sơ ứng tuyển của chính ứng viên đăng nhập.
+     */
+    @GetMapping("/candidate/applications")
+    @PreAuthorize("hasAnyAuthority('CANDIDATE_READ_OWN', 'ROLE_CANDIDATE')")
+    public ResponseEntity<List<CandidateApplicationPortalDto>> getMyApplications(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        List<CandidateApplicationPortalDto> list = withdrawalService.getCandidateApplications(principal.getId());
+        return ResponseEntity.ok(list);
     }
 
     /**

@@ -198,10 +198,10 @@ public class SecurityConfig {
                 // S3-10 / S3-09: Quản lý tin tuyển dụng nội bộ
                 .requestMatchers("/api/job-postings", "/api/job-postings/**")
                         .hasAnyAuthority("JOB_MANAGE", "ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_RECRUITER")
-                // SCRUM-181 & SCRUM-182: API rút hồ sơ ứng tuyển (AC1 qua token email công khai)
+                // SCRUM-181 & SCRUM-182: API rút hồ sơ ứng tuyển (AC1 qua token email công khai & Candidate Portal)
                 .requestMatchers(HttpMethod.GET, "/api/public/applications/withdraw").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/public/applications/withdraw").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/candidate/applications/{id}/withdraw")
+                .requestMatchers("/api/candidate/applications", "/api/candidate/applications/**")
                         .hasAnyAuthority("CANDIDATE_READ_OWN", "ROLE_CANDIDATE")
                 // AC3: Thông báo hệ thống (Notification Center) - NOTIFICATION_READ_OWN
                 .requestMatchers("/api/notifications", "/api/notifications/**")

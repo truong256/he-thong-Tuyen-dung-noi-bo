@@ -28,6 +28,7 @@ import PublicCareerPage from './pages/PublicCareerPage';
 import PublicJobDetailPage from './pages/PublicJobDetailPage';
 import PermissionMatrixPage from './pages/PermissionMatrixPage';
 import WithdrawApplicationPage from './pages/WithdrawApplicationPage';
+import CandidateApplicationsPage from './pages/CandidateApplicationsPage';
 
 export const App: React.FC = () => {
   return (
@@ -91,6 +92,10 @@ export const App: React.FC = () => {
 
             {/* Profile – tất cả authenticated users (PROFILE_READ base permission) */}
             <Route path="profile" element={<ProfilePage />} />
+
+            {/* Cổng thông tin ứng viên: Hồ sơ & CV đã nộp (S4-06) */}
+            <Route path="candidate/applications" element={<CandidateApplicationsPage />} />
+            <Route path="my-applications" element={<Navigate to="/candidate/applications" replace />} />
 
             {/*
               Organization & Company Profile – CATALOG_READ

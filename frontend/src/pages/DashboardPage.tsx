@@ -17,6 +17,7 @@ import jobTitleApi from '../api/jobTitle';
 import categoryApi from '../api/category';
 import questionBankApi from '../api/questionBank';
 import jobPostingApi from '../api/jobPosting';
+import CandidateMyApplications from '../components/candidate/CandidateMyApplications';
 
 interface DashboardMetrics {
   userCount: number;
@@ -399,6 +400,9 @@ export const DashboardPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Hồ sơ & CV ứng tuyển của tôi kèm tính năng Rút hồ sơ (S4-06) */}
+          <CandidateMyApplications />
         </div>
       )}
 

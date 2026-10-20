@@ -33,6 +33,14 @@ export const withdrawalApi = {
     });
     return response.data;
   },
+
+  /**
+   * Fetch all applications of current authenticated candidate (GET)
+   */
+  getMyApplications: async (): Promise<import('../types/withdrawal').CandidateApplicationPortalItem[]> => {
+    const response = await apiClient.get<import('../types/withdrawal').CandidateApplicationPortalItem[]>('/api/candidate/applications');
+    return response.data;
+  },
 };
 
 export default withdrawalApi;

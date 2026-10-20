@@ -12,6 +12,8 @@ public interface CandidateApplicationRepository extends JpaRepository<CandidateA
 
     java.util.List<CandidateApplication> findByRequisitionId(Long requisitionId);
 
+    java.util.List<CandidateApplication> findByCandidateUserId(Long candidateUserId);
+
     long countByRequisitionId(Long requisitionId);
 }
 

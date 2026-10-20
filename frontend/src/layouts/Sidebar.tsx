@@ -308,16 +308,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </NavLink>
                 </li>
                 <li>
-                  <a
-                    href="#my-profile"
-                    className="sidebar-link-upcoming"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Hồ sơ & CV của tôi');
-                    }}
-                  >
+                  <NavLink to="/candidate/applications" onClick={handleLinkClick}>
                     <span>Hồ sơ & CV của tôi</span>
-                  </a>
+                  </NavLink>
                 </li>
               </ul>
             </div>
