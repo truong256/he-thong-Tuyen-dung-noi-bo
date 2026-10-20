@@ -62,6 +62,30 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
     @Query("""
         SELECT j FROM JobPosting j
+        WHERE j.status = 'PUBLISHED'
+          AND (:includeExpired = true OR j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
+          AND (:departmentId IS NULL OR j.departmentId = :departmentId)
+          AND (:workingModel IS NULL OR UPPER(j.workingModel) = UPPER(:workingModel))
+          AND (:workLocation IS NULL OR LOWER(j.workLocation) LIKE LOWER(CONCAT('%', :workLocation, '%')))
+          AND (:keyword IS NULL OR (
+                LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.jobDescription) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.requirements) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          ))
+        ORDER BY j.publishedAt DESC, j.createdAt DESC
+    """)
+    Page<JobPosting> findPublicPostingsWithExpired(
+            @Param("currentDate") LocalDate currentDate,
+            @Param("departmentId") Long departmentId,
+            @Param("workingModel") String workingModel,
+            @Param("workLocation") String workLocation,
+            @Param("keyword") String keyword,
+            @Param("includeExpired") boolean includeExpired,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT j FROM JobPosting j
         WHERE j.id = :id
           AND j.status = 'PUBLISHED'
           AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)

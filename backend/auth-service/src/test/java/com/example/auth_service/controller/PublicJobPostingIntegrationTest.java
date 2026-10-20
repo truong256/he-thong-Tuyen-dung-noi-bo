@@ -113,7 +113,10 @@ class PublicJobPostingIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.totalElements").value(3));
         mvc.perform(get("/api/public/job-postings/" + expired.getId()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expired").value(true))
+                .andExpect(jsonPath("$.canApply").value(false))
+                .andExpect(jsonPath("$.status").value("EXPIRED"));
     }
 
     @Test

@@ -554,6 +554,50 @@ public class DataInitializer {
                 jp3.setPublishedAt(Instant.now());
                 jp3.setDepartmentId(itDeptId);
                 jobPostingRepository.save(jp3);
+
+                // S4-02: Tin tuyển dụng mẫu đã hết hạn nhận hồ sơ để kiểm thử giao diện & API chặn ứng tuyển
+                JobPosting jp4 = new JobPosting();
+                jp4.setTitle("Chuyên viên Truyền thông & Thương hiệu Tuyển dụng (Đã hết hạn)");
+                jp4.setJobCode("JP-2026-0004");
+                jp4.setStatus("PUBLISHED");
+                jp4.setWorkingModel("HYBRID");
+                jp4.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                jp4.setQuantity(1);
+                jp4.setJobDescription("Lên kế hoạch và thực hiện các chiến dịch truyền thông nhằm gia tăng độ nhận diện thương hiệu tuyển dụng của công ty.");
+                jp4.setRequirements("Tối thiểu 2 năm kinh nghiệm trong lĩnh vực truyền thông nội bộ hoặc Employer Branding.");
+                jp4.setBenefits("Môi trường sáng tạo, hỗ trợ chi phí tham gia các khóa học chuyên môn, khám sức khỏe định kỳ.");
+                jp4.setSalaryVisible(true);
+                jp4.setSalaryMin(18000000L);
+                jp4.setSalaryMax(28000000L);
+                jp4.setCurrency("VND");
+                jp4.setApplicationDeadline(LocalDate.now().minusDays(3)); // Đã hết hạn cách đây 3 ngày
+                jp4.setPublishedAt(Instant.now().minus(20, java.time.temporal.ChronoUnit.DAYS));
+                jp4.setDepartmentId(hrDeptId);
+                jobPostingRepository.save(jp4);
+            } else if (!isTestProfile && jobPostingRepository.findByJobCode("JP-2026-0004").isEmpty()) {
+                Department hrDept = departmentRepository.findAll().stream()
+                        .filter(d -> "HR".equalsIgnoreCase(d.getCode()) || (d.getName() != null && d.getName().contains("Nhân sự")))
+                        .findFirst().orElseGet(() -> departmentRepository.findAll().stream().findFirst().orElse(null));
+                Long hrDeptId = hrDept != null ? hrDept.getId() : null;
+
+                JobPosting jp4 = new JobPosting();
+                jp4.setTitle("Chuyên viên Truyền thông & Thương hiệu Tuyển dụng (Đã hết hạn)");
+                jp4.setJobCode("JP-2026-0004");
+                jp4.setStatus("PUBLISHED");
+                jp4.setWorkingModel("HYBRID");
+                jp4.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                jp4.setQuantity(1);
+                jp4.setJobDescription("Lên kế hoạch và thực hiện các chiến dịch truyền thông nhằm gia tăng độ nhận diện thương hiệu tuyển dụng của công ty.");
+                jp4.setRequirements("Tối thiểu 2 năm kinh nghiệm trong lĩnh vực truyền thông nội bộ hoặc Employer Branding.");
+                jp4.setBenefits("Môi trường sáng tạo, hỗ trợ chi phí tham gia các khóa học chuyên môn, khám sức khỏe định kỳ.");
+                jp4.setSalaryVisible(true);
+                jp4.setSalaryMin(18000000L);
+                jp4.setSalaryMax(28000000L);
+                jp4.setCurrency("VND");
+                jp4.setApplicationDeadline(LocalDate.now().minusDays(3)); // Đã hết hạn cách đây 3 ngày
+                jp4.setPublishedAt(Instant.now().minus(20, java.time.temporal.ChronoUnit.DAYS));
+                jp4.setDepartmentId(hrDeptId);
+                jobPostingRepository.save(jp4);
             }
 
         };

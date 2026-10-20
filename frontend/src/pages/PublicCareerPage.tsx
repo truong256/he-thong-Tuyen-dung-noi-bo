@@ -30,6 +30,7 @@ export const PublicCareerPage: React.FC = () => {
   const [departmentId, setDepartmentId] = useState<string>('ALL');
   const [workLocation, setWorkLocation] = useState<string>('ALL');
   const [workingModel, setWorkingModel] = useState<string>('ALL');
+  const [includeExpired, setIncludeExpired] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
 
   const loadJobs = useCallback(async () => {
@@ -43,6 +44,7 @@ export const PublicCareerPage: React.FC = () => {
         workLocation: loc,
         workingModel: workingModel !== 'ALL' ? workingModel : undefined,
         keyword: keyword.trim() || undefined,
+        includeExpired,
         page: 0,
         size: 30,
       });
@@ -53,7 +55,7 @@ export const PublicCareerPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [keyword, departmentId, workLocation, workingModel]);
+  }, [keyword, departmentId, workLocation, workingModel, includeExpired]);
 
   useEffect(() => {
     jobPostingApi.getPublicDepartments().then((data) => {
@@ -172,6 +174,18 @@ export const PublicCareerPage: React.FC = () => {
               </select>
             </div>
           </div>
+
+          <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={includeExpired}
+                onChange={(e) => setIncludeExpired(e.target.checked)}
+                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              <span>Hiển thị cả tin tuyển dụng đã hết hạn</span>
+            </label>
+          </div>
         </div>
       </section>
 
@@ -179,7 +193,7 @@ export const PublicCareerPage: React.FC = () => {
       <main className="jp-public-main-content">
         <div className="jp-public-header-row">
           <h2>Các vị trí đang mở tuyển ({totalElements})</h2>
-          <span className="jp-text-muted">Chỉ hiển thị các tin tuyển dụng đã phê duyệt và còn hạn nhận hồ sơ</span>
+          <span className="jp-text-muted">Khám phá các cơ hội nghề nghiệp và vị trí tuyển dụng từ doanh nghiệp</span>
         </div>
 
         {loading ? (
@@ -221,12 +235,29 @@ export const PublicCareerPage: React.FC = () => {
             {jobs.map((job) => (
               <div
                 key={job.id}
-                className="jp-public-job-card"
+                className={`jp-public-job-card ${job.expired ? 'jp-job-card-expired-border' : ''}`}
+                style={job.expired ? { borderLeft: '4px solid #ef4444', opacity: 0.92 } : undefined}
                 onClick={() => navigate(`/careers/${job.id}`)}
               >
                 <div className="jp-job-card-top">
                   <span className="jp-job-card-dept">{job.departmentName || 'Doanh nghiệp'}</span>
                   <span className="jp-job-card-model">{job.workingModel}</span>
+                  {job.expired && (
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        background: '#fee2e2',
+                        color: '#991b1b',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        border: '1px solid #fca5a5',
+                      }}
+                    >
+                      Đã hết hạn
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="jp-job-card-title">{job.title}</h3>
@@ -243,16 +274,16 @@ export const PublicCareerPage: React.FC = () => {
                     {job.salaryDisplay}
                   </span>
                   {job.applicationDeadline && (
-                    <span className="jp-job-meta-item">
+                    <span className="jp-job-meta-item" style={job.expired ? { color: '#b91c1c', fontWeight: 500 } : undefined}>
                       <Calendar size={14} />
-                      Hạn nộp: {job.applicationDeadline}
+                      Hạn nộp: {job.applicationDeadline} {job.expired && '(Hết hạn)'}
                     </span>
                   )}
                 </div>
 
                 <div className="jp-job-card-footer">
                   <span className="jp-job-card-link">
-                    <span>Xem chi tiết công việc</span>
+                    <span>{job.expired ? 'Xem chi tiết (Đã dừng nhận hồ sơ)' : 'Xem chi tiết công việc'}</span>
                     <ArrowRight size={16} />
                   </span>
                 </div>

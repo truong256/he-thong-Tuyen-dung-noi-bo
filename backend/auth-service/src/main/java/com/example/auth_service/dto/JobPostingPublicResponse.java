@@ -36,4 +36,9 @@ public class JobPostingPublicResponse {
 
     private LocalDate applicationDeadline;
     private Instant publishedAt;
+
+    private boolean expired;
+    private boolean canApply;
+    private String status;
+    private String expiredMessage;
 }
