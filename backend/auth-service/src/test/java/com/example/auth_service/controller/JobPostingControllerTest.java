@@ -191,7 +191,7 @@ class JobPostingControllerTest {
                 .salaryDisplay("20,000,000 - 35,000,000 VND")
                 .build();
 
-        when(jobPostingService.getPublicJobPostings(any(), any(), any(), any(), any()))
+        when(jobPostingService.getPublicJobPostings(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(pub), org.springframework.data.domain.PageRequest.of(0, 10), 1));
 
         publicMockMvc.perform(get("/api/public/job-postings")

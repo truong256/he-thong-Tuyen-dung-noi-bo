@@ -4,6 +4,7 @@ import com.example.auth_service.domain.sprint2.SalaryRange;
 import com.example.auth_service.dto.CandidateSummaryDto;
 import com.example.auth_service.repository.*;
 import com.example.auth_service.security.CandidateScope;
+import com.example.auth_service.security.UserPrincipal;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import org.springframework.data.domain.*;
 import org.springframework.security.access.AccessDeniedException;
@@ -67,16 +68,43 @@ public class RecruitmentReadService {
     @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
     @Transactional
     public CandidateSummaryDto updatePipelineStage(Long candidateId, String stage) {
-        var scope = CandidateScope.visibleTo(SecurityContextHolder.getContext().getAuthentication());
-        var app = candidates.findOne(scope.and((root, query, cb) -> cb.equal(root.get("id"), candidateId)))
-                .orElseThrow(() -> new AccessDeniedException("Bạn không có quyền quản lý pipeline của ứng viên này hoặc ứng viên ngoài phạm vi phụ trách."));
+        return updatePipelineStage(candidateId, stage, null);
+    }
+
+    @PreAuthorize("hasAuthority('PIPELINE_MANAGE')")
+    @Transactional
+    public CandidateSummaryDto updatePipelineStage(Long candidateId, String stage, String reason) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        var scope = CandidateScope.visibleTo(authentication);
+        var app = candidates.findOne(scope.and(
+                (root, query, cb) -> cb.equal(root.get("id"), candidateId)))
+                .orElseThrow(() -> new AccessDeniedException(
+                        "Bạn không có quyền quản lý pipeline của ứng viên này hoặc ứng viên ngoài phạm vi phụ trách."));
 
         if (CandidateApplicationWithdrawalService.isWithdrawnStage(app.getStage())) {
             throw new com.example.auth_service.exception.BadRequestException(
                     "Hồ sơ đã được ứng viên rút và không thể tiếp tục chuyển giai đoạn trong pipeline.");
         }
 
-        app.setStage(stage != null ? stage.trim() : "APPLIED");
+        String normalizedStage = stage == null ? "" : stage.trim();
+        if ("REJECTED".equals(normalizedStage)) {
+            if (reason == null || reason.trim().length() < 5) {
+                throw new com.example.auth_service.exception.BadRequestException(
+                        "Lý do từ chối phải có ít nhất 5 ký tự.");
+            }
+            app.setRejectionReason(reason.trim());
+        } else {
+            app.setRejectionReason(null);
+        }
+
+        Long actorId = null;
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal) {
+            actorId = ((UserPrincipal) authentication.getPrincipal()).getId();
+        }
+
+        app.setStage(normalizedStage.isEmpty() ? "APPLIED" : normalizedStage);
+        app.setStageChangedById(actorId);
+        app.setStageChangedAt(java.time.Instant.now());
         return CandidateSummaryDto.from(candidates.save(app));
     }
 }

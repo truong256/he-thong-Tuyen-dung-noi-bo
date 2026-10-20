@@ -765,7 +765,7 @@ public class JobPostingService {
 
         String salaryDisplay = "Thỏa thuận";
         if (j.isSalaryVisible() && (j.getSalaryMin() != null || j.getSalaryMax() != null)) {
-            DecimalFormat fmt = new DecimalFormat("#,###");
+            DecimalFormat fmt = new DecimalFormat("#,###", java.text.DecimalFormatSymbols.getInstance(java.util.Locale.US));
             String curr = j.getCurrency() != null ? j.getCurrency() : "VND";
             if (j.getSalaryMin() != null && j.getSalaryMax() != null) {
                 salaryDisplay = fmt.format(j.getSalaryMin()) + " - " + fmt.format(j.getSalaryMax()) + " " + curr;
