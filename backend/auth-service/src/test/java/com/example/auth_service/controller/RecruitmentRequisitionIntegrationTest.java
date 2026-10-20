@@ -28,7 +28,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.util.Set;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -46,7 +45,6 @@ class RecruitmentRequisitionIntegrationTest {
     @Autowired private RoleRepository roles;
     @Autowired private DepartmentRepository departments;
     @Autowired private JobTitleRepository jobTitles;
-    @Autowired private RecruitmentRequisitionRepository requisitions;
     @Autowired private com.example.auth_service.repository.RequisitionApprovalConfigurationRepository configurations;
     @Autowired private com.example.auth_service.repository.RequisitionApprovalConfigurationStepRepository configurationSteps;
 
@@ -314,7 +312,7 @@ class RecruitmentRequisitionIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Long sourceId = mapper.readTree(createContent).get("id").asLong();
-        String sourceCode = mapper.readTree(createContent).get("requisitionCode").asText();
+        String sourceCode = mapper.readTree(createContent).get("requisitionCode").asString();
 
         // 2. Thực hiện gọi API clone
         String cloneContent = mvc.perform(post("/api/recruitment-requests/" + sourceId + "/clone")
@@ -329,7 +327,7 @@ class RecruitmentRequisitionIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Long clonedId = mapper.readTree(cloneContent).get("id").asLong();
-        String clonedCode = mapper.readTree(cloneContent).get("requisitionCode").asText();
+        String clonedCode = mapper.readTree(cloneContent).get("requisitionCode").asString();
 
         // ID và mã bản sao phải khác bản gốc
         org.junit.jupiter.api.Assertions.assertNotEquals(sourceId, clonedId);
