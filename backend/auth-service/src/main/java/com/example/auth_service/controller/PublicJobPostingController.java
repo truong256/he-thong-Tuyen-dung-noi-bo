@@ -11,6 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
+import com.example.auth_service.dto.PublicJobApplicationRequest;
+import com.example.auth_service.dto.PublicJobApplicationResponse;
+import com.example.auth_service.security.UserPrincipal;
+import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
+
 @RestController
 @RequestMapping("/api/public/job-postings")
 public class PublicJobPostingController {
@@ -48,6 +54,7 @@ public class PublicJobPostingController {
             @RequestParam(required = false) String workingModel,
             @RequestParam(required = false) String workLocation,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "false") Boolean includeExpired,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "publishedAt,desc") String sort
@@ -63,17 +70,37 @@ public class PublicJobPostingController {
 
         Pageable pageable = PageRequest.of(safePage, safeSize, Sort.by(direction, property));
         return ResponseEntity.ok(jobPostingService.getPublicJobPostings(
-                departmentId, workingModel, workLocation, keyword, pageable
+                departmentId, workingModel, workLocation, keyword, includeExpired, pageable
         ));
     }
 
     /**
      * GET /api/public/job-postings/{id}
-     * SCRUM-150: Xem chi tiết tin tuyển dụng công khai.
-     * Chỉ trả tin nếu đang PUBLISHED và chưa hết hạn.
+     * S4-02 / SCRUM-155 / SCRUM-166: Xem chi tiết tin tuyển dụng công khai.
+     * - Trả đúng mô tả công việc, yêu cầu, quyền lợi, hạn nộp cho tin được phép công khai.
+     * - Trả trạng thái đủ để giao diện thay biểu mẫu bằng thông báo khi hết hạn.
+     * - 404 cho tin không tồn tại, chưa xuất bản hoặc đã gỡ không lộ thông tin nội bộ.
      */
     @GetMapping("/{id}")
     public ResponseEntity<JobPostingPublicResponse> getPublicJobPostingDetail(@PathVariable Long id) {
         return ResponseEntity.ok(jobPostingService.getPublicJobPostingDetail(id));
+    }
+
+    /**
+     * POST /api/public/job-postings/{id}/apply
+     * S4-02 / SCRUM-166: Ứng viên nộp hồ sơ ứng tuyển.
+     * Server chặn nộp hồ sơ khi tin đã hết hạn.
+     */
+    @PostMapping("/{id}/apply")
+    public ResponseEntity<PublicJobApplicationResponse> applyJob(
+            @PathVariable Long id,
+            @Valid @RequestBody PublicJobApplicationRequest request,
+            Authentication authentication
+    ) {
+        Long authenticatedUserId = null;
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
+            authenticatedUserId = principal.getId();
+        }
+        return ResponseEntity.ok(jobPostingService.applyPublic(id, request, authenticatedUserId));
     }
 }

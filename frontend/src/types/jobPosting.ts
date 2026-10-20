@@ -108,6 +108,30 @@ export interface JobPostingPublic {
   salaryDisplay: string;
   applicationDeadline?: string;
   publishedAt?: string;
+  expired?: boolean;
+  canApply?: boolean;
+  status?: string;
+  expiredMessage?: string;
+}
+
+export interface PublicJobApplicationPayload {
+  fullName: string;
+  email: string;
+  phone?: string;
+  coverLetter?: string;
+  cvFileUrl?: string;
+}
+
+export interface PublicJobApplicationResult {
+  applicationId: number;
+  jobPostingId: number;
+  jobCode: string;
+  title: string;
+  fullName: string;
+  email: string;
+  status: string;
+  message: string;
+  appliedAt?: string;
 }
 
 export interface JobPostingFilterState {

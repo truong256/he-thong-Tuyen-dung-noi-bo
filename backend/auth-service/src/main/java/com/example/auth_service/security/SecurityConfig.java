@@ -185,8 +185,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.POST, "/api/organization/profile/logo", "/api/organization/profile/image").hasAuthority("CATALOG_MANAGE")
-                // S3-10 / SCRUM-150: API công khai việc làm cho ứng viên
+                // S3-10 / SCRUM-150 / S4-02: API công khai việc làm và nộp hồ sơ cho ứng viên
                 .requestMatchers(HttpMethod.GET, "/api/public/job-postings", "/api/public/job-postings/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/public/job-postings/{id}/apply").permitAll()
                 // S3-10 / SCRUM-149: Duyệt và xuất bản tin tuyển dụng - Chỉ HR Manager
                 .requestMatchers(HttpMethod.POST,
                         "/api/job-postings/{id}/approve",

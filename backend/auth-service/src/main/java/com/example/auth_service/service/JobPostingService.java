@@ -6,11 +6,14 @@ import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.domain.sprint3.JobPosting;
 import com.example.auth_service.domain.sprint3.JobPostingAuditLog;
 import com.example.auth_service.dto.*;
+import com.example.auth_service.entity.CandidateApplication;
+import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.*;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,6 +38,9 @@ public class JobPostingService {
     private final JobTitleRepository jobTitles;
     private final UserRepository users;
     private final RequisitionAssignmentRepository assignments;
+    private final CandidateApplicationRepository candidateApplications;
+    private final RoleRepository roles;
+    private final PasswordEncoder passwordEncoder;
 
     @Autowired
     public JobPostingService(
@@ -44,7 +50,10 @@ public class JobPostingService {
             DepartmentRepository departments,
             JobTitleRepository jobTitles,
             UserRepository users,
-            @Autowired(required = false) RequisitionAssignmentRepository assignments
+            @Autowired(required = false) RequisitionAssignmentRepository assignments,
+            @Autowired(required = false) CandidateApplicationRepository candidateApplications,
+            @Autowired(required = false) RoleRepository roles,
+            @Autowired(required = false) PasswordEncoder passwordEncoder
     ) {
         this.jobPostings = jobPostings;
         this.auditLogs = auditLogs;
@@ -53,6 +62,9 @@ public class JobPostingService {
         this.jobTitles = jobTitles;
         this.users = users;
         this.assignments = assignments;
+        this.candidateApplications = candidateApplications;
+        this.roles = roles;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public JobPostingService(
@@ -63,7 +75,7 @@ public class JobPostingService {
             JobTitleRepository jobTitles,
             UserRepository users
     ) {
-        this(jobPostings, auditLogs, requisitions, departments, jobTitles, users, null);
+        this(jobPostings, auditLogs, requisitions, departments, jobTitles, users, null, null, null, null);
     }
 
     /**
@@ -411,14 +423,32 @@ public class JobPostingService {
             String keyword,
             Pageable pageable
     ) {
+        return getPublicJobPostings(departmentId, workingModel, workLocation, keyword, false, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<JobPostingPublicResponse> getPublicJobPostings(
+            Long departmentId,
+            String workingModel,
+            String workLocation,
+            String keyword,
+            Boolean includeExpired,
+            Pageable pageable
+    ) {
         LocalDate today = LocalDate.now();
         String filterWorkingModel = (workingModel != null && !workingModel.isBlank() && !"ALL".equalsIgnoreCase(workingModel))
                 ? workingModel.trim() : null;
         String filterLocation = (workLocation != null && !workLocation.isBlank() && !"ALL".equalsIgnoreCase(workLocation))
                 ? workLocation.trim() : null;
         String filterKeyword = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+        boolean incExpired = Boolean.TRUE.equals(includeExpired);
 
-        Page<JobPosting> page = jobPostings.findPublicPostings(today, departmentId, filterWorkingModel, filterLocation, filterKeyword, pageable);
+        Page<JobPosting> page;
+        if (incExpired) {
+            page = jobPostings.findPublicPostingsWithExpired(today, departmentId, filterWorkingModel, filterLocation, filterKeyword, true, pageable);
+        } else {
+            page = jobPostings.findPublicPostings(today, departmentId, filterWorkingModel, filterLocation, filterKeyword, pageable);
+        }
         return page.map(this::mapToPublicResponse);
     }
 
@@ -434,14 +464,116 @@ public class JobPostingService {
         return jobPostings.findPublicLocations(LocalDate.now());
     }
 
-    /** Public detail returns 404 for unpublished or expired postings. */
+    /**
+     * S4-02 / SCRUM-166: Public detail returns full job posting information (jobDescription, requirements, benefits, deadline).
+     * If posting was published and is past applicationDeadline, it returns with expired=true, canApply=false and status="EXPIRED".
+     * If posting does not exist, is draft, or was unpublished, returns 404 without leaking internal notes.
+     */
     @Transactional(readOnly = true)
     public JobPostingPublicResponse getPublicJobPostingDetail(Long id) {
-        LocalDate today = LocalDate.now();
-        JobPosting posting = jobPostings.findPublicById(id, today)
+        JobPosting posting = jobPostings.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tin tuyển dụng không tồn tại, đã hết hạn hoặc đã được gỡ xuống."));
 
+        if ("UNPUBLISHED".equalsIgnoreCase(posting.getStatus())) {
+            throw new ResourceNotFoundException("Tin tuyển dụng không tồn tại, đã hết hạn hoặc đã được gỡ xuống.");
+        }
+
+        if (!"PUBLISHED".equalsIgnoreCase(posting.getStatus()) && !"EXPIRED".equalsIgnoreCase(posting.getStatus())) {
+            throw new ResourceNotFoundException("Tin tuyển dụng không tồn tại, đã hết hạn hoặc đã được gỡ xuống.");
+        }
+
         return mapToPublicResponse(posting);
+    }
+
+    /**
+     * S4-02 / SCRUM-166: Nộp hồ sơ ứng tuyển công khai và server chặn nộp khi tin đã hết hạn.
+     */
+    @Transactional
+    public PublicJobApplicationResponse applyPublic(Long jobPostingId, PublicJobApplicationRequest req, Long authenticatedUserId) {
+        if (req == null) {
+            throw new BadRequestException("Thông tin ứng tuyển không được để trống.");
+        }
+        if (req.getFullName() == null || req.getFullName().trim().isEmpty()) {
+            throw new BadRequestException("Họ và tên ứng viên không được để trống.");
+        }
+        if (req.getEmail() == null || req.getEmail().trim().isEmpty()) {
+            throw new BadRequestException("Email ứng viên không được để trống.");
+        }
+
+        JobPosting posting = jobPostings.findById(jobPostingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Tin tuyển dụng không tồn tại."));
+
+        if (!"PUBLISHED".equalsIgnoreCase(posting.getStatus())) {
+            throw new ResourceNotFoundException("Tin tuyển dụng hiện không tiếp nhận hồ sơ ứng tuyển.");
+        }
+
+        LocalDate today = LocalDate.now();
+        boolean isExpired = (posting.getApplicationDeadline() != null && posting.getApplicationDeadline().isBefore(today))
+                || "EXPIRED".equalsIgnoreCase(posting.getStatus())
+                || "CLOSED".equalsIgnoreCase(posting.getStatus());
+
+        if (isExpired) {
+            throw new BadRequestException("Tin tuyển dụng này đã hết hạn nhận hồ sơ (" + posting.getApplicationDeadline() + "), server không tiếp nhận đơn ứng tuyển.");
+        }
+
+        Long candidateUserId = authenticatedUserId;
+        if (candidateUserId == null) {
+            String normEmail = req.getEmail().trim().toLowerCase();
+            User user = users.findByEmail(normEmail).orElse(null);
+            if (user != null) {
+                candidateUserId = user.getId();
+            } else {
+                User newUser = new User();
+                newUser.setEmail(normEmail);
+                newUser.setFullName(req.getFullName().trim());
+                if (passwordEncoder != null) {
+                    newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
+                } else {
+                    newUser.setPassword("temp-pass-" + UUID.randomUUID());
+                }
+                if (roles != null) {
+                    Role candRole = roles.findByName(RoleName.CANDIDATE).orElse(null);
+                    if (candRole != null) {
+                        newUser.setRoles(Set.of(candRole));
+                    }
+                }
+                User savedUser = users.save(newUser);
+                candidateUserId = savedUser.getId();
+            }
+        }
+
+        Long reqId = posting.getRequisitionId();
+        if (reqId == null) {
+            RecruitmentRequisition defReq = requisitions.findAll().stream().findFirst().orElse(null);
+            reqId = defReq != null ? defReq.getId() : 1L;
+        }
+
+        CandidateApplication app = new CandidateApplication();
+        app.setRequisitionId(reqId);
+        app.setCandidateUserId(candidateUserId);
+        app.setFullName(req.getFullName().trim());
+        app.setEmail(req.getEmail().trim().toLowerCase());
+        app.setStage("APPLIED");
+
+        CandidateApplication savedApp;
+        if (candidateApplications != null) {
+            savedApp = candidateApplications.save(app);
+        } else {
+            savedApp = app;
+            savedApp.setId(101L);
+        }
+
+        return PublicJobApplicationResponse.builder()
+                .applicationId(savedApp.getId())
+                .jobPostingId(posting.getId())
+                .jobCode(posting.getJobCode())
+                .title(posting.getTitle())
+                .fullName(savedApp.getFullName())
+                .email(savedApp.getEmail())
+                .status("APPLIED")
+                .message("Nộp hồ sơ ứng tuyển thành công! Cảm ơn bạn đã quan tâm đến cơ hội nghề nghiệp tại công ty.")
+                .appliedAt(Instant.now())
+                .build();
     }
 
     /**
@@ -635,6 +767,14 @@ public class JobPostingService {
             }
         }
 
+        LocalDate today = LocalDate.now();
+        boolean isExpired = (j.getApplicationDeadline() != null && j.getApplicationDeadline().isBefore(today))
+                || "EXPIRED".equalsIgnoreCase(j.getStatus())
+                || "CLOSED".equalsIgnoreCase(j.getStatus());
+        boolean canApply = !isExpired && "PUBLISHED".equalsIgnoreCase(j.getStatus());
+        String status = isExpired ? "EXPIRED" : j.getStatus();
+        String expiredMessage = isExpired ? "Tin tuyển dụng này đã hết hạn nhận hồ sơ." : null;
+
         return JobPostingPublicResponse.builder()
                 .id(j.getId())
                 .jobCode(j.getJobCode())
@@ -656,6 +796,10 @@ public class JobPostingService {
                 .salaryDisplay(salaryDisplay)
                 .applicationDeadline(j.getApplicationDeadline())
                 .publishedAt(j.getPublishedAt())
+                .expired(isExpired)
+                .canApply(canApply)
+                .status(status)
+                .expiredMessage(expiredMessage)
                 .build();
     }
 

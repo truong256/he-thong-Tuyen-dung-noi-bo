@@ -400,7 +400,7 @@ class JobPostingServiceTest {
     @Test
     @DisplayName("SCRUM-150 AC2: Chi tiết công khai của tin bị gỡ hoặc hết hạn ném ResourceNotFoundException")
     void testGetPublicJobPostingDetail_UnpublishedOrExpired_ThrowsNotFound() {
-        when(jobPostingRepository.findPublicById(eq(100L), any(LocalDate.class)))
+        when(jobPostingRepository.findById(eq(100L)))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.getPublicJobPostingDetail(100L))
