@@ -9,7 +9,6 @@ import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
-import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.RequisitionApprovalHistoryRepository;
@@ -36,7 +35,6 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)

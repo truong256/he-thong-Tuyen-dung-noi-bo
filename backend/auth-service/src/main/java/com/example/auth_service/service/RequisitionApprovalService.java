@@ -251,7 +251,6 @@ public class RequisitionApprovalService {
         boolean isDraft = "DRAFT".equalsIgnoreCase(req.getStatus());
         boolean isApproved = "APPROVED".equalsIgnoreCase(req.getStatus());
         boolean isRejected = "REJECTED".equalsIgnoreCase(req.getStatus());
-        boolean isPending = "PENDING_APPROVAL".equalsIgnoreCase(req.getStatus());
 
         // Lấy thông tin người tạo
         User creator = null;
