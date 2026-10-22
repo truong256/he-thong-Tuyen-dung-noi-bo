@@ -1,94 +1,110 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import CompanyProfileEditor from '../components/organization/CompanyProfileEditor';
 import { INITIAL_COMPANY_PROFILE } from '../api/organization';
 
-describe('CompanyProfileEditor (Giao diện chỉnh sửa hồ sơ giới thiệu công ty)', () => {
+describe('CompanyProfileEditor — SCRUM-89, 90, 91', () => {
   const mockOnSave = vi.fn();
   const mockOnCancel = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    mockOnSave.mockReset();
+    mockOnCancel.mockReset();
+    mockOnSave.mockResolvedValue(undefined);
   });
 
-  it('renders all sections, navigation buttons, and completeness progress', () => {
-    render(
+  function renderEditor() {
+    return render(
       <CompanyProfileEditor
         profile={INITIAL_COMPANY_PROFILE}
         onSave={mockOnSave}
         onCancel={mockOnCancel}
       />
     );
+  }
 
-    // Section headings & labels (present in both nav and section headers)
-    expect(screen.getAllByText('Nhận diện thương hiệu').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Thông tin pháp lý').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Liên hệ & Trụ sở').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Giới thiệu & Văn hóa').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Người đại diện').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Chính sách & Phúc lợi').length).toBeGreaterThanOrEqual(1);
+  function getPreview() {
+    return screen.getByRole('complementary', {
+      name: 'Xem trước hồ sơ công khai',
+    });
+  }
 
-    // Completeness card
+  it('hiển thị các phần của biểu mẫu và mức độ hoàn thiện', () => {
+    renderEditor();
+
+    const sections = [
+      'Nhận diện thương hiệu',
+      'Thông tin pháp lý',
+      'Liên hệ & Trụ sở',
+      'Giới thiệu & Văn hóa',
+      'Người đại diện',
+      'Chính sách & Phúc lợi',
+    ];
+
+    sections.forEach((section) => {
+      expect(screen.getAllByText(section).length).toBeGreaterThanOrEqual(1);
+    });
+
     expect(screen.getByText('Mức độ hoàn thiện')).toBeInTheDocument();
-
-    // Inputs with initial values
-    expect(screen.getByDisplayValue(INITIAL_COMPANY_PROFILE.companyName)).toBeInTheDocument();
-    expect(screen.getByDisplayValue(INITIAL_COMPANY_PROFILE.taxCode)).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(INITIAL_COMPANY_PROFILE.companyName)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(INITIAL_COMPANY_PROFILE.taxCode)
+    ).toBeInTheDocument();
   });
 
-  it('updates live preview when modifying company name', () => {
-    render(
-      <CompanyProfileEditor
-        profile={INITIAL_COMPANY_PROFILE}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
-    );
+  it('cập nhật tên công ty trong bản xem trước khi chưa lưu', () => {
+    renderEditor();
 
-    const nameInput = screen.getByLabelText(/Tên tổ chức \/ Công ty/i);
-    fireEvent.change(nameInput, { target: { value: 'Tập đoàn Công nghệ Tương Lai' } });
+    fireEvent.change(screen.getByLabelText(/Tên tổ chức \/ Công ty/i), {
+      target: { value: 'Tập đoàn Công nghệ Tương Lai' },
+    });
 
-    // Live preview updates
-    expect(screen.getAllByText('Tập đoàn Công nghệ Tương Lai').length).toBeGreaterThan(0);
+    expect(
+      within(getPreview()).getByText('Tập đoàn Công nghệ Tương Lai')
+    ).toBeInTheDocument();
+    expect(mockOnSave).not.toHaveBeenCalled();
   });
 
-  it('allows adding and removing core values tags', () => {
-    render(
-      <CompanyProfileEditor
-        profile={INITIAL_COMPANY_PROFILE}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
+  it('thêm và xóa giá trị cốt lõi trong biểu mẫu và bản xem trước', () => {
+    renderEditor();
+
+    const tagInput = screen.getByPlaceholderText(
+      /Thêm giá trị…|Enter để thêm/i
     );
 
-    const tagInput = screen.getByPlaceholderText(/Thêm giá trị…|Enter để thêm/i);
-    fireEvent.change(tagInput, { target: { value: 'Sáng tạo đột phá' } });
+    fireEvent.change(tagInput, {
+      target: { value: 'Sáng tạo đột phá' },
+    });
     fireEvent.keyDown(tagInput, { key: 'Enter', code: 'Enter' });
 
-    // Shows in tag list and live preview
-    expect(screen.getAllByText('Sáng tạo đột phá').length).toBeGreaterThanOrEqual(1);
+    expect(
+      within(getPreview()).getByText('Sáng tạo đột phá')
+    ).toBeInTheDocument();
 
-    // Delete a tag
-    const deleteBtn = screen.getByLabelText('Xóa giá trị Sáng tạo đột phá');
-    fireEvent.click(deleteBtn);
+    fireEvent.click(screen.getByLabelText('Xóa giá trị Sáng tạo đột phá'));
 
-    expect(screen.queryByText('Sáng tạo đột phá')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Sáng tạo đột phá')
+    ).not.toBeInTheDocument();
   });
 
-  it('validates invalid tax code format on submit', async () => {
-    render(
-      <CompanyProfileEditor
-        profile={INITIAL_COMPANY_PROFILE}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
+  it('không lưu khi mã số thuế sai định dạng', async () => {
+    renderEditor();
+
+    fireEvent.change(screen.getByLabelText(/Mã số thuế/i), {
+      target: { value: '123' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: /Lưu thay đổi hồ sơ/i })
     );
-
-    const taxInput = screen.getByLabelText(/Mã số thuế/i);
-    fireEvent.change(taxInput, { target: { value: '123' } });
-
-    const submitBtn = screen.getByRole('button', { name: /Lưu thay đổi hồ sơ/i });
-    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(
@@ -99,22 +115,15 @@ describe('CompanyProfileEditor (Giao diện chỉnh sửa hồ sơ giới thiệ
     expect(mockOnSave).not.toHaveBeenCalled();
   });
 
-  it('calls onSave when submitting valid updated profile', async () => {
-    mockOnSave.mockResolvedValue(undefined);
+  it('gọi onSave với dữ liệu hợp lệ đã chỉnh sửa', async () => {
+    renderEditor();
 
-    render(
-      <CompanyProfileEditor
-        profile={INITIAL_COMPANY_PROFILE}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
+    fireEvent.change(screen.getByLabelText(/Tên tổ chức \/ Công ty/i), {
+      target: { value: 'Công ty Cổ phần ATS Global' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: /Lưu thay đổi hồ sơ/i })
     );
-
-    const nameInput = screen.getByLabelText(/Tên tổ chức \/ Công ty/i);
-    fireEvent.change(nameInput, { target: { value: 'Công ty Cổ phần ATS Global' } });
-
-    const submitBtn = screen.getByRole('button', { name: /Lưu thay đổi hồ sơ/i });
-    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(mockOnSave).toHaveBeenCalledWith(
@@ -125,18 +134,176 @@ describe('CompanyProfileEditor (Giao diện chỉnh sửa hồ sơ giới thiệ
     });
   });
 
-  it('calls onCancel when clicking cancel with no unsaved changes', () => {
-    render(
-      <CompanyProfileEditor
-        profile={INITIAL_COMPANY_PROFILE}
-        onSave={mockOnSave}
-        onCancel={mockOnCancel}
-      />
+  it('gọi onCancel khi hủy mà không có thay đổi', () => {
+    renderEditor();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /Hủy chỉnh sửa/i })
     );
 
-    const cancelBtn = screen.getByRole('button', { name: /Hủy chỉnh sửa/i });
-    fireEvent.click(cancelBtn);
+    expect(mockOnCancel).toHaveBeenCalledTimes(1);
+  });
 
-    expect(mockOnCancel).toHaveBeenCalled();
+  it('hiển thị đầy đủ giới thiệu dài trước khi lưu', () => {
+    renderEditor();
+
+    const description =
+      'Giới thiệu công ty với nội dung đầy đủ. '.repeat(10) +
+      'Đây là phần cuối cần xuất hiện trong bản xem trước.';
+
+    fireEvent.change(screen.getByLabelText(/Giới thiệu tổng quan/i), {
+      target: { value: description },
+    });
+
+    expect(
+      within(getPreview()).getByText(description, { exact: true })
+    ).toBeInTheDocument();
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it('cập nhật sứ mệnh và tầm nhìn trước khi lưu', () => {
+    renderEditor();
+
+    fireEvent.change(screen.getByLabelText(/Sứ mệnh \(Mission\)/i), {
+      target: { value: 'Sứ mệnh kiểm tra SCRUM-90' },
+    });
+    fireEvent.change(screen.getByLabelText(/Tầm nhìn \(Vision\)/i), {
+      target: { value: 'Tầm nhìn kiểm tra SCRUM-90' },
+    });
+
+    const preview = within(getPreview());
+
+    expect(
+      preview.getByText('Sứ mệnh kiểm tra SCRUM-90')
+    ).toBeInTheDocument();
+    expect(
+      preview.getByText('Tầm nhìn kiểm tra SCRUM-90')
+    ).toBeInTheDocument();
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it('giữ dữ liệu khi ẩn rồi mở lại bản xem trước', () => {
+    renderEditor();
+
+    fireEvent.change(screen.getByLabelText(/Tên tổ chức \/ Công ty/i), {
+      target: { value: 'Công ty kiểm tra bật tắt' },
+    });
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Ẩn xem trước$/i })
+    );
+
+    expect(
+      screen.queryByRole('complementary', {
+        name: 'Xem trước hồ sơ công khai',
+      })
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /^Xem trước$/i })
+    );
+
+    expect(
+      within(getPreview()).getByText('Công ty kiểm tra bật tắt')
+    ).toBeInTheDocument();
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it('cập nhật logo và ảnh bìa trong bản xem trước khi chưa lưu', async () => {
+    const { container } = renderEditor();
+
+    const logoInput = container.querySelector('#logo-upload');
+    const bannerInput = container.querySelector('#banner-upload');
+
+    if (!logoInput || !bannerInput) {
+      throw new Error('Không tìm thấy ô tải logo hoặc ảnh bìa.');
+    }
+
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10">' +
+      '<rect width="10" height="10" fill="blue"/></svg>';
+
+    fireEvent.change(logoInput, {
+      target: {
+        files: [new File([svg], 'logo.svg', { type: 'image/svg+xml' })],
+      },
+    });
+    fireEvent.change(bannerInput, {
+      target: {
+        files: [new File([svg], 'banner.svg', { type: 'image/svg+xml' })],
+      },
+    });
+
+    const preview = getPreview();
+
+    await waitFor(() => {
+      const logo = preview.querySelector('.cpe-preview-logo img');
+      const banner =
+        preview.querySelector<HTMLElement>('.cpe-preview-banner');
+
+      expect(logo?.getAttribute('src')).toMatch(
+        /^data:image\/svg\+xml;base64,/
+      );
+      expect(banner?.style.backgroundImage).toContain(
+        'data:image/svg+xml;base64,'
+      );
+    });
+
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it('từ chối file logo không đúng định dạng', () => {
+    const { container } = renderEditor();
+    const logoInput = container.querySelector('#logo-upload');
+
+    if (!logoInput) {
+      throw new Error('Không tìm thấy ô tải logo.');
+    }
+
+    const preview = getPreview();
+    const previousLogo = preview
+      .querySelector('.cpe-preview-logo img')
+      ?.getAttribute('src');
+
+    fireEvent.change(logoInput, {
+      target: {
+        files: [
+          new File(['Không phải ảnh'], 'note.txt', {
+            type: 'text/plain',
+          }),
+        ],
+      },
+    });
+
+    expect(
+      screen.getByText('Chỉ hỗ trợ PNG, JPG, WEBP hoặc SVG.')
+    ).toBeInTheDocument();
+    expect(
+      preview.querySelector('.cpe-preview-logo img')?.getAttribute('src')
+    ).toBe(previousLogo);
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  it('từ chối logo có dung lượng lớn hơn 1MB', () => {
+    const { container } = renderEditor();
+    const logoInput = container.querySelector('#logo-upload');
+
+    if (!logoInput) {
+      throw new Error('Không tìm thấy ô tải logo.');
+    }
+
+    const oversizedLogo = new File(
+      [new Uint8Array(1024 * 1024 + 1)],
+      'large-logo.png',
+      { type: 'image/png' }
+    );
+
+    fireEvent.change(logoInput, {
+      target: { files: [oversizedLogo] },
+    });
+
+    expect(
+      screen.getByText('Dung lượng tối đa 1MB.')
+    ).toBeInTheDocument();
+    expect(mockOnSave).not.toHaveBeenCalled();
   });
 });

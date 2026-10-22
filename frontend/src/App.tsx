@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -32,6 +32,7 @@ import CandidateApplicationsPage from "./pages/CandidateApplicationsPage";
 import RecruitmentCandidatesPage from "./pages/RecruitmentCandidatesPage";
 import CandidateApprovalsPage from "./pages/CandidateApprovalsPage";
 import OffersPage from "./pages/OffersPage";
+import CompanyProfilePreviewPage from "./pages/CompanyProfilePreviewPage";
 
 export const App: React.FC = () => {
   return (
@@ -43,7 +44,7 @@ export const App: React.FC = () => {
         }}
       >
         <Routes>
-          {/* Public careers routes (S3-10 / SCRUM-150) */}
+          
           <Route path="/careers" element={<PublicCareerPage />} />
           <Route path="/careers/:id" element={<PublicJobDetailPage />} />
           <Route path="/jobs" element={<Navigate to="/careers" replace />} />
@@ -53,7 +54,7 @@ export const App: React.FC = () => {
           />
           <Route path="/withdraw" element={<WithdrawApplicationPage />} />
 
-          {/* CÃ¡c trang Ä‘Äƒng nháº­p */}
+          
           <Route path="/login" element={<LoginPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -61,7 +62,7 @@ export const App: React.FC = () => {
           <Route path="/403" element={<UnauthorizedPage statusCode={403} />} />
           <Route path="/401" element={<UnauthorizedPage statusCode={401} />} />
 
-          {/* Trang báº¯t buá»™c Ä‘á»•i máº­t kháº©u láº§n Ä‘áº§u */}
+          
           <Route
             path="/first-login/change-password"
             element={
@@ -71,12 +72,21 @@ export const App: React.FC = () => {
             }
           />
 
-          {/* Xem thá»­ frontend Excel khi cháº¡y mÃ´i trÆ°á»ng phÃ¡t triá»ƒn */}
+          
           {import.meta.env.DEV && (
-            <Route path="/preview/import-excel" element={<ExcelImportPage />} />
+            <>
+              <Route
+                path="/preview/import-excel"
+                element={<ExcelImportPage />}
+              />
+              <Route
+                path="/preview/company-profile"
+                element={<CompanyProfilePreviewPage />}
+              />
+            </>
           )}
 
-          {/* CÃ¡c trang yÃªu cáº§u Ä‘Äƒng nháº­p */}
+          
           <Route
             path="/"
             element={
@@ -87,13 +97,13 @@ export const App: React.FC = () => {
           >
             <Route index element={<Navigate to="/dashboard" replace />} />
 
-            {/* Dashboard â€“ táº¥t cáº£ authenticated users */}
+            
             <Route path="dashboard" element={<DashboardPage />} />
 
-            {/* Profile â€“ táº¥t cáº£ authenticated users (PROFILE_READ base permission) */}
+            
             <Route path="profile" element={<ProfilePage />} />
 
-            {/* Cá»•ng thÃ´ng tin á»©ng viÃªn: Há»“ sÆ¡ & CV Ä‘Ã£ ná»™p (S4-06) */}
+            
             <Route
               path="candidate/applications"
               element={<CandidateApplicationsPage />}
@@ -127,11 +137,7 @@ export const App: React.FC = () => {
               element={<Navigate to="/candidate/applications" replace />}
             />
 
-            {/*
-              Organization & Company Profile â€“ CATALOG_READ
-              Roles: HR_MANAGER (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R), APPROVER (R)
-              ADMIN (F via catalog), CANDIDATE (â€“)
-            */}
+            
             <Route
               path="organization"
               element={
@@ -141,10 +147,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Job Titles â€“ CATALOG_READ
-              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), APPROVER (R), INTERVIEWER (R)
-            */}
+            
             <Route
               path="job-titles"
               element={
@@ -154,11 +157,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Categories â€“ CATALOG_READ
-              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
-              NOTE: CANDIDATE and APPROVER do NOT have CATALOG_READ
-            */}
+            
             <Route
               path="categories"
               element={
@@ -176,10 +175,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Question Bank â€“ CATALOG_READ
-              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
-            */}
+            
             <Route
               path="questions"
               element={
@@ -197,10 +193,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Competency Frameworks (S2-06) â€“ CATALOG_READ
-              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
-            */}
+            
             <Route
               path="competencies"
               element={
@@ -222,10 +215,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Requisitions â€“ S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL, REQUISITION_APPROVE)
-              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F), APPROVER (W*)
-            */}
+            
             <Route
               path="recruitment/requisitions"
               element={
@@ -265,7 +255,7 @@ export const App: React.FC = () => {
                 </RoleGuard>
               }
             />
-            {/* Tin tuyá»ƒn dá»¥ng (S3-10 / SCRUM-151) â€“ RECRUITER, HR_MANAGER, ADMIN */}
+            
             <Route
               path="recruitment/job-postings"
               element={
@@ -287,7 +277,7 @@ export const App: React.FC = () => {
               element={<Navigate to="/recruitment/requisitions" replace />}
             />
 
-            {/* Legacy redirects */}
+            
             <Route
               path="excel-import"
               element={<Navigate to="/admin/import-excel" replace />}
@@ -301,10 +291,7 @@ export const App: React.FC = () => {
               element={<Navigate to="/admin/import-excel" replace />}
             />
 
-            {/*
-              Excel Import â€“ USER_MANAGE (ADMIN only)
-              HR_MANAGER has USER_READ but NOT USER_MANAGE â†’ cannot import
-            */}
+            
             <Route
               path="admin/import-excel"
               element={
@@ -314,12 +301,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              User Management â€“ USER_READ (ADMIN=F, HR_MANAGER=R)
-              S1-08: HR_MANAGER can view user list/details but cannot create/lock/assign roles.
-              The UserManagementPage component should conditionally render action buttons
-              based on hasPermission('USER_MANAGE') and hasPermission('ROLE_MANAGE').
-            */}
+            
             <Route
               path="admin/users"
               element={
@@ -329,10 +311,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Permission Matrix â€“ ROLE_READ (ADMIN + HR_MANAGER)
-              Standalone dynamic view of the RBAC permission matrix fetched from /api/admin/roles.
-            */}
+            
             <Route
               path="admin/permission-matrix"
               element={
@@ -342,10 +321,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Organization (admin path) â€“ HR_MANAGER has DEPARTMENT_MANAGE + CATALOG_MANAGE
-              ADMIN has CATALOG_MANAGE
-            */}
+            
             <Route
               path="admin/organization"
               element={
@@ -355,9 +331,7 @@ export const App: React.FC = () => {
               }
             />
 
-            {/*
-              Job Titles (admin path) â€“ HR_MANAGER and ADMIN both have CATALOG_MANAGE
-            */}
+            
             <Route
               path="admin/job-titles"
               element={
@@ -368,7 +342,7 @@ export const App: React.FC = () => {
             />
           </Route>
 
-          {/* Trang khÃ´ng tÃ¬m tháº¥y */}
+          
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
