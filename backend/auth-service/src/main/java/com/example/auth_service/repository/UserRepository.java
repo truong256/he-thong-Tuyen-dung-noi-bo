@@ -42,9 +42,9 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
             (
                 :keyword IS NULL
                 OR :keyword = ''
-                OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(u.username) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+                OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+                OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
             )
             AND
             (

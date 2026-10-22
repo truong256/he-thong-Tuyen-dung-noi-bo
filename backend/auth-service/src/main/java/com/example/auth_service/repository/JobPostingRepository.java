@@ -25,8 +25,8 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
         SELECT j FROM JobPosting j
         WHERE (:status IS NULL OR j.status = :status)
           AND (:departmentId IS NULL OR j.departmentId = :departmentId)
-          AND (:keyword IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-               OR LOWER(j.jobCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:keyword IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+               OR LOWER(j.jobCode) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))
         ORDER BY j.createdAt DESC
     """)
     Page<JobPosting> findWithFilters(
@@ -42,11 +42,11 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
           AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
           AND (:departmentId IS NULL OR j.departmentId = :departmentId)
           AND (:workingModel IS NULL OR UPPER(j.workingModel) = UPPER(CAST(:workingModel AS string)))
-          AND (:workLocation IS NULL OR LOWER(j.workLocation) LIKE LOWER(CONCAT('%', :workLocation, '%')))
+          AND (:workLocation IS NULL OR LOWER(j.workLocation) LIKE LOWER(CONCAT('%', CAST(:workLocation AS string), '%')))
           AND (:keyword IS NULL OR (
-                LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(j.jobDescription) LIKE LOWER(CONCAT('%', :keyword, '%'))
-                OR LOWER(j.requirements) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                LOWER(j.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+                OR LOWER(j.jobDescription) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+                OR LOWER(j.requirements) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
           ))
         ORDER BY j.publishedAt DESC, j.createdAt DESC
     """)

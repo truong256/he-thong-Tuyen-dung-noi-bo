@@ -53,7 +53,8 @@ status, headers, public = request('/api/public/job-postings', origin=os.environ[
 assert status == 200 and public['totalElements'] >= 1, 'Published demo job missing'
 assert headers.get('Access-Control-Allow-Origin') == os.environ['APP_FRONTEND_URL'], 'CORS origin missing'
 assert request('/api/public/departments')[0] == 200
-for path in ('/api/job-titles', '/api/requisitions', '/api/recruitment-requests'):
+assert request('/api/admin/users', token=tokens['ADMIN'])[0] == 200
+for path in ('/api/job-titles', '/api/requisitions', '/api/recruitment-requests', '/api/organization/profile', '/api/categories', '/api/interview-questions'):
     status, _, _ = request(path, token=tokens['HR_MANAGER'])
     assert status == 200, 'Unfiltered catalogue/requisition query failed: ' + path + ', HTTP ' + str(status)
 assert request('/api/public/job-postings?workingModel=ONSITE')[0] == 200
