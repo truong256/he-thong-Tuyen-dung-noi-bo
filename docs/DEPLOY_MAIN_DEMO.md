@@ -16,6 +16,8 @@ Trạng thái: chưa triển khai production. Không có backend/database công 
 
 Hai bản SQL cấu hình phê duyệt bị trùng ở V24/V25 được giữ nguyên nội dung trong `db/legacy-conflicts`, bên ngoài location Flyway. Bản canonical là `V24_1`, chạy sau V24 yêu cầu tuyển dụng và trước V25 hành động phê duyệt. Các SQL khác không thay checksum. V30 chỉ tạo bảng ledger cho seed.
 
+V31 bổ sung năm cột entity có sẵn nhưng trước đây chỉ được Hibernate tạo trong dev: proposed_min_salary, proposed_max_salary, requirements của yêu cầu tuyển dụng, username và role của users. Chỉ ADD COLUMN nullable, không ghi đè bản ghi hay đổi checksum cũ.
+
 **Database mới:** dùng schema rỗng và chạy Flyway của ứng dụng; `baseline-on-migrate=false`, `validate-on-migrate=true`, `clean-disabled=true`, `out-of-order=false`.
 
 **Database đã tồn tại:** trước khi khởi động bản mới, sao lưu và xem schema cùng `flyway_schema_history` (version, description, script, checksum, success). Nếu lịch sử V24/V25 là bản cấu hình phê duyệt cũ, dừng để lập phương án nâng cấp riêng theo lịch sử thực tế. Không đổi history, không tự `repair`, không reset/baseline, không bật out-of-order để vượt lỗi. Bản này không tuyên bố tương thích mọi lịch sử cũ chưa được kiểm tra.
