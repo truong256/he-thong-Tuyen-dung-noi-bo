@@ -35,6 +35,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "CREATE TABLE IF NOT EXISTS demo_seed_runs (seed_key VARCHAR(100) PRIMARY KEY, completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, record_counts TEXT NOT NULL)"
 })
 class DemoSeedIntegrationTest {
+    @org.junit.jupiter.api.BeforeEach
+    void clearInheritedAuthentication() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    void clearAuthentication() {
+        org.springframework.security.core.context.SecurityContextHolder.clearContext();
+    }
     @Autowired DemoSeedService seed;
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;

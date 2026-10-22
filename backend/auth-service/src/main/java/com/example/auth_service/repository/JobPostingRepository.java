@@ -41,7 +41,7 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
         WHERE j.status = 'PUBLISHED'
           AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
           AND (:departmentId IS NULL OR j.departmentId = :departmentId)
-          AND (:workingModel IS NULL OR UPPER(j.workingModel) = UPPER(:workingModel))
+          AND (:workingModel IS NULL OR UPPER(j.workingModel) = UPPER(CAST(:workingModel AS string)))
           AND (:workLocation IS NULL OR LOWER(j.workLocation) LIKE LOWER(CONCAT('%', :workLocation, '%')))
           AND (:keyword IS NULL OR (
                 LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))

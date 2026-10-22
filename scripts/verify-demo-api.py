@@ -27,8 +27,11 @@ def request(path, payload=None, token=None, origin=None):
 
 for attempt in range(120):
     try:
-        if request('/api/public/job-postings')[0] == 200:
+        status = request('/api/public/job-postings')[0]
+        if status == 200:
             break
+        if status >= 500:
+            raise RuntimeError('Public jobs API returned HTTP ' + str(status) + '; inspect backend/database error logs')
     except (OSError, TimeoutError):
         pass
     time.sleep(1)
@@ -50,7 +53,12 @@ status, headers, public = request('/api/public/job-postings', origin=os.environ[
 assert status == 200 and public['totalElements'] >= 1, 'Published demo job missing'
 assert headers.get('Access-Control-Allow-Origin') == os.environ['APP_FRONTEND_URL'], 'CORS origin missing'
 assert request('/api/public/departments')[0] == 200
+for path in ('/api/job-titles', '/api/requisitions', '/api/recruitment-requests'):
+    status, _, _ = request(path, token=tokens['HR_MANAGER'])
+    assert status == 200, 'Unfiltered catalogue/requisition query failed: ' + path + ', HTTP ' + str(status)
+assert request('/api/public/job-postings?workingModel=ONSITE')[0] == 200
 assert request('/api/admin/users', token=tokens['CANDIDATE'])[0] == 403, 'Candidate gained admin access'
 assert request('/api/departments')[0] == 401, 'Internal departments became public'
+assert request('/api/public/job-postings', origin='https://untrusted.example.test')[0] == 403, 'Unexpected CORS origin allowed'
 print('PASS public APIs, exact CORS and negative RBAC')
 print('NOT IMPLEMENTED candidate submission and full applicant management; full demo is not READY')
