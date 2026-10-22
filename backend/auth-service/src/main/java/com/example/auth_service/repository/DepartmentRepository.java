@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import java.util.List;
 
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
+    @Query("SELECT d FROM Department d WHERE d.active = true AND d.id IN (SELECT j.departmentId FROM JobPosting j WHERE j.status = 'PUBLISHED' AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :today)) ORDER BY d.name")
+    List<Department> findPublicDepartments(@org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
     List<Department> findAllByOrderByNameAscIdAsc();
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
     boolean existsByCodeIgnoreCaseAndIdNot(String code, Long id);

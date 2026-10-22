@@ -508,3 +508,6 @@ $RECYCLE.BIN/
 # Postman
 .postman/
 postman/
+
+# Backend deployment secrets stay outside git.
+deploy/*.env

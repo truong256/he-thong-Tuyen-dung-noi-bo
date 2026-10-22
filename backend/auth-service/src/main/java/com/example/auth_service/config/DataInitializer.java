@@ -34,6 +34,8 @@ import java.util.Map;
 import java.util.Set;
 
 @Configuration
+@org.springframework.context.annotation.Profile("dev | test")
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.local-seed-enabled", havingValue = "true")
 public class DataInitializer {
 
     @Bean
@@ -69,7 +71,10 @@ public class DataInitializer {
             }
 
             // 2. Helper to create user if not exists
-            String defaultSeedPassword = System.getenv().getOrDefault("SEED_ACCOUNT_PASSWORD", "Password123@");
+            String defaultSeedPassword = env.getRequiredProperty("SEED_ACCOUNT_PASSWORD");
+            if (defaultSeedPassword.length() < 16) {
+                throw new IllegalStateException("SEED_ACCOUNT_PASSWORD must contain at least 16 characters");
+            }
 
             User adminUser = createUserIfMissing(userRepository, passwordEncoder, "admin@company.com", defaultSeedPassword,
                     "Quản trị viên Hệ thống", "Ban Tổng Giám Đốc (BOD)", Set.of(roleMap.get(RoleName.ADMIN)));
@@ -91,9 +96,6 @@ public class DataInitializer {
 
             createUserIfMissing(userRepository, passwordEncoder, "candidate@company.com", defaultSeedPassword,
                     "Ứng viên Nguyễn Văn A", null, Set.of(roleMap.get(RoleName.CANDIDATE)));
-
-            createUserIfMissing(userRepository, passwordEncoder, "truong256@company.com", "#r7GDs^QRbhF",
-                    "Kiểm thử viên Tự động", null, Set.of(roleMap.get(RoleName.CANDIDATE)));
 
             // 3. Seed default enterprise departments if none exist (only in non-test profiles)
             boolean isTestProfile = Arrays.asList(env.getActiveProfiles()).contains("test");

@@ -74,9 +74,11 @@ public class CompanyProfileController {
         stats.put("totalUsers", userCount);
         stats.put("totalCategories", categoryCount);
         stats.put("totalQuestions", questionCount);
-        stats.put("totalLocations", 3); // 1 HQ + 2 branches
-        stats.put("headcountFulfillmentRate", 94.2);
-        stats.put("openRequisitionsCount", jobTitleRepository.count());
+        stats.put("totalLocations", categoryRepository.findByTypeAndActiveTrueOrderBySortOrderAscNameAsc("WORK_LOCATION").size());
+        var titles = jobTitleRepository.findAll();
+        long planned = titles.stream().mapToLong(t -> t.getStandardHeadcount() == null ? 0 : t.getStandardHeadcount()).sum();
+        long actual = titles.stream().mapToLong(t -> t.getCurrentHeadcount() == null ? 0 : t.getCurrentHeadcount()).sum();
+        stats.put("headcountFulfillmentRate", planned == 0 ? 0 : actual * 100.0 / planned);
 
         return ResponseEntity.ok(stats);
     }

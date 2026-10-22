@@ -86,6 +86,10 @@ export const jobPostingApi = {
   },
 
   // 4. API Công khai (Public Careers)
+  listPublicDepartments: async (): Promise<Array<{ id: number; name: string }>> => {
+    const response = await apiClient.get<Array<{ id: number; name: string }>>('/api/public/departments');
+    return response.data;
+  },
   listPublic: async (params?: {
     departmentId?: number;
     workingModel?: string;

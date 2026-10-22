@@ -1,0 +1,32 @@
+# Kết quả kiểm tra ngày 23/10/2026
+
+Nguồn bắt buộc: `main`, SHA `b14e2f49da67c36d2bbcef4b7fece95f6dff8088`.
+Thay đổi chuẩn bị triển khai nằm trên `deploy/vercel-main-demo`, chưa tích hợp vào main.
+
+| Hạng mục | Bằng chứng / kết quả |
+|---|---|
+| Frontend npm ci | PASS |
+| Typecheck, lint, build | PASS |
+| Frontend unit/component tests | 266 PASS |
+| Backend Java 21 tests / verify | 515 PASS, toàn bộ coverage gate PASS, không skipTests |
+| Duplicate migration regression | PASS, 32 phiên bản duy nhất |
+| SQL trên PostgreSQL WASM test engine | 32 script chạy tuần tự PASS; chỉ là bằng chứng bổ sung |
+| Seeder integration | PASS trên H2 test: đủ quan hệ/trạng thái, trùng email dừng, lỗi giữa seed rollback, chạy lại không ghi đè |
+| Seeder shell | bash -n PASS; thiếu DEMO_SEED_ENABLED=true trả exit 2 |
+| Build thiếu backend trên Vercel | Bị từ chối đúng như yêu cầu |
+| Browser cục bộ | Build production của frontend + API thật với H2 dev/test: login PASS, careers/organization mở được; 5 viewport không tràn ngang; không pageerror JS |
+| PostgreSQL native + Flyway + Hibernate validate | Chưa có PASS trong phiên cục bộ; workflow GitHub mới dùng PostgreSQL 16 sẽ kiểm tra |
+| Docker image build | Chưa chạy do môi trường không có Docker |
+| Frontend / Backend public URL | Chưa có |
+| Managed PostgreSQL / upload storage | Chưa được cấp cho dự án |
+| Seed production, restart/redeploy persistence | Chưa thực hiện |
+| Full production E2E | Chưa thực hiện; nộp đơn và quản lý hồ sơ hoàn chỉnh NOT IMPLEMENTED |
+| Production status | BLOCKED / NOT READY |
+
+PostgreSQL native không chạy được trong môi trường local chỉ có root và không hỗ trợ đổi UID. Test bổ sung bằng PostgreSQL WASM chạy SQL thành công nhưng adapter không hoàn tất được luồng lock đa kết nối của Flyway; không dùng kết quả này để thay thế PostgreSQL production. Không thay đổi cấu hình production để bỏ qua lỗi đó.
+
+Rà soát độc lập đã phát hiện và sửa lỗi trang tổ chức bị chặn bởi địa điểm chưa có API, cùng các fallback dữ liệu mẫu ở client production. Các test regression đã chạy FAIL trước khi sửa, PASS sau sửa. Giữ nguyên giao diện/stylesheet; chỉ thêm thông báo tính năng địa điểm chưa hỗ trợ lưu trên server.
+
+Backend chạy `mvn verify` bao gồm Mockito Java agent rõ ràng cho Java 21. Một test RBAC cũ dùng nội dung thông báo lương lỗi thời đã được đồng bộ với thông báo thực tế, vẫn yêu cầu HTTP 400 và đúng nội dung nghiệp vụ. Bổ sung test mapping DepartmentResponse để kiểm tra hierarchy, thông tin quản lý và số tổng hợp nullable; coverage hiện đạt gate mà không giảm ngưỡng.
+
+Để tiếp tục triển khai cần backend container service, PostgreSQL quản lý và volume/object storage phù hợp do chủ tài khoản cấp. Sau khi CI PostgreSQL PASS và PR tích hợp vào main, cấu hình secret trực tiếp trên nhà cung cấp, chạy seeder, lấy backend URL thật, tạo Vercel project theo `DEPLOY_MAIN_DEMO.md`, rồi kiểm thử production. Chưa đánh dấu READY trước khi có bằng chứng cho các bước này.

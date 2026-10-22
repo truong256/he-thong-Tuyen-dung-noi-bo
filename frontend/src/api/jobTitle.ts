@@ -403,6 +403,7 @@ export const INITIAL_JOB_TITLES: JobTitle[] = [
 
 // Helper to safely access localStorage with fallback
 const getStoredData = <T>(key: string, defaultValue: T): T => {
+  if (import.meta.env.PROD) throw new Error('Không thể tải dữ liệu chức danh từ máy chủ.');
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return defaultValue;
@@ -424,7 +425,7 @@ export const jobTitleApi = {
   // Fetch all with filtering and department enrichment
   getJobTitles: async (filters?: Partial<JobTitleFilterState>): Promise<JobTitle[]> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const params = new URLSearchParams();
         if (filters?.search) params.append('search', filters.search);
@@ -548,7 +549,7 @@ export const jobTitleApi = {
 
   getJobTitleById: async (id: number): Promise<JobTitle | null> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.get<any>(`/api/job-titles/${id}`);
         if (res.data) {
@@ -595,7 +596,7 @@ export const jobTitleApi = {
 
   createJobTitle: async (payload: Omit<JobTitle, 'id' | 'createdAt'>): Promise<JobTitle> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.post<any>('/api/job-titles', {
           title: payload.title,
@@ -655,7 +656,7 @@ export const jobTitleApi = {
 
   updateJobTitle: async (id: number, payload: Partial<JobTitle>): Promise<JobTitle> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.put<any>(`/api/job-titles/${id}`, {
           title: payload.title,
@@ -735,7 +736,7 @@ export const jobTitleApi = {
 
   deleteJobTitle: async (id: number): Promise<{ success: boolean; message: string }> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         await apiClient.delete(`/api/job-titles/${id}`);
         return { success: true, message: 'Đã xóa thành công chức danh công việc.' };
@@ -770,7 +771,7 @@ export const jobTitleApi = {
 
   toggleJobTitleStatus: async (id: number): Promise<JobTitle> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.patch<any>(`/api/job-titles/${id}/status`, {});
         if (res.data) {
@@ -822,7 +823,7 @@ export const jobTitleApi = {
     let list = providedList;
     if (!list) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      if (token && !token.startsWith('mock-')) {
+      if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
         try {
           list = await jobTitleApi.getJobTitles();
         } catch {
@@ -854,6 +855,7 @@ export const jobTitleApi = {
   },
 
   resetToDefault: async (): Promise<JobTitle[]> => {
+    if (import.meta.env.PROD) throw new Error('Không hỗ trợ khôi phục dữ liệu mẫu trên production.');
     localStorage.removeItem(STORAGE_KEYS.JOB_TITLES);
     return INITIAL_JOB_TITLES;
   },
@@ -862,7 +864,7 @@ export const jobTitleApi = {
     let list = providedList;
     if (!list) {
       const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      if (token && !token.startsWith('mock-')) {
+      if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
         try {
           list = await jobTitleApi.getJobTitles();
         } catch {

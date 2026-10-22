@@ -3,10 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import OrganizationManagementPage from '../pages/OrganizationManagementPage';
 import * as useAuthHook from '../hooks/useAuth';
+import organizationApi, { INITIAL_COMPANY_PROFILE } from '../api/organization';
 
 vi.mock('../hooks/useAuth');
 
 describe('Organization Management Page (Hồ sơ tổ chức & Cơ cấu)', () => {
+  it('keeps server-backed organization content available when locations are unsupported', async () => {
+    vi.spyOn(organizationApi, 'getLocations').mockRejectedValueOnce(new Error('Locations unavailable'));
+    render(<MemoryRouter><OrganizationManagementPage /></MemoryRouter>);
+    expect((await screen.findAllByText(INITIAL_COMPANY_PROFILE.companyName)).length).toBeGreaterThan(0);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
