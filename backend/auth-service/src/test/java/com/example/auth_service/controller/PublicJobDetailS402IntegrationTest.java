@@ -3,14 +3,9 @@ package com.example.auth_service.controller;
 import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.domain.sprint3.JobPosting;
-import com.example.auth_service.entity.RoleName;
-import com.example.auth_service.entity.User;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobPostingRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
-import com.example.auth_service.repository.RoleRepository;
-import com.example.auth_service.repository.UserRepository;
-import com.example.auth_service.security.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,9 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Set;
 
-import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -42,9 +35,6 @@ class PublicJobDetailS402IntegrationTest {
     @Autowired JobPostingRepository postings;
     @Autowired DepartmentRepository departments;
     @Autowired RecruitmentRequisitionRepository requisitions;
-    @Autowired UserRepository users;
-    @Autowired RoleRepository roles;
-    @Autowired JwtUtils jwt;
 
     private Department dept;
     private RecruitmentRequisition req;

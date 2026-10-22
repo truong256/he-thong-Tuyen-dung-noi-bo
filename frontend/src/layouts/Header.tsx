@@ -46,12 +46,25 @@ export const Header: React.FC<HeaderProps> = ({
     setAvatarImgError(false);
   }, [avatarSrc]);
 
+  const isItemRead = (item: NotificationItem) => Boolean(item.isRead ?? item.read);
+
   useEffect(() => {
     if (!user) return;
-    notificationApi
-      .getUnreadCount()
-      .then((res) => setUnreadCount(res.unreadCount || 0))
-      .catch(() => {});
+    const fetchUnread = () => {
+      notificationApi
+        .getUnreadCount()
+        .then((res) => setUnreadCount(res.unreadCount || 0))
+        .catch(() => {});
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 10000);
+    window.addEventListener('focus', fetchUnread);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchUnread);
+    };
   }, [user]);
 
   useEffect(() => {
@@ -70,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
     try {
       await notificationApi.markAsRead(id);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        prev.map((n) => (n.id === id ? { ...n, isRead: true, read: true } : n))
       );
       setUnreadCount((c) => Math.max(0, c - 1));
     } catch {
@@ -81,7 +94,7 @@ export const Header: React.FC<HeaderProps> = ({
   const handleMarkAllAsRead = async () => {
     try {
       await notificationApi.markAllAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, read: true })));
       setUnreadCount(0);
     } catch {
       // Ignore notification read-all failure
@@ -212,20 +225,26 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <div className="notification-list">
                   {notifications.length > 0 ? (
-                    notifications.map((item) => (
-                      <div
-                        key={item.id}
-                        className={`notification-item ${!item.isRead ? 'unread' : ''}`}
-                        onClick={() => !item.isRead && handleMarkAsRead(item.id)}
-                        style={{ cursor: !item.isRead ? 'pointer' : 'default', opacity: item.isRead ? 0.75 : 1 }}
-                      >
-                        <span
-                          className={`notification-dot-indicator ${
-                            item.type === 'CANDIDATE_WITHDRAWN' ? 'danger' : item.isRead ? 'info' : 'warning'
-                          }`}
-                          aria-hidden="true"
-                        />
-                        <div className="notification-item-content" style={{ flex: 1 }}>
+                    notifications.map((item) => {
+                      const readStatus = isItemRead(item);
+                      return (
+                        <div
+                          key={item.id}
+                          className={`notification-item ${!readStatus ? 'unread' : ''}`}
+                          onClick={() => !readStatus && handleMarkAsRead(item.id)}
+                          style={{ cursor: !readStatus ? 'pointer' : 'default', opacity: readStatus ? 0.75 : 1 }}
+                        >
+                          <span
+                            className={`notification-dot-indicator ${
+                              item.type === 'CANDIDATE_WITHDRAWAL' || item.type === 'CANDIDATE_WITHDRAWN'
+                                ? 'danger'
+                                : readStatus
+                                ? 'info'
+                                : 'warning'
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <div className="notification-item-content" style={{ flex: 1 }}>
                           <strong className="notification-item-title" style={{ display: 'block', fontSize: '0.85rem' }}>
                             {item.title}
                           </strong>
@@ -240,7 +259,8 @@ export const Header: React.FC<HeaderProps> = ({
                           </span>
                         </div>
                       </div>
-                    ))
+                    );
+                  })
                   ) : (
                     <>
                       <div className="notification-item">

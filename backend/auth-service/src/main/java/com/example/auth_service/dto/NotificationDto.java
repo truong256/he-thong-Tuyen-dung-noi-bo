@@ -1,6 +1,7 @@
 package com.example.auth_service.dto;
 
 import com.example.auth_service.entity.Notification;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.time.Instant;
 
@@ -12,9 +13,13 @@ public record NotificationDto(
         String type,
         Long relatedEntityId,
         String relatedEntityType,
-        boolean read,
+        @JsonProperty("read") boolean read,
         Instant createdAt
 ) {
+    @JsonProperty("isRead")
+    public boolean isRead() {
+        return read;
+    }
     public static NotificationDto from(Notification n) {
         return new NotificationDto(
                 n.getId(),

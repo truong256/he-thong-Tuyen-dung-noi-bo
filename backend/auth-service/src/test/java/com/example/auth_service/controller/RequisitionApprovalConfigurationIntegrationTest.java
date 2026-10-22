@@ -7,7 +7,6 @@ import com.example.auth_service.dto.ApprovalConfigurationRequest;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionRequest;
 import com.example.auth_service.entity.RequisitionApprovalConfiguration;
-import com.example.auth_service.entity.RequisitionApprovalConfigurationStep;
 import com.example.auth_service.entity.RequisitionApprovalSnapshot;
 import com.example.auth_service.entity.RequisitionAssignment;
 import com.example.auth_service.entity.Role;

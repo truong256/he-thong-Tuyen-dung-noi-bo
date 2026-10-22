@@ -471,22 +471,36 @@ public class DataInitializer {
                 });
             }
 
-            if (!isTestProfile && applicationRepository.count() == 0) {
-                User candidateUser = userRepository.findByEmail("candidate@company.com").orElse(null);
+            if (!isTestProfile) {
                 User recruiterUser = userRepository.findByEmail("recruiter@company.com").orElse(null);
-                RecruitmentRequisition sampleReq = requisitionRepository.findAll().stream().findFirst().orElse(null);
-
-                if (sampleReq != null && recruiterUser != null) {
-                    if (assignmentRepository.findByRequisitionId(sampleReq.getId()).isEmpty()) {
-                        RequisitionAssignment assignment = new RequisitionAssignment();
-                        assignment.setRequisitionId(sampleReq.getId());
-                        assignment.setUserId(recruiterUser.getId());
-                        assignment.setRole(RoleName.RECRUITER);
-                        assignment.setPrimary(true);
-                        assignment.setAssignedAt(Instant.now());
-                        assignmentRepository.save(assignment);
+                if (recruiterUser != null) {
+                    for (RecruitmentRequisition r : requisitionRepository.findAll()) {
+                        if (assignmentRepository.findByRequisitionIdAndRole(r.getId(), RoleName.RECRUITER).isEmpty()) {
+                            RequisitionAssignment assignment = new RequisitionAssignment();
+                            assignment.setRequisitionId(r.getId());
+                            assignment.setUserId(recruiterUser.getId());
+                            assignment.setRole(RoleName.RECRUITER);
+                            assignment.setPrimary(true);
+                            assignment.setAssignedAt(Instant.now());
+                            assignmentRepository.save(assignment);
+                        }
                     }
                 }
+
+                RecruitmentRequisition defaultReq = requisitionRepository.findAll().stream().findFirst().orElse(null);
+                if (defaultReq != null) {
+                    for (JobPosting jp : jobPostingRepository.findAll()) {
+                        if (jp.getRequisitionId() == null) {
+                            jp.setRequisitionId(defaultReq.getId());
+                            jobPostingRepository.save(jp);
+                        }
+                    }
+                }
+            }
+
+            if (!isTestProfile && applicationRepository.count() == 0) {
+                User candidateUser = userRepository.findByEmail("candidate@company.com").orElse(null);
+                RecruitmentRequisition sampleReq = requisitionRepository.findAll().stream().findFirst().orElse(null);
 
                 if (sampleReq != null && candidateUser != null) {
                     Optional<CandidateApplicationWithdrawToken> existingToken = tokenRepository.findByToken("demo-withdraw-token-123");

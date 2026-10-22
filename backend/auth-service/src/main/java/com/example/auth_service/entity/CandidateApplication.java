@@ -35,4 +35,13 @@ public class CandidateApplication {
 
     @Column(name = "withdrawal_reason", columnDefinition = "TEXT")
     private String withdrawalReason;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(name = "stage_changed_by_id")
+    private Long stageChangedById;
+
+    @Column(name = "stage_changed_at")
+    private java.time.Instant stageChangedAt;
 }

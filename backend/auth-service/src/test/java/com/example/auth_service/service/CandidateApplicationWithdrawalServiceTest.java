@@ -313,4 +313,34 @@ class CandidateApplicationWithdrawalServiceTest {
         assertThat(sampleApp.getWithdrawalReason()).isEqualTo("Đổi định hướng");
         assertThat(sampleToken.isUsed()).isTrue();
     }
+
+    @Test
+    @DisplayName("Fallback: Thông báo cho toàn bộ Recruiter đang hoạt động khi yêu cầu tuyển dụng chưa có phân công Recruiter cụ thể")
+    void testConfirmWithdrawal_fallbackToActiveRecruitersWhenNoAssignment() {
+        when(tokenRepository.findByToken("valid-secret-token-123")).thenReturn(Optional.of(sampleToken));
+        when(applicationRepository.findById(101L)).thenReturn(Optional.of(sampleApp));
+        when(applicationRepository.save(any(CandidateApplication.class))).thenAnswer(i -> i.getArgument(0));
+        when(tokenRepository.save(any(CandidateApplicationWithdrawToken.class))).thenAnswer(i -> i.getArgument(0));
+        when(requisitionRepository.findById(202L)).thenReturn(Optional.of(sampleReq));
+        // No assignment for this requisition
+        when(assignmentRepository.findByRequisitionIdAndRole(202L, RoleName.RECRUITER)).thenReturn(List.of());
+        // System has active recruiters
+        when(userRepository.findActiveUsersByRoleName(RoleName.RECRUITER)).thenReturn(List.of(sampleRecruiter));
+        when(notificationRepository.existsByUserIdAndRelatedEntityTypeAndRelatedEntityIdAndType(
+                808L, "CANDIDATE_APPLICATION", 101L, "CANDIDATE_WITHDRAWAL")).thenReturn(false);
+
+        WithdrawalResultResponse result = service.confirmWithdrawal("valid-secret-token-123", "Lý do cá nhân");
+
+        assertThat(result.success()).isTrue();
+        assertThat(sampleApp.getStage()).isEqualTo("WITHDRAWN");
+
+        ArgumentCaptor<Notification> notifCaptor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(notifCaptor.capture());
+        Notification savedNotif = notifCaptor.getValue();
+        assertThat(savedNotif.getUserId()).isEqualTo(808L);
+        assertThat(savedNotif.getType()).isEqualTo("CANDIDATE_WITHDRAWAL");
+        assertThat(savedNotif.getTitle()).isEqualTo("Ứng viên đã rút hồ sơ");
+
+        verify(mailService).sendCandidateWithdrawnNotification("recruiter@company.com", "Nguyen Van A", "Ky su Phan mem Senior", 101L);
+    }
 }

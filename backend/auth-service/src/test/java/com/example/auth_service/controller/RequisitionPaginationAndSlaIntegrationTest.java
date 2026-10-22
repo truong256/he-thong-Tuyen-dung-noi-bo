@@ -196,10 +196,10 @@ class RequisitionPaginationAndSlaIntegrationTest {
         JsonNode page1 = mapper.readTree(resPage1).get("content");
 
         List<String> page0Codes = new ArrayList<>();
-        page0.forEach(node -> page0Codes.add(node.get("requisitionCode").asText()));
+        page0.forEach(node -> page0Codes.add(node.get("requisitionCode").asString()));
 
         List<String> page1Codes = new ArrayList<>();
-        page1.forEach(node -> page1Codes.add(node.get("requisitionCode").asText()));
+        page1.forEach(node -> page1Codes.add(node.get("requisitionCode").asString()));
 
         assertThat(page0Codes).hasSize(10);
         assertThat(page1Codes).hasSize(10);

@@ -54,7 +54,6 @@ class RequisitionApprovalIntegrationTest {
     @Autowired private RequisitionAssignmentRepository assignments;
 
     private User hiringManager;
-    private User hrManager;
     private User approverUser;
     private User candidateUser;
     private User adminUser;
@@ -66,7 +65,6 @@ class RequisitionApprovalIntegrationTest {
     @BeforeEach
     void setUp() {
         hiringManager = createUser("hm_s3@example.com", RoleName.HIRING_MANAGER);
-        hrManager = createUser("hr_s3@example.com", RoleName.HR_MANAGER);
         approverUser = createUser("approver_s3@example.com", RoleName.APPROVER);
         candidateUser = createUser("cand_s3@example.com", RoleName.CANDIDATE);
         adminUser = createUser("admin_s3@example.com", RoleName.ADMIN);

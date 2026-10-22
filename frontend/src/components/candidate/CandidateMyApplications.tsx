@@ -8,7 +8,8 @@ import {
   Mail,
   RefreshCw,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import withdrawalApi from '../../api/withdrawal';
@@ -24,6 +25,7 @@ export const CandidateMyApplications: React.FC<Props> = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [successToast, setSuccessToast] = useState<string>('');
+  const [filterTab, setFilterTab] = useState<'ALL' | 'ACTIVE' | 'WITHDRAWN'>('ALL');
 
   // Modal withdrawal state
   const [selectedApp, setSelectedApp] = useState<CandidateApplicationPortalItem | null>(null);
@@ -415,30 +417,126 @@ export const CandidateMyApplications: React.FC<Props> = () => {
           )}
 
           {/* Applications List / Table */}
-          {!isLoading && !errorMessage && applications.length > 0 && (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ borderBottom: '2px solid #E2E8F0', color: '#475569', fontSize: '0.85rem' }}>
-                    <th style={{ padding: '10px 12px' }}>MÃ & VỊ TRÍ ỨNG TUYỂN</th>
-                    <th style={{ padding: '10px 12px' }}>TRẠNG THÁI</th>
-                    <th style={{ padding: '10px 12px' }}>THÔNG TIN THỰC HIỆN</th>
-                    <th style={{ padding: '10px 12px', textAlign: 'right' }}>THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {applications.map((app) => {
-                    const isWithdrawn =
-                      app.withdrawn || app.stage === 'WITHDRAWN' || app.stage === 'Ứng viên rút';
-                    return (
-                      <tr
-                        key={app.id}
-                        style={{
-                          borderBottom: '1px solid #F1F5F9',
-                          background: isWithdrawn ? '#F8FAFC' : '#FFFFFF',
-                          transition: 'background 0.15s ease',
-                        }}
-                      >
+          {!isLoading && !errorMessage && applications.length > 0 && (() => {
+            const isWithdrawnApp = (app: CandidateApplicationPortalItem) =>
+              app.withdrawn || app.stage === 'WITHDRAWN' || app.stage === 'Ứng viên rút';
+
+            const activeApps = applications.filter((app) => !isWithdrawnApp(app));
+            const withdrawnApps = applications.filter((app) => isWithdrawnApp(app));
+
+            const filteredApplications =
+              filterTab === 'ACTIVE'
+                ? activeApps
+                : filterTab === 'WITHDRAWN'
+                ? withdrawnApps
+                : applications;
+
+            return (
+              <div>
+                {/* Status Filter Tabs */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    borderBottom: '1px solid #E2E8F0',
+                    paddingBottom: '12px',
+                    marginBottom: '16px',
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('ALL')}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: filterTab === 'ALL' ? '1px solid #2563EB' : '1px solid #E2E8F0',
+                        background: filterTab === 'ALL' ? '#EFF6FF' : '#FFFFFF',
+                        color: filterTab === 'ALL' ? '#1D4ED8' : '#64748B',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Tất cả ({applications.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('ACTIVE')}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: filterTab === 'ACTIVE' ? '1px solid #059669' : '1px solid #E2E8F0',
+                        background: filterTab === 'ACTIVE' ? '#ECFDF5' : '#FFFFFF',
+                        color: filterTab === 'ACTIVE' ? '#047857' : '#64748B',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Đang ứng tuyển ({activeApps.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilterTab('WITHDRAWN')}
+                      style={{
+                        padding: '6px 14px',
+                        borderRadius: '8px',
+                        border: filterTab === 'WITHDRAWN' ? '1px solid #DC2626' : '1px solid #E2E8F0',
+                        background: filterTab === 'WITHDRAWN' ? '#FEF2F2' : '#FFFFFF',
+                        color: filterTab === 'WITHDRAWN' ? '#B91C1C' : '#64748B',
+                        fontWeight: 600,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      Đã rút ({withdrawnApps.length})
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#64748B' }}>
+                    <Info size={14} color="#3B82F6" />
+                    <span>Hồ sơ đã rút được lưu lại làm lịch sử và đã loại khỏi danh sách xét duyệt của Recruiter.</span>
+                  </div>
+                </div>
+
+                {filteredApplications.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px 16px', color: '#64748B' }}>
+                    <p style={{ margin: 0, fontSize: '0.875rem' }}>
+                      {filterTab === 'ACTIVE'
+                        ? 'Bạn hiện không có hồ sơ nào đang ứng tuyển.'
+                        : 'Không có hồ sơ nào đã rút.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid #E2E8F0', color: '#475569', fontSize: '0.85rem' }}>
+                          <th style={{ padding: '10px 12px' }}>MÃ & VỊ TRÍ ỨNG TUYỂN</th>
+                          <th style={{ padding: '10px 12px' }}>TRẠNG THÁI</th>
+                          <th style={{ padding: '10px 12px' }}>THÔNG TIN THỰC HIỆN</th>
+                          <th style={{ padding: '10px 12px', textAlign: 'right' }}>THAO TÁC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredApplications.map((app) => {
+                          const isWithdrawn = isWithdrawnApp(app);
+                          return (
+                            <tr
+                              key={app.id}
+                              style={{
+                                borderBottom: '1px solid #F1F5F9',
+                                background: isWithdrawn ? '#F8FAFC' : '#FFFFFF',
+                                transition: 'background 0.15s ease',
+                              }}
+                            >
                         {/* Position info */}
                         <td style={{ padding: '14px 12px', verticalAlign: 'middle' }}>
                           <div style={{ fontWeight: 600, color: isWithdrawn ? '#64748B' : '#0F172A' }}>
@@ -545,6 +643,9 @@ export const CandidateMyApplications: React.FC<Props> = () => {
               </table>
             </div>
           )}
+              </div>
+            );
+          })()}
         </div>
       </div>
 

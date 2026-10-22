@@ -860,7 +860,7 @@ public class RequisitionService {
      */
     @Transactional(readOnly = true)
     public com.example.auth_service.dto.PipelineSummaryResponse getPipelineSummary(Long id) {
-        RecruitmentRequisition req = requisitions.findById(id)
+        requisitions.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
 
         if (candidateApplications == null) {

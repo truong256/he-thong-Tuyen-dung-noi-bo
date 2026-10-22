@@ -7,7 +7,6 @@ import com.example.auth_service.dto.*;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
-import com.example.auth_service.repository.CompetencyCriterionRepository;
 import com.example.auth_service.repository.CompetencyFrameworkRepository;
 import com.example.auth_service.repository.InterviewQuestionRepository;
 import com.example.auth_service.repository.JobTitleRepository;
