@@ -1,37 +1,37 @@
-﻿import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
-import PermissionGuard from './components/PermissionGuard';
-import RoleGuard from './components/RoleGuard';
-import AppLayout from './layouts/AppLayout';
-import LoginPage from './pages/LoginPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import DashboardPage from './pages/DashboardPage';
-import ProfilePage from './pages/ProfilePage';
-import UserManagementPage from './pages/UserManagementPage';
-import OrganizationManagementPage from './pages/OrganizationManagementPage';
-import JobTitleManagementPage from './pages/JobTitleManagementPage';
-import UnauthorizedPage from './pages/UnauthorizedPage';
-import NotFoundPage from './pages/NotFoundPage';
-import ExcelImportPage from './pages/ExcelImportPage';
-import FirstLoginChangePasswordPage from './pages/FirstLoginChangePasswordPage';
-import QuestionBankPage from './pages/QuestionBankPage';
-import CategoryManagementPage from './pages/CategoryManagementPage';
-import RequisitionManagementPage from './pages/RequisitionManagementPage';
-import RecruitmentRequestPage from './pages/RecruitmentRequestPage';
-import CompetencyFrameworkPage from './pages/CompetencyFrameworkPage';
-import ApprovalConfigurationPage from './pages/ApprovalConfigurationPage';
-import JobPostingManagementPage from './pages/JobPostingManagementPage';
-import PublicCareerPage from './pages/PublicCareerPage';
-import PublicJobDetailPage from './pages/PublicJobDetailPage';
-import PermissionMatrixPage from './pages/PermissionMatrixPage';
-import WithdrawApplicationPage from './pages/WithdrawApplicationPage';
-import CandidateApplicationsPage from './pages/CandidateApplicationsPage';
-import RecruitmentCandidatesPage from './pages/RecruitmentCandidatesPage';
-import CandidateApprovalsPage from './pages/CandidateApprovalsPage';
-import OffersPage from './pages/OffersPage';
+﻿import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import PermissionGuard from "./components/PermissionGuard";
+import RoleGuard from "./components/RoleGuard";
+import AppLayout from "./layouts/AppLayout";
+import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import DashboardPage from "./pages/DashboardPage";
+import ProfilePage from "./pages/ProfilePage";
+import UserManagementPage from "./pages/UserManagementPage";
+import OrganizationManagementPage from "./pages/OrganizationManagementPage";
+import JobTitleManagementPage from "./pages/JobTitleManagementPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ExcelImportPage from "./pages/ExcelImportPage";
+import FirstLoginChangePasswordPage from "./pages/FirstLoginChangePasswordPage";
+import QuestionBankPage from "./pages/QuestionBankPage";
+import CategoryManagementPage from "./pages/CategoryManagementPage";
+import RequisitionManagementPage from "./pages/RequisitionManagementPage";
+import RecruitmentRequestPage from "./pages/RecruitmentRequestPage";
+import CompetencyFrameworkPage from "./pages/CompetencyFrameworkPage";
+import ApprovalConfigurationPage from "./pages/ApprovalConfigurationPage";
+import JobPostingManagementPage from "./pages/JobPostingManagementPage";
+import PublicCareerPage from "./pages/PublicCareerPage";
+import PublicJobDetailPage from "./pages/PublicJobDetailPage";
+import PermissionMatrixPage from "./pages/PermissionMatrixPage";
+import WithdrawApplicationPage from "./pages/WithdrawApplicationPage";
+import CandidateApplicationsPage from "./pages/CandidateApplicationsPage";
+import RecruitmentCandidatesPage from "./pages/RecruitmentCandidatesPage";
+import CandidateApprovalsPage from "./pages/CandidateApprovalsPage";
+import OffersPage from "./pages/OffersPage";
 
 export const App: React.FC = () => {
   return (
@@ -43,11 +43,14 @@ export const App: React.FC = () => {
         }}
       >
         <Routes>
-          {/* Cá»•ng tuyá»ƒn dá»¥ng cÃ´ng khai dÃ nh cho á»©ng viÃªn (S3-10 / SCRUM-150) */}
+          {/* Public careers routes (S3-10 / SCRUM-150) */}
           <Route path="/careers" element={<PublicCareerPage />} />
           <Route path="/careers/:id" element={<PublicJobDetailPage />} />
           <Route path="/jobs" element={<Navigate to="/careers" replace />} />
-          <Route path="/candidate/withdraw" element={<WithdrawApplicationPage />} />
+          <Route
+            path="/candidate/withdraw"
+            element={<WithdrawApplicationPage />}
+          />
           <Route path="/withdraw" element={<WithdrawApplicationPage />} />
 
           {/* CÃ¡c trang Ä‘Äƒng nháº­p */}
@@ -70,10 +73,7 @@ export const App: React.FC = () => {
 
           {/* Xem thá»­ frontend Excel khi cháº¡y mÃ´i trÆ°á»ng phÃ¡t triá»ƒn */}
           {import.meta.env.DEV && (
-            <Route
-              path="/preview/import-excel"
-              element={<ExcelImportPage />}
-            />
+            <Route path="/preview/import-excel" element={<ExcelImportPage />} />
           )}
 
           {/* CÃ¡c trang yÃªu cáº§u Ä‘Äƒng nháº­p */}
@@ -85,10 +85,7 @@ export const App: React.FC = () => {
               </ProtectedRoute>
             }
           >
-            <Route
-              index
-              element={<Navigate to="/dashboard" replace />}
-            />
+            <Route index element={<Navigate to="/dashboard" replace />} />
 
             {/* Dashboard â€“ táº¥t cáº£ authenticated users */}
             <Route path="dashboard" element={<DashboardPage />} />
@@ -97,11 +94,38 @@ export const App: React.FC = () => {
             <Route path="profile" element={<ProfilePage />} />
 
             {/* Cá»•ng thÃ´ng tin á»©ng viÃªn: Há»“ sÆ¡ & CV Ä‘Ã£ ná»™p (S4-06) */}
-            <Route path="candidate/applications" element={<CandidateApplicationsPage />} />
-            <Route path="recruitment/candidates" element={<PermissionGuard requiredPermissions={['CANDIDATE_READ_ALL']}><RecruitmentCandidatesPage /></PermissionGuard>} />
-            <Route path="recruitment/approvals" element={<PermissionGuard requiredPermissions={['CANDIDATE_READ_ALL']}><CandidateApprovalsPage /></PermissionGuard>} />
-            <Route path="recruitment/offers" element={<PermissionGuard requiredPermissions={['CANDIDATE_READ_ALL']}><OffersPage /></PermissionGuard>} />
-            <Route path="my-applications" element={<Navigate to="/candidate/applications" replace />} />
+            <Route
+              path="candidate/applications"
+              element={<CandidateApplicationsPage />}
+            />
+            <Route
+              path="recruitment/candidates"
+              element={
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                  <RecruitmentCandidatesPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/approvals"
+              element={
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                  <CandidateApprovalsPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/offers"
+              element={
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                  <OffersPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="my-applications"
+              element={<Navigate to="/candidate/applications" replace />}
+            />
 
             {/*
               Organization & Company Profile â€“ CATALOG_READ
@@ -111,7 +135,7 @@ export const App: React.FC = () => {
             <Route
               path="organization"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <OrganizationManagementPage />
                 </PermissionGuard>
               }
@@ -124,7 +148,7 @@ export const App: React.FC = () => {
             <Route
               path="job-titles"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <JobTitleManagementPage />
                 </PermissionGuard>
               }
@@ -138,7 +162,7 @@ export const App: React.FC = () => {
             <Route
               path="categories"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <CategoryManagementPage />
                 </PermissionGuard>
               }
@@ -146,7 +170,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/categories"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <CategoryManagementPage />
                 </PermissionGuard>
               }
@@ -159,7 +183,7 @@ export const App: React.FC = () => {
             <Route
               path="questions"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <QuestionBankPage />
                 </PermissionGuard>
               }
@@ -167,7 +191,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/questions"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <QuestionBankPage />
                 </PermissionGuard>
               }
@@ -180,7 +204,7 @@ export const App: React.FC = () => {
             <Route
               path="competencies"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <CompetencyFrameworkPage />
                 </PermissionGuard>
               }
@@ -192,7 +216,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/competencies"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <CompetencyFrameworkPage />
                 </PermissionGuard>
               }
@@ -206,7 +230,12 @@ export const App: React.FC = () => {
               path="recruitment/requisitions"
               element={
                 <PermissionGuard
-                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL', 'REQUISITION_APPROVE']}
+                  requiredPermissions={[
+                    "REQUISITION_CREATE",
+                    "REQUISITION_READ_OWN",
+                    "REQUISITION_READ_ALL",
+                    "REQUISITION_APPROVE",
+                  ]}
                   requireAny
                 >
                   <RequisitionManagementPage />
@@ -217,7 +246,11 @@ export const App: React.FC = () => {
               path="recruitment/create"
               element={
                 <PermissionGuard
-                  requiredPermissions={['REQUISITION_CREATE', 'REQUISITION_READ_OWN', 'REQUISITION_READ_ALL']}
+                  requiredPermissions={[
+                    "REQUISITION_CREATE",
+                    "REQUISITION_READ_OWN",
+                    "REQUISITION_READ_ALL",
+                  ]}
                   requireAny
                 >
                   <RecruitmentRequestPage />
@@ -227,7 +260,7 @@ export const App: React.FC = () => {
             <Route
               path="recruitment/approval-configurations"
               element={
-                <RoleGuard allowedRoles={['HR_MANAGER']}>
+                <RoleGuard allowedRoles={["HR_MANAGER"]}>
                   <ApprovalConfigurationPage />
                 </RoleGuard>
               }
@@ -236,7 +269,7 @@ export const App: React.FC = () => {
             <Route
               path="recruitment/job-postings"
               element={
-                <PermissionGuard requiredPermissions={['JOB_MANAGE']}>
+                <PermissionGuard requiredPermissions={["JOB_MANAGE"]}>
                   <JobPostingManagementPage />
                 </PermissionGuard>
               }
@@ -275,7 +308,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/import-excel"
               element={
-                <PermissionGuard requiredPermissions={['USER_MANAGE']}>
+                <PermissionGuard requiredPermissions={["USER_MANAGE"]}>
                   <ExcelImportPage />
                 </PermissionGuard>
               }
@@ -290,7 +323,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/users"
               element={
-                <PermissionGuard requiredPermissions={['USER_READ']}>
+                <PermissionGuard requiredPermissions={["USER_READ"]}>
                   <UserManagementPage />
                 </PermissionGuard>
               }
@@ -303,7 +336,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/permission-matrix"
               element={
-                <PermissionGuard requiredPermissions={['ROLE_READ']}>
+                <PermissionGuard requiredPermissions={["ROLE_READ"]}>
                   <PermissionMatrixPage />
                 </PermissionGuard>
               }
@@ -316,7 +349,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/organization"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <OrganizationManagementPage />
                 </PermissionGuard>
               }
@@ -328,7 +361,7 @@ export const App: React.FC = () => {
             <Route
               path="admin/job-titles"
               element={
-                <PermissionGuard requiredPermissions={['CATALOG_READ']}>
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
                   <JobTitleManagementPage />
                 </PermissionGuard>
               }
@@ -344,4 +377,3 @@ export const App: React.FC = () => {
 };
 
 export default App;
-

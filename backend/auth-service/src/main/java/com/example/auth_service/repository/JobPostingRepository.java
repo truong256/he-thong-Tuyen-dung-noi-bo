@@ -14,6 +14,10 @@ import java.util.Optional;
 
 public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT j FROM JobPosting j WHERE j.id = :id")
+    Optional<JobPosting> findLockedById(@Param("id") Long id);
+
     Optional<JobPosting> findByJobCode(String jobCode);
 
     boolean existsByJobCode(String jobCode);
@@ -36,6 +40,16 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT j FROM JobPosting j
+        WHERE j.status = 'PUBLISHED'
+          AND j.applicationDeadline IS NOT NULL
+          AND j.applicationDeadline < :currentDate
+        ORDER BY j.applicationDeadline ASC, j.id ASC
+    """)
+    List<JobPosting> findExpiredPublishedPostings(@Param("currentDate") LocalDate currentDate);
 
     @Query("""
         SELECT j FROM JobPosting j

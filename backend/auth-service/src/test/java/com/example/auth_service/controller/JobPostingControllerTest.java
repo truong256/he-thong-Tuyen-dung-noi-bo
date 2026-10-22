@@ -233,4 +233,25 @@ class JobPostingControllerTest {
                 .andExpect(jsonPath("$[1]").value("Đà Nẵng"))
                 .andExpect(jsonPath("$[2]").value("TP. Hồ Chí Minh"));
     }
+
+    @Test
+    @DisplayName("POST /api/job-postings/auto-expire - Kích hoạt tự động hết hạn các tin quá hạn")
+    void testTriggerAutoExpire() throws Exception {
+        AutoExpireResult result = AutoExpireResult.builder()
+                .expiredCount(2)
+                .expiredPostingIds(List.of(10L, 20L))
+                .expiredJobCodes(List.of("JP-2026-0010", "JP-2026-0020"))
+                .checkedDate(LocalDate.now())
+                .message("Đã tự động hết hạn và ẩn 2 tin tuyển dụng.")
+                .build();
+
+        when(jobPostingService.expireDueJobPostings(any(LocalDate.class))).thenReturn(result);
+
+        mockMvc.perform(post("/api/job-postings/auto-expire")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expiredCount").value(2))
+                .andExpect(jsonPath("$.expiredJobCodes[0]").value("JP-2026-0010"))
+                .andExpect(jsonPath("$.expiredJobCodes[1]").value("JP-2026-0020"));
+    }
 }

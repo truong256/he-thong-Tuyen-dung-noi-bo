@@ -331,7 +331,7 @@ class JobPostingServiceTest {
         testPosting.setPublishedByUserId(hrManagerUser.getId());
         testPosting.setPublishedAt(Instant.now().minusSeconds(86400));
 
-        when(jobPostingRepository.findById(100L)).thenReturn(Optional.of(testPosting));
+        when(jobPostingRepository.findLockedById(100L)).thenReturn(Optional.of(testPosting));
         when(jobPostingRepository.save(any(JobPosting.class))).thenAnswer(i -> i.getArgument(0));
 
         JobPostingResponse res = service.unpublishJobPosting(100L, "Đã tuyển đủ chỉ tiêu headcount", hrManagerUser.getId());
@@ -440,5 +440,87 @@ class JobPostingServiceTest {
         org.mockito.Mockito.verify(jobPostingRepository).findPublicPostings(
                 any(LocalDate.class), isNull(), isNull(), isNull(), isNull(), any(Pageable.class)
         );
+    }
+
+    @Test
+    @DisplayName("S4-08 / SCRUM-187: Gỡ tin tuyển dụng với lý do rỗng ném BadRequestException")
+    void testUnpublishJobPosting_BlankReason_ThrowsBadRequest() {
+        assertThatThrownBy(() -> service.unpublishJobPosting(100L, "   ", hrManagerUser.getId()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Vui lòng cung cấp lý do");
+    }
+
+    @Test
+    @DisplayName("S4-08 / SCRUM-187: Gỡ tin tuyển dụng khi không ở trạng thái PUBLISHED ném BadRequestException")
+    void testUnpublishJobPosting_NotPublished_ThrowsBadRequest() {
+        testPosting.setStatus("DRAFT");
+        when(jobPostingRepository.findLockedById(100L)).thenReturn(Optional.of(testPosting));
+
+        assertThatThrownBy(() -> service.unpublishJobPosting(100L, "Đã tuyển đủ nhân sự", hrManagerUser.getId()))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining("Chỉ tin đang xuất bản hoặc đã hết hạn mới có thể gỡ");
+    }
+
+    @Test
+    @DisplayName("S4-08 / SCRUM-187 / SCRUM-189: Tự động hết hạn tin tuyển dụng quá hạn nhận hồ sơ")
+    void testExpireDueJobPostings_Success() {
+        LocalDate today = LocalDate.now();
+        JobPosting overdue1 = new JobPosting();
+        overdue1.setId(501L);
+        overdue1.setJobCode("JP-2026-0501");
+        overdue1.setTitle("Frontend VueJS");
+        overdue1.setStatus("PUBLISHED");
+        overdue1.setApplicationDeadline(today.minusDays(1));
+        overdue1.setPublishedByUserId(hrManagerUser.getId());
+
+        JobPosting overdue2 = new JobPosting();
+        overdue2.setId(502L);
+        overdue2.setJobCode("JP-2026-0502");
+        overdue2.setTitle("DevOps Engineer");
+        overdue2.setStatus("PUBLISHED");
+        overdue2.setApplicationDeadline(today.minusDays(5));
+        overdue2.setPublishedByUserId(hrManagerUser.getId());
+
+        when(jobPostingRepository.findExpiredPublishedPostings(today))
+                .thenReturn(List.of(overdue1, overdue2));
+        when(jobPostingRepository.save(any(JobPosting.class))).thenAnswer(i -> i.getArgument(0));
+
+        AutoExpireResult result = service.expireDueJobPostings(today);
+
+        assertThat(result.getExpiredCount()).isEqualTo(2);
+        assertThat(result.getExpiredPostingIds()).containsExactly(501L, 502L);
+        assertThat(result.getExpiredJobCodes()).containsExactly("JP-2026-0501", "JP-2026-0502");
+        assertThat(overdue1.getStatus()).isEqualTo("EXPIRED");
+        assertThat(overdue2.getStatus()).isEqualTo("EXPIRED");
+
+        verify(auditLogRepository, org.mockito.Mockito.times(2)).save(argThat(log ->
+                "AUTO_EXPIRE".equals(log.getAction()) && "EXPIRED".equals(log.getToStatus())
+        ));
+    }
+
+    @Test
+    @DisplayName("S4-08 / SCRUM-187 / SCRUM-189: Tự động hết hạn khi không có tin nào quá hạn")
+    void testExpireDueJobPostings_NoOverdue() {
+        LocalDate today = LocalDate.now();
+        when(jobPostingRepository.findExpiredPublishedPostings(today))
+                .thenReturn(List.of());
+
+        AutoExpireResult result = service.expireDueJobPostings(today);
+
+        assertThat(result.getExpiredCount()).isEqualTo(0);
+        assertThat(result.getExpiredPostingIds()).isEmpty();
+        verify(auditLogRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    @DisplayName("S4-08 / SCRUM-187 / SCRUM-189: Scheduled Task JobPostingExpirationTask gọi expireDueJobPostings thành công")
+    void testJobPostingExpirationTask_RunsSuccessfully() {
+        JobPostingExpirationTask task = new JobPostingExpirationTask(service);
+        when(jobPostingRepository.findExpiredPublishedPostings(any(LocalDate.class)))
+                .thenReturn(List.of());
+
+        task.runDailyExpirationTask();
+
+        verify(jobPostingRepository).findExpiredPublishedPostings(any(LocalDate.class));
     }
 }
