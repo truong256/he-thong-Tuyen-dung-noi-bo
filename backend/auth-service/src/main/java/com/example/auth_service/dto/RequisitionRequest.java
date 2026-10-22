@@ -22,6 +22,7 @@ public record RequisitionRequest(
 
         String jobTitle,
 
+        @jakarta.validation.constraints.NotNull(message = "Phòng ban không được để trống")
         Long departmentId,
 
         String department,

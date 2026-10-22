@@ -15,6 +15,16 @@ export interface PageResponse<T> {
 }
 
 export const jobPostingApi = {
+  getPublicDepartments: async (): Promise<Array<{ id: number; name: string }>> => {
+    const response = await apiClient.get<Array<{ id: number; name: string }>>('/api/public/job-postings/departments');
+    return response.data;
+  },
+
+  getPublicLocations: async (): Promise<string[]> => {
+    const response = await apiClient.get<string[]>('/api/public/job-postings/locations');
+    return response.data;
+  },
+
   // 1. Quản lý nội bộ
   list: async (params?: {
     status?: string;
@@ -90,11 +100,13 @@ export const jobPostingApi = {
     const response = await apiClient.get<Array<{ id: number; name: string }>>('/api/public/departments');
     return response.data;
   },
+
   listPublic: async (params?: {
     departmentId?: number;
     workingModel?: string;
     workLocation?: string;
     keyword?: string;
+    includeExpired?: boolean;
     page?: number;
     size?: number;
     sort?: string;
@@ -105,6 +117,19 @@ export const jobPostingApi = {
 
   getPublicDetail: async (id: number): Promise<JobPostingPublic> => {
     const response = await apiClient.get<JobPostingPublic>(`/api/public/job-postings/${id}`);
+    return response.data;
+  },
+
+  applyPublic: async (
+    id: number,
+    payload: import('../types/jobPosting').PublicJobApplicationPayload | FormData
+  ): Promise<import('../types/jobPosting').PublicJobApplicationResult> => {
+    const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
+    const response = await apiClient.post<import('../types/jobPosting').PublicJobApplicationResult>(
+      `/api/public/job-postings/${id}/apply`,
+      payload,
+      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
+    );
     return response.data;
   },
 };

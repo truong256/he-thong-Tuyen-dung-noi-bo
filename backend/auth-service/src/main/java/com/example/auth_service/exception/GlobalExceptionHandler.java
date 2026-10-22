@@ -77,7 +77,7 @@ public class GlobalExceptionHandler {
         ApiErrorResponse response = new ApiErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 "FILE_TOO_LARGE",
-                "Dung lượng tệp không được vượt quá 2MB.",
+                "Dung lượng tệp vượt quá giới hạn cho phép (tối đa 10MB).",
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
@@ -139,6 +139,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(response);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorResponse> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest request) {
+        ApiErrorResponse response = new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "BAD_REQUEST",
+                ex.getMessage() != null ? ex.getMessage() : "Dữ liệu yêu cầu không hợp lệ.",
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         logger.error("Unhandled exception at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
@@ -149,18 +160,6 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
-    }
-
-    @ExceptionHandler(BudgetExceededException.class)
-    public ResponseEntity<Map<String, Object>> handleBudgetExceeded(BudgetExceededException ex, HttpServletRequest request) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("status", HttpStatus.CONFLICT.value());
-        body.put("error", ex.getErrorCode());
-        body.put("message", ex.getMessage());
-        body.put("path", request.getRequestURI());
-        body.put("canOverride", ex.isCanOverride());
-        body.put("details", ex.getEvaluation());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
     @ExceptionHandler(ConflictException.class)
@@ -186,4 +185,3 @@ public class GlobalExceptionHandler {
     }
 
 }
-

@@ -8,10 +8,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.net.URI;
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/requisitions")
@@ -98,22 +101,36 @@ public class RequisitionController {
     }
 
     /**
-     * API danh sách yêu cầu tuyển dụng có phân trang, lọc theo trạng thái, phòng ban và từ khóa.
+     * API danh sách yêu cầu tuyển dụng có phân trang, lọc theo trạng thái, phòng ban, từ khóa, ngày tạo, recruiter, SLA.
      */
     @GetMapping
     public ResponseEntity<Page<RequisitionResponse>> list(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
+            @RequestParam(required = false) Long recruiterId,
+            @RequestParam(required = false) String sla,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "10") int size
     ) {
+        String effectiveKeyword = keyword != null && !keyword.trim().isEmpty()
+                ? keyword.trim()
+                : (search != null && !search.trim().isEmpty() ? search.trim() : null);
+
         Pageable pageable = PageRequest.of(
                 Math.max(0, page),
                 Math.clamp(size, 1, 100),
-                Sort.by(Sort.Direction.DESC, "createdAt")
+                Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"))
         );
-        Page<RequisitionResponse> result = service.list(status, departmentId, keyword, pageable);
+        Page<RequisitionResponse> result = service.list(
+                status,
+                departmentId,
+                effectiveKeyword,
+                pageable
+        );
         return ResponseEntity.ok(result);
     }
 
@@ -170,5 +187,15 @@ public class RequisitionController {
         return ResponseEntity.ok(service.cancel(id, reason));
     }
 
+    /**
+     * API kiểm tra tóm tắt cảnh báo pipeline ứng viên trước khi đóng/hủy (SCRUM-135 / S3-07).
+     */
+    @GetMapping("/{id}/pipeline-summary")
+    public ResponseEntity<com.example.auth_service.dto.PipelineSummaryResponse> getPipelineSummary(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getPipelineSummary(id));
+    }
+
 }
+
+
 

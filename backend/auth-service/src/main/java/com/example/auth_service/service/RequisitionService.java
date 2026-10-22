@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
@@ -49,6 +50,9 @@ public class RequisitionService {
 
     @Autowired(required = false)
     private com.example.auth_service.repository.JobPostingRepository jobPostings;
+
+    @Autowired(required = false)
+    private com.example.auth_service.repository.CandidateApplicationRepository candidateApplications;
 
     @Autowired
     public RequisitionService(
@@ -268,6 +272,10 @@ public class RequisitionService {
     public RequisitionResponse createAndSubmit(CreateRequisitionRequest request) {
         User currentUser = getCurrentUser();
 
+        if (request.departmentId() == null) {
+            throw new BadRequestException("Phòng ban không được để trống");
+        }
+
         Department dept = departments.findById(request.departmentId())
                 .orElseThrow(() -> new BadRequestException("Phòng ban không tồn tại"));
         if (!dept.isActive()) {
@@ -278,6 +286,10 @@ public class RequisitionService {
                 .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
         if (!isHrOrAdmin && (dept.getManagerUserId() == null || !dept.getManagerUserId().equals(currentUser.getId()))) {
             throw new AccessDeniedException("Bạn không có quyền tạo yêu cầu tuyển dụng cho phòng ban này.");
+        }
+
+        if (request.jobTitleId() == null) {
+            throw new BadRequestException("Chức danh không được để trống");
         }
 
         JobTitle job = jobTitles.findById(request.jobTitleId())
@@ -767,6 +779,37 @@ public class RequisitionService {
             }
         }
     }
+
+    /**
+     * Lấy tóm tắt cảnh báo pipeline ứng viên trước khi đóng/hủy yêu cầu tuyển dụng (SCRUM-135 / S3-07).
+     * Ứng viên chưa có trạng thái kết thúc (chưa HIRED, REJECTED, WITHDRAWN, CANCELLED) được tính là đang trong pipeline.
+     */
+    @Transactional(readOnly = true)
+    public com.example.auth_service.dto.PipelineSummaryResponse getPipelineSummary(Long id) {
+        requisitions.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy yêu cầu tuyển dụng với ID: " + id));
+
+        if (candidateApplications == null) {
+            return new com.example.auth_service.dto.PipelineSummaryResponse(id, 0L, 0L, java.util.Map.of());
+        }
+
+        java.util.List<com.example.auth_service.entity.CandidateApplication> list = candidateApplications.findByRequisitionId(id);
+        java.util.Set<String> terminalStages = java.util.Set.of("HIRED", "REJECTED", "WITHDRAWN", "CANCELLED");
+
+        long activeCount = 0;
+        java.util.Map<String, Long> countByStage = new java.util.HashMap<>();
+
+        for (var app : list) {
+            String stage = app.getStage() != null ? app.getStage().trim().toUpperCase() : "APPLIED";
+            countByStage.put(stage, countByStage.getOrDefault(stage, 0L) + 1L);
+            if (!terminalStages.contains(stage)) {
+                activeCount++;
+            }
+        }
+
+        return new com.example.auth_service.dto.PipelineSummaryResponse(id, list.size(), activeCount, countByStage);
+    }
+
 
     private void validateSalaryAgainstJobTitle(JobTitle job, Long salaryMin, Long salaryMax, String salaryExplanation) {
         boolean outside = false;

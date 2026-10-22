@@ -29,4 +29,40 @@ public class CandidateApplication {
 
     @Column(name = "rejection_reason_id")
     private Long rejectionReasonId;
+
+    @Column(name = "withdrawn_at")
+    private java.time.Instant withdrawnAt;
+
+    @Column(name = "withdrawal_reason", columnDefinition = "TEXT")
+    private String withdrawalReason;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(name = "stage_changed_by_id")
+    private Long stageChangedById;
+
+    @Column(name = "stage_changed_at")
+    private java.time.Instant stageChangedAt;
+
+    @Column(length = 25)
+    private String phone;
+
+    @Column(name = "cover_letter", columnDefinition = "TEXT")
+    private String coverLetter;
+
+    @Column(name = "cv_file_url", length = 500)
+    private String cvFileUrl;
+
+    @Column(name = "cv_file_name", length = 255)
+    private String cvFileName;
+
+    @Column(name = "stored_file_name", length = 255)
+    private String storedFileName;
+
+    @Column(name = "job_posting_id")
+    private Long jobPostingId;
+
+    @Column(name = "applied_at")
+    private java.time.Instant appliedAt;
 }

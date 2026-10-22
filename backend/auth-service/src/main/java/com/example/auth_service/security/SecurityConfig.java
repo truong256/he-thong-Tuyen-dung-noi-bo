@@ -111,8 +111,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/competency-frameworks/**")
                         .hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/salary-ranges", "/api/salary-ranges/{id}").hasAuthority("SALARY_READ")
-                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}")
+                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}", "/api/candidates/{id}/cv")
                         .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "CANDIDATE_READ_OWN")
+                .requestMatchers(HttpMethod.PATCH, "/api/candidates/{id}/stage").hasAuthority("PIPELINE_MANAGE")
                 // S3-01: only HR managers can manage versioned approval configurations.
                 .requestMatchers("/api/requisition-approval-configurations", "/api/requisition-approval-configurations/**")
                         .hasRole("HR_MANAGER")
@@ -123,7 +124,7 @@ public class SecurityConfig {
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/submit")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
-                .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}", "/api/requisitions/{id}/pipeline-summary")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/approve", "/api/requisitions/{id}/reject")
                         .hasAnyAuthority("REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
@@ -185,8 +186,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.POST, "/api/organization/profile/logo", "/api/organization/profile/image").hasAuthority("CATALOG_MANAGE")
-                // S3-10 / SCRUM-150: API công khai việc làm cho ứng viên
+                // S3-10 / SCRUM-150 / S4-02: API công khai việc làm và nộp hồ sơ cho ứng viên
                 .requestMatchers(HttpMethod.GET, "/api/public/job-postings", "/api/public/job-postings/**", "/api/public/departments").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/public/job-postings/{id}/apply").permitAll()
                 // S3-10 / SCRUM-149: Duyệt và xuất bản tin tuyển dụng - Chỉ HR Manager
                 .requestMatchers(HttpMethod.POST,
                         "/api/job-postings/{id}/approve",
@@ -200,6 +202,14 @@ public class SecurityConfig {
                 // S3-04 / SCRUM-101: Quản lý ngân sách headcount & lương phòng ban
                 .requestMatchers("/api/headcount-budgets", "/api/headcount-budgets/**")
                         .hasAnyAuthority("ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_APPROVER", "ROLE_HIRING_MANAGER", "ROLE_RECRUITER")
+                // SCRUM-181 & SCRUM-182: API rút hồ sơ ứng tuyển
+                .requestMatchers(HttpMethod.GET, "/api/public/applications/withdraw").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/public/applications/withdraw").permitAll()
+                .requestMatchers("/api/candidate/applications", "/api/candidate/applications/**")
+                        .hasAnyAuthority("CANDIDATE_READ_OWN", "ROLE_CANDIDATE")
+                // AC3: Thông báo hệ thống (Notification Center) - NOTIFICATION_READ_OWN
+                .requestMatchers("/api/notifications", "/api/notifications/**")
+                        .hasAuthority("NOTIFICATION_READ_OWN")
                 .anyRequest().denyAll()
             )
             .exceptionHandling(errors -> errors.authenticationEntryPoint(securityErrorHandler)
