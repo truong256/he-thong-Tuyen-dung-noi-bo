@@ -205,7 +205,7 @@ class DepartmentServiceTest {
         when(departments.saveAndFlush(root)).thenReturn(root);
         assertThat(service.setActive(1L, false).active()).isFalse();
         assertThat(root.getManagerUserId()).isEqualTo(10L);
-        verifyNoInteractions(requisitions);
+        verify(requisitions, never()).delete(any());
         verify(departments, never()).delete(any());
     }
 

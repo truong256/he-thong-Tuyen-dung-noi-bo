@@ -3,7 +3,6 @@ package com.example.auth_service.service;
 import com.example.auth_service.dto.ChangePasswordRequest;
 import com.example.auth_service.dto.CreateUserRequest;
 import com.example.auth_service.dto.LoginRequest;
-import com.example.auth_service.dto.UserSummaryDto;
 import com.example.auth_service.entity.Role;
 import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
@@ -37,9 +36,6 @@ public class FirstLoginPasswordChangeIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
-
-    @Autowired
-    private AdminUserService adminUserService;
 
     @Autowired
     private UserRepository userRepository;
@@ -95,15 +91,12 @@ public class FirstLoginPasswordChangeIntegrationTest {
         createReq.setRoles(Set.of("RECRUITER"));
         createReq.setStatus("ACTIVE");
 
-        String createUserResponse = mockMvc.perform(post("/api/admin/users")
+        mockMvc.perform(post("/api/admin/users")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createReq)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.mustChangePassword").value(true))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andExpect(jsonPath("$.mustChangePassword").value(true));
 
         User persistedUser = userRepository.findByEmail(newStaffEmail).orElseThrow();
         assertThat(persistedUser.isMustChangePassword()).isTrue();

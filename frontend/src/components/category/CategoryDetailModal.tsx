@@ -92,7 +92,7 @@ export const CategoryDetailModal: React.FC<CategoryDetailModalProps> = ({
         };
       case 'REJECTION_REASON':
         return {
-          label: 'Lý do từ chối',
+          label: 'Lý do loại hồ sơ',
           icon: <AlertCircle size={16} />,
           badgeClass: 'cat-badge-rejection',
           description: 'Lý do loại hồ sơ ở các vòng lọc CV, phỏng vấn, phục vụ phân tích chất lượng nguồn ứng viên.',

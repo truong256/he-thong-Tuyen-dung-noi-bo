@@ -41,6 +41,10 @@ public class JobTitle {
     @JoinColumn(name = "department_id", foreignKey = @ForeignKey(name = "fk_job_titles_department"))
     private Department department;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "competency_framework_id", foreignKey = @ForeignKey(name = "fk_job_titles_framework"))
+    private CompetencyFramework competencyFramework;
+
     @Column(length = 50)
     private String level;
 

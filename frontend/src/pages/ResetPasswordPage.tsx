@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Eye, EyeOff, Lock, ArrowLeft, Check, X, AlertCircle } from 'lucide-react';
 import authApi from '../api/auth';
 import { validatePasswordPolicy } from '../utils/passwordPolicy';
+import '../styles/login.css';
 
 export const ResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -134,7 +135,8 @@ export const ResetPasswordPage: React.FC = () => {
                 className="eye-toggle-btn"
                 onClick={() => setShowNew(!showNew)}
                 aria-label={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -182,7 +184,8 @@ export const ResetPasswordPage: React.FC = () => {
                 className="eye-toggle-btn"
                 onClick={() => setShowConfirm(!showConfirm)}
                 aria-label={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>

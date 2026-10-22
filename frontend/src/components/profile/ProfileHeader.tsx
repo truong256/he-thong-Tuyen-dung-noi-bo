@@ -1,13 +1,16 @@
-import React from 'react';
-import { KeyRound } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Trash2, X, Check, AlertCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { UserSummary } from '../../types/auth';
 import { getRoleLabel } from '../../constants/rbac';
+import { useAuth } from '../../hooks/useAuth';
+import authApi from '../../api/auth';
 
 interface ProfileHeaderProps {
   user: UserSummary | null;
   fullName: string;
   isAccountActive: boolean;
   onOpenPasswordModal: () => void;
+  onNotify?: (message: string, type: 'success' | 'warning' | 'error') => void;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -15,7 +18,9 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   fullName,
   isAccountActive,
   onOpenPasswordModal,
+  onNotify,
 }) => {
+  const { updateUser, refreshUser } = useAuth();
   const displayName = fullName.trim() || user?.fullName || user?.email || 'Người dùng';
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -26,18 +31,336 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   const rolesSummary = userRolesList.map((r: string) => getRoleLabel(r)).join(' · ');
 
+  // Avatar state & handlers
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const [localToasts, setLocalToasts] = useState<
+    Array<{ id: string; message: string; type: 'success' | 'warning' | 'error' }>
+  >([]);
+
+  const notify = (msg: string, type: 'success' | 'warning' | 'error') => {
+    if (onNotify) {
+      onNotify(msg, type);
+    } else {
+      const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setLocalToasts((prev) => [...prev, { id, message: msg, type }]);
+      setTimeout(() => {
+        setLocalToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4000);
+    }
+  };
+
+  const [imgError, setImgError] = useState(false);
+
+  /**
+   * avatarDisplayUrl is derived from the current user prop, with a cache-busting param
+   * injected after any successful upload or delete (via a local version counter).
+   * This ensures the browser always fetches the latest image after changes.
+   */
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const rawAvatarUrl = user?.avatarUrl || user?.avatarThumbnailUrl;
+  const avatarDisplayUrl = rawAvatarUrl
+    ? `${rawAvatarUrl}${rawAvatarUrl.includes('?') ? '&' : '?'}v=${avatarVersion}`
+    : null;
+  const hasAvatar = !!rawAvatarUrl && !imgError;
+
+  // Reset imgError whenever the underlying avatar URL changes
+  useEffect(() => {
+    setImgError(false);
+  }, [rawAvatarUrl]);
+
+  // Clean up object URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Reset input value so user can re-select the same file if needed (AV-13)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    // A. Validate file type: Only accept JPG or PNG (AV-14)
+    const validMimes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const fileName = file.name.toLowerCase();
+    const isJpegExt = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg');
+    const isPngExt = fileName.endsWith('.png');
+    const isMimeValid = validMimes.includes(file.type.toLowerCase());
+
+    if (!isMimeValid && !isJpegExt && !isPngExt) {
+      notify('Chỉ chấp nhận ảnh JPG hoặc PNG.', 'error');
+      return;
+    }
+
+    // B. Validate file size: Maximum 2MB (AV-14)
+    const MAX_SIZE = 2 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      notify('Ảnh đại diện không được vượt quá 2MB.', 'error');
+      return;
+    }
+
+    // Revoke old object URL if exists
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+    setSelectedFile(file);
+    setPreviewUrl(objectUrl);
+    setModalError(null);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setModalError(null);
+    setIsModalOpen(false);
+  };
+
+  const handleSaveAvatar = async () => {
+    if (!selectedFile) return;
+
+    setIsUploading(true);
+    setModalError(null);
+
+    try {
+      const res = await authApi.uploadAvatar(selectedFile);
+
+      // Step 1: Optimistically update AuthContext with the data from upload response
+      // This gives immediate feedback (AV-01, AV-02)
+      if (updateUser) {
+        if (res.user) {
+          updateUser(res.user);
+        } else if (user) {
+          updateUser({
+            ...user,
+            avatarUrl: res.avatarUrl,
+            avatarThumbnailUrl: res.avatarThumbnailUrl || res.thumbnailUrl,
+          });
+        }
+      }
+
+      // Step 2: Bump the avatar version to force cache-busting on the img element
+      setAvatarVersion((v) => v + 1);
+
+      // Step 3: Confirm the update by fetching /api/auth/me from the server
+      // If this fails, we still show the optimistic state and warn the user (AV-09, AV-10)
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        // refreshUser failed (network error, token expired, etc.)
+        // We already applied the optimistic update, so the UI shows the new avatar,
+        // but we warn the user that the server state could not be confirmed.
+        notify(
+          'Ảnh đã được tải lên nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.',
+          'warning'
+        );
+        handleCloseModal();
+        return;
+      }
+
+      // Bump again after refreshUser so the freshly-fetched URL also gets a new cache-buster
+      setAvatarVersion((v) => v + 1);
+
+      handleCloseModal();
+      notify('Cập nhật ảnh đại diện thành công.', 'success');
+    } catch (err: any) {
+      const status = err.response?.status;
+      if (status === 403) {
+        setModalError('Bạn không có quyền cập nhật ảnh đại diện.');
+      } else {
+        const msg =
+          err.response?.data?.message ||
+          'Không thể tải lên ảnh đại diện. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại sau.';
+        setModalError(msg);
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await authApi.deleteAvatar();
+
+      // Step 1: Optimistically clear avatar in AuthContext (AV-03, AV-04)
+      if (user && updateUser) {
+        updateUser({
+          ...user,
+          avatarUrl: undefined,
+          avatarThumbnailUrl: undefined,
+        });
+      }
+
+      // Step 2: Confirm deletion by fetching /api/auth/me (AV-08)
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        // Server confirmation failed, but optimistic update already cleared the avatar UI.
+        // Warn the user.
+        notify(
+          'Ảnh đã được xóa nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.',
+          'warning'
+        );
+        setIsDeleteModalOpen(false);
+        return;
+      }
+
+      setIsDeleteModalOpen(false);
+      notify('Đã xóa ảnh đại diện.', 'success');
+    } catch (err: any) {
+      const status = err.response?.status;
+      if (status === 403) {
+        notify('Bạn không có quyền xóa ảnh đại diện.', 'error');
+      } else {
+        const msg =
+          err.response?.data?.message ||
+          'Không thể xóa ảnh đại diện. Vui lòng thử lại sau.';
+        notify(msg, 'error');
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
   return (
     <section className="profile-summary-header" aria-label="Thông tin hồ sơ quản trị viên">
+      {/*
+        When onNotify is provided (e.g. within ProfilePage), toast notifications are handled centrally
+        by the page-level toast container to prevent duplicate containers or overlapping notifications.
+        When rendered standalone (e.g. isolated component unit tests), we render this local fallback container.
+      */}
+      {!onNotify && localToasts.length > 0 && (
+        <div className="profile-toast-container" aria-live="polite">
+          {localToasts.map((t) => (
+            <div
+              key={t.id}
+              className={`profile-header-toast ${t.type}`}
+              role={t.type === 'error' ? 'alert' : 'status'}
+              data-testid={`toast-${t.type}`}
+            >
+              {t.type === 'success' && <Check size={16} />}
+              {t.type === 'warning' && <AlertTriangle size={16} />}
+              {t.type === 'error' && <AlertCircle size={16} />}
+              <span>{t.message}</span>
+              <button
+                type="button"
+                className="toast-close-btn"
+                onClick={() => setLocalToasts((prev) => prev.filter((item) => item.id !== t.id))}
+                aria-label="Đóng thông báo"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        accept="image/jpeg,image/png"
+        style={{ display: 'none' }}
+        onChange={handleFileChange}
+        data-testid="avatar-file-input"
+        aria-hidden="true"
+      />
+
       <div className="profile-header-main">
-        {/* Avatar with Status Indicator */}
-        <div className="profile-header-avatar-box">
-          <div className="profile-header-avatar" aria-label="Ảnh đại diện">
-            {initial}
+        {/* Avatar column: avatar circle + status dot + delete button */}
+        <div className="profile-header-avatar-col">
+          <div className="profile-header-avatar-box">
+            <div
+              className="profile-header-avatar"
+              aria-label="Ảnh đại diện — Nhấn để đổi ảnh"
+              role="button"
+              tabIndex={0}
+              onClick={triggerFileInput}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  triggerFileInput();
+                }
+              }}
+              title="Nhấn để đổi ảnh đại diện"
+              data-testid="profile-avatar-clickable"
+            >
+              {hasAvatar ? (
+                <img
+                  src={avatarDisplayUrl!}
+                  alt={displayName}
+                  className="profile-header-avatar-img"
+                  onError={() => setImgError(true)}
+                />
+              ) : (
+                <span className="profile-header-avatar-initial">{initial}</span>
+              )}
+
+              {/* Hover overlay with camera icon */}
+              <div className="profile-avatar-hover-overlay" aria-hidden="true">
+                <Camera size={18} />
+                <span className="profile-avatar-overlay-text">Đổi ảnh</span>
+              </div>
+            </div>
+
+            {/* Camera badge button (accessible on touchscreen / mobile) */}
+            <button
+              type="button"
+              className="profile-avatar-badge-btn"
+              onClick={triggerFileInput}
+              title="Đổi ảnh đại diện"
+              aria-label="Đổi ảnh đại diện"
+            >
+              <Camera size={14} />
+            </button>
+
+            <span
+              className={`profile-header-status-dot ${isAccountActive ? 'active' : 'locked'}`}
+              title={isAccountActive ? 'Đang hoạt động' : 'Tài khoản tạm khóa'}
+            />
           </div>
-          <span
-            className={`profile-header-status-dot ${isAccountActive ? 'active' : 'locked'}`}
-            title={isAccountActive ? 'Đang hoạt động' : 'Tài khoản tạm khóa'}
-          />
+
+          {/* Delete avatar button — only visible when user currently has an avatar (AV-04) */}
+          {hasAvatar && (
+            <button
+              type="button"
+              className="profile-btn-delete-avatar"
+              onClick={() => setIsDeleteModalOpen(true)}
+              title="Xóa ảnh đại diện"
+              data-testid="delete-avatar-btn"
+            >
+              <Trash2 size={12} />
+              <span>Xóa ảnh</span>
+            </button>
+          )}
         </div>
 
         {/* Identity & Metadata */}
@@ -61,18 +384,197 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
       </div>
 
-      {/* Action: Secondary Change Password Button */}
+      {/* Action: Change Password button — fixed position at the right side (AV-11) */}
       <div className="profile-header-actions">
         <button
           type="button"
           className="btn btn-secondary profile-btn-change-password"
           onClick={onOpenPasswordModal}
           title="Đổi mật khẩu tài khoản"
+          data-testid="change-password-btn"
         >
-          <KeyRound size={15} />
           <span>Đổi mật khẩu</span>
         </button>
       </div>
+
+      {/* MODAL 1: Đổi ảnh đại diện (Preview & Confirmation) */}
+      {isModalOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="avatar-modal-title"
+        >
+          <div className="modal-box avatar-modal-box">
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="modal-title-icon">
+                  <Camera size={20} />
+                </div>
+                <h3 id="avatar-modal-title">Đổi ảnh đại diện</h3>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={handleCloseModal}
+                disabled={isUploading}
+                aria-label="Đóng cửa sổ"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {modalError && (
+              <div className="alert-box error" role="alert" style={{ marginTop: '12px' }}>
+                <AlertCircle size={16} />
+                <span>{modalError}</span>
+              </div>
+            )}
+
+            <div className="avatar-preview-container">
+              {/* Circular preview showing final avatar presentation */}
+              <div className="avatar-preview-circle-wrap has-preview">
+                <div className="avatar-preview-circle">
+                  {previewUrl && (
+                    <img
+                      src={previewUrl}
+                      alt="Xem trước ảnh đại diện"
+                      className="avatar-preview-img"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {selectedFile && (
+                <div className="avatar-preview-meta">
+                  <span className="avatar-file-name">{selectedFile.name}</span>
+                  <span className="avatar-file-size">
+                    Dung lượng: {formatFileSize(selectedFile.size)}
+                  </span>
+                </div>
+              )}
+
+              <div className="avatar-guidelines-box">
+                <strong>Lưu ý định dạng:</strong>
+                <ul>
+                  <li>Chỉ chấp nhận tệp định dạng JPG hoặc PNG.</li>
+                  <li>Dung lượng tối đa 2MB.</li>
+                  <li>Hệ thống tự động căn giữa và cắt vuông tỷ lệ 1:1.</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="avatar-modal-footer">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={triggerFileInput}
+                disabled={isUploading}
+                style={{ fontSize: '0.85rem' }}
+              >
+                <RefreshCw size={14} />
+                <span>Chọn ảnh khác</span>
+              </button>
+
+              <div className="avatar-modal-footer-right">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseModal}
+                  disabled={isUploading}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleSaveAvatar}
+                  disabled={isUploading}
+                  data-testid="save-avatar-btn"
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 size={16} className="spinner-icon" />
+                      <span>Đang tải ảnh...</span>
+                    </>
+                  ) : (
+                    <span>Lưu ảnh</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Xác nhận xóa ảnh đại diện */}
+      {isDeleteModalOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-avatar-modal-title"
+        >
+          <div className="modal-box" style={{ maxWidth: '420px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="modal-title-icon" style={{ color: '#ef4444', background: '#fee2e2' }}>
+                  <Trash2 size={20} />
+                </div>
+                <h3 id="delete-avatar-modal-title">Xác nhận xóa ảnh</h3>
+              </div>
+              <button
+                type="button"
+                className="close-btn"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+                aria-label="Đóng cửa sổ"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ margin: '16px 0 20px', color: '#475569', fontSize: '0.9rem', lineHeight: '1.6' }}>
+              Bạn có chắc muốn xóa ảnh đại diện? Sau khi xóa, hệ thống sẽ hiển thị lại chữ cái đầu của tên bạn.
+            </div>
+
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={isDeleting}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="btn"
+                style={{
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                data-testid="confirm-delete-avatar-btn"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 size={15} className="spinner-icon" />
+                    <span>Đang xóa...</span>
+                  </>
+                ) : (
+                  <span>Xóa ảnh</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };

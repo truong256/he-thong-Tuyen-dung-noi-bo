@@ -21,4 +21,27 @@ public class CandidateApplication {
     private String fullName;
     @Column(nullable = false, length = 100)
     private String email;
+    @Column(length = 50)
+    private String stage = "APPLIED";
+
+    @Column(name = "candidate_source_id")
+    private Long candidateSourceId;
+
+    @Column(name = "rejection_reason_id")
+    private Long rejectionReasonId;
+
+    @Column(name = "withdrawn_at")
+    private java.time.Instant withdrawnAt;
+
+    @Column(name = "withdrawal_reason", columnDefinition = "TEXT")
+    private String withdrawalReason;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(name = "stage_changed_by_id")
+    private Long stageChangedById;
+
+    @Column(name = "stage_changed_at")
+    private java.time.Instant stageChangedAt;
 }

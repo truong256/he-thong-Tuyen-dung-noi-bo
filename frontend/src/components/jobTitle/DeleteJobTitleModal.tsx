@@ -31,7 +31,8 @@ export const DeleteJobTitleModal: React.FC<DeleteJobTitleModalProps> = ({
       await onConfirm(jobTitle.id);
       onClose();
     } catch (err: any) {
-      setErrorMessage(err.message || 'Không thể xóa chức danh này.');
+      const msg = err.response?.data?.message || err.message || 'Không thể xóa chức danh này.';
+      setErrorMessage(msg);
     } finally {
       setIsDeleting(false);
     }

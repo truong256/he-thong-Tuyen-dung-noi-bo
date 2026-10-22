@@ -24,10 +24,26 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import org.springframework.core.env.Environment;
 
+import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
+import com.example.auth_service.domain.sprint3.JobPosting;
+import com.example.auth_service.repository.RecruitmentRequisitionRepository;
+import com.example.auth_service.repository.JobPostingRepository;
+import com.example.auth_service.entity.CandidateApplication;
+import com.example.auth_service.entity.CandidateApplicationWithdrawToken;
+import com.example.auth_service.entity.RequisitionAssignment;
+import com.example.auth_service.repository.CandidateApplicationRepository;
+import com.example.auth_service.repository.CandidateApplicationWithdrawTokenRepository;
+import com.example.auth_service.repository.RequisitionAssignmentRepository;
+import com.example.auth_service.entity.RequisitionApprovalConfiguration;
+import com.example.auth_service.entity.RequisitionApprovalConfigurationStep;
+import com.example.auth_service.repository.RequisitionApprovalConfigurationRepository;
+import com.example.auth_service.repository.RequisitionApprovalConfigurationStepRepository;
+import java.time.LocalDate;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 @Configuration
@@ -42,9 +58,25 @@ public class DataInitializer {
                                       CompetencyCriterionRepository competencyCriterionRepository,
                                       InterviewQuestionRepository interviewQuestionRepository,
                                       CommonCategoryRepository commonCategoryRepository,
+                                      RecruitmentRequisitionRepository requisitionRepository,
+                                      CandidateApplicationRepository applicationRepository,
+                                      CandidateApplicationWithdrawTokenRepository tokenRepository,
+                                      RequisitionAssignmentRepository assignmentRepository,
+                                      JobPostingRepository jobPostingRepository,
+                                      RequisitionApprovalConfigurationRepository approvalConfigurationRepository,
+                                      RequisitionApprovalConfigurationStepRepository approvalConfigurationStepRepository,
                                       PasswordEncoder passwordEncoder,
-                                      Environment env) {
+                                      Environment env,
+                                      org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         return args -> {
+            // 0. Ensure department_tree_lock table exists for hierarchy transactions
+            try {
+                jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS department_tree_lock (id INTEGER PRIMARY KEY CHECK (id = 1))");
+                jdbcTemplate.update("INSERT INTO department_tree_lock(id) SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM department_tree_lock WHERE id=1)");
+            } catch (Exception ex) {
+                // Ignore if managed by Flyway or already exists
+            }
+
             // 1. Seed 7 roles if not present
             Map<RoleName, Role> roleMap = new HashMap<>();
             for (RoleName rn : RoleName.values()) {
@@ -59,28 +91,28 @@ public class DataInitializer {
             String defaultSeedPassword = System.getenv().getOrDefault("SEED_ACCOUNT_PASSWORD", "Password123@");
 
             User adminUser = createUserIfMissing(userRepository, passwordEncoder, "admin@company.com", defaultSeedPassword,
-                    "Quản trị viên Hệ thống", Set.of(roleMap.get(RoleName.ADMIN), roleMap.get(RoleName.HR_MANAGER)));
+                    "Quản trị viên Hệ thống", "Ban Tổng Giám Đốc (BOD)", Set.of(roleMap.get(RoleName.ADMIN)));
 
             createUserIfMissing(userRepository, passwordEncoder, "recruiter@company.com", defaultSeedPassword,
-                    "Chuyên viên Tuyển dụng", Set.of(roleMap.get(RoleName.RECRUITER)));
+                    "Chuyên viên Tuyển dụng", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.RECRUITER)));
 
             User hrManagerUser = createUserIfMissing(userRepository, passwordEncoder, "hr_manager@company.com", defaultSeedPassword,
-                    "Trưởng phòng Nhân sự", Set.of(roleMap.get(RoleName.HR_MANAGER)));
+                    "Trưởng phòng Nhân sự", "Phòng Tuyển dụng & Thu hút Nhân tài", Set.of(roleMap.get(RoleName.HR_MANAGER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "interviewer@company.com", defaultSeedPassword,
-                    "Người Phỏng vấn Kỹ thuật", Set.of(roleMap.get(RoleName.INTERVIEWER)));
+                    "Người Phỏng vấn Kỹ thuật", "Khối Công nghệ & Kỹ thuật", Set.of(roleMap.get(RoleName.INTERVIEWER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "hiring_manager@company.com", defaultSeedPassword,
-                    "Quản lý Bộ phận Tuyển dụng", Set.of(roleMap.get(RoleName.HIRING_MANAGER)));
+                    "Quản lý Bộ phận Tuyển dụng", "Phòng Phát triển Phần mềm Backend", Set.of(roleMap.get(RoleName.HIRING_MANAGER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "approver@company.com", defaultSeedPassword,
-                    "Người Phê duyệt Tuyển dụng", Set.of(roleMap.get(RoleName.APPROVER)));
+                    "Người Phê duyệt Tuyển dụng", "Ban Tổng Giám Đốc (BOD)", Set.of(roleMap.get(RoleName.APPROVER)));
 
             createUserIfMissing(userRepository, passwordEncoder, "candidate@company.com", defaultSeedPassword,
-                    "Ứng viên Nguyễn Văn A", Set.of(roleMap.get(RoleName.CANDIDATE)));
+                    "Ứng viên Nguyễn Văn A", null, Set.of(roleMap.get(RoleName.CANDIDATE)));
 
             createUserIfMissing(userRepository, passwordEncoder, "truong256@company.com", "#r7GDs^QRbhF",
-                    "Kiểm thử viên Tự động", Set.of(roleMap.get(RoleName.CANDIDATE)));
+                    "Kiểm thử viên Tự động", null, Set.of(roleMap.get(RoleName.CANDIDATE)));
 
             // 3. Seed default enterprise departments if none exist (only in non-test profiles)
             boolean isTestProfile = Arrays.asList(env.getActiveProfiles()).contains("test");
@@ -105,6 +137,66 @@ public class DataInitializer {
                         "Tìm kiếm, tuyển chọn và điều phối phỏng vấn ứng viên", bod.getId(),
                         hrManagerUser != null ? hrManagerUser.getId() : adminUser.getId(), true, Instant.now());
                 hrDept = departmentRepository.save(hrDept);
+            }
+
+            if (!isTestProfile) {
+                User hmUser = userRepository.findByEmail("hiring_manager@company.com").orElse(null);
+                User hrUser = userRepository.findByEmail("hr_manager@company.com").orElse(null);
+                User approverUser = userRepository.findByEmail("approver@company.com").orElse(null);
+
+                if (hmUser != null) {
+                    departmentRepository.findAll().stream()
+                            .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()))
+                            .findFirst()
+                            .ifPresent(d -> {
+                                if (d.getManagerUserId() == null || !d.getManagerUserId().equals(hmUser.getId())) {
+                                    d.setManagerUserId(hmUser.getId());
+                                    departmentRepository.save(d);
+                                }
+                            });
+                }
+
+                // Seed active requisition approval configuration for departments if missing
+                if (hmUser != null && hrUser != null && approverUser != null) {
+                    for (Department dept : departmentRepository.findAll()) {
+                        if (approvalConfigurationRepository.findByDepartmentIdAndActiveTrue(dept.getId()).isEmpty()) {
+                            RequisitionApprovalConfiguration config = new RequisitionApprovalConfiguration();
+                            config.setDepartmentId(dept.getId());
+                            config.setVersion(1);
+                            config.setActive(true);
+                            config.setCreatedByUserId(hrUser.getId());
+                            config.setCreatedAt(Instant.now());
+                            config = approvalConfigurationRepository.save(config);
+
+                            Long step1ApproverId = (dept.getManagerUserId() != null
+                                    && !dept.getManagerUserId().equals(hrUser.getId())
+                                    && !dept.getManagerUserId().equals(approverUser.getId()))
+                                    ? dept.getManagerUserId()
+                                    : hmUser.getId();
+
+                            RequisitionApprovalConfigurationStep step1 = new RequisitionApprovalConfigurationStep();
+                            step1.setConfigurationId(config.getId());
+                            step1.setStepOrder(1);
+                            step1.setMinimumSalary(0L);
+                            step1.setApproverUserId(step1ApproverId);
+                            approvalConfigurationStepRepository.save(step1);
+
+                            RequisitionApprovalConfigurationStep step2 = new RequisitionApprovalConfigurationStep();
+                            step2.setConfigurationId(config.getId());
+                            step2.setStepOrder(2);
+                            step2.setMinimumSalary(0L);
+                            step2.setApproverUserId(hrUser.getId());
+                            approvalConfigurationStepRepository.save(step2);
+
+                            RequisitionApprovalConfigurationStep step3 = new RequisitionApprovalConfigurationStep();
+                            step3.setConfigurationId(config.getId());
+                            step3.setStepOrder(3);
+                            step3.setMinimumSalary(30_000_000L);
+                            step3.setApproverUserId(approverUser.getId());
+                            approvalConfigurationStepRepository.save(step3);
+                        }
+                    }
+                }
             }
 
             // 4. Seed default job titles linked to departments if none exist
@@ -185,6 +277,10 @@ public class DataInitializer {
                     fwBe.setWeightPercent(100);
                     fwBe.setJobTitle(beSenior);
                     fwBe = competencyFrameworkRepository.save(fwBe);
+                    if (beSenior != null) {
+                        beSenior.setCompetencyFramework(fwBe);
+                        jobTitleRepository.save(beSenior);
+                    }
 
                     CompetencyCriterion critBe01 = new CompetencyCriterion();
                     critBe01.setCompetencyFramework(fwBe);
@@ -221,6 +317,10 @@ public class DataInitializer {
                     fwFe.setWeightPercent(100);
                     fwFe.setJobTitle(feMid);
                     fwFe = competencyFrameworkRepository.save(fwFe);
+                    if (feMid != null) {
+                        feMid.setCompetencyFramework(fwFe);
+                        jobTitleRepository.save(feMid);
+                    }
 
                     CompetencyCriterion critFe01 = new CompetencyCriterion();
                     critFe01.setCompetencyFramework(fwFe);
@@ -248,6 +348,10 @@ public class DataInitializer {
                     fwHr.setWeightPercent(100);
                     fwHr.setJobTitle(recSpecialist);
                     fwHr = competencyFrameworkRepository.save(fwHr);
+                    if (recSpecialist != null) {
+                        recSpecialist.setCompetencyFramework(fwHr);
+                        jobTitleRepository.save(recSpecialist);
+                    }
 
                     CompetencyCriterion critHr01 = new CompetencyCriterion();
                     critHr01.setCompetencyFramework(fwHr);
@@ -329,6 +433,271 @@ public class DataInitializer {
             if (commonCategoryRepository.count() == 0) {
                 seedCategories(commonCategoryRepository);
             }
+
+            // 7. Seed sample recruitment requisitions in PENDING_APPROVAL if none exist
+            if (!isTestProfile) {
+                boolean hasPending = requisitionRepository.findAll().stream()
+                        .anyMatch(r -> "PENDING_APPROVAL".equalsIgnoreCase(r.getStatus()));
+                if (!hasPending) {
+                    Department devBe = departmentRepository.findAll().stream()
+                            .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()))
+                            .findFirst().orElse(null);
+                    JobTitle beSenior = jobTitleRepository.findByCodeIgnoreCase("BE-SR-01").orElse(null);
+                    User hmUser = userRepository.findByEmail("hiring_manager@company.com").orElse(null);
+
+                    if (devBe != null && beSenior != null && hmUser != null) {
+                        String code1 = "REQ-202610-0001";
+                        RecruitmentRequisition req1 = requisitionRepository.findByRequisitionCode(code1).orElseGet(RecruitmentRequisition::new);
+                        req1.setRequisitionCode(code1);
+                        req1.setTitle("Tuyển dụng Kỹ sư Phần mềm Backend Cao cấp (Senior Backend Engineer)");
+                        req1.setDepartmentId(devBe.getId());
+                        req1.setJobTitleId(beSenior.getId());
+                        req1.setQuantity(2);
+                        req1.setRecruitmentType("NEW");
+                        req1.setReason("Tăng mới headcount theo kế hoạch mở rộng tính năng ATS Q4");
+                        req1.setSalaryMin(35000000L);
+                        req1.setSalaryMax(50000000L);
+                        req1.setCurrency("VND");
+                        req1.setNeededDate(LocalDate.now().plusDays(30));
+                        req1.setTargetDate(LocalDate.now().plusDays(30));
+                        req1.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                        req1.setWorkingModel("HYBRID");
+                        req1.setJobDescription("Phát triển các microservices backend, quản lý giao dịch CSDL, tối ưu hóa câu lệnh PostgreSQL và xây dựng RESTful APIs.");
+                        req1.setCandidateRequirements("Có từ 4+ năm kinh nghiệm phát triển Java/Spring Boot, hiểu sâu Concurrency, JPA/Hibernate.");
+                        req1.setBenefits("Lương tháng 13, thưởng hiệu suất dự án, gói bảo hiểm sức khỏe toàn diện.");
+                        req1.setStatus("PENDING_APPROVAL");
+                        req1.setCreatedByUserId(hmUser.getId());
+                        req1.setSubmittedAt(Instant.now());
+                        req1.setUpdatedAt(Instant.now());
+                        requisitionRepository.save(req1);
+                    }
+
+                    Department devFe = departmentRepository.findAll().stream()
+                            .filter(d -> "DEV-FE".equalsIgnoreCase(d.getCode()))
+                            .findFirst().orElse(null);
+                    JobTitle feMid = jobTitleRepository.findByCodeIgnoreCase("FE-MID-02").orElse(null);
+                    if (devFe != null && feMid != null && hmUser != null) {
+                        String code2 = "REQ-202610-0002";
+                        RecruitmentRequisition req2 = requisitionRepository.findByRequisitionCode(code2).orElseGet(RecruitmentRequisition::new);
+                        req2.setRequisitionCode(code2);
+                        req2.setTitle("Tuyển dụng Kỹ sư Phát triển Giao diện (Middle Frontend Developer)");
+                        req2.setDepartmentId(devFe.getId());
+                        req2.setJobTitleId(feMid.getId());
+                        req2.setQuantity(1);
+                        req2.setRecruitmentType("NEW");
+                        req2.setReason("Bổ sung nhân sự chuyên trách giao diện người dùng ATS");
+                        req2.setSalaryMin(22000000L);
+                        req2.setSalaryMax(32000000L);
+                        req2.setCurrency("VND");
+                        req2.setNeededDate(LocalDate.now().plusDays(25));
+                        req2.setTargetDate(LocalDate.now().plusDays(25));
+                        req2.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                        req2.setWorkingModel("ONSITE");
+                        req2.setJobDescription("Xây dựng component React 18, TypeScript, cải thiện trải nghiệm người dùng và responsive.");
+                        req2.setCandidateRequirements("Có 2-4 năm kinh nghiệm React, TypeScript, CSS Variables, tối ưu Core Web Vitals.");
+                        req2.setBenefits("Môi trường làm việc năng động, lộ trình phát triển rõ ràng, review lương định kỳ.");
+                        req2.setStatus("PENDING_APPROVAL");
+                        req2.setCreatedByUserId(hmUser.getId());
+                        req2.setSubmittedAt(Instant.now());
+                        req2.setUpdatedAt(Instant.now());
+                        requisitionRepository.save(req2);
+                    }
+                }
+            }
+
+            // 8. Seed/Reset sample candidate application and withdraw token for testing SCRUM-181 & SCRUM-182
+            if (!isTestProfile) {
+                tokenRepository.findByToken("demo-withdraw-token-123").ifPresent(token -> {
+                    token.setUsed(false);
+                    token.setUsedAt(null);
+                    token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+                    tokenRepository.save(token);
+
+                    applicationRepository.findById(token.getApplicationId()).ifPresent(app -> {
+                        app.setStage("SCREENING");
+                        app.setWithdrawnAt(null);
+                        app.setWithdrawalReason(null);
+                        applicationRepository.save(app);
+                    });
+                });
+            }
+
+            if (!isTestProfile) {
+                User recruiterUser = userRepository.findByEmail("recruiter@company.com").orElse(null);
+                if (recruiterUser != null) {
+                    for (RecruitmentRequisition r : requisitionRepository.findAll()) {
+                        if (assignmentRepository.findByRequisitionIdAndRole(r.getId(), RoleName.RECRUITER).isEmpty()) {
+                            RequisitionAssignment assignment = new RequisitionAssignment();
+                            assignment.setRequisitionId(r.getId());
+                            assignment.setUserId(recruiterUser.getId());
+                            assignment.setRole(RoleName.RECRUITER);
+                            assignment.setPrimary(true);
+                            assignment.setAssignedAt(Instant.now());
+                            assignmentRepository.save(assignment);
+                        }
+                    }
+                }
+
+                RecruitmentRequisition defaultReq = requisitionRepository.findAll().stream().findFirst().orElse(null);
+                if (defaultReq != null) {
+                    for (JobPosting jp : jobPostingRepository.findAll()) {
+                        if (jp.getRequisitionId() == null) {
+                            jp.setRequisitionId(defaultReq.getId());
+                            jobPostingRepository.save(jp);
+                        }
+                    }
+                }
+            }
+
+            if (!isTestProfile && applicationRepository.count() == 0) {
+                User candidateUser = userRepository.findByEmail("candidate@company.com").orElse(null);
+                RecruitmentRequisition sampleReq = requisitionRepository.findAll().stream().findFirst().orElse(null);
+
+                if (sampleReq != null && candidateUser != null) {
+                    Optional<CandidateApplicationWithdrawToken> existingToken = tokenRepository.findByToken("demo-withdraw-token-123");
+                    if (existingToken.isPresent()) {
+                        CandidateApplicationWithdrawToken token = existingToken.get();
+                        token.setUsed(false);
+                        token.setUsedAt(null);
+                        token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+                        tokenRepository.save(token);
+
+                        applicationRepository.findById(token.getApplicationId()).ifPresent(app -> {
+                            app.setStage("SCREENING");
+                            app.setWithdrawnAt(null);
+                            app.setWithdrawalReason(null);
+                            applicationRepository.save(app);
+                        });
+                    } else {
+                        CandidateApplication app = new CandidateApplication();
+                        app.setCandidateUserId(candidateUser.getId());
+                        app.setFullName(candidateUser.getFullName());
+                        app.setEmail(candidateUser.getEmail());
+                        app.setRequisitionId(sampleReq.getId());
+                        app.setStage("SCREENING");
+                        app = applicationRepository.save(app);
+
+                        CandidateApplicationWithdrawToken token = new CandidateApplicationWithdrawToken();
+                        token.setApplicationId(app.getId());
+                        token.setToken("demo-withdraw-token-123");
+                        token.setExpiryDate(Instant.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+                        token.setUsed(false);
+                        token.setCreatedAt(Instant.now());
+                        tokenRepository.save(token);
+                    }
+                }
+            }
+            // 9. Seed sample public job postings for S4-01 / SCRUM-154
+            if (!isTestProfile && jobPostingRepository.count() == 0) {
+                Department itDept = departmentRepository.findAll().stream()
+                        .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()) || (d.getName() != null && d.getName().contains("Kỹ thuật")))
+                        .findFirst().orElseGet(() -> departmentRepository.findAll().stream().findFirst().orElse(null));
+                Long itDeptId = itDept != null ? itDept.getId() : null;
+
+                Department hrDept = departmentRepository.findAll().stream()
+                        .filter(d -> "HR".equalsIgnoreCase(d.getCode()) || (d.getName() != null && d.getName().contains("Nhân sự")))
+                        .findFirst().orElseGet(() -> departmentRepository.findAll().stream().findFirst().orElse(null));
+                Long hrDeptId = hrDept != null ? hrDept.getId() : itDeptId;
+
+                JobPosting jp1 = new JobPosting();
+                jp1.setTitle("Kỹ sư Phần mềm Senior Java (Backend)");
+                jp1.setJobCode("JP-2026-0001");
+                jp1.setStatus("PUBLISHED");
+                jp1.setWorkingModel("HYBRID");
+                jp1.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                jp1.setQuantity(2);
+                jp1.setJobDescription("Tham gia thiết kế, phát triển và tối ưu hóa hệ thống backend tuyển dụng nội bộ phục vụ hàng nghìn nhân sự.");
+                jp1.setRequirements("Tối thiểu 3 năm kinh nghiệm lập trình Java, thành thạo Spring Boot, PostgreSQL, Docker.");
+                jp1.setBenefits("Mức lương cạnh tranh, thưởng dự án, bảo hiểm sức khỏe PTI, 15 ngày phép/năm.");
+                jp1.setSalaryVisible(true);
+                jp1.setSalaryMin(25000000L);
+                jp1.setSalaryMax(40000000L);
+                jp1.setCurrency("VND");
+                jp1.setApplicationDeadline(LocalDate.now().plusMonths(2));
+                jp1.setPublishedAt(Instant.now());
+                jp1.setDepartmentId(itDeptId);
+                jobPostingRepository.save(jp1);
+
+                JobPosting jp2 = new JobPosting();
+                jp2.setTitle("Chuyên viên Tuyển dụng & Đào tạo (HR Recruiter)");
+                jp2.setJobCode("JP-2026-0002");
+                jp2.setStatus("PUBLISHED");
+                jp2.setWorkingModel("ONSITE");
+                jp2.setWorkLocation("TP. Hồ Chí Minh - Chi nhánh Quận 1");
+                jp2.setQuantity(1);
+                jp2.setJobDescription("Tìm nguồn và thu hút nhân tài, điều phối quy trình phỏng vấn và hỗ trợ onboard nhân viên mới.");
+                jp2.setRequirements("Từ 2 năm kinh nghiệm tuyển dụng trong ngành công nghệ / tài chính.");
+                jp2.setBenefits("Môi trường trẻ trung, du lịch công ty hàng năm, phụ cấp ăn trưa và gửi xe.");
+                jp2.setSalaryVisible(false);
+                jp2.setApplicationDeadline(LocalDate.now().plusMonths(3));
+                jp2.setPublishedAt(Instant.now());
+                jp2.setDepartmentId(hrDeptId);
+                jobPostingRepository.save(jp2);
+
+                JobPosting jp3 = new JobPosting();
+                jp3.setTitle("Lập trình viên Frontend React (Remote)");
+                jp3.setJobCode("JP-2026-0003");
+                jp3.setStatus("PUBLISHED");
+                jp3.setWorkingModel("REMOTE");
+                jp3.setWorkLocation("Đà Nẵng - Trung tâm R&D");
+                jp3.setQuantity(3);
+                jp3.setJobDescription("Xây dựng các giao diện web responsive, hiện đại, tối ưu trải nghiệm người dùng.");
+                jp3.setRequirements("Thành thạo React, TypeScript, CSS hiện đại và Responsive Design.");
+                jp3.setBenefits("Làm việc từ xa linh hoạt, cung cấp laptop Macbook Pro, gói bảo hiểm toàn diện.");
+                jp3.setSalaryVisible(true);
+                jp3.setSalaryMin(20000000L);
+                jp3.setSalaryMax(35000000L);
+                jp3.setCurrency("VND");
+                jp3.setApplicationDeadline(LocalDate.now().plusMonths(1));
+                jp3.setPublishedAt(Instant.now());
+                jp3.setDepartmentId(itDeptId);
+                jobPostingRepository.save(jp3);
+
+                // S4-02: Tin tuyển dụng mẫu đã hết hạn nhận hồ sơ để kiểm thử giao diện & API chặn ứng tuyển
+                JobPosting jp4 = new JobPosting();
+                jp4.setTitle("Chuyên viên Truyền thông & Thương hiệu Tuyển dụng (Đã hết hạn)");
+                jp4.setJobCode("JP-2026-0004");
+                jp4.setStatus("PUBLISHED");
+                jp4.setWorkingModel("HYBRID");
+                jp4.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                jp4.setQuantity(1);
+                jp4.setJobDescription("Lên kế hoạch và thực hiện các chiến dịch truyền thông nhằm gia tăng độ nhận diện thương hiệu tuyển dụng của công ty.");
+                jp4.setRequirements("Tối thiểu 2 năm kinh nghiệm trong lĩnh vực truyền thông nội bộ hoặc Employer Branding.");
+                jp4.setBenefits("Môi trường sáng tạo, hỗ trợ chi phí tham gia các khóa học chuyên môn, khám sức khỏe định kỳ.");
+                jp4.setSalaryVisible(true);
+                jp4.setSalaryMin(18000000L);
+                jp4.setSalaryMax(28000000L);
+                jp4.setCurrency("VND");
+                jp4.setApplicationDeadline(LocalDate.now().minusDays(3)); // Đã hết hạn cách đây 3 ngày
+                jp4.setPublishedAt(Instant.now().minus(20, java.time.temporal.ChronoUnit.DAYS));
+                jp4.setDepartmentId(hrDeptId);
+                jobPostingRepository.save(jp4);
+            } else if (!isTestProfile && jobPostingRepository.findByJobCode("JP-2026-0004").isEmpty()) {
+                Department hrDept = departmentRepository.findAll().stream()
+                        .filter(d -> "HR".equalsIgnoreCase(d.getCode()) || (d.getName() != null && d.getName().contains("Nhân sự")))
+                        .findFirst().orElseGet(() -> departmentRepository.findAll().stream().findFirst().orElse(null));
+                Long hrDeptId = hrDept != null ? hrDept.getId() : null;
+
+                JobPosting jp4 = new JobPosting();
+                jp4.setTitle("Chuyên viên Truyền thông & Thương hiệu Tuyển dụng (Đã hết hạn)");
+                jp4.setJobCode("JP-2026-0004");
+                jp4.setStatus("PUBLISHED");
+                jp4.setWorkingModel("HYBRID");
+                jp4.setWorkLocation("Hà Nội - Trụ sở chính (Cầu Giấy)");
+                jp4.setQuantity(1);
+                jp4.setJobDescription("Lên kế hoạch và thực hiện các chiến dịch truyền thông nhằm gia tăng độ nhận diện thương hiệu tuyển dụng của công ty.");
+                jp4.setRequirements("Tối thiểu 2 năm kinh nghiệm trong lĩnh vực truyền thông nội bộ hoặc Employer Branding.");
+                jp4.setBenefits("Môi trường sáng tạo, hỗ trợ chi phí tham gia các khóa học chuyên môn, khám sức khỏe định kỳ.");
+                jp4.setSalaryVisible(true);
+                jp4.setSalaryMin(18000000L);
+                jp4.setSalaryMax(28000000L);
+                jp4.setCurrency("VND");
+                jp4.setApplicationDeadline(LocalDate.now().minusDays(3)); // Đã hết hạn cách đây 3 ngày
+                jp4.setPublishedAt(Instant.now().minus(20, java.time.temporal.ChronoUnit.DAYS));
+                jp4.setDepartmentId(hrDeptId);
+                jobPostingRepository.save(jp4);
+            }
+
         };
     }
 
@@ -337,16 +706,29 @@ public class DataInitializer {
                                      String email,
                                      String rawPassword,
                                      String fullName,
+                                     String department,
                                      Set<Role> roles) {
         var existing = userRepository.findByEmail(email);
         if (existing.isEmpty()) {
             User user = new User(email, passwordEncoder.encode(rawPassword));
             user.setFullName(fullName);
+            user.setDepartment(department);
             user.setRoles(roles);
             user.setStatus("ACTIVE");
             return userRepository.save(user);
+        } else {
+            User user = existing.get();
+            boolean changed = false;
+            if (!user.getRoles().equals(roles)) {
+                user.setRoles(roles);
+                changed = true;
+            }
+            if (department != null && (user.getDepartment() == null || !department.equals(user.getDepartment()))) {
+                user.setDepartment(department);
+                changed = true;
+            }
+            return changed ? userRepository.save(user) : user;
         }
-        return existing.get();
     }
 
     private void seedCategories(CommonCategoryRepository repo) {

@@ -36,6 +36,8 @@ export interface JobTitle {
   currentHeadcount: number;
   openRequisitions: number;
   active: boolean;
+  competencyFrameworkId?: number;
+  competencyFrameworkName?: string;
   createdAt: string;
   updatedAt?: string;
   updatedBy?: string;

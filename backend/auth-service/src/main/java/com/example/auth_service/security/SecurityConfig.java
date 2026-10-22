@@ -9,7 +9,6 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -57,14 +56,24 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/auth/avatar", "/api/auth/profile/avatar").hasAuthority("PROFILE_UPDATE")
                 .requestMatchers(HttpMethod.GET, "/api/auth/avatar", "/api/auth/avatar/thumbnail", "/api/auth/profile/avatar").hasAuthority("PROFILE_READ")
                 .requestMatchers(HttpMethod.GET, "/api/auth/avatar/**", "/api/auth/avatars/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/organization/profile/images/**").permitAll()
+                // S1-05 / S1-09: ROLE_READ â†’ ADMIN + HR_MANAGER
                 .requestMatchers(HttpMethod.GET, "/api/admin/roles").hasAuthority("ROLE_READ")
+                // S1-08: USER_READ â†’ ADMIN (F) + HR_MANAGER (R â€” only view, cannot mutate)
+                .requestMatchers(HttpMethod.GET, "/api/admin/users/import-template", "/api/admin/users/template").hasAnyAuthority("USER_READ", "USER_MANAGE")
+                .requestMatchers(HttpMethod.POST, "/api/admin/users/import-preview", "/api/admin/users/import", "/api/admin/users/import-rows", "/api/admin/users/import-file").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/admin/users", "/api/admin/users/{id}").hasAuthority("USER_READ")
+                // S1-09: ROLE_MANAGE â†’ ADMIN only (assign/revoke roles)
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}/roles").hasAuthority("ROLE_MANAGE")
+                // S1-08: USER_MANAGE â†’ ADMIN only (create, update, delete, import, reset password)
                 .requestMatchers(HttpMethod.POST, "/api/admin/users").hasAuthority("USER_MANAGE")
                 .requestMatchers("/api/admin/users/import", "/api/admin/users/import/**").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.PUT, "/api/admin/users/{id}").hasAuthority("USER_MANAGE")
+                // S1-10: Lock/unlock account â†’ ADMIN only
                 .requestMatchers(HttpMethod.PATCH, "/api/admin/users/{id}/status").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.DELETE, "/api/admin/users/{id}").hasAuthority("USER_MANAGE")
+                // ADMIN only: reset password endpoint
+                .requestMatchers(HttpMethod.POST, "/api/admin/users/{id}/reset-password").hasAuthority("USER_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/interview-questions", "/api/interview-questions/**", "/api/questions", "/api/questions/**")
                         .hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.POST, "/api/interview-questions", "/api/interview-questions/**", "/api/questions", "/api/questions/**")
@@ -76,13 +85,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/job-titles", "/api/job-titles/{id}")
                         .hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.POST, "/api/job-titles")
-                        .hasAuthority("CATALOG_MANAGE")
+                        .hasRole("HR_MANAGER")
                 .requestMatchers(HttpMethod.PUT, "/api/job-titles/{id}")
-                        .hasAuthority("CATALOG_MANAGE")
+                        .hasRole("HR_MANAGER")
                 .requestMatchers(HttpMethod.PATCH, "/api/job-titles/{id}/status")
-                        .hasAuthority("CATALOG_MANAGE")
+                        .hasRole("HR_MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/job-titles/{id}")
-                        .hasAuthority("CATALOG_MANAGE")
+                        .hasRole("HR_MANAGER")
                 .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**")
                         .hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.POST, "/api/categories", "/api/categories/**")
@@ -93,13 +102,81 @@ public class SecurityConfig {
                         .hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.DELETE, "/api/categories/**")
                         .hasAuthority("CATALOG_MANAGE")
+                .requestMatchers(HttpMethod.GET, "/api/competency-frameworks", "/api/competency-frameworks/**")
+                        .hasAuthority("CATALOG_READ")
+                .requestMatchers(HttpMethod.POST, "/api/competency-frameworks", "/api/competency-frameworks/**")
+                        .hasAuthority("CATALOG_MANAGE")
+                .requestMatchers(HttpMethod.PUT, "/api/competency-frameworks/**")
+                        .hasAuthority("CATALOG_MANAGE")
+                .requestMatchers(HttpMethod.DELETE, "/api/competency-frameworks/**")
+                        .hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/salary-ranges", "/api/salary-ranges/{id}").hasAuthority("SALARY_READ")
                 .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}")
                         .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "CANDIDATE_READ_OWN")
+                .requestMatchers(HttpMethod.PATCH, "/api/candidates/{id}/stage").hasAuthority("PIPELINE_MANAGE")
+                // S3-01: only HR managers can manage versioned approval configurations.
+                .requestMatchers("/api/requisition-approval-configurations", "/api/requisition-approval-configurations/**")
+                        .hasRole("HR_MANAGER")
+                // S2-10: Recruitment Requisition (YÃªu cáº§u tuyá»ƒn dá»¥ng)
+                .requestMatchers(HttpMethod.POST, "/api/requisitions/draft", "/api/requisitions")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/draft", "/api/requisitions/{id}")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/submit")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions", "/api/requisitions/{id}", "/api/requisitions/{id}/pipeline-summary")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/requisitions/{id}/approve", "/api/requisitions/{id}/reject")
+                        .hasAnyAuthority("REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST,
+                        "/api/requisitions/{id}/hold",
+                        "/api/requisitions/{id}/resume",
+                        "/api/requisitions/{id}/close",
+                        "/api/requisitions/{id}/cancel")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/recruitment-requests", "/api/recruitment-requests/{id}/clone")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.PUT, "/api/recruitment-requests/{id}")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.POST, "/api/recruitment-requests/{id}/submit")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.GET, "/api/recruitment-requests", "/api/recruitment-requests/{id}")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.DELETE, "/api/recruitment-requests/{id}")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions/assignable-recruiters")
+                        .hasAuthority("RECRUITER_ASSIGN")
+                .requestMatchers(HttpMethod.GET, "/api/requisitions/{id}/assignments", "/api/requisitions/{id}/assignments/history")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "REQUISITION_READ_OWN", "RECRUITER_ASSIGN", "REQUISITION_APPROVE")
+                .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/assignments")
+                        .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.PUT, "/api/requisitions/{id}/assignments/{userId}")
                         .hasAuthority("RECRUITER_ASSIGN")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}/assignments/{userId}")
                         .hasAuthority("RECRUITER_ASSIGN")
+                .requestMatchers(HttpMethod.PUT,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/reject",
+                        "/api/requisitions/{id}/request-changes")
+                        .hasAuthority("REQUISITION_APPROVE")
+                .requestMatchers(HttpMethod.POST,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/reject",
+                        "/api/requisitions/{id}/request-changes",
+                        "/api/requisitions/{id}/approval-actions",
+                        "/api/requisitions/{id}/approval-action")
+                        .hasAuthority("REQUISITION_APPROVE")
+                .requestMatchers(HttpMethod.GET,
+                        "/api/requisitions/{id}/approve",
+                        "/api/requisitions/{id}/approve/**",
+                        "/api/requisitions/{id}/timeline",
+                        "/api/requisitions/{id}/approval-logs",
+                        "/api/requisitions/{id}/approval-history",
+                        "/api/requisitions/{id}/approve/logs",
+                        "/api/requisitions/{id}/approve/history")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "REQUISITION_APPROVE", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.GET, "/api/departments", "/api/departments/tree", "/api/departments/{id}")
                         .hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.POST, "/api/departments").hasAuthority("DEPARTMENT_MANAGE")
@@ -108,6 +185,28 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/departments/{id}").hasAuthority("DEPARTMENT_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_READ")
                 .requestMatchers(HttpMethod.PUT, "/api/organization", "/api/organization/**").hasAuthority("CATALOG_MANAGE")
+                .requestMatchers(HttpMethod.POST, "/api/organization/profile/logo", "/api/organization/profile/image").hasAuthority("CATALOG_MANAGE")
+                // S3-10 / SCRUM-150 / S4-02: API cÃ´ng khai viá»‡c lÃ m vÃ  ná»™p há»“ sÆ¡ cho á»©ng viÃªn
+                .requestMatchers(HttpMethod.GET, "/api/public/job-postings", "/api/public/job-postings/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/public/job-postings/{id}/apply").permitAll()
+                // S3-10 / SCRUM-149: Duyá»‡t vÃ  xuáº¥t báº£n tin tuyá»ƒn dá»¥ng - Chá»‰ HR Manager
+                .requestMatchers(HttpMethod.POST,
+                        "/api/job-postings/{id}/approve",
+                        "/api/job-postings/{id}/publish",
+                        "/api/job-postings/{id}/approve-and-publish",
+                        "/api/job-postings/{id}/reject")
+                        .hasRole("HR_MANAGER")
+                // S3-10 / S3-09: Quáº£n lÃ½ tin tuyá»ƒn dá»¥ng ná»™i bá»™
+                .requestMatchers("/api/job-postings", "/api/job-postings/**")
+                        .hasAnyAuthority("JOB_MANAGE", "ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_RECRUITER")
+                // SCRUM-181 & SCRUM-182: API rÃºt há»“ sÆ¡ á»©ng tuyá»ƒn (AC1 qua token email cÃ´ng khai & Candidate Portal)
+                .requestMatchers(HttpMethod.GET, "/api/public/applications/withdraw").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/public/applications/withdraw").permitAll()
+                .requestMatchers("/api/candidate/applications", "/api/candidate/applications/**")
+                        .hasAnyAuthority("CANDIDATE_READ_OWN", "ROLE_CANDIDATE")
+                // AC3: ThÃ´ng bÃ¡o há»‡ thá»‘ng (Notification Center) - NOTIFICATION_READ_OWN
+                .requestMatchers("/api/notifications", "/api/notifications/**")
+                        .hasAuthority("NOTIFICATION_READ_OWN")
                 .anyRequest().denyAll()
             )
             .exceptionHandling(errors -> errors.authenticationEntryPoint(securityErrorHandler)
@@ -143,3 +242,4 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 }
+

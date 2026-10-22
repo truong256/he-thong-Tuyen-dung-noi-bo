@@ -14,12 +14,14 @@ interface CareerMatrixVisualizerProps {
   jobTitles: JobTitle[];
   departments: Department[];
   onSelectJobTitle: (jt: JobTitle) => void;
+  canViewSalary?: boolean;
 }
 
 export const CareerMatrixVisualizer: React.FC<CareerMatrixVisualizerProps> = ({
   jobTitles,
   departments,
   onSelectJobTitle,
+  canViewSalary = false,
 }) => {
   const [selectedDeptId, setSelectedDeptId] = useState<string>('ALL');
   const [matrixSearch, setMatrixSearch] = useState('');
@@ -182,9 +184,13 @@ export const CareerMatrixVisualizer: React.FC<CareerMatrixVisualizerProps> = ({
                       </div>
 
                       <div className="jt-card-bottom-row">
-                        <span className="jt-card-salary">
-                          {jt.salaryRangeDisplay || 'Thỏa thuận'}
-                        </span>
+                        {canViewSalary ? (
+                          <span className="jt-card-salary">
+                            {jt.salaryRangeDisplay || 'Chưa khai báo'}
+                          </span>
+                        ) : (
+                          <span />
+                        )}
                         <span className="jt-card-headcount" title="Số lượng nhân sự hiện tại">
                           <Users size={12} /> {jt.currentHeadcount}
                         </span>

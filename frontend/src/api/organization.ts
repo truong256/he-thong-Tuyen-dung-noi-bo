@@ -325,6 +325,33 @@ const serializeProfileForApi = (payload: Partial<CompanyProfile>): any => {
   return res;
 };
 
+export const extractErrorMessage = (err: any, fallbackMessage: string): string => {
+  if (!err) return fallbackMessage;
+  const status = err.response?.status;
+  const serverMsg = err.response?.data?.message;
+
+  if (status === 400) {
+    if (err.response?.data?.validationErrors) {
+      const fieldErrors = Object.values(err.response.data.validationErrors);
+      if (fieldErrors.length > 0) return String(fieldErrors[0]);
+    }
+    return serverMsg || 'Dữ liệu gửi lên không hợp lệ. Vui lòng kiểm tra lại các trường thông tin.';
+  }
+  if (status === 401) {
+    return 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.';
+  }
+  if (status === 403) {
+    return 'Bạn không có quyền thực hiện thao tác này. Chức năng quản lý phòng ban chỉ dành cho Trưởng phòng Nhân sự (HR_MANAGER).';
+  }
+  if (status === 409) {
+    return serverMsg || 'Dữ liệu bị xung đột hoặc trùng lặp (tên/mã phòng ban đã tồn tại hoặc tạo vòng lặp phân cấp).';
+  }
+  if (status === 500) {
+    return serverMsg || 'Hệ thống máy chủ gặp sự cố khi xử lý dữ liệu. Vui lòng thử lại sau.';
+  }
+  return serverMsg || err.message || fallbackMessage;
+};
+
 export const organizationApi = {
   // --- Profile Methods ---
   getCompanyProfile: async (): Promise<CompanyProfile> => {
@@ -360,8 +387,7 @@ export const organizationApi = {
           return normalized;
         }
       } catch (err: any) {
-        const msg = err.response?.data?.message || err.message || 'Lỗi khi cập nhật hồ sơ doanh nghiệp lên máy chủ.';
-        throw new Error(msg);
+        throw new Error(extractErrorMessage(err, 'Lỗi khi cập nhật hồ sơ doanh nghiệp lên máy chủ.'));
       }
     }
 
@@ -383,13 +409,16 @@ export const organizationApi = {
         const res = await apiClient.get<any[]>('/api/departments');
         if (res.data && Array.isArray(res.data)) {
           const mapped: Department[] = res.data.map((d: any) => ({
-            id: d.id,
+            id: Number(d.id),
             name: d.name,
             code: d.code,
             description: d.description || '',
-            parentDepartmentId: d.parentDepartmentId || null,
-            managerName: d.managerUserId ? `Quản lý #${d.managerUserId}` : undefined,
-            employeeCount: d.employeeCount || 0,
+            parentDepartmentId: d.parentDepartmentId ? Number(d.parentDepartmentId) : null,
+            managerUserId: d.managerUserId ? Number(d.managerUserId) : undefined,
+            managerName: d.managerName || (d.managerUserId ? `Quản lý #${d.managerUserId}` : undefined),
+            managerEmail: d.managerEmail || undefined,
+            employeeCount: Number(d.employeeCount) || 0,
+            openRequisitionsCount: Number(d.openRequisitionsCount) || 0,
             active: d.active !== false,
             createdAt: d.createdAt ? String(d.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
           }));
@@ -398,12 +427,10 @@ export const organizationApi = {
             ...d,
             parentDepartmentName: d.parentDepartmentId ? deptMap.get(d.parentDepartmentId) : undefined,
           }));
-          setStoredData(STORAGE_KEYS.DEPARTMENTS, enriched);
           return enriched;
         }
       } catch (err: any) {
-        const errorMsg = err?.response?.data?.message || err?.message || 'Không thể tải danh sách phòng ban từ máy chủ.';
-        throw new Error(errorMsg);
+        throw new Error(extractErrorMessage(err, 'Không thể tải danh sách phòng ban từ máy chủ.'));
       }
     }
 
@@ -415,38 +442,77 @@ export const organizationApi = {
     }));
   },
 
-  createDepartment: async (payload: Omit<Department, 'id' | 'createdAt'>): Promise<Department> => {
+  getEligibleManagers: async (): Promise<Array<{ id: number; fullName: string; email: string; roles: string[] }>> => {
+    try {
+      const res = await apiClient.get<any>('/api/admin/users?status=ACTIVE&size=100');
+      const users = res.data?.content || [];
+      return users
+        .filter((u: any) => {
+          if (u.status !== 'ACTIVE' || u.locked) return false;
+          const roles = u.roles || [];
+          return roles.some((r: string) => r !== 'CANDIDATE');
+        })
+        .map((u: any) => ({
+          id: Number(u.id),
+          fullName: u.fullName || u.username,
+          email: u.email,
+          roles: u.roles || [],
+        }));
+    } catch (err) {
+      console.warn('[OrganizationApi] Failed to load eligible managers:', err);
+      return [];
+    }
+  },
+
+  createDepartment: async (payload: {
+    name: string;
+    code: string;
+    description?: string;
+    parentDepartmentId?: number | null;
+    managerUserId: number;
+  }): Promise<Department> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token && !token.startsWith('mock-')) {
       try {
         const res = await apiClient.post<any>('/api/departments', {
-          name: payload.name,
-          code: payload.code,
-          description: payload.description || '',
+          name: payload.name.trim(),
+          code: payload.code.trim().toUpperCase(),
+          description: payload.description ? payload.description.trim() : null,
           parentDepartmentId: payload.parentDepartmentId || null,
-          managerUserId: 1,
+          managerUserId: Number(payload.managerUserId),
         });
         if (res.data && res.data.id) {
-          const newDept: Department = {
-            ...payload,
-            id: res.data.id,
+          return {
+            id: Number(res.data.id),
+            name: res.data.name,
+            code: res.data.code,
+            description: res.data.description || '',
+            parentDepartmentId: res.data.parentDepartmentId ? Number(res.data.parentDepartmentId) : null,
+            managerUserId: res.data.managerUserId ? Number(res.data.managerUserId) : payload.managerUserId,
+            managerName: res.data.managerName,
+            managerEmail: res.data.managerEmail,
+            employeeCount: Number(res.data.employeeCount) || 0,
+            openRequisitionsCount: Number(res.data.openRequisitionsCount) || 0,
+            active: res.data.active !== false,
             createdAt: res.data.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
           };
-          const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-          list.push(newDept);
-          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
-          return newDept;
         }
       } catch (err: any) {
-        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi tạo phòng ban mới trên hệ thống.';
-        throw new Error(errorMsg);
+        throw new Error(extractErrorMessage(err, 'Lỗi khi tạo phòng ban mới trên hệ thống.'));
       }
     }
 
     const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
     const maxId = list.reduce((max, d) => Math.max(max, d.id), 0);
     const newDept: Department = {
-      ...payload,
+      name: payload.name,
+      code: payload.code,
+      description: payload.description,
+      parentDepartmentId: payload.parentDepartmentId,
+      managerUserId: payload.managerUserId,
+      employeeCount: 0,
+      openRequisitionsCount: 0,
+      active: true,
       id: maxId + 1,
       createdAt: new Date().toISOString().slice(0, 10),
     };
@@ -455,36 +521,39 @@ export const organizationApi = {
     return newDept;
   },
 
-  updateDepartment: async (id: number, payload: Partial<Department>): Promise<Department> => {
+  updateDepartment: async (id: number, payload: {
+    name: string;
+    code: string;
+    description?: string;
+    parentDepartmentId?: number | null;
+    managerUserId: number;
+  }): Promise<Department> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token && !token.startsWith('mock-')) {
       try {
-        await apiClient.put(`/api/departments/${id}`, {
-          name: payload.name,
-          code: payload.code,
-          description: payload.description || '',
+        const res = await apiClient.put<any>(`/api/departments/${id}`, {
+          name: payload.name.trim(),
+          code: payload.code.trim().toUpperCase(),
+          description: payload.description ? payload.description.trim() : null,
           parentDepartmentId: payload.parentDepartmentId || null,
-          managerUserId: 1,
+          managerUserId: Number(payload.managerUserId),
         });
-        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-        const index = list.findIndex((d) => d.id === id);
-        if (index !== -1) {
-          const updatedDept: Department = { ...list[index], ...payload };
-          list[index] = updatedDept;
-          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
-          return updatedDept;
-        }
         return {
-          id,
-          name: payload.name || '',
-          code: payload.code || '',
-          active: payload.active !== false,
-          createdAt: new Date().toISOString().slice(0, 10),
-          ...payload,
-        } as Department;
+          id: Number(res.data?.id || id),
+          name: res.data?.name || payload.name,
+          code: res.data?.code || payload.code,
+          description: res.data?.description || payload.description || '',
+          parentDepartmentId: res.data?.parentDepartmentId ? Number(res.data.parentDepartmentId) : (payload.parentDepartmentId || null),
+          managerUserId: res.data?.managerUserId ? Number(res.data.managerUserId) : payload.managerUserId,
+          managerName: res.data?.managerName,
+          managerEmail: res.data?.managerEmail,
+          employeeCount: Number(res.data?.employeeCount) || 0,
+          openRequisitionsCount: Number(res.data?.openRequisitionsCount) || 0,
+          active: res.data?.active !== false,
+          createdAt: res.data?.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+        };
       } catch (err: any) {
-        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi cập nhật thông tin phòng ban.';
-        throw new Error(errorMsg);
+        throw new Error(extractErrorMessage(err, 'Lỗi khi cập nhật thông tin phòng ban.'));
       }
     }
 
@@ -507,13 +576,9 @@ export const organizationApi = {
     if (token && !token.startsWith('mock-')) {
       try {
         await apiClient.delete(`/api/departments/${id}`);
-        const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-        const filtered = list.filter((d) => d.id !== id);
-        setStoredData(STORAGE_KEYS.DEPARTMENTS, filtered);
         return { success: true, message: 'Đã xóa phòng ban thành công.' };
       } catch (err: any) {
-        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi xóa phòng ban.';
-        throw new Error(errorMsg);
+        throw new Error(extractErrorMessage(err, 'Lỗi khi xóa phòng ban.'));
       }
     }
 
@@ -527,31 +592,43 @@ export const organizationApi = {
     return { success: true, message: 'Đã xóa phòng ban thành công.' };
   },
 
-  toggleDepartmentStatus: async (id: number): Promise<Department> => {
-    const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
-    const index = list.findIndex((d) => d.id === id);
-    const currentActive = index !== -1 ? list[index].active : true;
-    const nextActive = !currentActive;
-
+  toggleDepartmentStatus: async (id: number, currentActive?: boolean): Promise<Department> => {
+    let nextActive: boolean;
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
     if (token && !token.startsWith('mock-')) {
       try {
-        await apiClient.patch(`/api/departments/${id}/status`, { active: nextActive });
-        if (index !== -1) {
-          list[index].active = nextActive;
-          setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
-          return list[index];
+        if (currentActive !== undefined) {
+          nextActive = !currentActive;
+        } else {
+          const cur = await apiClient.get<any>(`/api/departments/${id}`);
+          nextActive = !(cur.data?.active !== false);
         }
-        return { id, active: nextActive } as Department;
+        const res = await apiClient.patch<any>(`/api/departments/${id}/status`, { active: nextActive });
+        return {
+          id: Number(res.data?.id || id),
+          name: res.data?.name || '',
+          code: res.data?.code || '',
+          description: res.data?.description || '',
+          parentDepartmentId: res.data?.parentDepartmentId ? Number(res.data.parentDepartmentId) : null,
+          managerUserId: res.data?.managerUserId ? Number(res.data.managerUserId) : undefined,
+          managerName: res.data?.managerName,
+          managerEmail: res.data?.managerEmail,
+          employeeCount: Number(res.data?.employeeCount) || 0,
+          openRequisitionsCount: Number(res.data?.openRequisitionsCount) || 0,
+          active: res.data?.active !== false,
+          createdAt: res.data?.createdAt ? String(res.data.createdAt).slice(0, 10) : new Date().toISOString().slice(0, 10),
+        };
       } catch (err: any) {
-        const errorMsg = err?.response?.data?.message || err?.message || 'Lỗi khi thay đổi trạng thái phòng ban.';
-        throw new Error(errorMsg);
+        throw new Error(extractErrorMessage(err, 'Lỗi khi thay đổi trạng thái phòng ban.'));
       }
     }
 
+    const list = getStoredData<Department[]>(STORAGE_KEYS.DEPARTMENTS, INITIAL_DEPARTMENTS);
+    const index = list.findIndex((d) => d.id === id);
     if (index === -1) {
       throw new Error(`Không tìm thấy phòng ban với ID: ${id}`);
     }
+    nextActive = currentActive !== undefined ? !currentActive : !list[index].active;
     list[index].active = nextActive;
     setStoredData(STORAGE_KEYS.DEPARTMENTS, list);
     return list[index];

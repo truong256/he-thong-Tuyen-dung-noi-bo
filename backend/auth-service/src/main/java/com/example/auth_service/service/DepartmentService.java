@@ -31,11 +31,11 @@ public class DepartmentService {
     public List<DepartmentResponse> list(Boolean active) {
         return departments.findAllByOrderByNameAscIdAsc().stream()
                 .filter(d -> active == null || d.isActive() == active)
-                .map(DepartmentResponse::from).toList();
+                .map(this::toResponse).toList();
     }
 
     @PreAuthorize("hasAuthority('CATALOG_READ')")
-    public DepartmentResponse get(Long id) { return DepartmentResponse.from(requireDepartment(id)); }
+    public DepartmentResponse get(Long id) { return toResponse(requireDepartment(id)); }
 
     @PreAuthorize("hasAuthority('CATALOG_READ')")
     public List<DepartmentTreeNode> tree() {
@@ -44,7 +44,7 @@ public class DepartmentService {
         Map<Long, DepartmentTreeNode> nodes = new LinkedHashMap<>();
         for (Department department : all) {
             validateAncestry(department.getId(), department.getParentDepartmentId(), byId, false);
-            nodes.put(department.getId(), new DepartmentTreeNode(DepartmentResponse.from(department), new ArrayList<>()));
+            nodes.put(department.getId(), new DepartmentTreeNode(toResponse(department), new ArrayList<>()));
         }
         List<DepartmentTreeNode> roots = new ArrayList<>();
         for (Department department : all) {
@@ -63,7 +63,7 @@ public class DepartmentService {
         validateAncestry(null, request.parentDepartmentId(), index(departments.findAll()), true);
         Department department = new Department();
         apply(department, request);
-        return DepartmentResponse.from(departments.saveAndFlush(department));
+        return toResponse(departments.saveAndFlush(department));
     }
 
     @Transactional
@@ -81,7 +81,7 @@ public class DepartmentService {
             throw new ConflictException("Phòng ban có tài khoản đang sử dụng tên/mã cũ. Hãy cập nhật liên kết tài khoản trước khi đổi tên/mã.");
         }
         apply(department, request);
-        return DepartmentResponse.from(departments.saveAndFlush(department));
+        return toResponse(departments.saveAndFlush(department));
     }
 
     @Transactional
@@ -95,7 +95,7 @@ public class DepartmentService {
             throw new ConflictException("Hãy ngừng áp dụng các phòng ban con trước khi ngừng áp dụng phòng ban cha.");
         }
         department.setActive(active);
-        return DepartmentResponse.from(departments.saveAndFlush(department));
+        return toResponse(departments.saveAndFlush(department));
     }
 
     @Transactional
@@ -113,8 +113,32 @@ public class DepartmentService {
         departments.flush();
     }
 
+    private DepartmentResponse toResponse(Department department) {
+        String managerName = null;
+        String managerEmail = null;
+        if (department.getManagerUserId() != null) {
+            var managerOpt = users.findById(department.getManagerUserId());
+            if (managerOpt.isPresent()) {
+                managerName = managerOpt.get().getFullName();
+                managerEmail = managerOpt.get().getEmail();
+            }
+        }
+        long employeeCount = users.countUsersInDepartment(department.getName(), department.getCode());
+        if (employeeCount == 0 && department.getManagerUserId() != null) {
+            employeeCount = 1;
+        }
+        long openReqCount = requisitions.countOpenRequisitions(department.getId());
+        return DepartmentResponse.from(department, managerName, managerEmail, employeeCount, openReqCount);
+    }
+
     private void lockTree() {
-        if (!Integer.valueOf(1).equals(departments.lockTree())) {
+        try {
+            if (!Integer.valueOf(1).equals(departments.lockTree())) {
+                throw new ConflictException("Chưa khởi tạo khóa sơ đồ tổ chức. Vui lòng chạy migration phòng ban.");
+            }
+        } catch (ConflictException ce) {
+            throw ce;
+        } catch (Exception ex) {
             throw new ConflictException("Chưa khởi tạo khóa sơ đồ tổ chức. Vui lòng chạy migration phòng ban.");
         }
     }
@@ -162,7 +186,7 @@ public class DepartmentService {
     }
 
     private Map<Long, Department> index(List<Department> all) {
-        return all.stream().collect(Collectors.toMap(Department::getId, Function.identity()));
+        return all.stream().collect(Collectors.toMap(d -> d.getId(), Function.identity()));
     }
 
     private void apply(Department department, DepartmentRequest request) {

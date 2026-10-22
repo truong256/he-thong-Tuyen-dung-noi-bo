@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, KeyRound, Check, X, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff, Check, X, ShieldCheck } from 'lucide-react';
 import authApi from '../../api/auth';
 import { useAuth } from '../../hooks/useAuth';
 import { validatePasswordPolicy } from '../../utils/passwordPolicy';
@@ -112,12 +112,7 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="change-pwd-title">
       <div className="modal-box change-pwd-modal">
         <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div className="modal-title-icon">
-              <KeyRound size={20} />
-            </div>
-            <h3 id="change-pwd-title">Đổi mật khẩu</h3>
-          </div>
+          <h3 id="change-pwd-title">Đổi mật khẩu</h3>
           <button
             type="button"
             className="close-btn"
@@ -165,7 +160,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className="eye-toggle-btn"
                 onClick={() => setShowCurrent(!showCurrent)}
                 aria-label={showCurrent ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showCurrent ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -194,7 +190,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className="eye-toggle-btn"
                 onClick={() => setShowNew(!showNew)}
                 aria-label={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showNew ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -238,7 +235,8 @@ export const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                 className="eye-toggle-btn"
                 onClick={() => setShowConfirm(!showConfirm)}
                 aria-label={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                tabIndex={-1}
+                title={showConfirm ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                tabIndex={0}
               >
                 {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>

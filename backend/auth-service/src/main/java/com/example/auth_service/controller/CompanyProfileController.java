@@ -1,13 +1,16 @@
 package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.CompanyProfile;
-import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.repository.*;
 import com.example.auth_service.service.CompanyProfileService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -57,7 +60,7 @@ public class CompanyProfileController {
     public ResponseEntity<Map<String, Object>> getStatistics() {
         Map<String, Object> stats = new HashMap<>();
         long deptCount = departmentRepository.count();
-        long activeDepts = departmentRepository.findAll().stream().filter(Department::isActive).count();
+        long activeDepts = departmentRepository.findAll().stream().filter(d -> d != null && d.isActive()).count();
         long totalEmp = userRepository.count();
         long jobTitleCount = jobTitleRepository.count();
         long userCount = userRepository.count();
@@ -76,5 +79,38 @@ public class CompanyProfileController {
         stats.put("openRequisitionsCount", jobTitleRepository.count());
 
         return ResponseEntity.ok(stats);
+    }
+
+    @PostMapping("/profile/logo")
+    public ResponseEntity<CompanyProfile> uploadLogo(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) {
+        String username = authentication != null ? authentication.getName() : "Quản trị viên";
+        CompanyProfile updated = profileService.uploadLogo(file, username);
+        return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/profile/image")
+    public ResponseEntity<CompanyProfile> uploadImage(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) {
+        String username = authentication != null ? authentication.getName() : "Quản trị viên";
+        CompanyProfile updated = profileService.uploadImage(file, username);
+        return ResponseEntity.ok(updated);
+    }
+
+    @GetMapping("/profile/images/{filename:.+}")
+    public ResponseEntity<Resource> serveImage(@PathVariable String filename) {
+        Resource file = profileService.loadCompanyResource(filename);
+        String contentType = "image/jpeg";
+        if (filename.toLowerCase().endsWith(".png")) {
+            contentType = "image/png";
+        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
+                .contentType(MediaType.parseMediaType(contentType))
+                .body(file);
     }
 }

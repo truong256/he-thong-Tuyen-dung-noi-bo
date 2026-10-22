@@ -58,8 +58,13 @@ export const questionBankApi = {
     await apiClient.delete(`/api/questions/${id}`);
   },
 
-  getCriteria: async (): Promise<CompetencyCriterion[]> => {
-    const res = await apiClient.get<CompetencyCriterion[]>('/api/questions/criteria');
+  getCriteria: async (jobTitleId?: number | 'ALL'): Promise<CompetencyCriterion[]> => {
+    const params = new URLSearchParams();
+    if (jobTitleId && jobTitleId !== 'ALL') {
+      params.append('jobTitleId', String(jobTitleId));
+    }
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiClient.get<CompetencyCriterion[]>(`/api/questions/criteria${query}`);
     return res.data;
   },
 };

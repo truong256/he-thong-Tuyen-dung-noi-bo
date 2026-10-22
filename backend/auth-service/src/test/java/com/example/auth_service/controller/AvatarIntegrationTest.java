@@ -121,8 +121,8 @@ class AvatarIntegrationTest {
                 .andReturn();
 
         JsonNode json = mapper.readTree(result.getResponse().getContentAsString());
-        String avatarUrl = json.get("avatarUrl").asText();
-        String thumbnailUrl = json.get("thumbnailUrl").asText();
+        String avatarUrl = json.get("avatarUrl").asString();
+        String thumbnailUrl = json.get("thumbnailUrl").asString();
 
         assertThat(avatarUrl).startsWith("/api/auth/avatar/");
         assertThat(thumbnailUrl).contains("_thumb");

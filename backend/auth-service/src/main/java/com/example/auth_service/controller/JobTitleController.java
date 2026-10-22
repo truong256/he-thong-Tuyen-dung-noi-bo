@@ -27,9 +27,13 @@ public class JobTitleController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
             @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) String jobFamily,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
             Authentication authentication
     ) {
-        return service.list(search, active, departmentId, canViewSalary(authentication));
+        return service.list(search, active, departmentId, level, jobFamily, sortBy, sortOrder, canViewSalary(authentication));
     }
 
     @GetMapping("/{id}")
@@ -49,9 +53,14 @@ public class JobTitleController {
     }
 
     @PatchMapping("/{id}/status")
-    public JobTitleResponse setStatus(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-        boolean active = body.getOrDefault("active", true);
-        return service.setActive(id, active);
+    public JobTitleResponse setStatus(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Boolean> body
+    ) {
+        if (body != null && body.containsKey("active")) {
+            return service.setActive(id, Boolean.TRUE.equals(body.get("active")));
+        }
+        return service.toggleStatus(id);
     }
 
     @DeleteMapping("/{id}")

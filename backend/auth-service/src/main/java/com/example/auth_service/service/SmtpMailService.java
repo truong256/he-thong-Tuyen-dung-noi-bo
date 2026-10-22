@@ -97,21 +97,58 @@ public class SmtpMailService implements MailService {
         logger.info("Sent account activation email via SMTP to {}", toEmail);
     }
 
+    @Override
+    public void sendApplicationConfirmationEmail(String toEmail, String candidateName, String jobTitle, String withdrawToken) {
+        String greetingName = (candidateName != null && !candidateName.isBlank()) ? candidateName.trim() : "Quý ứng viên";
+        String subject = "[Tuyển dụng nội bộ] Xác nhận nộp hồ sơ ứng tuyển - " + (jobTitle != null ? jobTitle : "Vị trí tuyển dụng");
+        String withdrawLink = frontendUrl.replaceAll("/+$", "") + "/candidate/withdraw?token=" + withdrawToken;
+        String body = "<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;\">"
+                + "<h2 style=\"color: #1e40af; margin-top: 0; font-size: 20px;\">Hệ thống Tuyển dụng Nội bộ</h2>"
+                + "<p>Xin chào <strong>" + greetingName + "</strong>,</p>"
+                + "<p>Hồ sơ ứng tuyển của bạn cho vị trí <strong>" + (jobTitle != null ? jobTitle : "") + "</strong> đã được tiếp nhận thành công trên hệ thống của chúng tôi.</p>"
+                + "<p>Bộ phận Tuyển dụng sẽ xem xét hồ sơ và liên hệ với bạn trong thời gian sớm nhất.</p>"
+                + "<div style=\"margin: 24px 0; padding: 16px; background-color: #f8fafc; border-left: 4px solid #64748b; border-radius: 4px;\">"
+                + "<p style=\"margin: 0; font-size: 14px; color: #475569;\"><strong>Lưu ý:</strong> Nếu bạn đã nhận việc tại nơi khác hoặc muốn dừng ứng tuyển, bạn có thể chủ động rút hồ sơ của mình bằng liên kết bên dưới:</p>"
+                + "<p style=\"margin: 12px 0 0 0;\"><a href=\"" + withdrawLink + "\" style=\"color: #dc2626; font-weight: 600; text-decoration: underline;\">Bấm vào đây để yêu cầu rút hồ sơ ứng tuyển</a></p>"
+                + "</div>"
+                + "<p style=\"color: #64748b; font-size: 13px;\">Trân trọng,<br>Bộ phận Tuyển dụng</p>"
+                + "</div>";
+        sendEmail(toEmail, subject, body);
+        logger.info("Sent application confirmation email with withdraw link via SMTP to {}", toEmail);
+    }
+
+    @Override
+    public void sendCandidateWithdrawnNotification(String recruiterEmail, String candidateName, String jobTitle, Long applicationId) {
+        String subject = "[Thông báo] Ứng viên rút hồ sơ: " + candidateName + " - " + jobTitle;
+        String body = "<div style=\"font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background-color: #ffffff;\">"
+                + "<h2 style=\"color: #dc2626; margin-top: 0; font-size: 20px;\">Thông báo ứng viên rút hồ sơ</h2>"
+                + "<p>Kính gửi Chuyên viên tuyển dụng phụ trách,</p>"
+                + "<p>Ứng viên <strong>" + candidateName + "</strong> (Mã hồ sơ: #" + applicationId + ") đã chủ động rút hồ sơ ứng tuyển cho vị trí <strong>" + jobTitle + "</strong>.</p>"
+                + "<p>Hồ sơ đã được chuyển sang trạng thái <strong>Ứng viên rút</strong> và đưa ra khỏi pipeline đang hoạt động.</p>"
+                + "<p>Vui lòng đăng nhập hệ thống để kiểm tra và cập nhật tiến độ tuyển dụng tương ứng.</p>"
+                + "<p style=\"color: #64748b; font-size: 13px;\">Trân trọng,<br>Hệ thống Quản lý Tuyển dụng Nội bộ</p>"
+                + "</div>";
+        sendEmail(recruiterEmail, subject, body);
+        logger.info("Sent candidate withdrawal notification email via SMTP to recruiter {}", recruiterEmail);
+    }
+
+    @SuppressWarnings("resource")
     public void sendEmail(String toEmail, String subject, String bodyHtml) {
         logger.info("Initiating SMTP email transfer to {}:{}", host, port);
         try (Socket rawSocket = new Socket()) {
             rawSocket.connect(new InetSocketAddress(host, port), timeout);
             rawSocket.setSoTimeout(timeout);
 
-            Socket initialSocket = rawSocket;
+            Socket socket = rawSocket;
+            SSLSocket sslSocket = null;
             if (port == 465) {
-                SSLSocket sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
+                sslSocket = (SSLSocket) ((SSLSocketFactory) SSLSocketFactory.getDefault())
                         .createSocket(rawSocket, host, port, true);
                 sslSocket.startHandshake();
-                initialSocket = sslSocket;
+                socket = sslSocket;
             }
 
-            try (Socket socket = initialSocket) {
+            try {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
@@ -135,6 +172,10 @@ public class SmtpMailService implements MailService {
                     }
                 } else {
                     performSmtpTransaction(reader, writer, toEmail, subject, bodyHtml);
+                }
+            } finally {
+                if (sslSocket != null) {
+                    sslSocket.close();
                 }
             }
         } catch (Exception e) {

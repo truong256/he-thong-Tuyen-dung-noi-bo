@@ -71,8 +71,8 @@ class DepartmentIntegrationTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = RoleName.class, names = "HR_MANAGER", mode = EnumSource.Mode.EXCLUDE)
-    void otherSixRolesCannotMutateDepartments(RoleName role) throws Exception {
+    @EnumSource(value = RoleName.class, names = {"HR_MANAGER"}, mode = EnumSource.Mode.EXCLUDE)
+    void nonHrRolesCannotMutateDepartments(RoleName role) throws Exception {
         String bearer = token(user("dept-other", role));
         mvc.perform(post("/api/departments").header("Authorization", bearer).contentType(MediaType.APPLICATION_JSON)
                 .content(body("Denied", "DENIED", null, manager.getId())))

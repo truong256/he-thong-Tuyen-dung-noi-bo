@@ -10,9 +10,28 @@ export const AppLayout: React.FC = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('ats_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const { logout } = useAuth();
   const navigate = useNavigate();
+
+  const handleToggleSidebarCollapse = useCallback(() => {
+    setIsSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('ats_sidebar_collapsed', String(next));
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  }, []);
 
   // Listen for session expiration events from api client interceptor
   useEffect(() => {
@@ -54,11 +73,14 @@ export const AppLayout: React.FC = () => {
         onChangePasswordClick={() => setShowPasswordModal(true)}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         isMobileSidebarOpen={isMobileSidebarOpen}
+        isSidebarCollapsed={isSidebarCollapsed}
+        onToggleCollapseSidebar={handleToggleSidebarCollapse}
       />
 
       <div className="app-body">
         <Sidebar
           isOpen={isMobileSidebarOpen}
+          isCollapsed={isSidebarCollapsed}
           onClose={() => setIsMobileSidebarOpen(false)}
         />
         <main className="app-content">

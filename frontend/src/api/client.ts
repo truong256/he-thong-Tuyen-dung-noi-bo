@@ -9,20 +9,30 @@ export const apiClient = axios.create({
   },
 });
 
-import { isIdleExpired, clearActivity } from '../utils/idleTracker';
+import { isIdleExpired, clearActivity, recordActivity } from '../utils/idleTracker';
+
+// Public job reads do not depend on an internal login or its idle/refresh lifecycle.
+const isPublicJobRead = (config?: InternalAxiosRequestConfig) =>
+  config?.method?.toLowerCase() === 'get' &&
+  /^\/api\/public\/job-postings(?:\/[^/?]+)?\/?(?:\?.*)?$/.test(config.url || '');
 
 // Request interceptor to attach JWT access token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (isPublicJobRead(config)) {
+      config.headers.delete('Authorization');
+      return config;
+    }
     const url = config.url || '';
-    const isPublicAuthRoute =
+    const isPublicRoute =
+      url.includes('/api/public/') ||
       url.includes('/api/auth/login') ||
       url.includes('/api/auth/register') ||
       url.includes('/api/auth/forgot-password') ||
       url.includes('/api/auth/reset-password') ||
       url.includes('/api/auth/logout');
 
-    if (!isPublicAuthRoute && isIdleExpired()) {
+    if (!isPublicRoute && isIdleExpired()) {
       triggerIdleSessionExpired();
       return Promise.reject(new axios.Cancel('Phiên đăng nhập đã hết hạn do không hoạt động. Vui lòng đăng nhập lại.'));
     }
@@ -97,11 +107,18 @@ export const triggerIdleSessionExpired = () => {
 
 // Response interceptor to handle token refresh and session expiration
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (!isPublicJobRead(response.config)) recordActivity();
+    return response;
+  },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const status = error.response?.status;
     const url = originalRequest?.url || '';
+
+    if (originalRequest && isPublicJobRead(originalRequest)) {
+      return Promise.reject(error);
+    }
 
     // Ignore public auth routes and logout from refresh or session-expired logic
     const isPublicAuthRoute =

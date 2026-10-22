@@ -62,6 +62,9 @@ class AdminUserServiceTest {
     @Mock
     private RecruitmentRequisitionRepository recruitmentRequisitionRepository;
 
+    @Mock
+    private DepartmentRepository departmentRepository;
+
     @InjectMocks
     private AdminUserService adminUserService;
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertCircle, Save } from 'lucide-react';
+import { X, AlertCircle } from 'lucide-react';
 import {
   InterviewQuestion,
   CompetencyCriterion,
@@ -293,7 +293,6 @@ export const QuestionModal: React.FC<QuestionModalProps> = ({
               className="btn btn-primary"
               disabled={isSubmitting}
             >
-              <Save size={16} />
               <span>
                 {isSubmitting
                   ? 'Đang lưu...'

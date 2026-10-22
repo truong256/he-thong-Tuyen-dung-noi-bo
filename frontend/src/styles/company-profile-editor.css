@@ -375,8 +375,14 @@ kbd {
 
 .cpe-input:focus {
   outline: none;
-  border-color: var(--cpe-primary);
-  box-shadow: 0 0 0 4px var(--cpe-primary-ring);
+  border-color: #94a3b8;
+  box-shadow: none;
+}
+
+.cpe-input:focus-visible {
+  outline: none;
+  border-color: #94a3b8;
+  box-shadow: 0 0 0 1px rgba(100, 116, 139, 0.20);
 }
 
 .cpe-field.has-error .cpe-input {
@@ -550,7 +556,7 @@ kbd {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.cpe-tag-input:focus-within { border-color: var(--cpe-primary); box-shadow: 0 0 0 4px var(--cpe-primary-ring); }
+.cpe-tag-input:focus-within { border-color: #94a3b8; box-shadow: none; }
 
 .cpe-tag-input input {
   flex: 1;

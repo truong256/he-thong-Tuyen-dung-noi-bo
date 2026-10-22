@@ -22,12 +22,26 @@ public interface JobTitleRepository extends JpaRepository<JobTitle, Long> {
 
     List<JobTitle> findByActive(boolean active);
     List<JobTitle> findByDepartmentId(Long departmentId);
+    List<JobTitle> findByCompetencyFrameworkId(Long competencyFrameworkId);
+    boolean existsByCompetencyFrameworkId(Long competencyFrameworkId);
 
     @Query("SELECT j FROM JobTitle j WHERE " +
            "(:active IS NULL OR j.active = :active) AND " +
            "(:departmentId IS NULL OR (j.department IS NOT NULL AND j.department.id = :departmentId)) AND " +
-           "(:search IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(j.code) LIKE LOWER(CONCAT('%', :search, '%')))")
-    List<JobTitle> searchJobTitles(@Param("search") String search,
-                                  @Param("active") Boolean active,
-                                  @Param("departmentId") Long departmentId);
+           "(:level IS NULL OR UPPER(j.level) = UPPER(:level)) AND " +
+           "(:jobFamily IS NULL OR UPPER(j.jobFamily) = UPPER(:jobFamily)) AND " +
+           "(:search IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "   OR LOWER(j.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
+           "   OR (j.department IS NOT NULL AND LOWER(j.department.name) LIKE LOWER(CONCAT('%', :search, '%'))))")
+    List<JobTitle> searchJobTitles(
+            @Param("search") String search,
+            @Param("active") Boolean active,
+            @Param("departmentId") Long departmentId,
+            @Param("level") String level,
+            @Param("jobFamily") String jobFamily
+    );
+
+    default List<JobTitle> searchJobTitles(String search, Boolean active, Long departmentId) {
+        return searchJobTitles(search, active, departmentId, null, null);
+    }
 }

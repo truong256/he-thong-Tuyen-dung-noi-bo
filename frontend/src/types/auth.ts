@@ -36,6 +36,14 @@ export interface LoginResponse {
   mustChangePassword?: boolean;
 }
 
+export interface AvatarUploadResponse {
+  message: string;
+  avatarUrl: string;
+  thumbnailUrl: string;
+  avatarThumbnailUrl?: string;
+  user?: UserSummary;
+}
+
 export interface ApiError {
   timestamp?: string;
   status: number;

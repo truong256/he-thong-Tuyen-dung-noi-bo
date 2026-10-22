@@ -561,9 +561,7 @@ public class AuthService {
         if (request.getDisplayName() != null) {
             user.setDisplayName(request.getDisplayName().trim());
         }
-        if (request.getDepartment() != null) {
-            user.setDepartment(request.getDepartment().trim());
-        }
+        // Không cho phép người dùng tự thay đổi phòng ban, email, hoặc vai trò qua hồ sơ cá nhân (S2-02)
         if (request.getRecoveryEmail() != null) {
             String trimmedRecovery = request.getRecoveryEmail().trim().toLowerCase();
             user.setRecoveryEmail(trimmedRecovery.isEmpty() ? null : trimmedRecovery);

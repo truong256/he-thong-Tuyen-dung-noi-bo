@@ -16,7 +16,7 @@ const PREDEFINED_TYPES = [
   { type: 'WORK_LOCATION', label: 'Địa điểm làm việc (Hà Nội, TP.HCM, Remote, Hybrid...)' },
   { type: 'EDUCATION_LEVEL', label: 'Trình độ học vấn (Đại học, Cao đẳng, Thạc sĩ...)' },
   { type: 'CANDIDATE_SOURCE', label: 'Nguồn ứng viên (Website, LinkedIn, TopCV, Referral...)' },
-  { type: 'REJECTION_REASON', label: 'Lý do từ chối (Kỹ năng, Kinh nghiệm, Mức lương...)' },
+  { type: 'REJECTION_REASON', label: 'Lý do loại hồ sơ (Kỹ năng, Kinh nghiệm, Mức lương...)' },
   { type: 'INTERVIEW_TYPE', label: 'Hình thức phỏng vấn (Trực tiếp, Online, Bài test...)' },
   { type: 'SKILL_TAG', label: 'Kỹ năng & Chuyên môn (Java, React, Python, QA, BA...)' },
   { type: 'CUSTOM', label: '+ Tạo nhóm phân loại mới...' },
@@ -153,7 +153,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="cat-modal-form">
           <div className="cat-modal-body">
             {errors.api && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-sm text-red-700">
@@ -252,19 +252,25 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
 
               <div className="cat-form-group">
                 <label className="cat-form-label">Trạng thái Hoạt động</label>
-                <div className="flex items-center h-full pt-1">
-                  <label className="relative inline-flex items-center cursor-pointer gap-2">
-                    <input
-                      type="checkbox"
-                      checked={active}
-                      onChange={(e) => setActive(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:width-5 after:transition-all peer-checked:bg-blue-600"></div>
-                    <span className="text-sm font-medium text-slate-700">
-                      {active ? 'Đang hoạt động' : 'Tạm ngưng'}
-                    </span>
-                  </label>
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={active}
+                    onClick={() => setActive(!active)}
+                    className={`cat-status-switch ${active ? 'active' : ''}`}
+                    title={active ? 'Nhấn để chuyển sang Tạm ngưng' : 'Nhấn để chuyển sang Hoạt động'}
+                  >
+                    <span className="cat-status-switch-knob" />
+                  </button>
+                  <span
+                    className={`text-sm cursor-pointer select-none transition-colors ${
+                      active ? 'text-emerald-700 font-semibold' : 'text-slate-600 font-medium'
+                    }`}
+                    onClick={() => setActive(!active)}
+                  >
+                    {active ? 'Đang hoạt động' : 'Tạm ngưng'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -273,7 +279,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
           <div className="cat-modal-footer">
             <button
               type="button"
-              className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
+              className="cat-btn-outline"
               onClick={onClose}
               disabled={isSubmitting}
             >
@@ -281,7 +287,7 @@ export const CategoryModal: React.FC<CategoryModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5 disabled:opacity-50"
+              className="cat-btn-primary"
               disabled={isSubmitting}
             >
               <Save size={16} />

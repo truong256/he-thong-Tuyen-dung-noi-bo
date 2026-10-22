@@ -1,51 +1,78 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import {
-  LayoutDashboard,
-  Users,
-  Megaphone,
-  Kanban,
-  Calendar,
-  FileCheck,
-  ClipboardCheck,
-  MessageSquare,
-  Star,
-  Briefcase,
-  FileText,
-  User,
-  Building2,
-  Award,
-  HelpCircle,
-  FileSpreadsheet,
-  FolderTree,
-  X,
-} from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 interface SidebarProps {
   isOpen?: boolean;
+  isCollapsed?: boolean;
   onClose?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
-  const { hasRole, hasAnyRole } = useAuth();
+export const Sidebar: React.FC<SidebarProps> = ({
+  isOpen = false,
+  isCollapsed = false,
+  onClose,
+}) => {
+  const { hasRole, hasAnyRole, hasPermission } = useAuth();
   const [notice, setNotice] = useState<string | null>(null);
 
   const handleLinkClick = () => {
-    if (onClose) {
-      onClose();
-    }
+    onClose?.();
   };
 
   const handleUpcomingClick = (featureName: string) => {
-    setNotice(`Tính năng "${featureName}" đang được phát triển theo lộ trình Sprint tiếp theo.`);
+    setNotice(
+      `Tính năng "${featureName}" đang được phát triển theo lộ trình Sprint tiếp theo.`,
+    );
     setTimeout(() => setNotice(null), 3500);
     handleLinkClick();
   };
 
+  // Hiển thị menu theo quyền; sử dụng role làm phương án dự phòng.
+  const checkPerm = (perm: string, fallbackRoles: string[]) =>
+    typeof hasPermission === 'function'
+      ? hasPermission(perm)
+      : hasAnyRole(fallbackRoles);
+
+  const canReadCatalog = checkPerm('CATALOG_READ', [
+    'ADMIN',
+    'HR_MANAGER',
+    'RECRUITER',
+    'HIRING_MANAGER',
+    'INTERVIEWER',
+    'APPROVER',
+  ]);
+
+  const canReadUsers = checkPerm('USER_READ', ['ADMIN', 'HR_MANAGER']);
+  const canManageUsers = checkPerm('USER_MANAGE', ['ADMIN']);
+  const canReadRoles = checkPerm('ROLE_READ', ['ADMIN', 'HR_MANAGER']);
+  const canReadAudit = checkPerm('AUDIT_READ', ['ADMIN', 'HR_MANAGER']);
+
+  const canReadRequisitions =
+    hasAnyRole([
+      'HIRING_MANAGER',
+      'HR_MANAGER',
+      'ADMIN',
+      'RECRUITER',
+      'APPROVER',
+    ]) ||
+    (typeof hasPermission === 'function' &&
+      [
+        'REQUISITION_CREATE',
+        'REQUISITION_READ_OWN',
+        'REQUISITION_READ_ALL',
+        'REQUISITION_APPROVE',
+      ].some((permission) => hasPermission(permission)));
+
+  const canReadRecruitment = hasAnyRole([
+    'RECRUITER',
+    'HR_MANAGER',
+    'ADMIN',
+  ]);
+
   return (
     <>
-      {/* Mobile backdrop overlay */}
       {isOpen && (
         <div
           className="sidebar-backdrop"
@@ -54,13 +81,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         />
       )}
 
-      <aside className={`app-sidebar ${isOpen ? 'mobile-open' : ''}`} aria-label="Menu điều hướng hệ thống">
-        {/* Mobile Header with close button */}
+      <aside
+        className={`app-sidebar ${isOpen ? 'mobile-open' : ''} ${
+          isCollapsed ? 'is-collapsed' : ''
+        }`}
+        aria-label="Menu điều hướng hệ thống"
+      >
         <div className="sidebar-mobile-header">
           <div className="sidebar-mobile-brand">
-            <Briefcase size={20} style={{ color: '#2563eb' }} />
             <span>Menu Hệ thống</span>
           </div>
+
           <button
             type="button"
             className="sidebar-mobile-close-btn"
@@ -72,266 +103,282 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         </div>
 
         <nav className="sidebar-nav-container">
-          {/* Main Navigation Section */}
+          {/* Điều hướng chính */}
           <div className="sidebar-section">
-            <span className="sidebar-title">ĐIỀU HƯỚNG CHÍNH</span>
+            <span className="sidebar-title">ĐIỀU HƯỚNG</span>
             <ul className="sidebar-menu">
               <li>
                 <NavLink
                   to="/dashboard"
-                  className={({ isActive }) => (isActive ? 'active' : '')}
                   end
+                  className={({ isActive }) => (isActive ? 'active' : '')}
                   onClick={handleLinkClick}
                 >
-                  <LayoutDashboard size={18} />
                   <span>Tổng quan</span>
                 </NavLink>
               </li>
+            </ul>
+          </div>
 
-              <li>
-                <NavLink
-                  to="/profile"
-                  className={({ isActive }) => (isActive ? 'active' : '')}
-                  onClick={handleLinkClick}
-                >
-                  <User size={18} />
-                  <span>Hồ sơ cá nhân</span>
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="/organization"
-                  className={({ isActive }) => (isActive ? 'active' : '')}
-                  onClick={handleLinkClick}
-                >
-                  <Building2 size={18} />
-                  <span>Hồ sơ tổ chức</span>
-                </NavLink>
-              </li>
-
-              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER']) && (
+          {/* Cơ cấu và danh mục */}
+          {canReadCatalog && (
+            <div className="sidebar-section">
+              <span className="sidebar-title">CƠ CẤU & DANH MỤC</span>
+              <ul className="sidebar-menu">
                 <li>
                   <NavLink
                     to="/job-titles"
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <Award size={18} />
                     <span>Quản lý Chức danh</span>
                   </NavLink>
                 </li>
-              )}
-
-              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
                 <li>
                   <NavLink
                     to="/categories"
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <FolderTree size={18} />
                     <span>Quản lý Danh mục</span>
                   </NavLink>
                 </li>
-              )}
-
-              {hasAnyRole(['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER']) && (
+                <li>
+                  <NavLink
+                    to="/competencies"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <span>Khung Năng lực</span>
+                  </NavLink>
+                </li>
                 <li>
                   <NavLink
                     to="/questions"
                     className={({ isActive }) => (isActive ? 'active' : '')}
                     onClick={handleLinkClick}
                   >
-                    <HelpCircle size={18} />
                     <span>Ngân hàng Câu hỏi</span>
                   </NavLink>
                 </li>
-              )}
+              </ul>
+            </div>
+          )}
 
-              {hasRole('ADMIN') && (
-                <>
+          {/* Quản trị tài khoản */}
+          {(canReadUsers || canManageUsers || canReadRoles) && (
+            <div className="sidebar-section">
+              <span className="sidebar-title">QUẢN TRỊ TÀI KHOẢN</span>
+              <ul className="sidebar-menu">
+                {canReadUsers && (
                   <li>
                     <NavLink
                       to="/admin/users"
                       className={({ isActive }) => (isActive ? 'active' : '')}
                       onClick={handleLinkClick}
                     >
-                      <Users size={18} />
-                      <span>Quản lý Tài khoản</span>
+                      <span>
+                        {canManageUsers
+                          ? 'Quản lý Tài khoản'
+                          : 'Danh sách tài khoản'}
+                      </span>
                     </NavLink>
                   </li>
+                )}
+
+                {canReadRoles && (
+                  <li>
+                    <NavLink
+                      to="/admin/permission-matrix"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Ma trận phân quyền</span>
+                    </NavLink>
+                  </li>
+                )}
+
+                {canManageUsers && (
                   <li>
                     <NavLink
                       to="/admin/import-excel"
                       className={({ isActive }) => (isActive ? 'active' : '')}
                       onClick={handleLinkClick}
                     >
-                      <FileSpreadsheet size={18} />
                       <span>Nhập nhân sự Excel</span>
                     </NavLink>
                   </li>
-                </>
-              )}
-            </ul>
-          </div>
+                )}
+              </ul>
+            </div>
+          )}
 
-          {/* Recruitment Process Section */}
-          {(hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN'])) && (
+          {/* Quy trình tuyển dụng */}
+          {(canReadRecruitment ||
+            hasRole('HIRING_MANAGER') ||
+            hasRole('APPROVER')) && (
             <div className="sidebar-section">
               <span className="sidebar-title">QUY TRÌNH TUYỂN DỤNG</span>
               <ul className="sidebar-menu">
-                <li>
-                  <a
-                    href="#jobs"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Tin tuyển dụng');
-                    }}
-                  >
-                    <Megaphone size={18} />
-                    <span>Tin tuyển dụng</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#pipeline"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Hồ sơ & Pipeline');
-                    }}
-                  >
-                    <Kanban size={18} />
-                    <span>Hồ sơ & Pipeline</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#interviews"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Lịch phỏng vấn');
-                    }}
-                  >
-                    <Calendar size={18} />
-                    <span>Lịch phỏng vấn</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
-                </li>
+                {canReadRequisitions && (
+                  <li>
+                    <NavLink
+                      to="/recruitment/requisitions"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Yêu cầu tuyển dụng</span>
+                    </NavLink>
+                  </li>
+                )}
+
+                {hasRole('HR_MANAGER') && (
+                  <li>
+                    <NavLink
+                      to="/recruitment/approval-configurations"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Cấu hình luồng phê duyệt</span>
+                    </NavLink>
+                  </li>
+                )}
+
+                {canReadRecruitment && (
+                  <>
+                    <li>
+                      <NavLink
+                        to="/recruitment/job-postings"
+                        className={({ isActive }) => (isActive ? 'active' : '')}
+                        onClick={handleLinkClick}
+                      >
+                        <span>Tin tuyển dụng</span>
+                      </NavLink>
+                    </li>
+
+                    {/* Hồ sơ ứng viên: chuyển đến trang Pipeline */}
+                    <li>
+                      <NavLink
+                        to="/recruitment/candidates"
+                        className={({ isActive }) =>
+                          isActive ? 'active' : ''
+                        }
+                        onClick={handleLinkClick}
+                      >
+                        <span>Hồ sơ & Pipeline</span>
+                      </NavLink>
+                    </li>
+
+                    <li>
+                      <a
+                        href="#interviews"
+                        className="sidebar-link-upcoming"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          handleUpcomingClick('Lịch phỏng vấn');
+                        }}
+                      >
+                        <span>Lịch phỏng vấn</span>
+                      </a>
+                    </li>
+                  </>
+                )}
+
+                {hasAnyRole([
+                  'HIRING_MANAGER',
+                  'APPROVER',
+                  'HR_MANAGER',
+                  'ADMIN',
+                ]) && (
+                  <li>
+                    <NavLink
+                      to="/recruitment/candidates"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Duyệt ứng viên & Offer</span>
+                    </NavLink>
+                  </li>
+                )}
               </ul>
             </div>
           )}
 
-          {/* Approvals Section */}
-          {(hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER'])) && (
-            <div className="sidebar-section">
-              <span className="sidebar-title">PHÊ DUYỆT & ĐỀ XUẤT</span>
-              <ul className="sidebar-menu">
-                <li>
-                  <a
-                    href="#requisitions"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Yêu cầu tuyển dụng');
-                    }}
-                  >
-                    <FileCheck size={18} />
-                    <span>Yêu cầu tuyển dụng</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="#approvals"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Duyệt ứng viên & Offer');
-                    }}
-                  >
-                    <ClipboardCheck size={18} />
-                    <span>Duyệt ứng viên & Offer</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
-                </li>
-              </ul>
-            </div>
-          )}
-
-          {/* Interviewer Section */}
-          {(hasRole('INTERVIEWER')) && (
+          {/* Phỏng vấn chuyên môn */}
+          {hasRole('INTERVIEWER') && (
             <div className="sidebar-section">
               <span className="sidebar-title">PHỎNG VẤN CHUYÊN MÔN</span>
               <ul className="sidebar-menu">
                 <li>
                   <a
                     href="#my-interviews"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
+                    className="sidebar-link-upcoming"
+                    onClick={(event) => {
+                      event.preventDefault();
                       handleUpcomingClick('Lịch phỏng vấn của tôi');
                     }}
                   >
-                    <MessageSquare size={18} />
                     <span>Lịch phỏng vấn của tôi</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
                 <li>
                   <a
                     href="#evaluation"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
+                    className="sidebar-link-upcoming"
+                    onClick={(event) => {
+                      event.preventDefault();
                       handleUpcomingClick('Phiếu đánh giá ứng viên');
                     }}
                   >
-                    <Star size={18} />
                     <span>Phiếu đánh giá ứng viên</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
                   </a>
                 </li>
               </ul>
             </div>
           )}
 
-          {/* Candidate Section */}
-          {(hasRole('CANDIDATE')) && (
+          {/* Cổng ứng viên */}
+          {hasRole('CANDIDATE') && (
             <div className="sidebar-section">
               <span className="sidebar-title">ỨNG VIÊN NỘI BỘ</span>
               <ul className="sidebar-menu">
                 <li>
-                  <a
-                    href="#jobs-candidate"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Việc làm đang mở');
-                    }}
+                  <NavLink
+                    to="/careers"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
                   >
-                    <Briefcase size={18} />
                     <span>Việc làm đang mở</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
-                  </a>
+                  </NavLink>
                 </li>
                 <li>
+                  <NavLink
+                    to="/candidate/applications"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
+                  >
+                    <span>Hồ sơ & CV của tôi</span>
+                  </NavLink>
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {/* Nhật ký hệ thống */}
+          {canReadAudit && !canManageUsers && (
+            <div className="sidebar-section">
+              <span className="sidebar-title">NHẬT KÝ HỆ THỐNG</span>
+              <ul className="sidebar-menu">
+                <li>
                   <a
-                    href="#my-profile"
-                    aria-disabled="true"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Hồ sơ & CV của tôi');
+                    href="#audit-log"
+                    className="sidebar-link-upcoming"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      handleUpcomingClick('Nhật ký hoạt động');
                     }}
                   >
-                    <FileText size={18} />
-                    <span>Hồ sơ & CV của tôi</span>
-                    <span className="sidebar-badge-soon">Sắp ra mắt</span>
+                    <span>Nhật ký hoạt động</span>
                   </a>
                 </li>
               </ul>
@@ -340,10 +387,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         </nav>
       </aside>
 
-      {/* Roadmap notification toast */}
       {notice && (
-        <div className="sidebar-toast-notice" role="status" aria-live="polite">
-          <HelpCircle size={16} style={{ color: '#60a5fa', flexShrink: 0 }} />
+        <div
+          className="sidebar-toast-notice"
+          role="status"
+          aria-live="polite"
+        >
           <span>{notice}</span>
         </div>
       )}

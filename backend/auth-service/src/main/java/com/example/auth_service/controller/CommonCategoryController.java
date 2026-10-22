@@ -1,5 +1,6 @@
 package com.example.auth_service.controller;
 
+import com.example.auth_service.dto.CategoryReorderRequest;
 import com.example.auth_service.dto.CategoryTypeResponse;
 import com.example.auth_service.dto.CommonCategoryRequest;
 import com.example.auth_service.dto.CommonCategoryResponse;
@@ -45,6 +46,11 @@ public class CommonCategoryController {
     public ResponseEntity<CommonCategoryResponse> create(@Valid @RequestBody CommonCategoryRequest request) {
         CommonCategoryResponse created = service.create(request);
         return ResponseEntity.created(URI.create("/api/categories/" + created.id())).body(created);
+    }
+
+    @PutMapping("/reorder")
+    public List<CommonCategoryResponse> reorder(@Valid @RequestBody CategoryReorderRequest request) {
+        return service.reorder(request);
     }
 
     @PutMapping("/{id}")

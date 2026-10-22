@@ -439,6 +439,42 @@ class InterviewQuestionServiceTest {
         verify(competencyCriterionRepository).findAllActiveWithDetails();
     }
 
+    @Test
+    @DisplayName("S2-07: Lấy danh sách tiêu chí theo chức danh - lọc đúng chức danh")
+    void getCriteria_WithJobTitleId_FiltersCorrectly() {
+        CompetencyCriterion criterion1 = createCriterion(); // jobTitleId = 30L
+
+        JobTitle jobTitle2 = new JobTitle();
+        jobTitle2.setId(31L);
+        jobTitle2.setTitle("React Developer");
+
+        CompetencyFramework framework2 = new CompetencyFramework();
+        framework2.setId(21L);
+        framework2.setCompetencyName("Frontend");
+        framework2.setJobTitle(jobTitle2);
+
+        CompetencyCriterion criterion2 = new CompetencyCriterion();
+        criterion2.setId(11L);
+        criterion2.setCriterionCode("FE-01");
+        criterion2.setCriterionName("React");
+        criterion2.setCompetencyFramework(framework2);
+        criterion2.setActive(true);
+
+        when(competencyCriterionRepository.findAllActiveWithDetails())
+                .thenReturn(List.of(criterion1, criterion2));
+
+        List<CompetencyCriterionResponse> criteriaJob30 = interviewQuestionService.getCriteria(30L);
+        assertThat(criteriaJob30).hasSize(1);
+        assertThat(criteriaJob30.get(0).getCriterionCode()).isEqualTo("JAVA-01");
+
+        List<CompetencyCriterionResponse> criteriaJob31 = interviewQuestionService.getCriteria(31L);
+        assertThat(criteriaJob31).hasSize(1);
+        assertThat(criteriaJob31.get(0).getCriterionCode()).isEqualTo("FE-01");
+
+        List<CompetencyCriterionResponse> criteriaJob99 = interviewQuestionService.getCriteria(99L);
+        assertThat(criteriaJob99).isEmpty();
+    }
+
     private CompetencyCriterion createCriterion() {
         JobTitle jobTitle = new JobTitle();
         jobTitle.setId(30L);

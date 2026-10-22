@@ -9,12 +9,31 @@ import org.springframework.data.repository.query.Param;
 
 public interface InterviewQuestionRepository extends JpaRepository<InterviewQuestion, Long> {
 
-    @Query("""
-        SELECT q
+    @Query(value = """
+        SELECT DISTINCT q
         FROM InterviewQuestion q
         JOIN q.competencyCriterion c
         JOIN c.competencyFramework f
-        LEFT JOIN f.jobTitle j
+        LEFT JOIN f.jobTitles j
+        WHERE (:search IS NULL
+            OR LOWER(q.questionText) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(q.category) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(c.criterionCode) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(c.criterionName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(f.competencyName) LIKE LOWER(CONCAT('%', :search, '%'))
+            OR LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')))
+        AND (:difficultyLevel IS NULL OR q.difficultyLevel = :difficultyLevel)
+        AND (:jobTitleId IS NULL OR j.id = :jobTitleId)
+        AND (:criterionId IS NULL OR c.id = :criterionId)
+        AND (:active IS NULL OR q.active = :active)
+        ORDER BY q.createdAt DESC
+        """,
+        countQuery = """
+        SELECT COUNT(DISTINCT q)
+        FROM InterviewQuestion q
+        JOIN q.competencyCriterion c
+        JOIN c.competencyFramework f
+        LEFT JOIN f.jobTitles j
         WHERE (:search IS NULL
             OR LOWER(q.questionText) LIKE LOWER(CONCAT('%', :search, '%'))
             OR LOWER(q.category) LIKE LOWER(CONCAT('%', :search, '%'))
@@ -24,7 +43,6 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
         AND (:jobTitleId IS NULL OR j.id = :jobTitleId)
         AND (:criterionId IS NULL OR c.id = :criterionId)
         AND (:active IS NULL OR q.active = :active)
-        ORDER BY q.createdAt DESC
         """)
     Page<InterviewQuestion> search(
         @Param("search") String search,
@@ -34,4 +52,6 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
         @Param("active") Boolean active,
         Pageable pageable
     );
+
+    boolean existsByCompetencyCriterionId(Long competencyCriterionId);
 }

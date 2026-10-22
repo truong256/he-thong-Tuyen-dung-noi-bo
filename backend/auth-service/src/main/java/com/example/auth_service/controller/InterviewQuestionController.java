@@ -58,8 +58,10 @@ public class InterviewQuestionController {
 
     @GetMapping("/criteria")
     @PreAuthorize("hasAuthority('CATALOG_READ')")
-    public ResponseEntity<List<CompetencyCriterionResponse>> getCriteria() {
-        return ResponseEntity.ok(interviewQuestionService.getCriteria());
+    public ResponseEntity<List<CompetencyCriterionResponse>> getCriteria(
+            @RequestParam(required = false) Long jobTitleId
+    ) {
+        return ResponseEntity.ok(interviewQuestionService.getCriteria(jobTitleId));
     }
 
     @GetMapping("/{id}")
