@@ -2631,3 +2631,32 @@
     font-size: 0.82rem !important;
   }
 }
+
+/* S4-08: reuse existing action and expired status palette. */
+.jp-action-unpublish { color: #b45309; }
+.jp-action-unpublish:hover { background: #fffbeb; }
+.jp-prompt-unpublish { overflow-wrap: anywhere; }
+.jp-prompt-unpublish textarea { width: 100%; box-sizing: border-box; }
+.jp-action-btn:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+@media (max-width: 390px) {
+  .jp-prompt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .jp-prompt-actions .jp-btn { flex: 1 1 130px; white-space: normal; }
+}
+
+.jp-detail-modal .jp-modal-header,
+.jp-detail-modal .jp-modal-tabs,
+.jp-detail-modal .jp-modal-footer { flex-shrink: 0; }
+.jp-detail-modal .jp-modal-body { min-height: 70px; }
+.jp-detail-modal .jp-prompt-unpublish { flex-shrink: 0; max-height: 42vh; overflow-y: auto; }
+
+.jp-status-expired { color: #92400e; background: #fffbeb; border: 1px solid #fde68a; }
+
+/* Keep visually hidden action labels inside the horizontal table scroller. */
+.jp-management-page .jp-table-wrapper { position: relative; }
+.jp-management-page .jp-table-actions { position: relative; }
+
+@media (max-width: 480px) {
+  .jp-detail-modal .jp-modal-tabs { overflow-x: auto; flex-wrap: nowrap; }
+  .jp-detail-modal .jp-tab-btn { flex: 0 0 auto; white-space: nowrap; padding: 12px; }
+  .jp-detail-modal .jp-modal-footer { padding: 10px 14px; }
+}
