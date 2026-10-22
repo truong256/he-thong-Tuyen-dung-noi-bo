@@ -232,16 +232,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </NavLink>
                     </li>
                     <li>
-                      <a
-                        href="#pipeline"
-                        className="sidebar-link-upcoming"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleUpcomingClick('Hồ sơ & Pipeline');
-                        }}
+                      <NavLink
+                        to="/recruitment/candidates"
+                        className={({ isActive }) => (isActive ? 'active' : '')}
+                        onClick={handleLinkClick}
                       >
                         <span>Hồ sơ & Pipeline</span>
-                      </a>
+                      </NavLink>
                     </li>
                     <li>
                       <a
@@ -260,16 +257,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER', 'ADMIN']) && (
                   <li>
-                    <a
-                      href="#approvals"
-                      className="sidebar-link-upcoming"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleUpcomingClick('Duyệt ứng viên & Offer');
-                      }}
+                    <NavLink
+                      to="/recruitment/approvals"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
                     >
                       <span>Duyệt ứng viên & Offer</span>
-                    </a>
+                    </NavLink>
                   </li>
                 )}
               </ul>
