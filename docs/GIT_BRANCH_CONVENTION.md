@@ -19,8 +19,8 @@ Ap dung tu 22/10/2026 cho cong viec moi. Nhanh cu va PR dang mo khong bi doi ten
 ## Quy trinh
 1. Lay cap nhat tu `origin/dev`; tao nhanh cong viec tu `dev` sau khi da xem xet local changes.
 2. Commit theo Conventional Commits: `feat:`, `fix:`, `test:`, `docs:`, `refactor:`.
-3. Mo PR den `dev`; ghi Jira ticket, thay doi, cach test, anh minh chung (neu co).
-4. Can it nhat mot reviewer doc lap truoc merge, kiem tra CI/tests va khong co conflict.
+3. Mo PR den `dev`; ghi Jira ticket, thay doi, cach kiem thu va anh minh chung (neu co).
+4. Can it nhat mot reviewer doc lap truoc merge, kiem tra CI, ket qua kiem thu va khong co xung dot.
 5. Merge `dev` -> `main` chi khi phat hanh, co kiem thu va chap thuan.
 
 ## Xu ly cac nhanh cu
