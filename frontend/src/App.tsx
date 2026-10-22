@@ -29,6 +29,7 @@ import PublicJobDetailPage from "./pages/PublicJobDetailPage";
 import PermissionMatrixPage from "./pages/PermissionMatrixPage";
 import RecruitmentCandidatesPage from "./pages/RecruitmentCandidatesPage";
 import CandidateApprovalsPage from "./pages/CandidateApprovalsPage";
+import OffersPage from "./pages/OffersPage";
 import CompanyProfilePreviewPage from "./pages/CompanyProfilePreviewPage";
 
 export const App: React.FC = () => {
@@ -106,6 +107,21 @@ export const App: React.FC = () => {
               element={
                 <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED"]} requireAny>
                   <CandidateApprovalsPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/offers"
+              element={
+                <PermissionGuard
+                  requiredPermissions={[
+                    "CANDIDATE_READ_ALL",
+                    "CANDIDATE_READ_ASSIGNED",
+                    "OFFER_MANAGE",
+                  ]}
+                  requireAny
+                >
+                  <OffersPage />
                 </PermissionGuard>
               }
             />

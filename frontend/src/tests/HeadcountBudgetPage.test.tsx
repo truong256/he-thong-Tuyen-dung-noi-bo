@@ -140,12 +140,11 @@ describe('HeadcountBudgetPage (S3-04)', () => {
       expect(screen.getByText('Headcount đã sử dụng')).toBeInTheDocument();
       expect(screen.getByText('Headcount còn lại')).toBeInTheDocument();
       expect(screen.getByText('Ngân sách lương còn lại')).toBeInTheDocument();
+      // Stats values
+      expect(screen.getByText('25')).toBeInTheDocument();
+      expect(screen.getAllByText('10').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('15').length).toBeGreaterThan(0);
     });
-
-    // Stats values
-    expect(screen.getByText('25')).toBeInTheDocument();
-    expect(screen.getAllByText('10').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('15').length).toBeGreaterThan(0);
   });
 
   it('renders budget table with correct status and department information', async () => {
