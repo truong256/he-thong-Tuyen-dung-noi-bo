@@ -1,0 +1,379 @@
+﻿import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
+import PermissionGuard from "./components/PermissionGuard";
+import RoleGuard from "./components/RoleGuard";
+import AppLayout from "./layouts/AppLayout";
+import LoginPage from "./pages/LoginPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import DashboardPage from "./pages/DashboardPage";
+import ProfilePage from "./pages/ProfilePage";
+import UserManagementPage from "./pages/UserManagementPage";
+import OrganizationManagementPage from "./pages/OrganizationManagementPage";
+import JobTitleManagementPage from "./pages/JobTitleManagementPage";
+import UnauthorizedPage from "./pages/UnauthorizedPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ExcelImportPage from "./pages/ExcelImportPage";
+import FirstLoginChangePasswordPage from "./pages/FirstLoginChangePasswordPage";
+import QuestionBankPage from "./pages/QuestionBankPage";
+import CategoryManagementPage from "./pages/CategoryManagementPage";
+import RequisitionManagementPage from "./pages/RequisitionManagementPage";
+import RecruitmentRequestPage from "./pages/RecruitmentRequestPage";
+import CompetencyFrameworkPage from "./pages/CompetencyFrameworkPage";
+import ApprovalConfigurationPage from "./pages/ApprovalConfigurationPage";
+import JobPostingManagementPage from "./pages/JobPostingManagementPage";
+import PublicCareerPage from "./pages/PublicCareerPage";
+import PublicJobDetailPage from "./pages/PublicJobDetailPage";
+import PermissionMatrixPage from "./pages/PermissionMatrixPage";
+import WithdrawApplicationPage from "./pages/WithdrawApplicationPage";
+import CandidateApplicationsPage from "./pages/CandidateApplicationsPage";
+import RecruitmentCandidatesPage from "./pages/RecruitmentCandidatesPage";
+import CandidateApprovalsPage from "./pages/CandidateApprovalsPage";
+import OffersPage from "./pages/OffersPage";
+
+export const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
+        <Routes>
+          {/* Public careers routes (S3-10 / SCRUM-150) */}
+          <Route path="/careers" element={<PublicCareerPage />} />
+          <Route path="/careers/:id" element={<PublicJobDetailPage />} />
+          <Route path="/jobs" element={<Navigate to="/careers" replace />} />
+          <Route
+            path="/candidate/withdraw"
+            element={<WithdrawApplicationPage />}
+          />
+          <Route path="/withdraw" element={<WithdrawApplicationPage />} />
+
+          {/* CÃ¡c trang Ä‘Äƒng nháº­p */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/unauthorized" element={<UnauthorizedPage />} />
+          <Route path="/403" element={<UnauthorizedPage statusCode={403} />} />
+          <Route path="/401" element={<UnauthorizedPage statusCode={401} />} />
+
+          {/* Trang báº¯t buá»™c Ä‘á»•i máº­t kháº©u láº§n Ä‘áº§u */}
+          <Route
+            path="/first-login/change-password"
+            element={
+              <ProtectedRoute>
+                <FirstLoginChangePasswordPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Xem thá»­ frontend Excel khi cháº¡y mÃ´i trÆ°á»ng phÃ¡t triá»ƒn */}
+          {import.meta.env.DEV && (
+            <Route path="/preview/import-excel" element={<ExcelImportPage />} />
+          )}
+
+          {/* CÃ¡c trang yÃªu cáº§u Ä‘Äƒng nháº­p */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <AppLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="/dashboard" replace />} />
+
+            {/* Dashboard â€“ táº¥t cáº£ authenticated users */}
+            <Route path="dashboard" element={<DashboardPage />} />
+
+            {/* Profile â€“ táº¥t cáº£ authenticated users (PROFILE_READ base permission) */}
+            <Route path="profile" element={<ProfilePage />} />
+
+            {/* Cá»•ng thÃ´ng tin á»©ng viÃªn: Há»“ sÆ¡ & CV Ä‘Ã£ ná»™p (S4-06) */}
+            <Route
+              path="candidate/applications"
+              element={<CandidateApplicationsPage />}
+            />
+            <Route
+              path="recruitment/candidates"
+              element={
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                  <RecruitmentCandidatesPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/approvals"
+              element={
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                  <CandidateApprovalsPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/offers"
+              element={
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                  <OffersPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="my-applications"
+              element={<Navigate to="/candidate/applications" replace />}
+            />
+
+            {/*
+              Organization & Company Profile â€“ CATALOG_READ
+              Roles: HR_MANAGER (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R), APPROVER (R)
+              ADMIN (F via catalog), CANDIDATE (â€“)
+            */}
+            <Route
+              path="organization"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <OrganizationManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Job Titles â€“ CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), APPROVER (R), INTERVIEWER (R)
+            */}
+            <Route
+              path="job-titles"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <JobTitleManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Categories â€“ CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
+              NOTE: CANDIDATE and APPROVER do NOT have CATALOG_READ
+            */}
+            <Route
+              path="categories"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <CategoryManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="admin/categories"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <CategoryManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Question Bank â€“ CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
+            */}
+            <Route
+              path="questions"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <QuestionBankPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="admin/questions"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <QuestionBankPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Competency Frameworks (S2-06) â€“ CATALOG_READ
+              Roles: HR_MANAGER (F), ADMIN (F), RECRUITER (R), HIRING_MANAGER (R), INTERVIEWER (R)
+            */}
+            <Route
+              path="competencies"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <CompetencyFrameworkPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="competency-frameworks"
+              element={<Navigate to="/competencies" replace />}
+            />
+            <Route
+              path="admin/competencies"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <CompetencyFrameworkPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Requisitions â€“ S2-10 (REQUISITION_CREATE, REQUISITION_READ_OWN, REQUISITION_READ_ALL, REQUISITION_APPROVE)
+              Roles: HIRING_MANAGER (W*), HR_MANAGER (F), ADMIN (F), APPROVER (W*)
+            */}
+            <Route
+              path="recruitment/requisitions"
+              element={
+                <PermissionGuard
+                  requiredPermissions={[
+                    "REQUISITION_CREATE",
+                    "REQUISITION_READ_OWN",
+                    "REQUISITION_READ_ALL",
+                    "REQUISITION_APPROVE",
+                  ]}
+                  requireAny
+                >
+                  <RequisitionManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/create"
+              element={
+                <PermissionGuard
+                  requiredPermissions={[
+                    "REQUISITION_CREATE",
+                    "REQUISITION_READ_OWN",
+                    "REQUISITION_READ_ALL",
+                  ]}
+                  requireAny
+                >
+                  <RecruitmentRequestPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/approval-configurations"
+              element={
+                <RoleGuard allowedRoles={["HR_MANAGER"]}>
+                  <ApprovalConfigurationPage />
+                </RoleGuard>
+              }
+            />
+            {/* Tin tuyá»ƒn dá»¥ng (S3-10 / SCRUM-151) â€“ RECRUITER, HR_MANAGER, ADMIN */}
+            <Route
+              path="recruitment/job-postings"
+              element={
+                <PermissionGuard requiredPermissions={["JOB_MANAGE"]}>
+                  <JobPostingManagementPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/jobs"
+              element={<Navigate to="/recruitment/job-postings" replace />}
+            />
+            <Route
+              path="requisitions"
+              element={<Navigate to="/recruitment/requisitions" replace />}
+            />
+            <Route
+              path="recruitment-requests"
+              element={<Navigate to="/recruitment/requisitions" replace />}
+            />
+
+            {/* Legacy redirects */}
+            <Route
+              path="excel-import"
+              element={<Navigate to="/admin/import-excel" replace />}
+            />
+            <Route
+              path="users"
+              element={<Navigate to="/admin/users" replace />}
+            />
+            <Route
+              path="users/import-excel"
+              element={<Navigate to="/admin/import-excel" replace />}
+            />
+
+            {/*
+              Excel Import â€“ USER_MANAGE (ADMIN only)
+              HR_MANAGER has USER_READ but NOT USER_MANAGE â†’ cannot import
+            */}
+            <Route
+              path="admin/import-excel"
+              element={
+                <PermissionGuard requiredPermissions={["USER_MANAGE"]}>
+                  <ExcelImportPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              User Management â€“ USER_READ (ADMIN=F, HR_MANAGER=R)
+              S1-08: HR_MANAGER can view user list/details but cannot create/lock/assign roles.
+              The UserManagementPage component should conditionally render action buttons
+              based on hasPermission('USER_MANAGE') and hasPermission('ROLE_MANAGE').
+            */}
+            <Route
+              path="admin/users"
+              element={
+                <PermissionGuard requiredPermissions={["USER_READ"]}>
+                  <UserManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Permission Matrix â€“ ROLE_READ (ADMIN + HR_MANAGER)
+              Standalone dynamic view of the RBAC permission matrix fetched from /api/admin/roles.
+            */}
+            <Route
+              path="admin/permission-matrix"
+              element={
+                <PermissionGuard requiredPermissions={["ROLE_READ"]}>
+                  <PermissionMatrixPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Organization (admin path) â€“ HR_MANAGER has DEPARTMENT_MANAGE + CATALOG_MANAGE
+              ADMIN has CATALOG_MANAGE
+            */}
+            <Route
+              path="admin/organization"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <OrganizationManagementPage />
+                </PermissionGuard>
+              }
+            />
+
+            {/*
+              Job Titles (admin path) â€“ HR_MANAGER and ADMIN both have CATALOG_MANAGE
+            */}
+            <Route
+              path="admin/job-titles"
+              element={
+                <PermissionGuard requiredPermissions={["CATALOG_READ"]}>
+                  <JobTitleManagementPage />
+                </PermissionGuard>
+              }
+            />
+          </Route>
+
+          {/* Trang khÃ´ng tÃ¬m tháº¥y */}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+};
+
+export default App;

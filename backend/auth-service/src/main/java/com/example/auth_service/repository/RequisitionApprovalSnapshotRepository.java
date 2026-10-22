@@ -1,0 +1,32 @@
+package com.example.auth_service.repository;
+
+import com.example.auth_service.entity.RequisitionApprovalSnapshot;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+
+public interface RequisitionApprovalSnapshotRepository extends JpaRepository<RequisitionApprovalSnapshot, Long> {
+    List<RequisitionApprovalSnapshot> findAllByRequisitionIdOrderByStepOrderAsc(Long requisitionId);
+
+    boolean existsByRequisitionId(Long requisitionId);
+
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM RequisitionApprovalSnapshot s WHERE s.requisitionId = :requisitionId")
+    void deleteAllByRequisitionId(@Param("requisitionId") Long requisitionId);
+
+    List<RequisitionApprovalSnapshot> findAllByApproverUserId(Long approverUserId);
+
+    boolean existsByRequisitionIdAndApproverUserId(Long requisitionId, Long approverUserId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT step FROM RequisitionApprovalSnapshot step
+        WHERE step.requisitionId = :requisitionId AND step.status = 'PENDING'
+        ORDER BY step.stepOrder
+        """)
+    List<RequisitionApprovalSnapshot> findPendingForUpdate(@Param("requisitionId") Long requisitionId);
+}

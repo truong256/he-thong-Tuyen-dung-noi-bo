@@ -1,72 +1,103 @@
 package com.example.auth_service.security;
 
-import com.example.auth_service.entity.User;
-import com.example.auth_service.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtUtils jwtUtils;
-    private final UserRepository userRepository;
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
-    public JwtAuthenticationFilter(
-            JwtUtils jwtUtils,
-            UserRepository userRepository) {
+    private final JwtUtils jwtUtils;
+    private final CustomUserDetailsService userDetailsService;
+
+    public JwtAuthenticationFilter(JwtUtils jwtUtils, CustomUserDetailsService userDetailsService) {
         this.jwtUtils = jwtUtils;
-        this.userRepository = userRepository;
+        this.userDetailsService = userDetailsService;
     }
 
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+        try {
+            String jwt = parseJwt(request);
+            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
+                String username = jwtUtils.getUsernameFromJwtToken(jwt);
+                Integer tokenVersion = jwtUtils.getTokenVersionFromJwtToken(jwt);
 
-        String header = request.getHeader("Authorization");
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7);
+                if (userDetails instanceof UserPrincipal principal) {
+                    if (tokenVersion == null || tokenVersion != principal.getTokenVersion()) {
+                        SecurityContextHolder.clearContext();
+                        logger.warn("JWT authentication rejected: stale token version for user {}. Token v={}, DB v={}",
+                                username, tokenVersion, principal.getTokenVersion());
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
 
-            if (jwtUtils.validateJwtToken(token)) {
-                String username = jwtUtils.getUsernameFromJwt(token);
+                    if (principal.isMustChangePassword()) {
+                        String uri = request.getRequestURI();
+                        boolean isAllowedFirstLoginPath = uri.equals("/api/auth/change-password")
+                                || uri.equals("/api/auth/logout")
+                                || uri.equals("/api/auth/me")
+                                || uri.equals("/api/auth/refresh-token");
 
-                User user = userRepository.findByUsername(username);
+                        if (!isAllowedFirstLoginPath) {
+                            SecurityContextHolder.clearContext();
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"status\":403,\"message\":\"Tài khoản bắt buộc phải đổi mật khẩu lần đầu trước khi tiếp tục.\",\"mustChangePassword\":true}");
+                            return;
+                        }
+                    }
+                }
 
-                if (user != null && "ACTIVE".equals(user.getStatus())) {
-
-                    List<SimpleGrantedAuthority> authorities =
-                            user.getRoles()
-                                    .stream()
-                                    .map(role -> new SimpleGrantedAuthority(
-                                            "ROLE_" + role.toUpperCase()))
-                                    .collect(Collectors.toList());
-
-                    var authentication =
+                if (userDetails == null || !userDetails.isEnabled() || !userDetails.isAccountNonLocked()
+                        || !userDetails.isAccountNonExpired() || !userDetails.isCredentialsNonExpired()) {
+                    SecurityContextHolder.clearContext();
+                    logger.warn("JWT authentication rejected for inactive, expired or locked user: {}", username);
+                } else {
+                    UsernamePasswordAuthenticationToken authentication =
                             new UsernamePasswordAuthenticationToken(
-                                    user.getUsername(),
+                                    userDetails,
                                     null,
-                                    authorities);
+                                    userDetails.getAuthorities()
+                            );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    SecurityContextHolder.getContext()
-                            .setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
+        } catch (Exception e) {
+            SecurityContextHolder.clearContext();
+            logger.error("Cannot set user authentication: {}", e.getMessage());
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private String parseJwt(HttpServletRequest request) {
+        String headerAuth = request.getHeader("Authorization");
+
+        if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
+            return headerAuth.substring(7);
+        }
+
+        return null;
     }
 }

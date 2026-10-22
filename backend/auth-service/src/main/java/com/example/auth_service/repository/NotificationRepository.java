@@ -1,0 +1,22 @@
+package com.example.auth_service.repository;
+
+import com.example.auth_service.entity.Notification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import java.util.List;
+
+public interface NotificationRepository extends JpaRepository<Notification, Long> {
+    Page<Notification> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
+    List<Notification> findTop10ByUserIdOrderByCreatedAtDesc(Long userId);
+    long countByUserIdAndReadFalse(Long userId);
+    boolean existsByUserIdAndRelatedEntityTypeAndRelatedEntityIdAndType(Long userId, String relatedEntityType, Long relatedEntityId, String type);
+
+    @Modifying
+    @Query("UPDATE Notification n SET n.read = true WHERE n.userId = :userId AND n.read = false")
+    int markAllAsReadByUserId(@Param("userId") Long userId);
+}

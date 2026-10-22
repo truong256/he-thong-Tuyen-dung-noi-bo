@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yêu cầu chờ phê duyệt | HR Recruit ATS</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --page: #f4f7fb;
+      --white: #ffffff;
+      --text: #172b4d;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #15803d;
+      --success-bg: #dcfce7;
+      --warning: #a16207;
+      --warning-bg: #fef3c7;
+      --danger: #b91c1c;
+      --danger-bg: #fee2e2;
+      --shadow: 0 2px 5px rgba(15, 23, 42, 0.04);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--page);
+      color: var(--text);
+      font-size: 14px;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible,
+    select:focus-visible, textarea:focus-visible {
+      outline: 3px solid #93c5fd;
+      outline-offset: 2px;
+    }
+
+    .topbar {
+      height: 70px;
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 19px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: var(--primary);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .enterprise {
+      font-size: 11px;
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+      border-radius: 20px;
+      padding: 5px 9px;
+    }
+
+    .user-info { text-align: right; }
+    .user-info strong { display: block; }
+    .user-info span { color: var(--primary); font-size: 12px; }
+
+    .layout {
+      display: flex;
+      min-height: calc(100vh - 70px);
+    }
+
+    .sidebar {
+      width: 240px;
+      flex: 0 0 240px;
+      background: var(--white);
+      border-right: 1px solid var(--border);
+      padding: 22px 12px;
+    }
+
+    .nav-heading {
+      margin: 0 12px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: .4px;
+    }
+
+    .nav-link {
+      display: block;
+      text-decoration: none;
+      color: #334155;
+      padding: 11px 12px;
+      border-radius: 10px;
+      margin-bottom: 4px;
+    }
+
+    .nav-link.active {
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+    }
+
+    .nav-link:not(.active):hover { background: #f1f5f9; }
+
+    main {
+      min-width: 0;
+      flex: 1;
+      padding: 28px 30px 40px;
+    }
+
+    .breadcrumb {
+      color: var(--muted);
+      margin-bottom: 15px;
+    }
+
+    .page-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    h1 {
+      font-size: 27px;
+      margin: 0 0 8px;
+      letter-spacing: -.5px;
+    }
+
+    .subtitle { color: var(--muted); line-height: 1.6; }
+
+    .demo-note {
+      margin-bottom: 18px;
+      border: 1px solid #bfdbfe;
+      border-radius: 9px;
+      background: #eff6ff;
+      color: #1e40af;
+      padding: 11px 14px;
+      line-height: 1.5;
+    }
+
+    .button {
+      border: 1px solid #cbd5e1;
+      background: white;
+      color: #1e293b;
+      padding: 10px 14px;
+      border-radius: 9px;
+      font-weight: 600;
+      transition: background .15s;
+    }
+
+    .button:hover { background: #f8fafc; }
+
+    .button.primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .button.primary:hover { background: var(--primary-hover); }
+
+    .button.danger {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    .button.success {
+      background: var(--success);
+      color: white;
+      border-color: var(--success);
+    }
+
+    .button:disabled { opacity: .55; cursor: not-allowed; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 15px;
+      margin-bottom: 22px;
+    }
+
+    .stat-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 19px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-label { color: var(--muted); margin-bottom: 9px; }
+    .stat-value { font-size: 28px; font-weight: 750; }
+    .stat-card small { display: block; color: var(--muted); margin-top: 7px; }
+
+    .panel {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 19px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    h2 { margin: 0; font-size: 17px; }
+
+    .panel-body { padding: 18px 20px; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) 210px auto;
+      gap: 12px;
+      margin-bottom: 17px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: white;
+      color: var(--text);
+    }
+
+    textarea { min-height: 110px; resize: vertical; line-height: 1.5; }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      color: #475569;
+      background: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 14px 13px;
+      vertical-align: middle;
+    }
+
+    tbody tr:hover { background: #f8fafc; }
+
+    .request-code {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .secondary-text {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 20px;
+      padding: 5px 9px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .status.pending { color: var(--warning); background: var(--warning-bg); }
+    .status.approved { color: var(--success); background: var(--success-bg); }
+    .status.rejected { color: var(--danger); background: var(--danger-bg); }
+    .status.supplement { color: #6d28d9; background: #ede9fe; }
+
+    .actions { display: flex; gap: 6px; align-items: center; }
+    .button.small { padding: 7px 9px; font-size: 12px; }
+
+    .empty {
+      padding: 35px 15px;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      padding-top: 16px;
+      font-size: 12px;
+    }
+
+    .footer-note { color: var(--muted); font-size: 12px; line-height: 1.6; }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, .48);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 20;
+      overflow-y: auto;
+    }
+
+    .overlay.show { display: flex; }
+
+    .modal {
+      background: white;
+      width: min(640px, 100%);
+      max-height: 92vh;
+      overflow-y: auto;
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, .22);
+    }
+
+    .modal-header {
+      padding: 20px 22px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .modal-header h2 { font-size: 19px; }
+    .modal-content { padding: 22px; }
+    .close-button {
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 25px;
+      line-height: 1;
+      padding: 0 4px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .detail-item {
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 13px;
+      min-width: 0;
+    }
+
+    .detail-item.full { grid-column: 1 / -1; }
+    .detail-label { color: var(--muted); font-size: 12px; margin-bottom: 7px; }
+    .detail-value { font-weight: 600; line-height: 1.5; overflow-wrap: anywhere; }
+
+    .form-field { margin-top: 18px; }
+    .form-field label { display: block; font-weight: 700; margin-bottom: 8px; }
+    .required { color: var(--danger); }
+    .hint { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.5; }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 22px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      max-width: min(420px, calc(100vw - 32px));
+      padding: 14px 18px;
+      border-radius: 10px;
+      color: white;
+      background: #334155;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+      display: none;
+      z-index: 30;
+      line-height: 1.5;
+    }
+
+    .toast.show { display: block; }
+    .toast.success { background: #166534; }
+    .toast.error { background: #991b1b; }
+
+    @media (max-width: 1100px) {
+      .sidebar { width: 200px; flex-basis: 200px; }
+      main { padding: 22px 18px; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .topbar { padding: 0 15px; }
+      .sidebar { display: none; }
+      main { padding: 18px 12px; }
+      .page-heading { flex-direction: column; }
+      h1 { font-size: 23px; }
+      .stats { gap: 9px; }
+      .stat-card { padding: 13px; }
+      .stat-value { font-size: 24px; }
+      .filters { grid-template-columns: 1fr; }
+      .detail-grid { grid-template-columns: 1fr; }
+      .detail-item.full { grid-column: auto; }
+      .panel-body { padding: 13px; }
+      .user-info { font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">HR</div>
+      <span>HR Recruit ATS</span>
+      <span class="enterprise">ENTERPRISE</span>
+    </div>
+    <div class="user-info">
+      <strong>Người duyệt</strong>
+      <span>Màn hình phê duyệt</span>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <p class="nav-heading">ĐIỀU HƯỚNG</p>
+      <a class="nav-link" href="#dashboard">Tổng quan</a>
+      <p class="nav-heading" style="margin-top:25px">CƠ CẤU & DANH MỤC</p>
+      <a class="nav-link" href="#departments">Quản lý Chức danh</a>
+      <a class="nav-link" href="#categories">Quản lý Danh mục</a>
+      <a class="nav-link" href="#competencies">Khung Năng lực</a>
+      <a class="nav-link" href="#questions">Ngân hàng Câu hỏi</a>
+      <p class="nav-heading" style="margin-top:25px">QUY TRÌNH TUYỂN DỤNG</p>
+      <a class="nav-link" href="#requests">Yêu cầu tuyển dụng</a>
+      <a class="nav-link active" href="#approvals">Xử lý yêu cầu chờ duyệt</a>
+      <a class="nav-link" href="#jobs">Tin tuyển dụng</a>
+      <a class="nav-link" href="#candidates">Hồ sơ & Pipeline</a>
+      <a class="nav-link" href="#interviews">Lịch phỏng vấn</a>
+      <a class="nav-link" href="#offers">Duyệt ứng viên & Offer</a>
+    </aside>
+
+    <main>
+      <div class="breadcrumb">Trang chủ / Quy trình tuyển dụng / <strong>Xử lý yêu cầu chờ duyệt</strong></div>
+
+      <div class="page-heading">
+        <div>
+          <h1>Xử lý yêu cầu chờ duyệt</h1>
+          <div class="subtitle">
+            Xem xét yêu cầu tuyển dụng, đưa ra quyết định và ghi nhận ý kiến của người duyệt.
+          </div>
+        </div>
+        <button class="button" id="refreshButton">↻ Làm mới danh sách</button>
+      </div>
+
+      <div class="demo-note">
+        <strong>Chế độ giao diện thử nghiệm:</strong>
+        Dữ liệu bên dưới là dữ liệu mẫu. Các thao tác chỉ cập nhật trạng thái trong phiên trình duyệt hiện tại,
+        chưa lưu vào hệ thống thật vì chưa kết nối API backend.
+      </div>
+
+      <section class="stats" aria-label="Thống kê yêu cầu">
+        <div class="stat-card">
+          <div class="stat-label">Tổng yêu cầu mẫu</div>
+          <div class="stat-value" id="totalCount">0</div>
+          <small>Tất cả trạng thái</small>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Chờ duyệt</div>
+          <div class="stat-value" id="pendingCount">0</div>
+          <small>Cần xem xét</small>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Đã duyệt</div>
+          <div class="stat-value" id="approvedCount">0</div>
+          <small>Đã xử lý trong bản demo</small>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cần bổ sung</div>
+          <div class="stat-value" id="supplementCount">0</div>
+          <small>Đang chờ bổ sung</small>
+        </div>
+      </section>
+
+      <section class="panel" id="approvals">
+        <div class="panel-header">
+          <h2>Danh sách yêu cầu tuyển dụng</h2>
+          <span class="status pending" id="pendingBadge">0 yêu cầu chờ duyệt</span>
+        </div>
+
+        <div class="panel-body">
+          <div class="filters">
+            <input id="searchInput" type="search"
+              placeholder="Tìm mã yêu cầu, vị trí, phòng ban hoặc người tạo..."
+              aria-label="Tìm kiếm yêu cầu">
+            <select id="statusFilter" aria-label="Lọc trạng thái">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="pending">Chờ duyệt</option>
+              <option value="approved">Đã duyệt</option>
+              <option value="rejected">Từ chối</option>
+              <option value="supplement">Yêu cầu bổ sung</option>
+            </select>
+            <button class="button" id="clearFilterButton">Xóa bộ lọc</button>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã yêu cầu / Vị trí</th>
+                  <th>Phòng ban</th>
+                  <th>Người tạo</th>
+                  <th>Số lượng</th>
+                  <th>Ngày gửi</th>
+                  <th>Trạng thái</th>
+                  <th>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="requestRows"></tbody>
+            </table>
+          </div>
+
+          <div class="empty" id="emptyState" hidden>
+            Không tìm thấy yêu cầu phù hợp.<br>
+            Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc.
+          </div>
+
+          <div class="pagination">
+            <span id="resultCount">Hiển thị 0 yêu cầu</span>
+            <span>Đây là bản demo FE · Chưa kết nối API</span>
+          </div>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        Lưu ý: Khi tích hợp hệ thống thật, danh sách, quyền người duyệt, lịch sử quyết định và trạng thái
+        phải lấy từ backend. FE không được tự quyết định quyền phê duyệt.
+      </p>
+    </main>
+  </div>
+
+  <div class="overlay" id="modalOverlay" role="dialog" aria-modal="true"
+       aria-labelledby="modalTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <div>
+          <h2 id="modalTitle">Chi tiết yêu cầu</h2>
+          <div class="subtitle" id="modalSubtitle" style="margin-top:7px"></div>
+        </div>
+        <button class="close-button" id="closeModalButton" aria-label="Đóng">×</button>
+      </div>
+      <div class="modal-content" id="modalContent"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // DỮ LIỆU GIẢ LẬP: thay bằng dữ liệu API khi backend sẵn sàng.
+    const initialRequests = [
+      {
+        id: "REQ-2026-001",
+        title: "Nhân viên tuyển dụng",
+        department: "Phòng Nhân sự",
+        creator: "Nguyễn Minh Anh",
+        quantity: 2,
+        salary: "12–18 triệu VNĐ",
+        date: "10/10/2026",
+        reason: "Bổ sung nhân sự phục vụ kế hoạch tuyển dụng quý IV.",
+        status: "pending",
+        opinion: "",
+        history: []
+      },
+      {
+        id: "REQ-2026-002",
+        title: "Lập trình viên Backend",
+        department: "Phòng Công nghệ",
+        creator: "Trần Quốc Huy",
+        quantity: 3,
+        salary: "18–25 triệu VNĐ",
+        date: "09/10/2026",
+        reason: "Bổ sung nhân sự cho dự án phát triển hệ thống.",
+        status: "pending",
+        opinion: "",
+        history: []
+      },
+      {
+        id: "REQ-2026-003",
+        title: "Chuyên viên Marketing",
+        department: "Phòng Marketing",
+        creator: "Lê Thu Hà",
+        quantity: 1,
+        salary: "10–15 triệu VNĐ",
+        date: "08/10/2026",
+        reason: "Phục vụ kế hoạch truyền thông sản phẩm mới.",
+        status: "pending",
+        opinion: "",
+        history: []
+      },
+      {
+        id: "REQ-2026-004",
+        title: "Nhân viên kế toán",
+        department: "Phòng Tài chính",
+        creator: "Phạm Đức Long",
+        quantity: 1,
+        salary: "10–14 triệu VNĐ",
+        date: "07/10/2026",
+        reason: "Thay thế vị trí đang thiếu nhân sự.",
+        status: "approved",
+        opinion: "Đồng ý với nhu cầu tuyển dụng.",
+        history: [{
+          action: "Duyệt",
+          opinion: "Đồng ý với nhu cầu tuyển dụng.",
+          time: "10/10/2026"
+        }]
+      },
+      {
+        id: "REQ-2026-005",
+        title: "Chuyên viên nhân sự",
+        department: "Phòng Nhân sự",
+        creator: "Vũ Ngọc Mai",
+        quantity: 2,
+        salary: "11–16 triệu VNĐ",
+        date: "06/10/2026",
+        reason: "Mở rộng hoạt động quản trị nhân sự.",
+        status: "supplement",
+        opinion: "Vui lòng bổ sung mô tả công việc và căn cứ số lượng.",
+        history: [{
+          action: "Yêu cầu bổ sung",
+          opinion: "Vui lòng bổ sung mô tả công việc và căn cứ số lượng.",
+          time: "10/10/2026"
+        }]
+      },
+      {
+        id: "REQ-2026-006",
+        title: "Nhân viên kinh doanh",
+        department: "Phòng Kinh doanh",
+        creator: "Đỗ Hoàng Nam",
+        quantity: 4,
+        salary: "10–20 triệu VNĐ",
+        date: "05/10/2026",
+        reason: "Tăng nhân lực cho thị trường mới.",
+        status: "rejected",
+        opinion: "Chưa có kế hoạch ngân sách được xác nhận.",
+        history: [{
+          action: "Từ chối",
+          opinion: "Chưa có kế hoạch ngân sách được xác nhận.",
+          time: "10/10/2026"
+        }]
+      }
+    ];
+
+    let requests = initialRequests.map(item => ({
+      ...item,
+      history: item.history.map(event => ({ ...event }))
+    }));
+
+    let activeRequestId = null;
+    let toastTimer;
+
+    const statusLabels = {
+      pending: "Chờ duyệt",
+      approved: "Đã duyệt",
+      rejected: "Từ chối",
+      supplement: "Yêu cầu bổ sung"
+    };
+
+    const actionLabels = {
+      approve: "Duyệt",
+      reject: "Từ chối",
+      supplement: "Yêu cầu bổ sung"
+    };
+
+    const $ = id => document.getElementById(id);
+
+    function escapeHTML(value) {
+      return String(value ?? "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function statusClass(status) {
+      return status === "pending" ? "pending"
+        : status === "approved" ? "approved"
+        : status === "rejected" ? "rejected" : "supplement";
+    }
+
+    function statusBadge(status) {
+      return `<span class="status ${statusClass(status)}">${escapeHTML(statusLabels[status])}</span>`;
+    }
+
+    function showToast(message, type = "") {
+      const toast = $("toast");
+      toast.textContent = message;
+      toast.className = "toast show" + (type ? " " + type : "");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.className = "toast", 3500);
+    }
+
+    function renderStats() {
+      $("totalCount").textContent = requests.length;
+      $("pendingCount").textContent = requests.filter(r => r.status === "pending").length;
+      $("approvedCount").textContent = requests.filter(r => r.status === "approved").length;
+      $("supplementCount").textContent = requests.filter(r => r.status === "supplement").length;
+      $("pendingBadge").textContent =
+        requests.filter(r => r.status === "pending").length + " yêu cầu chờ duyệt";
+    }
+
+    function renderRows() {
+      const query = $("searchInput").value.trim().toLocaleLowerCase("vi");
+      const filter = $("statusFilter").value;
+
+      const filtered = requests.filter(request => {
+        const searchText = [
+          request.id, request.title, request.department, request.creator
+        ].join(" ").toLocaleLowerCase("vi");
+
+        return searchText.includes(query) &&
+          (filter === "all" || request.status === filter);
+      });
+
+      $("requestRows").innerHTML = filtered.map(request => {
+        const canProcess = request.status === "pending";
+
+        return `
+          <tr>
+            <td>
+              <span class="request-code">${escapeHTML(request.id)}</span>
+              <span class="secondary-text">${escapeHTML(request.title)}</span>
+            </td>
+            <td>${escapeHTML(request.department)}</td>
+            <td>${escapeHTML(request.creator)}</td>
+            <td>${escapeHTML(request.quantity)} người</td>
+            <td>${escapeHTML(request.date)}</td>
+            <td>${statusBadge(request.status)}</td>
+            <td>
+              <div class="actions">
+                <button class="button small" data-action="view"
+                  data-id="${escapeHTML(request.id)}">Chi tiết</button>
+                ${canProcess ? `
+                  <button class="button small primary" data-action="approve"
+                    data-id="${escapeHTML(request.id)}">Duyệt</button>
+                  <button class="button small" data-action="reject"
+                    data-id="${escapeHTML(request.id)}">Từ chối</button>
+                ` : ""}
+              </div>
+            </td>
+          </tr>`;
+      }).join("");
+
+      $("emptyState").hidden = filtered.length !== 0;
+      $("resultCount").textContent = `Hiển thị ${filtered.length} / ${requests.length} yêu cầu`;
+      renderStats();
+    }
+
+    function findRequest(id) {
+      return requests.find(request => request.id === id);
+    }
+
+    function openModal(requestId, mode = "view") {
+      const request = findRequest(requestId);
+      if (!request) {
+        showToast("Không tìm thấy yêu cầu cần xem.", "error");
+        return;
+      }
+
+      activeRequestId = requestId;
+      $("modalSubtitle").textContent = `${request.id} · ${request.title}`;
+
+      const details = `
+        <div class="detail-grid">
+          <div class="detail-item">
+            <div class="detail-label">Mã yêu cầu</div>
+            <div class="detail-value">${escapeHTML(request.id)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Trạng thái hiện tại</div>
+            <div class="detail-value">${statusBadge(request.status)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Vị trí tuyển dụng</div>
+            <div class="detail-value">${escapeHTML(request.title)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Phòng ban</div>
+            <div class="detail-value">${escapeHTML(request.department)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Người tạo yêu cầu</div>
+            <div class="detail-value">${escapeHTML(request.creator)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Số lượng cần tuyển</div>
+            <div class="detail-value">${escapeHTML(request.quantity)} người</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Mức lương đề xuất</div>
+            <div class="detail-value">${escapeHTML(request.salary)}</div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Ngày gửi yêu cầu</div>
+            <div class="detail-value">${escapeHTML(request.date)}</div>
+          </div>
+          <div class="detail-item full">
+            <div class="detail-label">Lý do tuyển dụng</div>
+            <div class="detail-value">${escapeHTML(request.reason)}</div>
+          </div>
+          ${request.opinion ? `
+            <div class="detail-item full">
+              <div class="detail-label">Ý kiến đã ghi nhận</div>
+              <div class="detail-value">${escapeHTML(request.opinion)}</div>
+            </div>` : ""}
+          ${request.history.length ? `
+            <div class="detail-item full">
+              <div class="detail-label">Lịch sử xử lý mẫu</div>
+              <div class="detail-value">
+                ${request.history.map(event =>
+                  `<p><strong>${escapeHTML(event.action)}</strong> — ${escapeHTML(event.time)}
+                  <br>${escapeHTML(event.opinion || "Không có ý kiến")}</p>`
+                ).join("")}
+              </div>
+            </div>` : ""}
+        </div>`;
+
+      $("modalTitle").textContent = mode === "view"
+        ? "Chi tiết yêu cầu tuyển dụng" : actionLabels[mode] + " yêu cầu";
+
+      let form = "";
+
+      if (mode !== "view") {
+        if (request.status !== "pending") {
+          $("modalContent").innerHTML = details + `
+            <div class="modal-actions">
+              <button class="button" data-action="close">Đóng</button>
+            </div>`;
+          $("modalOverlay").classList.add("show");
+          return;
+        }
+
+        const needsOpinion = mode === "reject" || mode === "supplement";
+        const label = mode === "approve" ? "Ý kiến người duyệt"
+          : mode === "reject" ? "Lý do từ chối"
+          : "Nội dung cần bổ sung";
+
+        form = `
+          <div class="form-field">
+            <label for="opinionInput">${label}${needsOpinion ? ' <span class="required">*</span>' : ''}</label>
+            <textarea id="opinionInput" maxlength="1000"
+              placeholder="${mode === "approve" ? "Nhập ý kiến (nếu có)..." :
+                mode === "reject" ? "Nhập lý do từ chối..." :
+                "Nêu rõ thông tin người tạo cần bổ sung..."}"></textarea>
+            <div class="hint">
+              ${needsOpinion ? "Trường này bắt buộc trong bản demo." :
+                "Có thể để trống nếu không có ý kiến."}
+              Tối đa 1000 ký tự.
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="button" data-action="close">Hủy</button>
+            <button class="button ${mode === "approve" ? "success" :
+              mode === "reject" ? "danger" : "primary"}"
+              id="confirmActionButton" data-action="confirm" data-mode="${mode}">
+              Xác nhận ${actionLabels[mode].toLowerCase()}
+            </button>
+          </div>`;
+      } else {
+        form = `
+          <div class="modal-actions">
+            ${request.status === "pending" ? `
+              <button class="button success" data-action="start-approve">Duyệt</button>
+              <button class="button danger" data-action="start-reject">Từ chối</button>
+              <button class="button primary" data-action="start-supplement">Yêu cầu bổ sung</button>
+            ` : ""}
+            <button class="button" data-action="close">Đóng</button>
+          </div>`;
+      }
+
+      $("modalContent").innerHTML = details + form;
+      $("modalOverlay").classList.add("show");
+
+      const opinionInput = $("opinionInput");
+      if (opinionInput) opinionInput.focus();
+    }
+
+    function performAction(requestId, mode, opinion) {
+      const request = findRequest(requestId);
+
+      if (!request) {
+        showToast("Không tìm thấy yêu cầu.", "error");
+        return;
+      }
+
+      if (request.status !== "pending") {
+        showToast("Yêu cầu này đã được xử lý, không thể thao tác lại trong bản demo.", "error");
+        return;
+      }
+
+      const needsOpinion = mode === "reject" || mode === "supplement";
+
+      if (needsOpinion && !opinion.trim()) {
+        showToast("Vui lòng nhập nội dung bắt buộc trước khi xác nhận.", "error");
+        $("opinionInput")?.focus();
+        return;
+      }
+
+      const button = $("confirmActionButton");
+      if (button) {
+        button.disabled = true;
+        button.textContent = "Đang xử lý...";
+      }
+
+      // Mô phỏng kết quả xử lý ở FE.
+      // Khi tích hợp BE, thay đoạn cập nhật bên dưới bằng lời gọi API thật.
+      setTimeout(() => {
+        const current = findRequest(requestId);
+
+        if (!current || current.status !== "pending") {
+          $("modalOverlay").classList.remove("show");
+          renderRows();
+          showToast("Yêu cầu đã thay đổi trạng thái. Vui lòng tải lại danh sách.", "error");
+          return;
+        }
+
+        const nextStatus = {
+          approve: "approved",
+          reject: "rejected",
+          supplement: "supplement"
+        }[mode];
+
+        current.status = nextStatus;
+        current.opinion = opinion.trim();
+        current.history.push({
+          action: actionLabels[mode],
+          opinion: opinion.trim(),
+          time: new Date().toLocaleString("vi-VN")
+        });
+
+        $("modalOverlay").classList.remove("show");
+        renderRows();
+        showToast(
+          `Đã mô phỏng thao tác "${actionLabels[mode]}" cho ${current.id}. Dữ liệu chưa được lưu lên backend.`,
+          "success"
+        );
+      }, 350);
+    }
+
+    $("requestRows").addEventListener("click", event => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+
+      const { action, id } = button.dataset;
+
+      if (action === "view") openModal(id, "view");
+      if (action === "approve") openModal(id, "approve");
+      if (action === "reject") openModal(id, "reject");
+    });
+
+    $("modalContent").addEventListener("click", event => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+
+      const action = button.dataset.action;
+      const mode = button.dataset.mode;
+
+      if (action === "close") {
+        $("modalOverlay").classList.remove("show");
+        return;
+      }
+
+      if (action === "start-approve") openModal(activeRequestId, "approve");
+      if (action === "start-reject") openModal(activeRequestId, "reject");
+      if (action === "start-supplement") openModal(activeRequestId, "supplement");
+
+      if (action === "confirm") {
+        const opinion = $("opinionInput")?.value || "";
+        performAction(activeRequestId, mode, opinion);
+      }
+    });
+
+    $("closeModalButton").addEventListener("click", () => {
+      $("modalOverlay").classList.remove("show");
+    });
+
+    $("modalOverlay").addEventListener("click", event => {
+      if (event.target === $("modalOverlay")) {
+        $("modalOverlay").classList.remove("show");
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") $("modalOverlay").classList.remove("show");
+    });
+
+    $("searchInput").addEventListener("input", renderRows);
+    $("statusFilter").addEventListener("change", renderRows);
+
+    $("clearFilterButton").addEventListener("click", () => {
+      $("searchInput").value = "";
+      $("statusFilter").value = "all";
+      renderRows();
+    });
+
+    $("refreshButton").addEventListener("click", () => {
+      renderRows();
+      showToast("Đã làm mới danh sách dữ liệu mẫu.", "success");
+    });
+
+    renderRows();
+  </script>
+</body>
+</html>

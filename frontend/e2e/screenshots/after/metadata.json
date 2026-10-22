@@ -1,0 +1,331 @@
+{
+  "commitSha": "bc325e6",
+  "mode": "after",
+  "updatedAt": "2026-10-16T08:45:36.877Z",
+  "screenshots": {
+    "dashboard-1440x900": {
+      "page": "dashboard",
+      "viewport": "1440x900",
+      "filename": "dashboard-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:13.679Z",
+      "url": "http://localhost:5173/dashboard"
+    },
+    "login-1440x900": {
+      "page": "login",
+      "viewport": "1440x900",
+      "filename": "login-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:13.678Z",
+      "url": "http://localhost:5173/login"
+    },
+    "profile-1440x900": {
+      "page": "profile",
+      "viewport": "1440x900",
+      "filename": "profile-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:18.314Z",
+      "url": "http://localhost:5173/profile"
+    },
+    "admin-users-1440x900": {
+      "page": "admin-users",
+      "viewport": "1440x900",
+      "filename": "admin-users-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:18.290Z",
+      "url": "http://localhost:5173/admin/users"
+    },
+    "admin-permission-matrix-1440x900": {
+      "page": "admin-permission-matrix",
+      "viewport": "1440x900",
+      "filename": "admin-permission-matrix-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:22.505Z",
+      "url": "http://localhost:5173/admin/permission-matrix"
+    },
+    "organization-1440x900": {
+      "page": "organization",
+      "viewport": "1440x900",
+      "filename": "organization-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:22.652Z",
+      "url": "http://localhost:5173/organization"
+    },
+    "job-titles-1440x900": {
+      "page": "job-titles",
+      "viewport": "1440x900",
+      "filename": "job-titles-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:27.045Z",
+      "url": "http://localhost:5173/job-titles"
+    },
+    "requisitions-1440x900": {
+      "page": "requisitions",
+      "viewport": "1440x900",
+      "filename": "requisitions-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:27.178Z",
+      "url": "http://localhost:5173/recruitment/requisitions"
+    },
+    "job-postings-1440x900": {
+      "page": "job-postings",
+      "viewport": "1440x900",
+      "filename": "job-postings-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:31.317Z",
+      "url": "http://localhost:5173/recruitment/job-postings"
+    },
+    "questions-1440x900": {
+      "page": "questions",
+      "viewport": "1440x900",
+      "filename": "questions-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:32.469Z",
+      "url": "http://localhost:5173/questions"
+    },
+    "approval-configurations-1440x900": {
+      "page": "approval-configurations",
+      "viewport": "1440x900",
+      "filename": "approval-configurations-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:36.014Z",
+      "url": "http://localhost:5173/recruitment/approval-configurations"
+    },
+    "competencies-1440x900": {
+      "page": "competencies",
+      "viewport": "1440x900",
+      "filename": "competencies-1440x900.png",
+      "width": 1440,
+      "height": 900,
+      "capturedAt": "2026-10-16T08:45:36.877Z",
+      "url": "http://localhost:5173/competencies"
+    },
+    "login-768x1024": {
+      "page": "login",
+      "viewport": "768x1024",
+      "filename": "login-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:24.066Z",
+      "url": "http://localhost:5173/login"
+    },
+    "dashboard-768x1024": {
+      "page": "dashboard",
+      "viewport": "768x1024",
+      "filename": "dashboard-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:24.706Z",
+      "url": "http://localhost:5173/dashboard"
+    },
+    "profile-768x1024": {
+      "page": "profile",
+      "viewport": "768x1024",
+      "filename": "profile-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:28.127Z",
+      "url": "http://localhost:5173/profile"
+    },
+    "admin-users-768x1024": {
+      "page": "admin-users",
+      "viewport": "768x1024",
+      "filename": "admin-users-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:28.895Z",
+      "url": "http://localhost:5173/admin/users"
+    },
+    "admin-permission-matrix-768x1024": {
+      "page": "admin-permission-matrix",
+      "viewport": "768x1024",
+      "filename": "admin-permission-matrix-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:31.983Z",
+      "url": "http://localhost:5173/admin/permission-matrix"
+    },
+    "organization-768x1024": {
+      "page": "organization",
+      "viewport": "768x1024",
+      "filename": "organization-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:32.719Z",
+      "url": "http://localhost:5173/organization"
+    },
+    "job-titles-768x1024": {
+      "page": "job-titles",
+      "viewport": "768x1024",
+      "filename": "job-titles-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:36.106Z",
+      "url": "http://localhost:5173/job-titles"
+    },
+    "requisitions-768x1024": {
+      "page": "requisitions",
+      "viewport": "768x1024",
+      "filename": "requisitions-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:37.004Z",
+      "url": "http://localhost:5173/recruitment/requisitions"
+    },
+    "job-postings-768x1024": {
+      "page": "job-postings",
+      "viewport": "768x1024",
+      "filename": "job-postings-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:40.073Z",
+      "url": "http://localhost:5173/recruitment/job-postings"
+    },
+    "questions-768x1024": {
+      "page": "questions",
+      "viewport": "768x1024",
+      "filename": "questions-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:40.789Z",
+      "url": "http://localhost:5173/questions"
+    },
+    "approval-configurations-768x1024": {
+      "page": "approval-configurations",
+      "viewport": "768x1024",
+      "filename": "approval-configurations-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:44.022Z",
+      "url": "http://localhost:5173/recruitment/approval-configurations"
+    },
+    "competencies-768x1024": {
+      "page": "competencies",
+      "viewport": "768x1024",
+      "filename": "competencies-768x1024.png",
+      "width": 768,
+      "height": 1024,
+      "capturedAt": "2026-10-16T07:42:44.656Z",
+      "url": "http://localhost:5173/competencies"
+    },
+    "login-390x844": {
+      "page": "login",
+      "viewport": "390x844",
+      "filename": "login-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:42:57.419Z",
+      "url": "http://localhost:5173/login"
+    },
+    "dashboard-390x844": {
+      "page": "dashboard",
+      "viewport": "390x844",
+      "filename": "dashboard-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:42:58.250Z",
+      "url": "http://localhost:5173/dashboard"
+    },
+    "profile-390x844": {
+      "page": "profile",
+      "viewport": "390x844",
+      "filename": "profile-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:02.013Z",
+      "url": "http://localhost:5173/profile"
+    },
+    "admin-users-390x844": {
+      "page": "admin-users",
+      "viewport": "390x844",
+      "filename": "admin-users-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:02.684Z",
+      "url": "http://localhost:5173/admin/users"
+    },
+    "admin-permission-matrix-390x844": {
+      "page": "admin-permission-matrix",
+      "viewport": "390x844",
+      "filename": "admin-permission-matrix-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:06.634Z",
+      "url": "http://localhost:5173/admin/permission-matrix"
+    },
+    "organization-390x844": {
+      "page": "organization",
+      "viewport": "390x844",
+      "filename": "organization-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:07.555Z",
+      "url": "http://localhost:5173/organization"
+    },
+    "job-titles-390x844": {
+      "page": "job-titles",
+      "viewport": "390x844",
+      "filename": "job-titles-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:11.326Z",
+      "url": "http://localhost:5173/job-titles"
+    },
+    "requisitions-390x844": {
+      "page": "requisitions",
+      "viewport": "390x844",
+      "filename": "requisitions-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:12.675Z",
+      "url": "http://localhost:5173/recruitment/requisitions"
+    },
+    "job-postings-390x844": {
+      "page": "job-postings",
+      "viewport": "390x844",
+      "filename": "job-postings-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:16.493Z",
+      "url": "http://localhost:5173/recruitment/job-postings"
+    },
+    "questions-390x844": {
+      "page": "questions",
+      "viewport": "390x844",
+      "filename": "questions-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:17.163Z",
+      "url": "http://localhost:5173/questions"
+    },
+    "approval-configurations-390x844": {
+      "page": "approval-configurations",
+      "viewport": "390x844",
+      "filename": "approval-configurations-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:21.066Z",
+      "url": "http://localhost:5173/recruitment/approval-configurations"
+    },
+    "competencies-390x844": {
+      "page": "competencies",
+      "viewport": "390x844",
+      "filename": "competencies-390x844.png",
+      "width": 390,
+      "height": 844,
+      "capturedAt": "2026-10-16T07:43:21.788Z",
+      "url": "http://localhost:5173/competencies"
+    }
+  }
+}

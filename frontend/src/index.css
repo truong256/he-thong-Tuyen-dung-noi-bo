@@ -1,0 +1,8 @@
+/* ==========================================================================
+   HR RECRUIT ATS - MASTER STYLESHEET (index.css)
+   Clean Modular Architecture: Design System, Layout & Shared Components
+   ========================================================================== */
+
+@import './styles/design-system.css';
+@import './styles/layout.css';
+@import './styles/components.css';

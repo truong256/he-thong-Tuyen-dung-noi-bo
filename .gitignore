@@ -5,6 +5,33 @@
 
 # dotenv files
 .env
+.env.local
+.env.*.local
+!.env.example
+application-local.properties
+**/application-local.properties
+.playwright-mcp/
+.agents/
+*.png
+frontend/*.png
+be/
+
+
+# Build output & dependencies
+target/
+**/target/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.vite/
+**/.vite/
+data/
+**/data/
+uploads/
+**/uploads/
+test-downloads/
+**/test-downloads/
 
 # User-specific files
 *.rsuser
@@ -384,12 +411,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-# VS Code files for those working on multiple tools
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# VS Code files
+.vscode/
 *.code-workspace
 
 # Local History for Visual Studio Code
@@ -423,6 +446,7 @@ autom4te.cache/
 *.tar.gz
 tarballs/
 test-results/
+playwright-report/
 
 # content below from: https://github.com/github/gitignore/blob/main/Global/macOS.gitignore
 # General
@@ -480,3 +504,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Postman
+.postman/
+postman/

@@ -157,16 +157,35 @@ Một User Story chỉ được xem là hoàn thành khi:
 - Không còn lỗi mức Major trở lên.
 - Product Owner đã nghiệm thu trên staging.
 
-## 11. Cấu trúc repository
+## 11. Cấu trúc repository & Hướng dẫn khởi chạy
 
 ```text
 he-thong-quan-ly-noi-bo/
-├── frontend/   # Ứng dụng giao diện người dùng
-├── backend/    # API, nghiệp vụ và truy cập dữ liệu
+├── frontend/   # Ứng dụng giao diện người dùng (React 18 + TypeScript + Vite)
+├── backend/    # API, nghiệp vụ và truy cập dữ liệu (Spring Boot)
 └── README.md
 ```
 
-Cấu trúc chi tiết của từng module sẽ được bổ sung khi đội dự án chốt framework backend và bắt đầu Sprint 1.
+### Khởi chạy Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+- **Địa chỉ truy cập cục bộ (Local URL):** [http://localhost:5173](http://localhost:5173)
+- **Đóng gói production (Build):**
+  ```bash
+  npm run build
+  ```
+- **Kiểm tra chất lượng code (Typecheck, Lint & Test):**
+  ```bash
+  npm run typecheck
+  npm run lint
+  npm run test
+  ```
+
 
 ## 12. Định hướng nghiệp vụ quan trọng
 
