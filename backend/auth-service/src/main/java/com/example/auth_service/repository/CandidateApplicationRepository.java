@@ -14,6 +14,10 @@ public interface CandidateApplicationRepository extends JpaRepository<CandidateA
 
     java.util.List<CandidateApplication> findByCandidateUserId(Long candidateUserId);
 
+    java.util.List<CandidateApplication> findByEmailIgnoreCase(String email);
+
+    java.util.List<CandidateApplication> findByCandidateUserIdOrEmailIgnoreCase(Long candidateUserId, String email);
+
     long countByRequisitionId(Long requisitionId);
 }
 

@@ -44,4 +44,25 @@ public class CandidateApplication {
 
     @Column(name = "stage_changed_at")
     private java.time.Instant stageChangedAt;
+
+    @Column(length = 25)
+    private String phone;
+
+    @Column(name = "cv_file_url", length = 500)
+    private String cvFileUrl;
+
+    @Column(name = "cv_file_name", length = 255)
+    private String cvFileName;
+
+    @Column(name = "cv_file_size")
+    private Long cvFileSize;
+
+    @Column(name = "cv_content_type", length = 100)
+    private String cvContentType;
+
+    @Column(name = "cover_letter", columnDefinition = "TEXT")
+    private String coverLetter;
+
+    @Column(name = "applied_at")
+    private java.time.Instant appliedAt = java.time.Instant.now();
 }

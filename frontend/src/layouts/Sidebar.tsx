@@ -71,6 +71,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     'ADMIN',
   ]);
 
+  const canReadCandidates =
+    canReadRecruitment ||
+    hasRole('HIRING_MANAGER') ||
+    checkPerm('CANDIDATE_READ_ASSIGNED', ['HIRING_MANAGER']);
+
   return (
     <>
       {isOpen && (
@@ -245,43 +250,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 )}
 
                 {canReadRecruitment && (
-                  <>
-                    <li>
-                      <NavLink
-                        to="/recruitment/job-postings"
-                        className={({ isActive }) => (isActive ? 'active' : '')}
-                        onClick={handleLinkClick}
-                      >
-                        <span>Tin tuyển dụng</span>
-                      </NavLink>
-                    </li>
+                  <li>
+                    <NavLink
+                      to="/recruitment/job-postings"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Tin tuyển dụng</span>
+                    </NavLink>
+                  </li>
+                )}
 
-                    {/* Hồ sơ ứng viên: chuyển đến trang Pipeline */}
-                    <li>
-                      <NavLink
-                        to="/recruitment/candidates"
-                        className={({ isActive }) =>
-                          isActive ? 'active' : ''
-                        }
-                        onClick={handleLinkClick}
-                      >
-                        <span>Hồ sơ & Pipeline</span>
-                      </NavLink>
-                    </li>
+                {/* Hồ sơ ứng viên: chuyển đến trang Pipeline */}
+                {canReadCandidates && (
+                  <li>
+                    <NavLink
+                      to="/recruitment/candidates"
+                      className={({ isActive }) =>
+                        isActive ? 'active' : ''
+                      }
+                      onClick={handleLinkClick}
+                    >
+                      <span>Hồ sơ & Pipeline</span>
+                    </NavLink>
+                  </li>
+                )}
 
-                    <li>
-                      <a
-                        href="#interviews"
-                        className="sidebar-link-upcoming"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          handleUpcomingClick('Lịch phỏng vấn');
-                        }}
-                      >
-                        <span>Lịch phỏng vấn</span>
-                      </a>
-                    </li>
-                  </>
+                {canReadRecruitment && (
+                  <li>
+                    <a
+                      href="#interviews"
+                      className="sidebar-link-upcoming"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        handleUpcomingClick('Lịch phỏng vấn');
+                      }}
+                    >
+                      <span>Lịch phỏng vấn</span>
+                    </a>
+                  </li>
                 )}
 
                 {hasAnyRole([

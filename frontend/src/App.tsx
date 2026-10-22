@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -32,6 +32,7 @@ import CandidateApplicationsPage from "./pages/CandidateApplicationsPage";
 import RecruitmentCandidatesPage from "./pages/RecruitmentCandidatesPage";
 import CandidateApprovalsPage from "./pages/CandidateApprovalsPage";
 import OffersPage from "./pages/OffersPage";
+import CandidateUnifiedProfilePage from "./pages/CandidateUnifiedProfilePage";
 
 export const App: React.FC = () => {
   return (
@@ -101,8 +102,33 @@ export const App: React.FC = () => {
             <Route
               path="recruitment/candidates"
               element={
-                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                <PermissionGuard
+                  requiredPermissions={["CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED"]}
+                  requireAny={true}
+                >
                   <RecruitmentCandidatesPage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/candidates/:id"
+              element={
+                <PermissionGuard
+                  requiredPermissions={["CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED"]}
+                  requireAny={true}
+                >
+                  <CandidateUnifiedProfilePage />
+                </PermissionGuard>
+              }
+            />
+            <Route
+              path="recruitment/candidates/:id/profile"
+              element={
+                <PermissionGuard
+                  requiredPermissions={["CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED"]}
+                  requireAny={true}
+                >
+                  <CandidateUnifiedProfilePage />
                 </PermissionGuard>
               }
             />

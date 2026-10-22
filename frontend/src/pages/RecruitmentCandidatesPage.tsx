@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import apiClient from '../api/client';
 
 type Candidate = {
@@ -160,7 +161,15 @@ export default function RecruitmentCandidatesPage() {
             {filtered.map(c => (
               <tr key={c.id}>
                 <td style={cell}>HS-{c.id}</td>
-                <td style={cell}>{c.fullName}</td>
+                <td style={cell}>
+                  <Link
+                    to={`/recruitment/candidates/${c.id}/profile`}
+                    style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}
+                    title="Xem hồ sơ hợp nhất"
+                  >
+                    {c.fullName}
+                  </Link>
+                </td>
                 <td style={cell}>{c.email}</td>
                 <td style={cell}>{c.requisitionId ?? '—'}</td>
                 <td style={cell}>
@@ -169,25 +178,45 @@ export default function RecruitmentCandidatesPage() {
                   </span>
                 </td>
                 <td style={cell}>
-                  {['INTERVIEW', 'OFFER', 'HIRED', 'REJECTED', 'WITHDRAWN'].includes(c.stage) ? (
-                    <span style={{ color: '#64748b' }}>Không khả dụng</span>
-                  ) : (
-                    <button
-                      onClick={() => void moveToInterview(c)}
-                      disabled={updatingId !== null || loading}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <Link
+                      to={`/recruitment/candidates/${c.id}/profile`}
                       style={{
                         padding: '8px 12px',
-                        border: 0,
+                        border: '1px solid #cbd5e1',
                         borderRadius: 7,
-                        background: updatingId === c.id ? '#94a3b8' : '#2563eb',
-                        color: '#fff',
-                        cursor: updatingId !== null ? 'wait' : 'pointer',
+                        background: '#ffffff',
+                        color: '#334155',
+                        textDecoration: 'none',
+                        fontSize: 13,
+                        fontWeight: 600,
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {updatingId === c.id ? 'Đang xử lý...' : 'Duyệt vào phỏng vấn'}
-                    </button>
-                  )}
+                      Xem hồ sơ
+                    </Link>
+                    {['INTERVIEW', 'OFFER', 'HIRED', 'REJECTED', 'WITHDRAWN'].includes(c.stage) ? (
+                      <span style={{ color: '#64748b', fontSize: 13 }}>Không khả dụng</span>
+                    ) : (
+                      <button
+                        onClick={() => void moveToInterview(c)}
+                        disabled={updatingId !== null || loading}
+                        style={{
+                          padding: '8px 12px',
+                          border: 0,
+                          borderRadius: 7,
+                          background: updatingId === c.id ? '#94a3b8' : '#2563eb',
+                          color: '#fff',
+                          cursor: updatingId !== null ? 'wait' : 'pointer',
+                          whiteSpace: 'nowrap',
+                          fontSize: 13,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {updatingId === c.id ? 'Đang xử lý...' : 'Duyệt vào phỏng vấn'}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

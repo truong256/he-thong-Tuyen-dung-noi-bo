@@ -603,7 +603,17 @@ public class JobPostingService {
         app.setCandidateUserId(candidateUserId);
         app.setFullName(req.getFullName().trim());
         app.setEmail(req.getEmail().trim().toLowerCase());
+        app.setPhone(req.getPhone() != null ? req.getPhone().trim() : null);
+        app.setCoverLetter(req.getCoverLetter() != null ? req.getCoverLetter().trim() : null);
+        app.setCvFileUrl(req.getCvFileUrl() != null ? req.getCvFileUrl().trim() : null);
+        if (req.getCvFileUrl() != null && !req.getCvFileUrl().trim().isEmpty()) {
+            String url = req.getCvFileUrl().trim();
+            int lastSlash = Math.max(url.lastIndexOf('/'), url.lastIndexOf('\\'));
+            String fname = lastSlash >= 0 ? url.substring(lastSlash + 1) : url;
+            app.setCvFileName(fname);
+        }
         app.setStage("APPLIED");
+        app.setAppliedAt(java.time.Instant.now());
 
         CandidateApplication savedApp;
         if (candidateApplications != null) {

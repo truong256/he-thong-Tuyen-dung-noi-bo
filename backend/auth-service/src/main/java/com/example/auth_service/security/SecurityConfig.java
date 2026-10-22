@@ -111,9 +111,17 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/competency-frameworks/**")
                         .hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/salary-ranges", "/api/salary-ranges/{id}").hasAuthority("SALARY_READ")
-                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}")
+                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}",
+                                "/api/candidates/{id}/profile", "/api/candidates/{id}/cv",
+                                "/api/candidates/{id}/notes", "/api/candidates/{id}/tags")
                         .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "CANDIDATE_READ_OWN")
                 .requestMatchers(HttpMethod.PATCH, "/api/candidates/{id}/stage").hasAuthority("PIPELINE_MANAGE")
+                .requestMatchers(HttpMethod.POST, "/api/candidates/{id}/cv", "/api/candidates/{id}/notes", "/api/candidates/{id}/tags")
+                        .hasAuthority("PIPELINE_MANAGE")
+                .requestMatchers(HttpMethod.PUT, "/api/candidates/{id}/notes/{noteId}")
+                        .hasAuthority("PIPELINE_MANAGE")
+                .requestMatchers(HttpMethod.DELETE, "/api/candidates/{id}/notes/{noteId}", "/api/candidates/{id}/tags/{tagId}")
+                        .hasAuthority("PIPELINE_MANAGE")
                 // S3-01: only HR managers can manage versioned approval configurations.
                 .requestMatchers("/api/requisition-approval-configurations", "/api/requisition-approval-configurations/**")
                         .hasRole("HR_MANAGER")

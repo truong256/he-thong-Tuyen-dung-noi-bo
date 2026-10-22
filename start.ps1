@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 
 $candidateJdks = @(
+    "C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot",
     "C:\Program Files\Java\jdk-21.0.12.1",
     "C:\Program Files\Java\latest",
     "C:\Program Files\Eclipse Adoptium\jdk-21.0.12.101-hotspot"
