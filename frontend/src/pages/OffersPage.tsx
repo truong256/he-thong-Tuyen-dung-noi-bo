@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import apiClient from '../api/client';
 
 type Candidate = {
   id: number;
@@ -14,13 +15,12 @@ export default function OffersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('/api/candidates?page=0&size=100', { credentials: 'include' })
-      .then(async response => {
-        if (!response.ok) throw new Error(`Không tải được hồ sơ (${response.status})`);
-        const data = await response.json();
+    apiClient.get<any>('/api/candidates?page=0&size=100')
+      .then(response => {
+        const data = response.data;
         setCandidates(Array.isArray(data) ? data : (data.content ?? data.items ?? []));
       })
-      .catch(e => setError(e instanceof Error ? e.message : 'Lỗi tải dữ liệu'))
+      .catch(e => setError(e?.response?.data?.message || (e instanceof Error ? e.message : 'Lỗi tải dữ liệu')))
       .finally(() => setLoading(false));
   }, []);
 

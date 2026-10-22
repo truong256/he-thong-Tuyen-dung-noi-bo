@@ -1,4 +1,5 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import apiClient from '../api/client';
 
 type Candidate = {
   id: number;
@@ -26,17 +27,14 @@ export default function CandidateApprovalsPage() {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/candidates?page=0&size=100', {
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error(`Không tải được hồ sơ (${response.status})`);
-      const data = await response.json();
+      const response = await apiClient.get<any>('/api/candidates?page=0&size=100');
+      const data = response.data;
       const rows = Array.isArray(data) ? data : (data.content ?? data.items ?? []);
       setItems(rows.filter((x: Candidate) =>
         ['APPLIED', 'SCREENING', 'EVALUATED'].includes(x.stage)
       ));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Lỗi tải dữ liệu');
+    } catch (e: any) {
+      setError(e?.response?.data?.message || (e instanceof Error ? e.message : 'Lỗi tải dữ liệu'));
     } finally {
       setLoading(false);
     }
@@ -57,24 +55,14 @@ export default function CandidateApprovalsPage() {
     setBusy(candidate.id);
     setNotice('');
     try {
-      // Dùng API pipeline hiện có; không giả vờ có audit API nếu backend chưa hỗ trợ.
-      const response = await fetch(`/api/candidates/${candidate.id}/stage`, {
-        method: 'PATCH',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stage: decision,
-          ...(decision === 'REJECTED' ? { reason } : {}),
-        }),
+      await apiClient.patch(`/api/candidates/${candidate.id}/stage`, {
+        stage: decision,
+        ...(decision === 'REJECTED' ? { reason } : {}),
       });
-      if (!response.ok) {
-        const body = await response.text();
-        throw new Error(`Backend từ chối thao tác (${response.status}): ${body.slice(0, 250)}`);
-      }
       setNotice(`Đã cập nhật trạng thái hồ sơ ${candidate.fullName}.`);
       await load();
-    } catch (e) {
-      setNotice(e instanceof Error ? e.message : 'Không thể cập nhật hồ sơ');
+    } catch (e: any) {
+      setNotice(e?.response?.data?.message || (e instanceof Error ? e.message : 'Không thể cập nhật hồ sơ'));
     } finally {
       setBusy(null);
     }

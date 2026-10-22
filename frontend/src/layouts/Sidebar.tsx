@@ -292,7 +292,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 ]) && (
                   <li>
                     <NavLink
-                      to="/recruitment/candidates"
+                      to="/recruitment/approvals"
                       className={({ isActive }) => (isActive ? 'active' : '')}
                       onClick={handleLinkClick}
                     >
