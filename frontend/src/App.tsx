@@ -111,7 +111,7 @@ export const App: React.FC = () => {
             <Route
               path="recruitment/candidates"
               element={
-                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED"]} requireAny>
                   <RecruitmentCandidatesPage />
                 </PermissionGuard>
               }
@@ -119,7 +119,7 @@ export const App: React.FC = () => {
             <Route
               path="recruitment/approvals"
               element={
-                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL"]}>
+                <PermissionGuard requiredPermissions={["CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED"]} requireAny>
                   <CandidateApprovalsPage />
                 </PermissionGuard>
               }

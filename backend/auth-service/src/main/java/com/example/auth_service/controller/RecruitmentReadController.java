@@ -49,6 +49,11 @@ public class RecruitmentReadController {
         return service.candidate(id);
     }
 
+    @GetMapping("/candidates/{id}/cv")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.Resource> candidateCv(@PathVariable Long id) {
+        return service.downloadCandidateCv(id);
+    }
+
     @org.springframework.web.bind.annotation.PatchMapping("/candidates/{id}/stage")
     public CandidateSummaryDto updateCandidateStage(
             @PathVariable Long id,

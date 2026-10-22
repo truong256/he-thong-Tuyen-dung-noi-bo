@@ -41,6 +41,8 @@ export const PublicJobDetailPage: React.FC = () => {
   const [coverLetter, setCoverLetter] = useState('');
   const [attachedFileName, setAttachedFileName] = useState<string | null>(null);
 
+  const [cvFile, setCvFile] = useState<File | null>(null);
+
   // Form submission states
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -91,10 +93,19 @@ export const PublicJobDetailPage: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setAttachedFileName(file.name);
-      if (!cvFileUrl) {
-        setCvFileUrl(`https://storage.local/cv/${encodeURIComponent(file.name)}`);
+      if (file.size > 10 * 1024 * 1024) {
+        setSubmitError('Dung lượng tệp CV không được vượt quá 10MB.');
+        return;
       }
+      const dotIdx = file.name.lastIndexOf('.');
+      const ext = dotIdx !== -1 ? file.name.slice(dotIdx).toLowerCase() : '';
+      if (!['.pdf', '.doc', '.docx'].includes(ext)) {
+        setSubmitError('Chỉ chấp nhận tệp CV định dạng PDF, DOC hoặc DOCX.');
+        return;
+      }
+      setSubmitError(null);
+      setCvFile(file);
+      setAttachedFileName(file.name);
     }
   };
 
@@ -133,15 +144,34 @@ export const PublicJobDetailPage: React.FC = () => {
 
     setSubmitting(true);
     try {
-      await jobPostingApi.applyPublic(job.id, {
-        fullName: fullName.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        coverLetter: coverLetter.trim(),
-        cvFileUrl: cvFileUrl.trim() || (attachedFileName ? `https://storage.local/cv/${attachedFileName}` : undefined),
-      });
+      if (cvFile) {
+        const formData = new FormData();
+        formData.append('fullName', fullName.trim());
+        formData.append('email', email.trim().toLowerCase());
+        formData.append('phone', phone.trim());
+        if (coverLetter.trim()) {
+          formData.append('coverLetter', coverLetter.trim());
+        }
+        if (cvFileUrl.trim()) {
+          formData.append('cvFileUrl', cvFileUrl.trim());
+        }
+        formData.append('file', cvFile);
+        formData.append('cvFile', cvFile);
+
+        await jobPostingApi.applyPublic(job.id, formData);
+      } else {
+        await jobPostingApi.applyPublic(job.id, {
+          fullName: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          coverLetter: coverLetter.trim() || undefined,
+          cvFileUrl: cvFileUrl.trim() || undefined,
+        });
+      }
 
       setApplied(true);
+      setCvFile(null);
+      setAttachedFileName(null);
     } catch (err: any) {
       setSubmitError(
         err?.response?.data?.message ||

@@ -1,6 +1,8 @@
 package com.example.auth_service.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
@@ -22,6 +24,7 @@ public record RequisitionRequest(
 
         String jobTitle,
 
+        @NotNull(message = "Phòng ban không được để trống")
         Long departmentId,
 
         String department,

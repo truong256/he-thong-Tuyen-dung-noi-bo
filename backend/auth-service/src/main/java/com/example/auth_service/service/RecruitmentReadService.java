@@ -13,14 +13,35 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.net.URI;
+import com.example.auth_service.entity.CandidateApplication;
+
 @Service
 @Transactional(readOnly = true)
 public class RecruitmentReadService {
     private final CandidateApplicationRepository candidates;
     private final SalaryRangeRepository salaries;
-    public RecruitmentReadService(CandidateApplicationRepository candidates, SalaryRangeRepository salaries) {
+    private final CvStorageService cvStorageService;
+
+    @Autowired
+    public RecruitmentReadService(
+            CandidateApplicationRepository candidates,
+            SalaryRangeRepository salaries,
+            @Autowired(required = false) CvStorageService cvStorageService
+    ) {
         this.candidates = candidates;
         this.salaries = salaries;
+        this.cvStorageService = cvStorageService;
+    }
+
+    public RecruitmentReadService(CandidateApplicationRepository candidates, SalaryRangeRepository salaries) {
+        this(candidates, salaries, null);
     }
 
     @PreAuthorize("hasAnyAuthority('CANDIDATE_READ_ALL', 'CANDIDATE_READ_ASSIGNED', 'CANDIDATE_READ_OWN')")
@@ -106,5 +127,37 @@ public class RecruitmentReadService {
         app.setStageChangedById(actorId);
         app.setStageChangedAt(java.time.Instant.now());
         return CandidateSummaryDto.from(candidates.save(app));
+    }
+
+    @PreAuthorize("hasAnyAuthority('CANDIDATE_READ_ALL', 'CANDIDATE_READ_ASSIGNED', 'CANDIDATE_READ_OWN')")
+    public ResponseEntity<Resource> downloadCandidateCv(Long id) {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        var scope = CandidateScope.visibleTo(authentication);
+        CandidateApplication app = candidates.findOne(scope.and((root, query, cb) -> cb.equal(root.get("id"), id)))
+                .orElseThrow(() -> new AccessDeniedException("Bạn không có quyền xem CV của hồ sơ này."));
+
+        if (app.getStoredFileName() == null || app.getStoredFileName().isBlank()) {
+            if (app.getCvFileUrl() != null && app.getCvFileUrl().startsWith("http")) {
+                return ResponseEntity.status(HttpStatus.FOUND)
+                        .location(URI.create(app.getCvFileUrl()))
+                        .build();
+            }
+            throw new ResourceNotFoundException("Hồ sơ này không có tệp CV đính kèm.");
+        }
+
+        if (cvStorageService == null) {
+            throw new ResourceNotFoundException("Dịch vụ lưu trữ CV chưa sẵn sàng.");
+        }
+
+        Resource resource = cvStorageService.loadCvResource(app.getStoredFileName());
+        String contentType = cvStorageService.determineContentType(app.getStoredFileName());
+        String filename = app.getCvFileName() != null && !app.getCvFileName().isBlank()
+                ? app.getCvFileName()
+                : "candidate_cv.pdf";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\"")
+                .body(resource);
     }
 }

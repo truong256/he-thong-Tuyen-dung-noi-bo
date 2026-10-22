@@ -47,8 +47,8 @@ class RecruitmentRequisitionServiceTest {
     @Mock
     private UserRepository userRepository;
 
-        @Mock
-        private RequisitionApprovalWorkflowService approvalWorkflow;
+    @Mock
+    private RequisitionApprovalWorkflowService approvalWorkflow;
 
     @InjectMocks
     private RecruitmentRequisitionService service;

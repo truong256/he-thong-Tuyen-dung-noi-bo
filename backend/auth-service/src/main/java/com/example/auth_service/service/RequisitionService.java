@@ -272,6 +272,10 @@ public class RequisitionService {
     public RequisitionResponse createAndSubmit(CreateRequisitionRequest request) {
         User currentUser = getCurrentUser();
 
+        if (request.departmentId() == null) {
+            throw new BadRequestException("Phòng ban không được để trống");
+        }
+
         Department dept = departments.findById(request.departmentId())
                 .orElseThrow(() -> new BadRequestException("Phòng ban không tồn tại"));
         if (!dept.isActive()) {
@@ -282,6 +286,10 @@ public class RequisitionService {
                 .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
         if (!isHrOrAdmin && (dept.getManagerUserId() == null || !dept.getManagerUserId().equals(currentUser.getId()))) {
             throw new AccessDeniedException("Bạn không có quyền tạo yêu cầu tuyển dụng cho phòng ban này.");
+        }
+
+        if (request.jobTitleId() == null) {
+            throw new BadRequestException("Chức danh không được để trống");
         }
 
         JobTitle job = jobTitles.findById(request.jobTitleId())

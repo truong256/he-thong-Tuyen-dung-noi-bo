@@ -111,7 +111,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/competency-frameworks/**")
                         .hasAuthority("CATALOG_MANAGE")
                 .requestMatchers(HttpMethod.GET, "/api/salary-ranges", "/api/salary-ranges/{id}").hasAuthority("SALARY_READ")
-                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}")
+                .requestMatchers(HttpMethod.GET, "/api/candidates", "/api/candidates/{id}", "/api/candidates/{id}/cv")
                         .hasAnyAuthority("CANDIDATE_READ_ALL", "CANDIDATE_READ_ASSIGNED", "CANDIDATE_READ_OWN")
                 .requestMatchers(HttpMethod.PATCH, "/api/candidates/{id}/stage").hasAuthority("PIPELINE_MANAGE")
                 // S3-01: only HR managers can manage versioned approval configurations.

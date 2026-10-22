@@ -4,8 +4,13 @@ import apiClient from '../api/client';
 type Candidate = {
   id: number;
   requisitionId: number;
+  jobPostingId?: number;
   fullName: string;
   email: string;
+  phone?: string;
+  coverLetter?: string;
+  cvFileUrl?: string;
+  cvFileName?: string;
   stage: string;
 };
 
@@ -63,6 +68,23 @@ export default function RecruitmentCandidatesPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const downloadCv = async (c: Candidate) => {
+    if (!c.cvFileUrl) return;
+    if (c.cvFileUrl.startsWith('http')) {
+      window.open(c.cvFileUrl, '_blank');
+      return;
+    }
+    try {
+      const response = await apiClient.get(c.cvFileUrl, { responseType: 'blob' });
+      const mimeType = (response.headers['content-type'] as string) || 'application/pdf';
+      const blob = new Blob([response.data], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err: any) {
+      alert('Không thể mở CV: ' + (err?.response?.data?.message || err.message));
+    }
+  };
+
   const moveToInterview = async (candidate: Candidate) => {
     if (updatingId !== null) return;
 
@@ -99,6 +121,7 @@ export default function RecruitmentCandidatesPage() {
     !keyword ||
     c.fullName?.toLowerCase().includes(keyword) ||
     c.email?.toLowerCase().includes(keyword) ||
+    (c.phone && c.phone.includes(keyword)) ||
     String(c.requisitionId).includes(keyword)
   );
 
@@ -127,7 +150,7 @@ export default function RecruitmentCandidatesPage() {
           <strong style={{ fontSize: 26 }}>{total}</strong>
         </div>
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Tìm tên, email, mã yêu cầu..." aria-label="Tìm hồ sơ"
+          placeholder="Tìm tên, email, SĐT, mã yêu cầu..." aria-label="Tìm hồ sơ"
           style={{ flex: '1 1 240px', padding: 12, border: '1px solid #cbd5e1', borderRadius: 8 }} />
         <select value={stage} aria-label="Lọc giai đoạn"
           onChange={e => { setStage(e.target.value); setPage(0); }}
@@ -143,12 +166,13 @@ export default function RecruitmentCandidatesPage() {
       {actionMessage && <div role="status" style={{ padding: 14, marginBottom: 16, background: '#eff6ff', color: '#1d4ed8', borderRadius: 8 }}>{actionMessage}</div>}
 
       <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: 10 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 650 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 750 }}>
           <thead style={{ background: '#f8fafc' }}>
             <tr>
               <th style={cell}>Mã hồ sơ</th>
               <th style={cell}>Ứng viên</th>
-              <th style={cell}>Email</th>
+              <th style={cell}>Liên hệ</th>
+              <th style={cell}>CV đính kèm</th>
               <th style={cell}>Mã yêu cầu</th>
               <th style={cell}>Giai đoạn</th>
               <th style={cell}>Thao tác</th>
@@ -156,12 +180,45 @@ export default function RecruitmentCandidatesPage() {
           </thead>
           <tbody>
             {!loading && !error && filtered.length === 0 &&
-              <tr><td colSpan={5} style={{ ...cell, textAlign: 'center', color: '#64748b' }}>Không tìm thấy hồ sơ phù hợp.</td></tr>}
+              <tr><td colSpan={7} style={{ ...cell, textAlign: 'center', color: '#64748b' }}>Không tìm thấy hồ sơ phù hợp.</td></tr>}
             {filtered.map(c => (
               <tr key={c.id}>
                 <td style={cell}>HS-{c.id}</td>
-                <td style={cell}>{c.fullName}</td>
-                <td style={cell}>{c.email}</td>
+                <td style={cell}>
+                  <strong>{c.fullName}</strong>
+                  {c.coverLetter && (
+                    <div style={{ fontSize: 12, color: '#475569', marginTop: 4, maxWidth: 220, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={c.coverLetter}>
+                      Thư: {c.coverLetter}
+                    </div>
+                  )}
+                </td>
+                <td style={cell}>
+                  <div>{c.email}</div>
+                  {c.phone && <div style={{ fontSize: 13, color: '#64748b', marginTop: 2 }}>☎ {c.phone}</div>}
+                </td>
+                <td style={cell}>
+                  {c.cvFileUrl ? (
+                    <button
+                      type="button"
+                      onClick={() => void downloadCv(c)}
+                      title={c.cvFileName || 'Xem tệp CV'}
+                      style={{
+                        padding: '6px 10px',
+                        fontSize: 13,
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 6,
+                        background: '#f8fafc',
+                        color: '#1e40af',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      📎 {c.cvFileName ? (c.cvFileName.length > 18 ? c.cvFileName.slice(0, 15) + '...' : c.cvFileName) : 'Xem CV'}
+                    </button>
+                  ) : (
+                    <span style={{ color: '#94a3b8', fontSize: 13 }}>Không có</span>
+                  )}
+                </td>
                 <td style={cell}>{c.requisitionId ?? '—'}</td>
                 <td style={cell}>
                   <span style={{ padding: '5px 9px', background: '#eff6ff', color: '#1d4ed8', borderRadius: 20, whiteSpace: 'nowrap' }}>
@@ -191,7 +248,7 @@ export default function RecruitmentCandidatesPage() {
                 </td>
               </tr>
             ))}
-            {loading && <tr><td colSpan={6} style={{ ...cell, textAlign: 'center' }}>Đang tải hồ sơ...</td></tr>}
+            {loading && <tr><td colSpan={7} style={{ ...cell, textAlign: 'center' }}>Đang tải hồ sơ...</td></tr>}
           </tbody>
         </table>
       </div>

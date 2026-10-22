@@ -91,16 +91,44 @@ public class PublicJobPostingController {
      * S4-02 / SCRUM-166: Ứng viên nộp hồ sơ ứng tuyển.
      * Server chặn nộp hồ sơ khi tin đã hết hạn.
      */
-    @PostMapping("/{id}/apply")
+    @PostMapping(value = "/{id}/apply", consumes = org.springframework.http.MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PublicJobApplicationResponse> applyJob(
             @PathVariable Long id,
             @Valid @RequestBody PublicJobApplicationRequest request,
             Authentication authentication
     ) {
-        Long authenticatedUserId = null;
-        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
-            authenticatedUserId = principal.getId();
-        }
+        Long authenticatedUserId = getAuthenticatedUserId(authentication);
         return ResponseEntity.ok(jobPostingService.applyPublic(id, request, authenticatedUserId));
+    }
+
+    @PostMapping(value = "/{id}/apply", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<PublicJobApplicationResponse> applyJobMultipart(
+            @PathVariable Long id,
+            @RequestParam("fullName") String fullName,
+            @RequestParam("email") String email,
+            @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "coverLetter", required = false) String coverLetter,
+            @RequestParam(value = "cvFileUrl", required = false) String cvFileUrl,
+            @RequestPart(value = "file", required = false) org.springframework.web.multipart.MultipartFile file,
+            @RequestPart(value = "cvFile", required = false) org.springframework.web.multipart.MultipartFile cvFile,
+            Authentication authentication
+    ) {
+        Long authenticatedUserId = getAuthenticatedUserId(authentication);
+        org.springframework.web.multipart.MultipartFile actualFile = cvFile != null && !cvFile.isEmpty() ? cvFile : file;
+        PublicJobApplicationRequest request = PublicJobApplicationRequest.builder()
+                .fullName(fullName)
+                .email(email)
+                .phone(phone)
+                .coverLetter(coverLetter)
+                .cvFileUrl(cvFileUrl)
+                .build();
+        return ResponseEntity.ok(jobPostingService.applyPublic(id, request, actualFile, authenticatedUserId));
+    }
+
+    private Long getAuthenticatedUserId(Authentication authentication) {
+        if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal principal) {
+            return principal.getId();
+        }
+        return null;
     }
 }

@@ -115,10 +115,15 @@ export const jobPostingApi = {
     return response.data;
   },
 
-  applyPublic: async (id: number, payload: import('../types/jobPosting').PublicJobApplicationPayload): Promise<import('../types/jobPosting').PublicJobApplicationResult> => {
+  applyPublic: async (
+    id: number,
+    payload: import('../types/jobPosting').PublicJobApplicationPayload | FormData
+  ): Promise<import('../types/jobPosting').PublicJobApplicationResult> => {
+    const isFormData = typeof FormData !== 'undefined' && payload instanceof FormData;
     const response = await apiClient.post<import('../types/jobPosting').PublicJobApplicationResult>(
       `/api/public/job-postings/${id}/apply`,
-      payload
+      payload,
+      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined
     );
     return response.data;
   },

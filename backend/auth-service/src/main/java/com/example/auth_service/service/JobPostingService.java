@@ -28,6 +28,8 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import org.springframework.web.multipart.MultipartFile;
+
 @Service
 public class JobPostingService {
 
@@ -42,6 +44,7 @@ public class JobPostingService {
     private final RoleRepository roles;
     private final PasswordEncoder passwordEncoder;
     private final CandidateApplicationWithdrawalService withdrawalService;
+    private final CvStorageService cvStorageService;
 
     @Autowired
     public JobPostingService(
@@ -55,7 +58,8 @@ public class JobPostingService {
             @Autowired(required = false) CandidateApplicationRepository candidateApplications,
             @Autowired(required = false) RoleRepository roles,
             @Autowired(required = false) PasswordEncoder passwordEncoder,
-            @Autowired(required = false) CandidateApplicationWithdrawalService withdrawalService
+            @Autowired(required = false) CandidateApplicationWithdrawalService withdrawalService,
+            @Autowired(required = false) CvStorageService cvStorageService
     ) {
         this.jobPostings = jobPostings;
         this.auditLogs = auditLogs;
@@ -68,6 +72,7 @@ public class JobPostingService {
         this.roles = roles;
         this.passwordEncoder = passwordEncoder;
         this.withdrawalService = withdrawalService;
+        this.cvStorageService = cvStorageService;
     }
 
     public JobPostingService(
@@ -78,7 +83,7 @@ public class JobPostingService {
             JobTitleRepository jobTitles,
             UserRepository users
     ) {
-        this(jobPostings, auditLogs, requisitions, departments, jobTitles, users, null, null, null, null, null);
+        this(jobPostings, auditLogs, requisitions, departments, jobTitles, users, null, null, null, null, null, null);
     }
 
     /**
@@ -540,6 +545,16 @@ public class JobPostingService {
      */
     @Transactional
     public PublicJobApplicationResponse applyPublic(Long jobPostingId, PublicJobApplicationRequest req, Long authenticatedUserId) {
+        return applyPublic(jobPostingId, req, null, authenticatedUserId);
+    }
+
+    @Transactional
+    public PublicJobApplicationResponse applyPublic(
+            Long jobPostingId,
+            PublicJobApplicationRequest req,
+            MultipartFile cvFile,
+            Long authenticatedUserId
+    ) {
         if (req == null) {
             throw new BadRequestException("Thông tin ứng tuyển không được để trống.");
         }
@@ -572,10 +587,17 @@ public class JobPostingService {
             User user = users.findByEmail(normEmail).orElse(null);
             if (user != null) {
                 candidateUserId = user.getId();
+                if ((user.getPhone() == null || user.getPhone().isBlank()) && req.getPhone() != null && !req.getPhone().isBlank()) {
+                    user.setPhone(req.getPhone().trim());
+                    users.save(user);
+                }
             } else {
                 User newUser = new User();
                 newUser.setEmail(normEmail);
                 newUser.setFullName(req.getFullName().trim());
+                if (req.getPhone() != null && !req.getPhone().isBlank()) {
+                    newUser.setPhone(req.getPhone().trim());
+                }
                 if (passwordEncoder != null) {
                     newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
                 } else {
@@ -603,11 +625,33 @@ public class JobPostingService {
         app.setCandidateUserId(candidateUserId);
         app.setFullName(req.getFullName().trim());
         app.setEmail(req.getEmail().trim().toLowerCase());
+        app.setPhone(req.getPhone() != null && !req.getPhone().isBlank() ? req.getPhone().trim() : null);
+        app.setCoverLetter(req.getCoverLetter() != null && !req.getCoverLetter().isBlank() ? req.getCoverLetter().trim() : null);
+        app.setJobPostingId(posting.getId());
+        app.setAppliedAt(Instant.now());
         app.setStage("APPLIED");
+
+        // Xử lý tệp CV tải lên hoặc URL CV
+        if (cvFile != null && !cvFile.isEmpty()) {
+            if (cvStorageService != null) {
+                CvStorageService.StoredCv stored = cvStorageService.storeCv(cvFile);
+                app.setCvFileName(stored.originalFileName());
+                app.setStoredFileName(stored.storedFileName());
+            }
+        } else if (req.getCvFileUrl() != null && !req.getCvFileUrl().isBlank()) {
+            app.setCvFileUrl(req.getCvFileUrl().trim());
+            app.setCvFileName("Đường dẫn CV online");
+        }
 
         CandidateApplication savedApp;
         if (candidateApplications != null) {
             savedApp = candidateApplications.save(app);
+            // Sau khi có ID bản ghi, gán đường dẫn tải CV bảo mật nếu đã lưu file
+            if (savedApp.getStoredFileName() != null && (savedApp.getCvFileUrl() == null || savedApp.getCvFileUrl().isBlank())) {
+                savedApp.setCvFileUrl("/api/candidates/" + savedApp.getId() + "/cv");
+                savedApp = candidateApplications.save(savedApp);
+            }
+
             if (withdrawalService != null) {
                 try {
                     withdrawalService.sendApplicationConfirmationWithWithdrawLink(savedApp);
@@ -618,6 +662,9 @@ public class JobPostingService {
         } else {
             savedApp = app;
             savedApp.setId(101L);
+            if (savedApp.getStoredFileName() != null) {
+                savedApp.setCvFileUrl("/api/candidates/101/cv");
+            }
         }
 
         return PublicJobApplicationResponse.builder()
