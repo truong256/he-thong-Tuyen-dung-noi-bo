@@ -258,6 +258,9 @@ export const INITIAL_LOCATIONS: BranchLocation[] = [
 
 // Helper to safely access localStorage with fallback
 const getStoredData = <T>(key: string, defaultValue: T): T => {
+  if (import.meta.env.PROD) {
+    throw new Error('Chức năng này chưa có API lưu dữ liệu trên máy chủ.');
+  }
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return defaultValue;
@@ -276,12 +279,19 @@ const setStoredData = <T>(key: string, value: T): void => {
 };
 
 const normalizeProfileFromApi = (data: any): CompanyProfile => {
+  const defaults: CompanyProfile = import.meta.env.PROD ? {
+    companyName: '', shortName: '', legalName: '', taxCode: '', foundedDate: '', industry: '',
+    companySize: '', email: '', phone: '', website: '', address: '', city: '', country: '',
+    description: '', mission: '', vision: '', coreValues: [],
+    legalRepresentative: { name: '', title: '' },
+    workPolicy: { standardWorkingHours: '', workModel: '', probationPeriod: '', leaveDaysPerYear: 0, keyBenefits: [] },
+  } : INITIAL_COMPANY_PROFILE;
   let coreValues = data.coreValues;
   if (typeof coreValues === 'string') {
     try {
       coreValues = JSON.parse(coreValues);
     } catch {
-      coreValues = INITIAL_COMPANY_PROFILE.coreValues;
+      coreValues = defaults.coreValues;
     }
   }
   let legalRepresentative = data.legalRepresentative;
@@ -289,7 +299,7 @@ const normalizeProfileFromApi = (data: any): CompanyProfile => {
     try {
       legalRepresentative = JSON.parse(legalRepresentative);
     } catch {
-      legalRepresentative = INITIAL_COMPANY_PROFILE.legalRepresentative;
+      legalRepresentative = defaults.legalRepresentative;
     }
   }
   let workPolicy = data.workPolicy;
@@ -297,16 +307,16 @@ const normalizeProfileFromApi = (data: any): CompanyProfile => {
     try {
       workPolicy = JSON.parse(workPolicy);
     } catch {
-      workPolicy = INITIAL_COMPANY_PROFILE.workPolicy;
+      workPolicy = defaults.workPolicy;
     }
   }
 
   return {
-    ...INITIAL_COMPANY_PROFILE,
+    ...defaults,
     ...data,
-    coreValues: Array.isArray(coreValues) ? coreValues : INITIAL_COMPANY_PROFILE.coreValues,
-    legalRepresentative: legalRepresentative || INITIAL_COMPANY_PROFILE.legalRepresentative,
-    workPolicy: workPolicy || INITIAL_COMPANY_PROFILE.workPolicy,
+    coreValues: Array.isArray(coreValues) ? coreValues : defaults.coreValues,
+    legalRepresentative: legalRepresentative || defaults.legalRepresentative,
+    workPolicy: workPolicy || defaults.workPolicy,
     updatedAt: data.updatedAt ? String(data.updatedAt) : new Date().toISOString(),
   };
 };
@@ -356,7 +366,7 @@ export const organizationApi = {
   // --- Profile Methods ---
   getCompanyProfile: async (): Promise<CompanyProfile> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.get<any>('/api/organization/profile');
         if (res.data) {
@@ -372,9 +382,11 @@ export const organizationApi = {
   },
 
   updateCompanyProfile: async (payload: Partial<CompanyProfile>): Promise<CompanyProfile> => {
-    const current = getStoredData<CompanyProfile>(STORAGE_KEYS.PROFILE, INITIAL_COMPANY_PROFILE);
+    const current = import.meta.env.PROD
+      ? await organizationApi.getCompanyProfile()
+      : getStoredData<CompanyProfile>(STORAGE_KEYS.PROFILE, INITIAL_COMPANY_PROFILE);
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const payloadToSend = serializeProfileForApi({
           ...current,
@@ -404,7 +416,7 @@ export const organizationApi = {
   // --- Department Methods ---
   getDepartments: async (): Promise<Department[]> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.get<any[]>('/api/departments');
         if (res.data && Array.isArray(res.data)) {
@@ -472,7 +484,7 @@ export const organizationApi = {
     managerUserId: number;
   }): Promise<Department> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.post<any>('/api/departments', {
           name: payload.name.trim(),
@@ -529,7 +541,7 @@ export const organizationApi = {
     managerUserId: number;
   }): Promise<Department> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.put<any>(`/api/departments/${id}`, {
           name: payload.name.trim(),
@@ -573,7 +585,7 @@ export const organizationApi = {
 
   deleteDepartment: async (id: number): Promise<{ success: boolean; message: string }> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         await apiClient.delete(`/api/departments/${id}`);
         return { success: true, message: 'Đã xóa phòng ban thành công.' };
@@ -595,7 +607,7 @@ export const organizationApi = {
   toggleDepartmentStatus: async (id: number, currentActive?: boolean): Promise<Department> => {
     let nextActive: boolean;
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         if (currentActive !== undefined) {
           nextActive = !currentActive;
@@ -685,17 +697,17 @@ export const organizationApi = {
   // --- Statistics ---
   getOrgStatistics: async (): Promise<OrgStatistics> => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (token && !token.startsWith('mock-')) {
+    if (import.meta.env.PROD || (token && !token.startsWith('mock-'))) {
       try {
         const res = await apiClient.get<any>('/api/organization/statistics');
         if (res.data) {
-          const locs = getStoredData<BranchLocation[]>(STORAGE_KEYS.LOCATIONS, INITIAL_LOCATIONS);
+          const locs = import.meta.env.PROD ? null : getStoredData<BranchLocation[]>(STORAGE_KEYS.LOCATIONS, INITIAL_LOCATIONS);
           return {
             totalDepartments: Number(res.data.totalDepartments || 0),
             activeDepartments: Number(res.data.activeDepartments || 0),
             totalEmployees: Number(res.data.totalEmployees || 0),
-            totalLocations: locs.length,
-            headcountFulfillmentRate: Number(res.data.headcountFulfillmentRate || 94.2),
+            totalLocations: locs ? locs.length : Number(res.data.totalLocations || 0),
+            headcountFulfillmentRate: Number(res.data.headcountFulfillmentRate || 0),
             openRequisitionsCount: Number(res.data.openRequisitionsCount || 0),
           };
         }

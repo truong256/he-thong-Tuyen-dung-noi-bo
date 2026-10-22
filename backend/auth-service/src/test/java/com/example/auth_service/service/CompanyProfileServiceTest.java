@@ -50,16 +50,16 @@ class CompanyProfileServiceTest {
     }
 
     @Test
-    @DisplayName("getProfile creates default profile if none exists")
-    void testGetProfile_Empty_CreatesDefault() {
+    @DisplayName("getProfile returns an unconfigured state without writing in a read-only transaction")
+    void testGetProfile_Empty_DoesNotInventOrPersistCompanyData() {
         when(repository.findAll()).thenReturn(Collections.emptyList());
-        when(repository.save(any(CompanyProfile.class))).thenAnswer(inv -> inv.getArgument(0));
 
         CompanyProfile result = service.getProfile();
 
         assertThat(result).isNotNull();
-        assertThat(result.getCompanyName()).contains("ATS");
-        verify(repository).save(any(CompanyProfile.class));
+        assertThat(result.getCompanyName()).isEqualTo("Chưa cấu hình hồ sơ doanh nghiệp");
+        assertThat(result.getTaxCode()).isNull();
+        verify(repository, never()).save(any(CompanyProfile.class));
     }
 
     @Test

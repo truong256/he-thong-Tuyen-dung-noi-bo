@@ -15,6 +15,10 @@ import { isIdleExpired, clearActivity, recordActivity } from '../utils/idleTrack
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const url = config.url || '';
+    if (url.startsWith('/api/public/')) {
+      config.headers.delete('Authorization');
+      return config;
+    }
     const isPublicAuthRoute =
       url.includes('/api/auth/login') ||
       url.includes('/api/auth/register') ||
@@ -98,13 +102,14 @@ export const triggerIdleSessionExpired = () => {
 // Response interceptor to handle token refresh and session expiration
 apiClient.interceptors.response.use(
   (response) => {
-    recordActivity();
+    if (!response.config?.url?.startsWith('/api/public/')) recordActivity();
     return response;
   },
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const status = error.response?.status;
     const url = originalRequest?.url || '';
+    if (url.startsWith('/api/public/')) return Promise.reject(error);
 
     // Ignore public auth routes and logout from refresh or session-expired logic
     const isPublicAuthRoute =

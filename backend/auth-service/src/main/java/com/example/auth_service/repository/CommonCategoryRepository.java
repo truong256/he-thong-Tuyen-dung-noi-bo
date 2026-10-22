@@ -31,9 +31,9 @@ public interface CommonCategoryRepository extends JpaRepository<CommonCategory, 
            "(:type IS NULL OR :type = '' OR c.type = :type) AND " +
            "(:active IS NULL OR c.active = :active) AND " +
            "(:search IS NULL OR :search = '' OR " +
-           " LOWER(c.name) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(c.code) LIKE LOWER(CONCAT('%', :search, '%')) OR " +
-           " LOWER(c.type) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           " LOWER(c.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR " +
+           " LOWER(c.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR " +
+           " LOWER(c.type) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
            "ORDER BY c.type ASC, c.sortOrder ASC, c.name ASC")
     List<CommonCategory> searchCategories(
             @Param("search") String search,

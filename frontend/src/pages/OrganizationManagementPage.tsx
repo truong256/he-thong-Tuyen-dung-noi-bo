@@ -54,6 +54,7 @@ export const OrganizationManagementPage: React.FC = () => {
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [locations, setLocations] = useState<BranchLocation[]>([]);
+  const [locationsUnavailable, setLocationsUnavailable] = useState(false);
   const [statistics, setStatistics] = useState<OrgStatistics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -88,7 +89,13 @@ export const OrganizationManagementPage: React.FC = () => {
       const [profData, deptData, locData, statsData] = await Promise.all([
         organizationApi.getCompanyProfile(),
         organizationApi.getDepartments(),
-        organizationApi.getLocations(),
+        organizationApi.getLocations().then(data => {
+          setLocationsUnavailable(false);
+          return data;
+        }).catch(() => {
+          setLocationsUnavailable(true);
+          return [];
+        }),
         organizationApi.getOrgStatistics(),
       ]);
       setProfile(profData);
@@ -951,7 +958,7 @@ export const OrganizationManagementPage: React.FC = () => {
                     Quản lý các cơ sở làm việc, trụ sở chính và chi nhánh tuyển dụng của tổ chức
                   </p>
                 </div>
-                {canEdit && (
+                {canEdit && !locationsUnavailable && (
                   <button type="button" className="btn btn-primary" onClick={handleOpenAddLoc}>
                     <Plus size={16} />
                     <span>Thêm địa điểm mới</span>
@@ -959,6 +966,9 @@ export const OrganizationManagementPage: React.FC = () => {
                 )}
               </div>
 
+              {locationsUnavailable && (
+                <p role="status">Quản lý chi nhánh chưa có API lưu dữ liệu trên máy chủ.</p>
+              )}
               <div className="locations-grid">
                 {locations.map((loc) => (
                   <div
