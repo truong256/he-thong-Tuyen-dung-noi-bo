@@ -10,7 +10,7 @@ class ProductionSettingsTest {
             .withUserConfiguration(ProductionSettings.class);
 
     @Test void missingSecretsFailBeforeDatabaseStartup() {
-        runner.run(context -> assertThat(context).hasFailed());
+        runner.withPropertyValues("DB_URL=").run(context -> assertThat(context).hasFailed());
     }
 
     @Test void h2IsRejected() {
