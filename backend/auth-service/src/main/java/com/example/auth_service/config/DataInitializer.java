@@ -34,6 +34,10 @@ import com.example.auth_service.entity.RequisitionAssignment;
 import com.example.auth_service.repository.CandidateApplicationRepository;
 import com.example.auth_service.repository.CandidateApplicationWithdrawTokenRepository;
 import com.example.auth_service.repository.RequisitionAssignmentRepository;
+import com.example.auth_service.entity.RequisitionApprovalConfiguration;
+import com.example.auth_service.entity.RequisitionApprovalConfigurationStep;
+import com.example.auth_service.repository.RequisitionApprovalConfigurationRepository;
+import com.example.auth_service.repository.RequisitionApprovalConfigurationStepRepository;
 import java.time.LocalDate;
 import java.time.Instant;
 import java.util.Arrays;
@@ -59,6 +63,8 @@ public class DataInitializer {
                                       CandidateApplicationWithdrawTokenRepository tokenRepository,
                                       RequisitionAssignmentRepository assignmentRepository,
                                       JobPostingRepository jobPostingRepository,
+                                      RequisitionApprovalConfigurationRepository approvalConfigurationRepository,
+                                      RequisitionApprovalConfigurationStepRepository approvalConfigurationStepRepository,
                                       PasswordEncoder passwordEncoder,
                                       Environment env,
                                       org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
@@ -135,6 +141,9 @@ public class DataInitializer {
 
             if (!isTestProfile) {
                 User hmUser = userRepository.findByEmail("hiring_manager@company.com").orElse(null);
+                User hrUser = userRepository.findByEmail("hr_manager@company.com").orElse(null);
+                User approverUser = userRepository.findByEmail("approver@company.com").orElse(null);
+
                 if (hmUser != null) {
                     departmentRepository.findAll().stream()
                             .filter(d -> "DEV-BE".equalsIgnoreCase(d.getCode()))
@@ -145,6 +154,48 @@ public class DataInitializer {
                                     departmentRepository.save(d);
                                 }
                             });
+                }
+
+                // Seed active requisition approval configuration for departments if missing
+                if (hmUser != null && hrUser != null && approverUser != null) {
+                    for (Department dept : departmentRepository.findAll()) {
+                        if (approvalConfigurationRepository.findByDepartmentIdAndActiveTrue(dept.getId()).isEmpty()) {
+                            RequisitionApprovalConfiguration config = new RequisitionApprovalConfiguration();
+                            config.setDepartmentId(dept.getId());
+                            config.setVersion(1);
+                            config.setActive(true);
+                            config.setCreatedByUserId(hrUser.getId());
+                            config.setCreatedAt(Instant.now());
+                            config = approvalConfigurationRepository.save(config);
+
+                            Long step1ApproverId = (dept.getManagerUserId() != null
+                                    && !dept.getManagerUserId().equals(hrUser.getId())
+                                    && !dept.getManagerUserId().equals(approverUser.getId()))
+                                    ? dept.getManagerUserId()
+                                    : hmUser.getId();
+
+                            RequisitionApprovalConfigurationStep step1 = new RequisitionApprovalConfigurationStep();
+                            step1.setConfigurationId(config.getId());
+                            step1.setStepOrder(1);
+                            step1.setMinimumSalary(0L);
+                            step1.setApproverUserId(step1ApproverId);
+                            approvalConfigurationStepRepository.save(step1);
+
+                            RequisitionApprovalConfigurationStep step2 = new RequisitionApprovalConfigurationStep();
+                            step2.setConfigurationId(config.getId());
+                            step2.setStepOrder(2);
+                            step2.setMinimumSalary(0L);
+                            step2.setApproverUserId(hrUser.getId());
+                            approvalConfigurationStepRepository.save(step2);
+
+                            RequisitionApprovalConfigurationStep step3 = new RequisitionApprovalConfigurationStep();
+                            step3.setConfigurationId(config.getId());
+                            step3.setStepOrder(3);
+                            step3.setMinimumSalary(30_000_000L);
+                            step3.setApproverUserId(approverUser.getId());
+                            approvalConfigurationStepRepository.save(step3);
+                        }
+                    }
                 }
             }
 

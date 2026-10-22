@@ -97,6 +97,7 @@ export const RequisitionManagementPage: React.FC = () => {
 
   // Form validation errors & toast
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [showSalaryExplanationInput, setShowSalaryExplanationInput] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Detail Modal
@@ -335,6 +336,7 @@ export const RequisitionManagementPage: React.FC = () => {
     setJobDescription('');
     setRequirements('');
     setFormErrors({});
+    setShowSalaryExplanationInput(false);
     setIsModalOpen(true);
   };
 
@@ -356,6 +358,7 @@ export const RequisitionManagementPage: React.FC = () => {
     setJobDescription(req.jobDescription || '');
     setRequirements(req.requirements || req.candidateRequirements || '');
     setFormErrors({});
+    setShowSalaryExplanationInput(Boolean(req.salaryExplanation));
     setIsModalOpen(true);
   };
 
@@ -464,7 +467,8 @@ export const RequisitionManagementPage: React.FC = () => {
       loadData();
     } catch (err: any) {
       const msg = err.response?.data?.message || 'Có lỗi xảy ra khi lưu yêu cầu tuyển dụng.';
-      if (msg.includes('khung lương tiêu chuẩn') || msg.includes('khung chuẩn')) {
+      if (msg.includes('khung lương tiêu chuẩn') || msg.includes('khung chuẩn') || msg.includes('giải trình dải lương') || msg.includes('giải trình')) {
+        setShowSalaryExplanationInput(true);
         setFormErrors((prev) => ({
           ...prev,
           salaryExplanation: 'Dải lương đề xuất nằm ngoài khung lương tiêu chuẩn của chức danh. Vui lòng nhập lý do giải trình.',
@@ -1275,6 +1279,19 @@ export const RequisitionManagementPage: React.FC = () => {
 
               {formErrors.salary && <span className="req-error-text">{formErrors.salary}</span>}
 
+              {/* Tùy chọn mở ô giải trình lương nếu đề xuất ngoài khung */}
+              {!isOutOfSalaryRange && !showSalaryExplanationInput && !formErrors.salaryExplanation && !salaryExplanation && (
+                <div style={{ marginTop: '-4px', marginBottom: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSalaryExplanationInput(true)}
+                    style={{ fontSize: '0.8rem', color: '#2563eb', background: 'none', border: 'none', padding: 0, cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    + Thêm giải trình dải lương (nếu đề xuất ngoài khung tiêu chuẩn)
+                  </button>
+                </div>
+              )}
+
               {/* Ô Giải trình nhu cầu tuyển dụng - tách biệt với loại nhu cầu */}
               <div className="req-form-group">
                 <label className="req-label">
@@ -1290,7 +1307,7 @@ export const RequisitionManagementPage: React.FC = () => {
               </div>
 
               {/* Cảnh báo dải lương ngoài chuẩn & bắt buộc giải trình */}
-              {isOutOfSalaryRange && (
+              {(isOutOfSalaryRange || formErrors.salaryExplanation || showSalaryExplanationInput) && (
                 <div className="req-salary-warning">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600 }}>
                     <AlertTriangle size={18} />
@@ -1304,7 +1321,7 @@ export const RequisitionManagementPage: React.FC = () => {
                 </div>
               )}
 
-              {(isOutOfSalaryRange || editingReq?.salaryExplanation) && (
+              {(isOutOfSalaryRange || editingReq?.salaryExplanation || showSalaryExplanationInput || Boolean(formErrors.salaryExplanation) || Boolean(salaryExplanation)) && (
                 <div className="req-form-group">
                   <label className="req-label">
                     Giải trình dải lương ngoài chuẩn <span className="required">*</span>
