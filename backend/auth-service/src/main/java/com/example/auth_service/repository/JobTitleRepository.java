@@ -28,11 +28,11 @@ public interface JobTitleRepository extends JpaRepository<JobTitle, Long> {
     @Query("SELECT j FROM JobTitle j WHERE " +
            "(:active IS NULL OR j.active = :active) AND " +
            "(:departmentId IS NULL OR (j.department IS NOT NULL AND j.department.id = :departmentId)) AND " +
-           "(:level IS NULL OR UPPER(j.level) = UPPER(:level)) AND " +
-           "(:jobFamily IS NULL OR UPPER(j.jobFamily) = UPPER(:jobFamily)) AND " +
-           "(:search IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "   OR LOWER(j.code) LIKE LOWER(CONCAT('%', :search, '%')) " +
-           "   OR (j.department IS NOT NULL AND LOWER(j.department.name) LIKE LOWER(CONCAT('%', :search, '%'))))")
+           "(:level IS NULL OR UPPER(j.level) = UPPER(CAST(:level AS string))) AND " +
+           "(:jobFamily IS NULL OR UPPER(j.jobFamily) = UPPER(CAST(:jobFamily AS string))) AND " +
+           "(:search IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+           "   OR LOWER(j.code) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) " +
+           "   OR (j.department IS NOT NULL AND LOWER(j.department.name) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))))")
     List<JobTitle> searchJobTitles(
             @Param("search") String search,
             @Param("active") Boolean active,

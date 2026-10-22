@@ -47,6 +47,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(OutputCaptureExtension.class)
 @TestPropertySource(locations = "classpath:application-test.properties", properties = {
         "spring.datasource.url=jdbc:h2:mem:password-reset;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
+        "app.local-seed-enabled=true",
+        "SEED_ACCOUNT_PASSWORD=LocalTestOnly_Seed_9!abc",
         "app.frontend-url=https://ats.example.test",
         "spring.mail.host=127.0.0.1",
         "spring.mail.properties.mail.smtp.starttls.enable=false",
@@ -136,7 +138,7 @@ class PasswordResetIntegrationTest {
         assertThat(admin.getRoles().stream().map(r -> r.getName().name())).contains("ADMIN");
 
         // Verify admin can login with default seed password
-        String defaultSeedPassword = System.getenv().getOrDefault("SEED_ACCOUNT_PASSWORD", "Password123@");
+        String defaultSeedPassword = "LocalTestOnly_Seed_9!abc";
         String refreshToken = login("admin@company.com", defaultSeedPassword);
         assertThat(refreshToken).isNotBlank();
 

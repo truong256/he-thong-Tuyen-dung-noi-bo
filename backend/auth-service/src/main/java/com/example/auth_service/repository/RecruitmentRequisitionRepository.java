@@ -69,10 +69,10 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
     @Query("""
         SELECT r FROM RecruitmentRequisition r
         WHERE (:createdByUserId IS NULL OR r.createdByUserId = :createdByUserId)
-          AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+          AND (:status IS NULL OR UPPER(r.status) = UPPER(CAST(:status AS string)))
           AND (:departmentId IS NULL OR r.departmentId = :departmentId)
-          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))
         ORDER BY r.createdAt DESC
         """)
     Page<RecruitmentRequisition> search(
@@ -89,10 +89,10 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
                OR (r.createdByUserId = :userId)
                OR (r.id IN :assignedIds)
                OR (r.departmentId IN :managedDepartmentIds))
-          AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+          AND (:status IS NULL OR UPPER(r.status) = UPPER(CAST(:status AS string)))
           AND (:departmentId IS NULL OR r.departmentId = :departmentId)
-          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))
+               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))
         ORDER BY r.createdAt DESC
         """)
     Page<RecruitmentRequisition> searchScoped(
@@ -112,11 +112,11 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
 
         @Query("""
                 SELECT r FROM RecruitmentRequisition r
-                WHERE (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :search, '%')))
+                WHERE (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
                     AND (:departmentId IS NULL OR r.departmentId = :departmentId)
                     AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
-                    AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+                    AND (:status IS NULL OR UPPER(r.status) = UPPER(CAST(:status AS string)))
                 ORDER BY r.createdAt DESC
                 """)
         Page<RecruitmentRequisition> findAllWithFilters(
@@ -130,11 +130,11 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
         @Query("""
                 SELECT r FROM RecruitmentRequisition r
                 WHERE r.createdByUserId = :createdByUserId
-                    AND (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :search, '%')))
+                    AND (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
                     AND (:departmentId IS NULL OR r.departmentId = :departmentId)
                     AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
-                    AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+                    AND (:status IS NULL OR UPPER(r.status) = UPPER(CAST(:status AS string)))
                 ORDER BY r.createdAt DESC
                 """)
         Page<RecruitmentRequisition> findScopedCreatedByWithFilters(
@@ -149,11 +149,11 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
         @Query("""
                 SELECT r FROM RecruitmentRequisition r
                 WHERE (r.departmentId IN :managedDepartmentIds OR r.createdByUserId = :createdByUserId)
-                    AND (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))
-                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :search, '%')))
+                    AND (:search IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+                             OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
                     AND (:departmentId IS NULL OR r.departmentId = :departmentId)
                     AND (:jobTitleId IS NULL OR r.jobTitleId = :jobTitleId)
-                    AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+                    AND (:status IS NULL OR UPPER(r.status) = UPPER(CAST(:status AS string)))
                 ORDER BY r.createdAt DESC
                 """)
         Page<RecruitmentRequisition> findScopedWithFilters(

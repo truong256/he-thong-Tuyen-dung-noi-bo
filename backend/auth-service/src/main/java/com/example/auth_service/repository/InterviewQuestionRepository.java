@@ -16,12 +16,12 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
         JOIN c.competencyFramework f
         LEFT JOIN f.jobTitles j
         WHERE (:search IS NULL
-            OR LOWER(q.questionText) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(q.category) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(c.criterionCode) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(c.criterionName) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(f.competencyName) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')))
+            OR LOWER(q.questionText) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(q.category) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(c.criterionCode) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(c.criterionName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(f.competencyName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(j.title) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
         AND (:difficultyLevel IS NULL OR q.difficultyLevel = :difficultyLevel)
         AND (:jobTitleId IS NULL OR j.id = :jobTitleId)
         AND (:criterionId IS NULL OR c.id = :criterionId)
@@ -35,10 +35,10 @@ public interface InterviewQuestionRepository extends JpaRepository<InterviewQues
         JOIN c.competencyFramework f
         LEFT JOIN f.jobTitles j
         WHERE (:search IS NULL
-            OR LOWER(q.questionText) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(q.category) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(c.criterionName) LIKE LOWER(CONCAT('%', :search, '%'))
-            OR LOWER(f.competencyName) LIKE LOWER(CONCAT('%', :search, '%')))
+            OR LOWER(q.questionText) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(q.category) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(c.criterionName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))
+            OR LOWER(f.competencyName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')))
         AND (:difficultyLevel IS NULL OR q.difficultyLevel = :difficultyLevel)
         AND (:jobTitleId IS NULL OR j.id = :jobTitleId)
         AND (:criterionId IS NULL OR c.id = :criterionId)
