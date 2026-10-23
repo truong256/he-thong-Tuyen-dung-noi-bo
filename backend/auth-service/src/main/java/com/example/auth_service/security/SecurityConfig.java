@@ -135,9 +135,15 @@ public class SecurityConfig {
                         "/api/requisitions/{id}/cancel")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.DELETE, "/api/requisitions/{id}")
+ feature/scrum-128-129-clone-recruitment-request
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL")
+                .requestMatchers(HttpMethod.POST, "/api/recruitment-requests", "/api/recruitment-requests/{id}/clone")
+                        .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL")
+
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/recruitment-requests", "/api/recruitment-requests/{id}/clone")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
+dev
                 .requestMatchers(HttpMethod.PUT, "/api/recruitment-requests/{id}")
                         .hasAnyAuthority("REQUISITION_CREATE", "REQUISITION_READ_OWN", "REQUISITION_READ_ALL", "ROLE_ADMIN", "ROLE_HR_MANAGER")
                 .requestMatchers(HttpMethod.POST, "/api/recruitment-requests/{id}/submit")

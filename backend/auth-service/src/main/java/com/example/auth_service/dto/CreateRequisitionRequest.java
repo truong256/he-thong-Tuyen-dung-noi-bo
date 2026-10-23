@@ -40,11 +40,11 @@ public class CreateRequisitionRequest {
     private String reason;
 
     @PositiveOrZero(message = "Lương tối thiểu không được âm")
-    @JsonAlias({"proposedMinSalary", "salaryMin"})
+    @JsonAlias({"proposedMinSalary", "salaryMin", "minSalary"})
     private Long salaryMin;
 
     @PositiveOrZero(message = "Lương tối đa không được âm")
-    @JsonAlias({"proposedMaxSalary", "salaryMax"})
+    @JsonAlias({"proposedMaxSalary", "salaryMax", "maxSalary"})
     private Long salaryMax;
 
     private String currency;
@@ -109,25 +109,37 @@ public class CreateRequisitionRequest {
     }
 
     public void setTargetDate(LocalDate targetDate) {
-        if (this.neededDate == null) {
+        if (targetDate != null) {
             this.neededDate = targetDate;
         }
     }
 
     public void setRequirements(String requirements) {
-        if (this.candidateRequirements == null) {
+        if (requirements != null && !requirements.isBlank()) {
             this.candidateRequirements = requirements;
         }
     }
 
     public void setProposedMinSalary(Long min) {
-        if (this.salaryMin == null) {
+        if (min != null) {
             this.salaryMin = min;
         }
     }
 
     public void setProposedMaxSalary(Long max) {
-        if (this.salaryMax == null) {
+        if (max != null) {
+            this.salaryMax = max;
+        }
+    }
+
+    public void setMinSalary(Long min) {
+        if (min != null) {
+            this.salaryMin = min;
+        }
+    }
+
+    public void setMaxSalary(Long max) {
+        if (max != null) {
             this.salaryMax = max;
         }
     }

@@ -101,8 +101,13 @@ public class RequisitionService {
             }
             boolean isHrOrAdmin = currentUser.getRoles().stream()
                     .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
-            if (!isHrOrAdmin && (dept.getManagerUserId() == null || !dept.getManagerUserId().equals(currentUser.getId()))) {
-                throw new AccessDeniedException("Bạn không có quyền tạo yêu cầu tuyển dụng cho phòng ban này.");
+            if (!isHrOrAdmin) {
+                if (dept.getManagerUserId() == null) {
+                    throw new BadRequestException("Phòng ban \"" + dept.getName() + "\" chưa được gán Trưởng bộ phận (Manager). Vui lòng liên hệ Admin/HR để chỉ định Trưởng bộ phận.");
+                }
+                if (!dept.getManagerUserId().equals(currentUser.getId())) {
+                    throw new AccessDeniedException("Chỉ Trưởng bộ phận phụ trách phòng ban \"" + dept.getName() + "\" hoặc HR/Admin mới có quyền tạo yêu cầu tuyển dụng.");
+                }
             }
         }
 
@@ -145,13 +150,16 @@ public class RequisitionService {
         requisition.setRecruitmentType(request.recruitmentType());
         requisition.setReason(request.reason());
         requisition.setSalaryMin(request.salaryMin());
+        requisition.setProposedMinSalary(request.salaryMin());
         requisition.setSalaryMax(request.salaryMax());
+        requisition.setProposedMaxSalary(request.salaryMax());
         requisition.setCurrency(request.currency() != null ? request.currency() : "VND");
         requisition.setSalaryExplanation(request.salaryExplanation());
         requisition.setNeededDate(request.neededDate());
         requisition.setTargetDate(request.neededDate());
         requisition.setJobDescription(request.jobDescription());
         requisition.setCandidateRequirements(request.candidateRequirements());
+        requisition.setRequirements(request.candidateRequirements());
         requisition.setBenefits(request.benefits());
         requisition.setWorkLocation(request.workLocation());
         requisition.setWorkingModel(request.workingModel() != null ? request.workingModel() : "ONSITE");
@@ -180,16 +188,29 @@ public class RequisitionService {
         boolean isOwner = requisition.getCreatedByUserId() != null && requisition.getCreatedByUserId().equals(currentUser.getId());
         boolean hasManageAll = currentUser.getRoles().stream()
                 .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
+        Department currentDept = requisition.getDepartmentId() != null
+                ? departments.findById(requisition.getDepartmentId()).orElse(null)
+                : null;
+        boolean isDeptManager = currentDept != null && currentDept.getManagerUserId() != null
+                && currentDept.getManagerUserId().equals(currentUser.getId());
 
-        if (!isOwner && !hasManageAll) {
-            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa bản nháp này");
+        if (!isOwner && !hasManageAll && !isDeptManager) {
+            throw new AccessDeniedException("Bạn không có quyền chỉnh sửa bản nháp này.");
         }
 
-        if (request.departmentId() != null) {
+        if (request.departmentId() != null && !request.departmentId().equals(requisition.getDepartmentId())) {
             Department dept = departments.findById(request.departmentId())
                     .orElseThrow(() -> new BadRequestException("Phòng ban không tồn tại"));
             if (!dept.isActive()) {
                 throw new BadRequestException("Phòng ban đã ngừng áp dụng");
+            }
+            if (!hasManageAll) {
+                if (dept.getManagerUserId() == null) {
+                    throw new BadRequestException("Phòng ban \"" + dept.getName() + "\" chưa được gán Trưởng bộ phận (Manager).");
+                }
+                if (!dept.getManagerUserId().equals(currentUser.getId())) {
+                    throw new AccessDeniedException("Chỉ Trưởng bộ phận phụ trách phòng ban \"" + dept.getName() + "\" mới có quyền chuyển yêu cầu sang phòng ban này.");
+                }
             }
             requisition.setDepartmentId(request.departmentId());
         }
@@ -217,9 +238,11 @@ public class RequisitionService {
         }
         if (request.salaryMin() != null) {
             requisition.setSalaryMin(request.salaryMin());
+            requisition.setProposedMinSalary(request.salaryMin());
         }
         if (request.salaryMax() != null) {
             requisition.setSalaryMax(request.salaryMax());
+            requisition.setProposedMaxSalary(request.salaryMax());
         }
         if (request.currency() != null) {
             requisition.setCurrency(request.currency());
@@ -236,6 +259,7 @@ public class RequisitionService {
         }
         if (request.candidateRequirements() != null) {
             requisition.setCandidateRequirements(request.candidateRequirements());
+            requisition.setRequirements(request.candidateRequirements());
         }
         if (request.benefits() != null) {
             requisition.setBenefits(request.benefits());
@@ -247,16 +271,18 @@ public class RequisitionService {
             requisition.setWorkingModel(request.workingModel());
         }
 
-        if ((requisition.getSalaryMin() != null && requisition.getSalaryMin() < 0) ||
-            (requisition.getSalaryMax() != null && requisition.getSalaryMax() < 0)) {
+        Long salMinCheck = requisition.getSalaryMin() != null ? requisition.getSalaryMin() : requisition.getProposedMinSalary();
+        Long salMaxCheck = requisition.getSalaryMax() != null ? requisition.getSalaryMax() : requisition.getProposedMaxSalary();
+        if ((salMinCheck != null && salMinCheck < 0) || (salMaxCheck != null && salMaxCheck < 0)) {
             throw new BadRequestException("Mức lương không được là số âm");
         }
 
-        if (requisition.getSalaryMin() != null && requisition.getSalaryMax() != null && requisition.getSalaryMin() > requisition.getSalaryMax()) {
+        if (salMinCheck != null && salMaxCheck != null && salMinCheck > salMaxCheck) {
             throw new BadRequestException("Lương tối đa phải lớn hơn hoặc bằng lương tối thiểu");
         }
 
-        if (requisition.getNeededDate() != null && requisition.getNeededDate().isBefore(LocalDate.now())) {
+        LocalDate nDate = requisition.getNeededDate() != null ? requisition.getNeededDate() : requisition.getTargetDate();
+        if (nDate != null && nDate.isBefore(LocalDate.now())) {
             throw new BadRequestException("Ngày cần người không được ở trong quá khứ");
         }
 
@@ -280,8 +306,13 @@ public class RequisitionService {
 
         boolean isHrOrAdmin = currentUser.getRoles().stream()
                 .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
-        if (!isHrOrAdmin && (dept.getManagerUserId() == null || !dept.getManagerUserId().equals(currentUser.getId()))) {
-            throw new AccessDeniedException("Bạn không có quyền tạo yêu cầu tuyển dụng cho phòng ban này.");
+        if (!isHrOrAdmin) {
+            if (dept.getManagerUserId() == null) {
+                throw new BadRequestException("Phòng ban \"" + dept.getName() + "\" chưa được gán Trưởng bộ phận (Manager). Vui lòng liên hệ Admin/HR để chỉ định Trưởng bộ phận.");
+            }
+            if (!dept.getManagerUserId().equals(currentUser.getId())) {
+                throw new AccessDeniedException("Chỉ Trưởng bộ phận phụ trách phòng ban \"" + dept.getName() + "\" hoặc HR/Admin mới có quyền tạo và gửi yêu cầu tuyển dụng.");
+            }
         }
 
         JobTitle job = jobTitles.findById(request.jobTitleId())
@@ -314,6 +345,15 @@ public class RequisitionService {
             throw new BadRequestException("Ngày cần người không được ở quá khứ.");
         }
 
+ feature/scrum-128-129-clone-recruitment-request
+        Long salMin = request.salaryMin();
+        Long salMax = request.salaryMax();
+        if ((salMin != null && salMin < 0) || (salMax != null && salMax < 0)) {
+            throw new BadRequestException("Mức lương không được là số âm");
+        }
+
+        if (salMin != null && salMax != null && salMin > salMax) {
+
         if (request.salaryMin() == null || request.salaryMax() == null) {
             throw new BadRequestException("Dải lương đề xuất không được để trống khi gửi yêu cầu tuyển dụng");
         }
@@ -323,6 +363,7 @@ public class RequisitionService {
         }
 
         if (request.salaryMin() > request.salaryMax()) {
+ dev
             throw new BadRequestException("Lương tối đa phải lớn hơn hoặc bằng lương tối thiểu");
         }
 
@@ -335,7 +376,7 @@ public class RequisitionService {
         }
 
         // Kiểm tra khung lương tiêu chuẩn của chức danh
-        validateSalaryAgainstJobTitle(job, request.salaryMin(), request.salaryMax(), request.salaryExplanation());
+        validateSalaryAgainstJobTitle(job, salMin, salMax, request.salaryExplanation());
 
         RecruitmentRequisition requisition = new RecruitmentRequisition();
         requisition.setRequisitionCode(generateRequisitionCode());
@@ -345,14 +386,17 @@ public class RequisitionService {
         requisition.setQuantity(request.quantity());
         requisition.setRecruitmentType(request.recruitmentType());
         requisition.setReason(request.reason());
-        requisition.setSalaryMin(request.salaryMin());
-        requisition.setSalaryMax(request.salaryMax());
+        requisition.setSalaryMin(salMin);
+        requisition.setProposedMinSalary(salMin);
+        requisition.setSalaryMax(salMax);
+        requisition.setProposedMaxSalary(salMax);
         requisition.setCurrency(request.currency() != null ? request.currency() : "VND");
         requisition.setSalaryExplanation(request.salaryExplanation());
         requisition.setNeededDate(request.neededDate());
         requisition.setTargetDate(request.neededDate());
         requisition.setJobDescription(request.jobDescription());
         requisition.setCandidateRequirements(request.candidateRequirements());
+        requisition.setRequirements(request.candidateRequirements());
         requisition.setBenefits(request.benefits());
         requisition.setWorkLocation(request.workLocation());
         requisition.setWorkingModel(request.workingModel() != null ? request.workingModel() : "ONSITE");
@@ -390,20 +434,28 @@ public class RequisitionService {
         boolean isOwner = req.getCreatedByUserId() != null && req.getCreatedByUserId().equals(currentUser.getId());
         boolean hasManageAll = currentUser.getRoles().stream()
                 .anyMatch(r -> r.getName() == RoleName.HR_MANAGER || r.getName() == RoleName.ADMIN);
+        Department dept = req.getDepartmentId() != null
+                ? departments.findById(req.getDepartmentId()).orElse(null)
+                : null;
+        boolean isDeptManager = dept != null && dept.getManagerUserId() != null
+                && dept.getManagerUserId().equals(currentUser.getId());
 
-        if (!isOwner && !hasManageAll) {
-            throw new AccessDeniedException("Bạn không có quyền gửi phê duyệt bản nháp này");
+        if (!isOwner && !hasManageAll && !isDeptManager) {
+            throw new AccessDeniedException("Bạn không có quyền gửi phê duyệt bản nháp này.");
         }
 
-        // Kiểm tra tính đầy đủ
+        // Kiểm tra tiêu đề chính thức
         if (req.getTitle() == null || req.getTitle().trim().isEmpty() || req.getTitle().startsWith("Bản nháp - ")) {
-            throw new BadRequestException("Vui lòng nhập tiêu đề yêu cầu tuyển dụng trước khi gửi phê duyệt");
+            throw new BadRequestException("Vui lòng nhập tiêu đề yêu cầu tuyển dụng chính thức trước khi gửi.");
         }
+
+        // Kiểm tra phòng ban
         if (req.getDepartmentId() == null) {
             throw new BadRequestException("Vui lòng chọn phòng ban trước khi gửi phê duyệt");
         }
-        Department dept = departments.findById(req.getDepartmentId())
-                .orElseThrow(() -> new BadRequestException("Phòng ban không tồn tại"));
+        if (dept == null) {
+            throw new BadRequestException("Phòng ban không tồn tại");
+        }
         if (!dept.isActive()) {
             throw new BadRequestException("Phòng ban đã ngừng áp dụng");
         }
@@ -411,6 +463,7 @@ public class RequisitionService {
             throw new AccessDeniedException("Bạn không có quyền tạo hoặc gửi yêu cầu tuyển dụng cho phòng ban này.");
         }
 
+        // Kiểm tra chức danh
         if (req.getJobTitleId() == null) {
             throw new BadRequestException("Vui lòng chọn chức danh trước khi gửi phê duyệt");
         }
@@ -423,24 +476,54 @@ public class RequisitionService {
         if (req.getQuantity() < 1) {
             throw new BadRequestException("Số lượng tuyển dụng phải lớn hơn 0");
         }
+
+        // Loại và Lý do tuyển dụng với fallback
         if (req.getRecruitmentType() == null || req.getRecruitmentType().isBlank()) {
-            throw new BadRequestException("Vui lòng chọn loại tuyển dụng (Tuyển mới hoặc Tuyển thay thế)");
+            if (req.getReason() != null && !req.getReason().isBlank()) {
+                req.setRecruitmentType(req.getReason());
+            } else {
+                req.setRecruitmentType("NEW");
+            }
         }
         if (req.getReason() == null || req.getReason().isBlank()) {
-            throw new BadRequestException("Vui lòng nhập lý do tuyển dụng");
+            if (req.getRecruitmentType() != null && !req.getRecruitmentType().isBlank()) {
+                req.setReason(req.getRecruitmentType());
+            } else {
+                req.setReason("Tăng mới theo kế hoạch định biên");
+            }
         }
-        if (req.getNeededDate() == null) {
-            throw new BadRequestException("Vui lòng chọn ngày cần người");
+
+        LocalDate neededDate = req.getNeededDate() != null ? req.getNeededDate() : req.getTargetDate();
+        if (neededDate == null) {
+            throw new BadRequestException("Vui lòng chọn ngày cần nhân sự đi làm");
         }
-        if (req.getNeededDate().isBefore(LocalDate.now())) {
-            throw new BadRequestException("Ngày cần người không được ở trong quá khứ");
+        if (neededDate.isBefore(LocalDate.now())) {
+            throw new BadRequestException("Ngày cần nhân sự đi làm không được ở trong quá khứ");
         }
+        req.setNeededDate(neededDate);
+        req.setTargetDate(neededDate);
+
         if (req.getJobDescription() == null || req.getJobDescription().isBlank()) {
-            throw new BadRequestException("Vui lòng nhập mô tả công việc");
+            throw new BadRequestException("Vui lòng nhập mô tả công việc trước khi gửi phê duyệt");
         }
-        if (req.getCandidateRequirements() == null || req.getCandidateRequirements().isBlank()) {
-            throw new BadRequestException("Vui lòng nhập yêu cầu ứng viên");
+
+        String candidateReqs = (req.getCandidateRequirements() != null && !req.getCandidateRequirements().isBlank())
+                ? req.getCandidateRequirements()
+                : req.getRequirements();
+        if (candidateReqs == null || candidateReqs.isBlank()) {
+            throw new BadRequestException("Vui lòng nhập yêu cầu ứng viên trước khi gửi phê duyệt");
         }
+        req.setCandidateRequirements(candidateReqs);
+        req.setRequirements(candidateReqs);
+
+ feature/scrum-128-129-clone-recruitment-request
+        Long salMin = req.getSalaryMin() != null ? req.getSalaryMin() : req.getProposedMinSalary();
+        Long salMax = req.getSalaryMax() != null ? req.getSalaryMax() : req.getProposedMaxSalary();
+        if ((salMin != null && salMin < 0) || (salMax != null && salMax < 0)) {
+            throw new BadRequestException("Mức lương không được là số âm");
+        }
+
+        if (salMin != null && salMax != null && salMin > salMax) {
 
         if (req.getSalaryMin() == null || req.getSalaryMax() == null) {
             throw new BadRequestException("Dải lương đề xuất không được để trống khi gửi phê duyệt");
@@ -451,11 +534,16 @@ public class RequisitionService {
         }
 
         if (req.getSalaryMin() > req.getSalaryMax()) {
+dev
             throw new BadRequestException("Lương tối đa phải lớn hơn hoặc bằng lương tối thiểu");
         }
+        req.setSalaryMin(salMin);
+        req.setProposedMinSalary(salMin);
+        req.setSalaryMax(salMax);
+        req.setProposedMaxSalary(salMax);
 
         // Kiểm tra khung lương chức danh
-        validateSalaryAgainstJobTitle(job, req.getSalaryMin(), req.getSalaryMax(), req.getSalaryExplanation());
+        validateSalaryAgainstJobTitle(job, salMin, salMax, req.getSalaryExplanation());
 
         req.setStatus("PENDING_APPROVAL");
         req.setSubmittedAt(Instant.now());
@@ -470,6 +558,14 @@ public class RequisitionService {
             }
         }
         return toResponse(saved);
+    }
+
+    /**
+     * Cập nhật thông tin bản nháp và nộp phê duyệt ngay.
+     */
+    public RequisitionResponse updateAndSubmit(Long id, CreateRequisitionRequest request) {
+        updateDraft(id, request.toDraftRequest());
+        return submitDraft(id);
     }
 
     /**
@@ -953,8 +1049,11 @@ public class RequisitionService {
         String reqs = (req.getCandidateRequirements() != null && !req.getCandidateRequirements().isBlank())
                 ? req.getCandidateRequirements()
                 : req.getRequirements();
+ feature/scrum-128-129-clone-recruitment-request
+
         LocalDate neededDate = req.getNeededDate() != null ? req.getNeededDate() : req.getTargetDate();
         LocalDate targetDate = req.getTargetDate() != null ? req.getTargetDate() : req.getNeededDate();
+ dev
 
         return new RequisitionResponse(
                 req.getId(),

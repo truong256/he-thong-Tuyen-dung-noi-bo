@@ -311,7 +311,11 @@ class RecruitmentRequisitionIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Long sourceId = mapper.readTree(createContent).get("id").asLong();
+ feature/scrum-128-129-clone-recruitment-request
+        String sourceCode = mapper.readTree(createContent).get("requisitionCode").asText();
+
         String sourceCode = mapper.readTree(createContent).get("requisitionCode").asString();
+ dev
 
         // 2. Thực hiện gọi API clone
         String cloneContent = mvc.perform(post("/api/recruitment-requests/" + sourceId + "/clone")
@@ -326,12 +330,20 @@ class RecruitmentRequisitionIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Long clonedId = mapper.readTree(cloneContent).get("id").asLong();
+ feature/scrum-128-129-clone-recruitment-request
+        String clonedCode = mapper.readTree(cloneContent).get("requisitionCode").asText();
+
         String clonedCode = mapper.readTree(cloneContent).get("requisitionCode").asString();
+ dev
 
         // ID và mã bản sao phải khác bản gốc
         org.junit.jupiter.api.Assertions.assertNotEquals(sourceId, clonedId);
         org.junit.jupiter.api.Assertions.assertNotEquals(sourceCode, clonedCode);
     }
+feature/scrum-128-129-clone-recruitment-request
+
+
+ dev
     private User createUser(String emailPrefix, RoleName roleName) {
         User user = new User(emailPrefix + "@test.local", "password123");
         user.setFullName("User " + emailPrefix);

@@ -625,10 +625,18 @@ public class RecruitmentRequisitionService {
         String reqs = (req.getCandidateRequirements() != null && !req.getCandidateRequirements().isBlank())
                 ? req.getCandidateRequirements()
                 : req.getRequirements();
+ feature/scrum-128-129-clone-recruitment-request
+
+        boolean outside = isSalaryOutsideRange(jt, minSalary, maxSalary);
+
+        // Dùng canonical constructor đầy đủ để đảm bảo map đúng
+        // neededDate, targetDate, benefits, workLocation, workingModel
+
         LocalDate neededDate = req.getNeededDate() != null ? req.getNeededDate() : req.getTargetDate();
         LocalDate targetDate = req.getTargetDate() != null ? req.getTargetDate() : req.getNeededDate();
         boolean outside = isSalaryOutsideRange(jt, minSalary, maxSalary);
 
+ dev
         return new RequisitionResponse(
                 req.getId(),
                 req.getRequisitionCode(),
@@ -638,11 +646,21 @@ public class RecruitmentRequisitionService {
                 dept != null ? dept.getCode() : null,
                 req.getJobTitleId(),
                 jt != null ? jt.getTitle() : null,
-                jt != null ? jt.getCode() : null,
-                jt != null ? jt.getMinSalary() : null,
-                jt != null ? jt.getMaxSalary() : null,
                 req.getQuantity(),
                 req.getRecruitmentType(),
+ feature/scrum-128-129-clone-recruitment-request
+                minSalary,
+                maxSalary,
+                req.getCurrency() != null ? req.getCurrency() : "VND",
+                req.getSalaryExplanation(),
+                req.getNeededDate() != null ? req.getNeededDate() : req.getTargetDate(),
+                req.getTargetDate() != null ? req.getTargetDate() : req.getNeededDate(),
+                req.getJobDescription(),
+                reqs,
+                req.getBenefits(),
+                req.getWorkLocation(),
+                req.getWorkingModel(),
+
                 req.getReason(),
                 minSalary,
                 maxSalary,
@@ -652,12 +670,22 @@ public class RecruitmentRequisitionService {
                 outside,
                 req.getJobDescription(),
                 reqs,
+ dev
                 req.getStatus(),
+                req.getReason(),
+                req.getRejectionReason(),
                 req.getCreatedByUserId(),
                 creator != null ? creator.getFullName() : null,
-                creator != null ? creator.getEmail() : null,
+                req.getSubmittedAt(),
+                req.getApprovedByUserId(),
+                req.getApprovedAt(),
                 req.getCreatedAt(),
-                req.getUpdatedAt()
+                req.getUpdatedAt(),
+                jt != null ? jt.getCode() : null,
+                jt != null ? jt.getMinSalary() : null,
+                jt != null ? jt.getMaxSalary() : null,
+                outside,
+                creator != null ? creator.getEmail() : null
         );
     }
 }

@@ -48,7 +48,11 @@ public class RequisitionController {
 
     /**
      * API cập nhật và gửi phê duyệt yêu cầu tuyển dụng.
+ feature/scrum-128-129-clone-recruitment-request
+     * Hỗ trợ lưu nháp nếu payload truyền isDraft = true.
+
      * Hỗ trợ lưu nháp nếu payload truyền isDraft = true, ngược lại cập nhật và nộp phê duyệt.
+ dev
      */
     @PutMapping("/{id}")
     public ResponseEntity<RequisitionResponse> update(
@@ -59,9 +63,14 @@ public class RequisitionController {
             RequisitionResponse updated = service.updateDraft(id, request.toDraftRequest());
             return ResponseEntity.ok(updated);
         }
+ feature/scrum-128-129-clone-recruitment-request
+        RequisitionResponse updated = service.updateAndSubmit(id, request);
+        return ResponseEntity.ok(updated);
+
         service.updateDraft(id, request.toDraftRequest());
         RequisitionResponse submitted = service.submitDraft(id);
         return ResponseEntity.ok(submitted);
+dev
     }
 
     /**

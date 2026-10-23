@@ -43,8 +43,13 @@ public class RequisitionApprovalWorkflowService {
     private final RequisitionApprovalLogRepository approvalLogs;
     private final RecruitmentRequisitionRepository requisitions;
     private final UserRepository users;
-    private final DepartmentRepository departments;
+ feature/scrum-128-129-clone-recruitment-request
+    private final com.example.auth_service.repository.JobTitleRepository jobTitles;
 
+    private final DepartmentRepository departments;
+ dev
+
+    @org.springframework.beans.factory.annotation.Autowired
     public RequisitionApprovalWorkflowService(
             RequisitionApprovalConfigurationRepository configurations,
             RequisitionApprovalConfigurationStepRepository configurationSteps,
@@ -52,7 +57,11 @@ public class RequisitionApprovalWorkflowService {
             RequisitionApprovalLogRepository approvalLogs,
             RecruitmentRequisitionRepository requisitions,
             UserRepository users,
+ feature/scrum-128-129-clone-recruitment-request
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.example.auth_service.repository.JobTitleRepository jobTitles
+
             DepartmentRepository departments
+ dev
     ) {
         this.configurations = configurations;
         this.configurationSteps = configurationSteps;
@@ -60,7 +69,21 @@ public class RequisitionApprovalWorkflowService {
         this.approvalLogs = approvalLogs;
         this.requisitions = requisitions;
         this.users = users;
+ feature/scrum-128-129-clone-recruitment-request
+        this.jobTitles = jobTitles;
+    }
+
+    public RequisitionApprovalWorkflowService(
+            RequisitionApprovalConfigurationRepository configurations,
+            RequisitionApprovalConfigurationStepRepository configurationSteps,
+            RequisitionApprovalSnapshotRepository snapshots,
+            RecruitmentRequisitionRepository requisitions,
+            UserRepository users
+    ) {
+        this(configurations, configurationSteps, snapshots, requisitions, users, null);
+
         this.departments = departments;
+ dev
     }
 
     /**
@@ -78,6 +101,39 @@ public class RequisitionApprovalWorkflowService {
         if (activeConfiguration.isEmpty()) {
             throw new BadRequestException("Phòng ban chưa có cấu hình luồng phê duyệt đang hoạt động. Vui lòng liên hệ Trưởng phòng Nhân sự để cấu hình trước khi gửi yêu cầu tuyển dụng.");
         }
+
+ feature/scrum-128-129-clone-recruitment-request
+        // Xóa snapshot cũ nếu có để cho phép submit lại bản nháp
+        if (snapshots.existsByRequisitionId(requisition.getId())) {
+            List<RequisitionApprovalSnapshot> existing = snapshots.findAllByRequisitionIdOrderByStepOrderAsc(requisition.getId());
+            snapshots.deleteAll(existing);
+        }
+
+        RequisitionApprovalConfiguration configuration = activeConfiguration.get();
+        Long salMax = requisition.getSalaryMax() != null ? requisition.getSalaryMax() : requisition.getProposedMaxSalary();
+        Long salMin = requisition.getSalaryMin() != null ? requisition.getSalaryMin() : requisition.getProposedMinSalary();
+        if (salMax == null && salMin == null && requisition.getJobTitleId() != null && jobTitles != null) {
+            var jtOpt = jobTitles.findById(requisition.getJobTitleId());
+            if (jtOpt.isPresent()) {
+                salMax = jtOpt.get().getMaxSalary();
+                salMin = jtOpt.get().getMinSalary();
+            }
+        }
+        long proposedSalary = salMax != null ? salMax : (salMin != null ? salMin : 0L);
+
+        List<RequisitionApprovalConfigurationStep> allSteps = configurationSteps
+                .findAllByConfigurationIdOrderByStepOrderAsc(configuration.getId());
+        if (allSteps.isEmpty()) {
+            throw new BadRequestException("Cấu hình phê duyệt của phòng ban chưa có bước phê duyệt nào.");
+        }
+
+        List<RequisitionApprovalConfigurationStep> applicableSteps = allSteps.stream()
+                .filter(step -> step.getMinimumSalary() <= proposedSalary)
+                .toList();
+
+        // Nếu mức lương đề xuất thấp hơn mức sàn các bước, fallback về bước 1 (cấp phê duyệt cơ sở)
+        if (applicableSteps.isEmpty()) {
+            applicableSteps = List.of(allSteps.getFirst());
 
         if (snapshots.existsByRequisitionId(requisition.getId())) {
             if ("DRAFT".equalsIgnoreCase(requisition.getStatus())
@@ -122,15 +178,25 @@ public class RequisitionApprovalWorkflowService {
             if (!hasHighLevelApprover) {
                 throw new BadRequestException("Mức lương đề xuất vượt hạn mức (" + formatCurrency(proposedSalary) + ") bắt buộc phải có cấp phê duyệt cấp cao (Ban Giám Đốc/APPROVER hoặc HR_MANAGER) trong luồng.");
             }
+dev
         }
 
         List<RequisitionApprovalSnapshot> workflow = applicableSteps.stream().map(step -> {
+            if (step.getApproverUserId() == null) {
+                throw new BadRequestException("Cấu hình phê duyệt bước " + step.getStepOrder() + " chưa thiết lập Người phê duyệt (Approver).");
+            }
             User approver = users.findById(step.getApproverUserId())
+ feature/scrum-128-129-clone-recruitment-request
+                    .orElseThrow(() -> new BadRequestException("Người phê duyệt (ID: " + step.getApproverUserId() + ") tại bước " + step.getStepOrder() + " không tồn tại hoặc đã bị xóa."));
+            boolean eligible = "ACTIVE".equalsIgnoreCase(approver.getStatus()) && approver.getRoles().stream()
+                    .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER || role.getName() == RoleName.ADMIN);
+
                     .orElseThrow(() -> new BadRequestException("Người phê duyệt đã bị xóa."));
             boolean eligible = "ACTIVE".equals(approver.getStatus()) && approver.getRoles().stream()
                     .anyMatch(role -> role.getName() == RoleName.APPROVER || role.getName() == RoleName.HR_MANAGER || role.getName() == RoleName.HIRING_MANAGER);
+ dev
             if (!eligible) {
-                throw new BadRequestException("Cấu hình có người phê duyệt không còn hợp lệ.");
+                throw new BadRequestException("Người phê duyệt (" + approver.getFullName() + ") tại bước " + step.getStepOrder() + " không ở trạng thái hoạt động hoặc thiếu vai trò phê duyệt (APPROVER/HR_MANAGER).");
             }
 
             RequisitionApprovalSnapshot snapshot = new RequisitionApprovalSnapshot();

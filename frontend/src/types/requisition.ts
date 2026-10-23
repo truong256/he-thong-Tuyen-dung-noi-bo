@@ -4,8 +4,10 @@ export interface Requisition {
   title: string;
   departmentId: number;
   departmentName?: string;
+  departmentCode?: string;
   jobTitleId: number;
   jobTitleName?: string;
+  jobTitleCode?: string;
   quantity: number;
   targetDate?: string;
   neededDate?: string;
@@ -17,6 +19,8 @@ export interface Requisition {
   proposedMaxSalary?: number;
   salaryMin?: number;
   salaryMax?: number;
+  minSalary?: number;
+  maxSalary?: number;
   salaryExplanation?: string;
   jobDescription?: string;
   requirements?: string;
@@ -123,4 +127,3 @@ export interface AssignRecruiterPayload {
   reason?: string;
   notes?: string;
 }
-

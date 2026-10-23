@@ -22,10 +22,10 @@ public class RequisitionDraftRequest {
     private String recruitmentType;
     private String reason;
 
-    @JsonAlias({"proposedMinSalary", "salaryMin"})
+    @JsonAlias({"proposedMinSalary", "salaryMin", "minSalary"})
     private Long salaryMin;
 
-    @JsonAlias({"proposedMaxSalary", "salaryMax"})
+    @JsonAlias({"proposedMaxSalary", "salaryMax", "maxSalary"})
     private Long salaryMax;
 
     private String currency;
@@ -44,25 +44,37 @@ public class RequisitionDraftRequest {
     private String workingModel;
 
     public void setTargetDate(LocalDate targetDate) {
-        if (this.neededDate == null) {
+        if (targetDate != null) {
             this.neededDate = targetDate;
         }
     }
 
     public void setRequirements(String requirements) {
-        if (this.candidateRequirements == null) {
+        if (requirements != null && !requirements.isBlank()) {
             this.candidateRequirements = requirements;
         }
     }
 
     public void setProposedMinSalary(Long min) {
-        if (this.salaryMin == null) {
+        if (min != null) {
             this.salaryMin = min;
         }
     }
 
     public void setProposedMaxSalary(Long max) {
-        if (this.salaryMax == null) {
+        if (max != null) {
+            this.salaryMax = max;
+        }
+    }
+
+    public void setMinSalary(Long min) {
+        if (min != null) {
+            this.salaryMin = min;
+        }
+    }
+
+    public void setMaxSalary(Long max) {
+        if (max != null) {
             this.salaryMax = max;
         }
     }
