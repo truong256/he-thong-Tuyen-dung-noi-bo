@@ -14,7 +14,7 @@ public class CandidateApplication {
     private Long id;
     @Column(nullable = false)
     private Long requisitionId;
-    @Column(nullable = false)
+    @Column(name = "candidate_user_id")
     private Long candidateUserId;
     private Long interviewerUserId;
     @Column(nullable = false, length = 150)
@@ -27,8 +27,36 @@ public class CandidateApplication {
     @Column(name = "candidate_source_id")
     private Long candidateSourceId;
 
+    @Column(name = "candidate_source_code", length = 50)
+    private String candidateSourceCode;
+
     @Column(name = "rejection_reason_id")
     private Long rejectionReasonId;
+
+ feature/SCRUM-184
+    @Column(name = "referrer_user_id")
+    private Long referrerUserId;
+
+    @Column(name = "referrer_name", length = 150)
+    private String referrerName;
+
+    @Column(name = "referral_notes", columnDefinition = "TEXT")
+    private String referralNotes;
+
+    @Column(name = "job_posting_id")
+    private Long jobPostingId;
+
+    @Column(length = 50)
+    private String phone;
+
+    @Column(name = "cv_url", length = 500)
+    private String cvUrl;
+
+    @Column(length = 100)
+    private String relationship;
+
+    @Column(name = "created_at")
+    private java.time.Instant createdAt = java.time.Instant.now();
 
     @Column(name = "withdrawn_at")
     private java.time.Instant withdrawnAt;
@@ -44,4 +72,5 @@ public class CandidateApplication {
 
     @Column(name = "stage_changed_at")
     private java.time.Instant stageChangedAt;
+ dev
 }

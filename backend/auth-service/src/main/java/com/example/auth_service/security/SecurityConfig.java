@@ -199,6 +199,19 @@ public class SecurityConfig {
                 // S3-10 / S3-09: Quáº£n lÃ½ tin tuyá»ƒn dá»¥ng ná»™i bá»™
                 .requestMatchers("/api/job-postings", "/api/job-postings/**")
                         .hasAnyAuthority("JOB_MANAGE", "ROLE_HR_MANAGER", "ROLE_ADMIN", "ROLE_RECRUITER")
+ feature/SCRUM-184
+                // S4-07 / SCRUM-184: Giới thiệu ứng viên nội bộ (S4-07)
+                .requestMatchers(HttpMethod.POST, "/api/referrals")
+                        .hasAnyRole("ADMIN", "HR_MANAGER", "RECRUITER", "HIRING_MANAGER", "INTERVIEWER", "APPROVER")
+                .requestMatchers(HttpMethod.GET, "/api/referrals/my-referrals", "/api/referrals/active-positions")
+                        .hasAnyRole("ADMIN", "HR_MANAGER", "RECRUITER", "HIRING_MANAGER", "INTERVIEWER", "APPROVER")
+                .requestMatchers(HttpMethod.GET, "/api/referrals/{id}")
+                        .hasAnyRole("ADMIN", "HR_MANAGER", "RECRUITER", "HIRING_MANAGER", "INTERVIEWER", "APPROVER")
+                .requestMatchers(HttpMethod.GET, "/api/referrals")
+                        .hasAnyRole("ADMIN", "HR_MANAGER", "RECRUITER")
+                .requestMatchers(HttpMethod.PATCH, "/api/referrals/{id}/status")
+                        .hasAnyRole("ADMIN", "HR_MANAGER", "RECRUITER")
+
                 // SCRUM-181 & SCRUM-182: API rÃºt há»“ sÆ¡ á»©ng tuyá»ƒn (AC1 qua token email cÃ´ng khai & Candidate Portal)
                 .requestMatchers(HttpMethod.GET, "/api/public/applications/withdraw").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/public/applications/withdraw").permitAll()
@@ -207,6 +220,7 @@ public class SecurityConfig {
                 // AC3: ThÃ´ng bÃ¡o há»‡ thá»‘ng (Notification Center) - NOTIFICATION_READ_OWN
                 .requestMatchers("/api/notifications", "/api/notifications/**")
                         .hasAuthority("NOTIFICATION_READ_OWN")
+ dev
                 .anyRequest().denyAll()
             )
             .exceptionHandling(errors -> errors.authenticationEntryPoint(securityErrorHandler)

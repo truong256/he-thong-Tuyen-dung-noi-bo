@@ -505,6 +505,16 @@ public class DataInitializer {
                 }
             }
 
+feature/SCRUM-184
+            // 8. Đảm bảo Job Posting JP-2026-0002 có requisition_id và trạng thái PUBLISHED
+            try {
+                jdbcTemplate.update(
+                    "UPDATE job_postings SET requisition_id = COALESCE(requisition_id, (SELECT id FROM recruitment_requisitions WHERE department_id = 4 ORDER BY id ASC LIMIT 1), 1), status = 'PUBLISHED' WHERE job_code = 'JP-2026-0002'"
+                );
+            } catch (Exception ex) {
+                // Bỏ qua nếu bảng chưa tồn tại hoặc lỗi trong môi trường test
+            }
+
             // 8. Seed/Reset sample candidate application and withdraw token for testing SCRUM-181 & SCRUM-182
             if (!isTestProfile) {
                 tokenRepository.findByToken("demo-withdraw-token-123").ifPresent(token -> {
@@ -698,6 +708,7 @@ public class DataInitializer {
                 jobPostingRepository.save(jp4);
             }
 
+ dev
         };
     }
 
