@@ -1,5 +1,7 @@
 package com.example.auth_service.controller;
 
+import java.time.LocalDate;
+
 import com.example.auth_service.dto.*;
 import com.example.auth_service.exception.GlobalExceptionHandler;
 import com.example.auth_service.security.UserPrincipal;
@@ -20,8 +22,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -193,7 +193,7 @@ class JobPostingControllerTest {
                 .salaryDisplay("20,000,000 - 35,000,000 VND")
                 .build();
 
-        when(jobPostingService.getPublicJobPostings(any(), any(), any(), any(), any()))
+        when(jobPostingService.getPublicJobPostings(any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(pub), org.springframework.data.domain.PageRequest.of(0, 10), 1));
 
         publicMockMvc.perform(get("/api/public/job-postings")
@@ -219,5 +219,41 @@ class JobPostingControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Kỹ sư phần mềm Java"));
+    }
+
+    @Test
+    @DisplayName("GET /api/public/job-postings/locations - Public API trả về danh sách địa điểm")
+    void testGetPublicLocations() throws Exception {
+        when(jobPostingService.getPublicLocations())
+                .thenReturn(List.of("Hà Nội", "Đà Nẵng", "TP. Hồ Chí Minh"));
+
+        publicMockMvc.perform(get("/api/public/job-postings/locations")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasSize(3)))
+                .andExpect(jsonPath("$[0]").value("Hà Nội"))
+                .andExpect(jsonPath("$[1]").value("Đà Nẵng"))
+                .andExpect(jsonPath("$[2]").value("TP. Hồ Chí Minh"));
+    }
+
+    @Test
+    @DisplayName("POST /api/job-postings/auto-expire - Kích hoạt tự động hết hạn các tin quá hạn")
+    void testTriggerAutoExpire() throws Exception {
+        AutoExpireResult result = AutoExpireResult.builder()
+                .expiredCount(2)
+                .expiredPostingIds(List.of(10L, 20L))
+                .expiredJobCodes(List.of("JP-2026-0010", "JP-2026-0020"))
+                .checkedDate(LocalDate.now())
+                .message("Đã tự động hết hạn và ẩn 2 tin tuyển dụng.")
+                .build();
+
+        when(jobPostingService.expireDueJobPostings(any(LocalDate.class))).thenReturn(result);
+
+        mockMvc.perform(post("/api/job-postings/auto-expire")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expiredCount").value(2))
+                .andExpect(jsonPath("$.expiredJobCodes[0]").value("JP-2026-0010"))
+                .andExpect(jsonPath("$.expiredJobCodes[1]").value("JP-2026-0020"));
     }
 }

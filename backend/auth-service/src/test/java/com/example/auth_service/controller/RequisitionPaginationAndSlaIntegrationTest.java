@@ -50,6 +50,7 @@ class RequisitionPaginationAndSlaIntegrationTest {
     @Autowired private JobTitleRepository jobTitles;
     @Autowired private RecruitmentRequisitionRepository requisitions;
     @Autowired private RequisitionAssignmentRepository assignments;
+    @Autowired private CandidateApplicationRepository candidateApplications;
 
     private User hrManager;
     private User recruiter;
@@ -195,10 +196,10 @@ class RequisitionPaginationAndSlaIntegrationTest {
         JsonNode page1 = mapper.readTree(resPage1).get("content");
 
         List<String> page0Codes = new ArrayList<>();
-        page0.forEach(node -> page0Codes.add(node.get("requisitionCode").asText()));
+        page0.forEach(node -> page0Codes.add(node.get("requisitionCode").asString()));
 
         List<String> page1Codes = new ArrayList<>();
-        page1.forEach(node -> page1Codes.add(node.get("requisitionCode").asText()));
+        page1.forEach(node -> page1Codes.add(node.get("requisitionCode").asString()));
 
         assertThat(page0Codes).hasSize(10);
         assertThat(page1Codes).hasSize(10);
@@ -276,4 +277,49 @@ class RequisitionPaginationAndSlaIntegrationTest {
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.content[0].requisitionCode").value("REQ-ASSIGNED"));
     }
+
+    @Test
+    @DisplayName("TC13: API pipeline-summary (SCRUM-135 / S3-07) đếm đúng số lượng ứng viên đang trong pipeline và trạng thái kết thúc")
+    void tc13_PipelineSummary_ActiveAndTerminalCandidates() throws Exception {
+        RecruitmentRequisition req = createReq("REQ-PIPE-001", "APPROVED", deptIT, LocalDate.now().plusDays(10), Instant.now());
+
+        // Tạo ứng viên 1: APPLIED (Active)
+        com.example.auth_service.entity.CandidateApplication app1 = new com.example.auth_service.entity.CandidateApplication();
+        app1.setRequisitionId(req.getId());
+        app1.setCandidateUserId(101L);
+        app1.setFullName("Nguyen Van A");
+        app1.setEmail("a@test.com");
+        app1.setStage("APPLIED");
+        candidateApplications.save(app1);
+
+        // Tạo ứng viên 2: INTERVIEW (Active)
+        com.example.auth_service.entity.CandidateApplication app2 = new com.example.auth_service.entity.CandidateApplication();
+        app2.setRequisitionId(req.getId());
+        app2.setCandidateUserId(102L);
+        app2.setFullName("Tran Thi B");
+        app2.setEmail("b@test.com");
+        app2.setStage("INTERVIEW");
+        candidateApplications.save(app2);
+
+        // Tạo ứng viên 3: REJECTED (Terminal - đã kết thúc)
+        com.example.auth_service.entity.CandidateApplication app3 = new com.example.auth_service.entity.CandidateApplication();
+        app3.setRequisitionId(req.getId());
+        app3.setCandidateUserId(103L);
+        app3.setFullName("Le Van C");
+        app3.setEmail("c@test.com");
+        app3.setStage("REJECTED");
+        candidateApplications.save(app3);
+
+        // Gọi API pipeline-summary: total = 3, activeCount = 2
+        mvc.perform(get("/api/requisitions/" + req.getId() + "/pipeline-summary")
+                        .header("Authorization", hrToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requisitionId").value(req.getId()))
+                .andExpect(jsonPath("$.totalCount").value(3))
+                .andExpect(jsonPath("$.activeCount").value(2))
+                .andExpect(jsonPath("$.countByStage.APPLIED").value(1))
+                .andExpect(jsonPath("$.countByStage.INTERVIEW").value(1))
+                .andExpect(jsonPath("$.countByStage.REJECTED").value(1));
+    }
 }
+

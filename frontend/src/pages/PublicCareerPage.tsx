@@ -10,6 +10,8 @@ import {
   Calendar,
   ArrowRight,
   Sparkles,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { JobPostingPublic } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';
@@ -19,43 +21,68 @@ export const PublicCareerPage: React.FC = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<JobPostingPublic[]>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
+  const [locations, setLocations] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filters
+  // Filters (S4-01 / SCRUM-154 & SCRUM-164)
   const [keyword, setKeyword] = useState('');
   const [departmentId, setDepartmentId] = useState<string>('ALL');
+  const [workLocation, setWorkLocation] = useState<string>('ALL');
   const [workingModel, setWorkingModel] = useState<string>('ALL');
+  const [includeExpired, setIncludeExpired] = useState(true);
   const [totalElements, setTotalElements] = useState(0);
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const deptId = departmentId !== 'ALL' ? Number(departmentId) : undefined;
+      const loc = workLocation !== 'ALL' ? workLocation : undefined;
       const res = await jobPostingApi.listPublic({
         departmentId: deptId,
+        workLocation: loc,
         workingModel: workingModel !== 'ALL' ? workingModel : undefined,
         keyword: keyword.trim() || undefined,
+        includeExpired,
         page: 0,
         size: 30,
       });
       setJobs(res.content || []);
       setTotalElements(res.totalElements || 0);
     } catch {
-      // Handle network error
+      setError('Không thể tải danh sách việc làm. Vui lòng kiểm tra kết nối mạng và thử lại.');
     } finally {
       setLoading(false);
     }
-  }, [keyword, departmentId, workingModel]);
+  }, [keyword, departmentId, workLocation, workingModel, includeExpired]);
 
   useEffect(() => {
     jobPostingApi.getPublicDepartments().then((data) => {
       if (Array.isArray(data)) setDepartments(data);
     }).catch(() => {});
+
+    if (typeof jobPostingApi.getPublicLocations === 'function') {
+      jobPostingApi.getPublicLocations().then((data) => {
+        if (Array.isArray(data)) setLocations(data);
+      }).catch(() => {});
+    }
   }, []);
 
   useEffect(() => {
     loadJobs();
   }, [loadJobs]);
+
+  const handleClearFilters = () => {
+    setKeyword('');
+    setDepartmentId('ALL');
+    setWorkLocation('ALL');
+    setWorkingModel('ALL');
+  };
+
+  const hasActiveFilters = Boolean(
+    keyword.trim() || departmentId !== 'ALL' || workLocation !== 'ALL' || workingModel !== 'ALL'
+  );
 
   return (
     <div className="jp-public-portal">
@@ -88,7 +115,7 @@ export const PublicCareerPage: React.FC = () => {
             Gia nhập đội ngũ nhân sự tài năng, môi trường làm việc năng động và chế độ đãi ngộ vượt trội.
           </p>
 
-          {/* Search bar inside hero */}
+          {/* Search bar inside hero - 3 filters according to S4-01 AC */}
           <div className="jp-banner-search-box">
             <div className="jp-search-field jp-flex-2">
               <Search size={18} />
@@ -97,6 +124,7 @@ export const PublicCareerPage: React.FC = () => {
                 placeholder="Tìm kiếm công việc theo chức danh, từ khóa..."
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
+                aria-label="Tìm kiếm theo từ khóa"
               />
             </div>
 
@@ -105,6 +133,7 @@ export const PublicCareerPage: React.FC = () => {
               <select
                 value={departmentId}
                 onChange={(e) => setDepartmentId(e.target.value)}
+                aria-label="Lọc theo phòng ban"
               >
                 <option value="ALL">Tất cả phòng ban</option>
                 {departments.map((d) => (
@@ -116,10 +145,27 @@ export const PublicCareerPage: React.FC = () => {
             </div>
 
             <div className="jp-search-field jp-flex-1">
+              <MapPin size={18} />
+              <select
+                value={workLocation}
+                onChange={(e) => setWorkLocation(e.target.value)}
+                aria-label="Lọc theo địa điểm"
+              >
+                <option value="ALL">Tất cả địa điểm</option>
+                {locations.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="jp-search-field jp-flex-1">
               <Globe size={18} />
               <select
                 value={workingModel}
                 onChange={(e) => setWorkingModel(e.target.value)}
+                aria-label="Lọc theo hình thức làm việc"
               >
                 <option value="ALL">Mọi hình thức</option>
                 <option value="ONSITE">Tại văn phòng</option>
@@ -128,6 +174,18 @@ export const PublicCareerPage: React.FC = () => {
               </select>
             </div>
           </div>
+
+          <div style={{ marginTop: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.875rem', color: '#475569', cursor: 'pointer', userSelect: 'none' }}>
+              <input
+                type="checkbox"
+                checked={includeExpired}
+                onChange={(e) => setIncludeExpired(e.target.checked)}
+                style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+              />
+              <span>Hiển thị cả tin tuyển dụng đã hết hạn</span>
+            </label>
+          </div>
         </div>
       </section>
 
@@ -135,31 +193,71 @@ export const PublicCareerPage: React.FC = () => {
       <main className="jp-public-main-content">
         <div className="jp-public-header-row">
           <h2>Các vị trí đang mở tuyển ({totalElements})</h2>
-          <span className="jp-text-muted">Chỉ hiển thị các tin tuyển dụng đã phê duyệt và còn hạn nhận hồ sơ</span>
+          <span className="jp-text-muted">Khám phá các cơ hội nghề nghiệp và vị trí tuyển dụng từ doanh nghiệp</span>
         </div>
 
         {loading ? (
-          <div className="jp-loading-container">
+          <div className="jp-loading-container" role="status">
             <div className="jp-spinner" />
             <p>Đang tìm kiếm cơ hội nghề nghiệp...</p>
+          </div>
+        ) : error ? (
+          <div className="jp-empty-state jp-public-empty jp-public-error-card" role="alert">
+            <AlertCircle size={48} className="jp-error-icon" />
+            <h3>Đã xảy ra lỗi khi tải danh sách việc làm</h3>
+            <p>{error}</p>
+            <button
+              type="button"
+              className="jp-btn jp-btn-primary jp-retry-btn"
+              onClick={() => loadJobs()}
+            >
+              <RefreshCw size={16} />
+              <span>Thử lại</span>
+            </button>
           </div>
         ) : jobs.length === 0 ? (
           <div className="jp-empty-state jp-public-empty">
             <Briefcase size={48} />
             <h3>Hiện chưa có vị trí phù hợp với tìm kiếm của bạn</h3>
-            <p>Hãy thử thay đổi từ khóa hoặc bộ lọc phòng ban để xem thêm các cơ hội khác.</p>
+            <p>Hãy thử thay đổi từ khóa hoặc bộ lọc phòng ban, địa điểm, hình thức làm việc để xem thêm các cơ hội khác.</p>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                className="jp-btn jp-btn-outline jp-clear-filters-btn"
+                onClick={handleClearFilters}
+              >
+                Xóa bộ lọc tìm kiếm
+              </button>
+            )}
           </div>
         ) : (
           <div className="jp-public-job-grid">
             {jobs.map((job) => (
               <div
                 key={job.id}
-                className="jp-public-job-card"
+                className={`jp-public-job-card ${job.expired ? 'jp-job-card-expired-border' : ''}`}
+                style={job.expired ? { borderLeft: '4px solid #ef4444', opacity: 0.92 } : undefined}
                 onClick={() => navigate(`/careers/${job.id}`)}
               >
                 <div className="jp-job-card-top">
                   <span className="jp-job-card-dept">{job.departmentName || 'Doanh nghiệp'}</span>
                   <span className="jp-job-card-model">{job.workingModel}</span>
+                  {job.expired && (
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        background: '#fee2e2',
+                        color: '#991b1b',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        border: '1px solid #fca5a5',
+                      }}
+                    >
+                      Đã hết hạn
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="jp-job-card-title">{job.title}</h3>
@@ -176,16 +274,16 @@ export const PublicCareerPage: React.FC = () => {
                     {job.salaryDisplay}
                   </span>
                   {job.applicationDeadline && (
-                    <span className="jp-job-meta-item">
+                    <span className="jp-job-meta-item" style={job.expired ? { color: '#b91c1c', fontWeight: 500 } : undefined}>
                       <Calendar size={14} />
-                      Hạn nộp: {job.applicationDeadline}
+                      Hạn nộp: {job.applicationDeadline} {job.expired && '(Hết hạn)'}
                     </span>
                   )}
                 </div>
 
                 <div className="jp-job-card-footer">
                   <span className="jp-job-card-link">
-                    <span>Xem chi tiết công việc</span>
+                    <span>{job.expired ? 'Xem chi tiết (Đã dừng nhận hồ sơ)' : 'Xem chi tiết công việc'}</span>
                     <ArrowRight size={16} />
                   </span>
                 </div>

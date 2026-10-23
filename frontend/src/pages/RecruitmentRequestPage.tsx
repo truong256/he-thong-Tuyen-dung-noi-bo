@@ -93,6 +93,7 @@ export const RecruitmentRequestPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('create');
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showSalaryExplanation, setShowSalaryExplanation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -468,6 +469,13 @@ export const RecruitmentRequestPage: React.FC = () => {
       setActiveTab('list');
     } catch (err: any) {
       const errText = err.response?.data?.message || 'Có lỗi xảy ra khi gửi yêu cầu.';
+      if (errText.includes('khung lương tiêu chuẩn') || errText.includes('khung chuẩn') || errText.includes('giải trình dải lương') || errText.includes('giải trình')) {
+        setShowSalaryExplanation(true);
+        setErrors((prev) => ({
+          ...prev,
+          salaryExplanation: 'Dải lương đề xuất nằm ngoài khung lương tiêu chuẩn của chức danh. Vui lòng nhập lý do giải trình.',
+        }));
+      }
       setMessage({ text: errText, type: 'error' });
     } finally {
       setIsSubmitting(false);
@@ -1020,7 +1028,7 @@ export const RecruitmentRequestPage: React.FC = () => {
               </div>
 
               {/* Cảnh báo vượt khung lương & Ô giải trình bắt buộc */}
-              {salaryValidation.isOutsideSalaryRange && (
+              {(salaryValidation.isOutsideSalaryRange || Boolean(form.salaryExplanation) || Boolean(errors.salaryExplanation) || showSalaryExplanation) && (
                 <div className="rr-salary-warning-box">
                   <div className="rr-salary-warning-header">
                     <ShieldAlert size={18} />

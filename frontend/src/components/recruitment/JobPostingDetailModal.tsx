@@ -22,6 +22,7 @@ import { useAuth } from '../../hooks/useAuth';
 
 interface JobPostingDetailModalProps {
   isOpen: boolean;
+  initialAction?: 'unpublish';
   jobPostingId: number | null;
   onClose: () => void;
   onActionSuccess: () => void;
@@ -29,11 +30,13 @@ interface JobPostingDetailModalProps {
 
 export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
   isOpen,
+  initialAction,
   jobPostingId,
   onClose,
   onActionSuccess,
 }) => {
-  const { hasRole } = useAuth();
+  const { hasRole, hasPermission } = useAuth();
+  const canUnpublish = hasRole('HR_MANAGER') || hasRole('ADMIN') || hasRole('RECRUITER') || Boolean(hasPermission?.('JOB_MANAGE'));
   const isHrManager = hasRole('HR_MANAGER');
 
   const [activeTab, setActiveTab] = useState<'preview' | 'details' | 'audit'>('preview');
@@ -57,14 +60,14 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
       setError(null);
       setSuccessMessage(null);
       setShowRejectInput(false);
-      setShowUnpublishInput(false);
+      setShowUnpublishInput(initialAction === 'unpublish');
       setRejectReason('');
       setUnpublishReason('');
       setApprovalNotes('');
     } else {
       setPosting(null);
     }
-  }, [isOpen, jobPostingId]);
+  }, [isOpen, jobPostingId, initialAction]);
 
   const loadPostingDetail = async (id: number) => {
     setLoading(true);
@@ -77,6 +80,29 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !actionLoading) { event.preventDefault(); onClose(); }
+      if (event.key !== 'Tab') return;
+      const controls = Array.from(document.querySelectorAll<HTMLElement>(
+        '.jp-detail-modal button:not(:disabled), .jp-detail-modal textarea:not(:disabled), .jp-detail-modal input:not(:disabled), .jp-detail-modal select:not(:disabled), .jp-detail-modal a[href]'
+      )).filter(element => element.getClientRects().length > 0);
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', keyboard);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', keyboard);
+      previousFocus?.focus();
+    };
+  }, [isOpen, actionLoading, onClose]);
 
   if (!isOpen) return null;
 
@@ -114,6 +140,8 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
         return <span className="jp-badge jp-badge-unpublished">Đã gỡ tin</span>;
       case 'REJECTED':
         return <span className="jp-badge jp-badge-rejected">Từ chối duyệt</span>;
+      case 'EXPIRED':
+        return <span className="jp-badge jp-status-expired">Đã hết hạn nhận hồ sơ</span>;
       case 'CLOSED':
         return <span className="jp-badge jp-badge-closed">Đã đóng</span>;
       default:
@@ -238,7 +266,7 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
   };
 
   return (
-    <div className="jp-modal-overlay" role="dialog" aria-modal="true">
+    <div className="jp-modal-overlay" role="dialog" aria-modal="true" aria-label="Chi tiết tin tuyển dụng">
       <div className="jp-modal-container jp-detail-modal">
         {/* Modal Header */}
         <div className="jp-modal-header">
@@ -633,13 +661,18 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
           </div>
         )}
 
-        {showUnpublishInput && (
+        {showUnpublishInput && canUnpublish && posting && (posting.status === 'PUBLISHED' || posting.status === 'EXPIRED') && (
           <div className="jp-action-prompt-box jp-prompt-unpublish">
             <div className="jp-prompt-header">
               <Lock size={16} />
               <span>Nhập lý do gỡ tin tuyển dụng khỏi cổng công khai:</span>
             </div>
+            <p>Tin sẽ được gỡ khỏi cổng công khai ngay sau khi xác nhận. Hồ sơ ứng viên và lịch sử tin vẫn được giữ lại.</p>
+            <label htmlFor="jp-unpublish-reason">Lý do gỡ tin (bắt buộc)</label>
             <textarea
+              id="jp-unpublish-reason"
+              autoFocus
+              maxLength={2000}
               className="jp-textarea"
               rows={3}
               placeholder="Ví dụ: Đã tuyển đủ headcount theo kế hoạch hoặc tạm hoãn đợt tuyển dụng..."
@@ -693,6 +726,18 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
                 </button>
               )}
 
+                  {/* Unpublish button (when PUBLISHED) */}
+                  {canUnpublish && (posting.status === 'PUBLISHED' || posting.status === 'EXPIRED') && !showUnpublishInput && (
+                    <button
+                      type="button"
+                      className="jp-btn jp-btn-warning"
+                      onClick={() => setShowUnpublishInput(true)}
+                      disabled={actionLoading}
+                    >
+                      <Lock size={16} />
+                      <span>Gỡ tin khỏi công khai</span>
+                    </button>
+                  )}
               {/* HR MANAGER ACTIONS (SCRUM-149) */}
               {isHrManager && (
                 <>
@@ -748,18 +793,6 @@ export const JobPostingDetailModal: React.FC<JobPostingDetailModalProps> = ({
                     </button>
                   )}
 
-                  {/* Unpublish button (when PUBLISHED) */}
-                  {posting.status === 'PUBLISHED' && !showUnpublishInput && (
-                    <button
-                      type="button"
-                      className="jp-btn jp-btn-warning"
-                      onClick={() => setShowUnpublishInput(true)}
-                      disabled={actionLoading}
-                    >
-                      <Lock size={16} />
-                      <span>Gỡ tin khỏi công khai</span>
-                    </button>
-                  )}
                 </>
               )}
             </div>

@@ -14,8 +14,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -168,12 +170,30 @@ public class JobPostingController {
      * SCRUM-150: Gỡ tin tuyển dụng khỏi trang công khai (kèm lý do).
      */
     @PostMapping("/{id}/unpublish")
+    @PreAuthorize("hasAnyAuthority('JOB_MANAGE', 'ROLE_HR_MANAGER', 'ROLE_ADMIN', 'ROLE_RECRUITER')")
     public ResponseEntity<JobPostingResponse> unpublishJobPosting(
             @PathVariable Long id,
             @Valid @RequestBody JobPostingUnpublishRequest request
     ) {
         Long userId = getCurrentUserId();
         return ResponseEntity.ok(jobPostingService.unpublishJobPosting(id, request.getReason(), userId));
+    }
+
+    /**
+     * POST /api/job-postings/auto-expire
+     * S4-08 / SCRUM-187: Kích hoạt kiểm tra và tự động hết hạn các tin tuyển dụng quá hạn nhận hồ sơ.
+     */
+    @PostMapping("/auto-expire")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AutoExpireResult> triggerAutoExpire(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        LocalDate today = LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        if (date != null && !date.equals(today)) {
+            throw new com.example.auth_service.exception.BadRequestException("Chỉ được quét hết hạn theo ngày hiện tại tại Việt Nam.");
+        }
+        LocalDate checkDate = today;
+        return ResponseEntity.ok(jobPostingService.expireDueJobPostings(checkDate));
     }
 
     /**

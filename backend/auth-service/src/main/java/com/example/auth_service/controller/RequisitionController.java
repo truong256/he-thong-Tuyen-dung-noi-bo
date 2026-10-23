@@ -190,5 +190,15 @@ public class RequisitionController {
         return ResponseEntity.ok(service.cancel(id, reason));
     }
 
+    /**
+     * API kiểm tra tóm tắt cảnh báo pipeline ứng viên trước khi đóng/hủy (SCRUM-135 / S3-07).
+     */
+    @GetMapping("/{id}/pipeline-summary")
+    public ResponseEntity<com.example.auth_service.dto.PipelineSummaryResponse> getPipelineSummary(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getPipelineSummary(id));
+    }
+
 }
+
+
 

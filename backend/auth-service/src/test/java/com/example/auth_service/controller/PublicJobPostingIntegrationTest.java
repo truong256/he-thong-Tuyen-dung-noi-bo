@@ -10,6 +10,7 @@ import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.JwtUtils;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -112,7 +113,10 @@ class PublicJobPostingIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.content", hasSize(1)))
                 .andExpect(jsonPath("$.totalElements").value(3));
         mvc.perform(get("/api/public/job-postings/" + expired.getId()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expired").value(true))
+                .andExpect(jsonPath("$.canApply").value(false))
+                .andExpect(jsonPath("$.status").value("EXPIRED"));
     }
 
     @Test
@@ -164,6 +168,66 @@ class PublicJobPostingIntegrationTest {
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(1));
         mvc.perform(get("/api/public/job-postings").param("workingModel", "ONSITE"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    @DisplayName("SCRUM-163: GET /api/public/job-postings/locations trả danh sách địa điểm của các tin đang hiệu lực, không yêu cầu đăng nhập")
+    void publicLocationsEndpointReturnsDistinctWorkLocationsOfOpenPostings() throws Exception {
+        JobPosting hanoi = posting("PUBLISHED", LocalDate.now().plusDays(5), publicDepartment.getId());
+        hanoi.setWorkLocation("Hà Nội - Trụ sở chính");
+        postings.saveAndFlush(hanoi);
+
+        JobPosting hcm = posting("PUBLISHED", LocalDate.now().plusDays(10), publicDepartment.getId());
+        hcm.setWorkLocation("TP. Hồ Chí Minh - Chi nhánh");
+        postings.saveAndFlush(hcm);
+
+        // Tin DRAFT không được xuất hiện trong danh sách địa điểm công khai
+        JobPosting draftDanang = posting("DRAFT", null, publicDepartment.getId());
+        draftDanang.setWorkLocation("Đà Nẵng - R&D");
+        postings.saveAndFlush(draftDanang);
+
+        // Tin hết hạn không được xuất hiện
+        JobPosting expiredHue = posting("PUBLISHED", LocalDate.now().minusDays(2), publicDepartment.getId());
+        expiredHue.setWorkLocation("Huế - Chi nhánh");
+        postings.saveAndFlush(expiredHue);
+
+        mvc.perform(get("/api/public/job-postings/locations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasItem("Hà Nội - Trụ sở chính")))
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.hasItem("TP. Hồ Chí Minh - Chi nhánh")))
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("Đà Nẵng - R&D"))))
+                .andExpect(jsonPath("$", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("Huế - Chi nhánh"))));
+    }
+
+    @Test
+    @DisplayName("SCRUM-163: Bộ lọc kết hợp phòng ban, địa điểm, hình thức làm việc và từ khóa hoạt động chính xác")
+    void publicListFiltersByWorkLocationAndCombinesWithOtherFilters() throws Exception {
+        JobPosting p1 = posting("PUBLISHED", LocalDate.now().plusDays(5), publicDepartment.getId());
+        p1.setTitle("Lập trình viên Frontend React");
+        p1.setWorkLocation("Hà Nội - Trụ sở chính");
+        p1.setWorkingModel("HYBRID");
+        p1.setJobDescription("Xây dựng giao diện ứng dụng web hiện đại");
+        postings.saveAndFlush(p1);
+
+        // 1. Lọc theo địa điểm
+        mvc.perform(get("/api/public/job-postings").param("workLocation", "Hà Nội"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].workLocation").value("Hà Nội - Trụ sở chính"));
+
+        // 2. Lọc theo địa điểm không khớp
+        mvc.perform(get("/api/public/job-postings").param("workLocation", "Cần Thơ"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        // 3. Kết hợp cả 4 tiêu chí: phòng ban + địa điểm + hình thức làm việc + từ khóa trong mô tả
+        mvc.perform(get("/api/public/job-postings")
+                        .param("departmentId", publicDepartment.getId().toString())
+                        .param("workLocation", "Hà Nội")
+                        .param("workingModel", "HYBRID")
+                        .param("keyword", "giao diện"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].title").value("Lập trình viên Frontend React"));
     }
 
     private JobPosting posting(String status, LocalDate deadline, Long departmentId) {

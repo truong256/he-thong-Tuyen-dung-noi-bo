@@ -33,6 +33,7 @@ public class CandidateApplication {
     @Column(name = "rejection_reason_id")
     private Long rejectionReasonId;
 
+ feature/SCRUM-184
     @Column(name = "referrer_user_id")
     private Long referrerUserId;
 
@@ -56,4 +57,20 @@ public class CandidateApplication {
 
     @Column(name = "created_at")
     private java.time.Instant createdAt = java.time.Instant.now();
+
+    @Column(name = "withdrawn_at")
+    private java.time.Instant withdrawnAt;
+
+    @Column(name = "withdrawal_reason", columnDefinition = "TEXT")
+    private String withdrawalReason;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
+    @Column(name = "stage_changed_by_id")
+    private Long stageChangedById;
+
+    @Column(name = "stage_changed_at")
+    private java.time.Instant stageChangedAt;
+ dev
 }

@@ -5,7 +5,8 @@ export type JobPostingStatus =
   | 'PUBLISHED'
   | 'UNPUBLISHED'
   | 'REJECTED'
-  | 'CLOSED';
+  | 'CLOSED'
+  | 'EXPIRED';
 
 export interface JobPostingAuditLog {
   id: number;
@@ -13,11 +14,19 @@ export interface JobPostingAuditLog {
   userId: number;
   userName: string;
   userEmail: string;
-  action: 'CREATE' | 'SUBMIT_APPROVAL' | 'APPROVE' | 'PUBLISH' | 'APPROVE_AND_PUBLISH' | 'UNPUBLISH' | 'REJECT' | 'UPDATE';
+  action: 'CREATE' | 'SUBMIT_APPROVAL' | 'APPROVE' | 'PUBLISH' | 'APPROVE_AND_PUBLISH' | 'UNPUBLISH' | 'REJECT' | 'UPDATE' | 'AUTO_EXPIRE';
   fromStatus?: string;
   toStatus?: string;
   note?: string;
   createdAt: string;
+}
+
+export interface AutoExpireResult {
+  expiredCount: number;
+  expiredPostingIds: number[];
+  expiredJobCodes: string[];
+  checkedDate: string;
+  message: string;
 }
 
 export interface JobPosting {
@@ -108,6 +117,30 @@ export interface JobPostingPublic {
   salaryDisplay: string;
   applicationDeadline?: string;
   publishedAt?: string;
+  expired?: boolean;
+  canApply?: boolean;
+  status?: string;
+  expiredMessage?: string;
+}
+
+export interface PublicJobApplicationPayload {
+  fullName: string;
+  email: string;
+  phone?: string;
+  coverLetter?: string;
+  cvFileUrl?: string;
+}
+
+export interface PublicJobApplicationResult {
+  applicationId: number;
+  jobPostingId: number;
+  jobCode: string;
+  title: string;
+  fullName: string;
+  email: string;
+  status: string;
+  message: string;
+  appliedAt?: string;
 }
 
 export interface JobPostingFilterState {

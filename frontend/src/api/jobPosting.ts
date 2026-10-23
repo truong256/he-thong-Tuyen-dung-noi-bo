@@ -20,6 +20,11 @@ export const jobPostingApi = {
     return response.data;
   },
 
+  getPublicLocations: async (): Promise<string[]> => {
+    const response = await apiClient.get<string[]>('/api/public/job-postings/locations');
+    return response.data;
+  },
+
   // 1. Quản lý nội bộ
   list: async (params?: {
     status?: string;
@@ -96,6 +101,7 @@ export const jobPostingApi = {
     workingModel?: string;
     workLocation?: string;
     keyword?: string;
+    includeExpired?: boolean;
     page?: number;
     size?: number;
     sort?: string;
@@ -106,6 +112,14 @@ export const jobPostingApi = {
 
   getPublicDetail: async (id: number): Promise<JobPostingPublic> => {
     const response = await apiClient.get<JobPostingPublic>(`/api/public/job-postings/${id}`);
+    return response.data;
+  },
+
+  applyPublic: async (id: number, payload: import('../types/jobPosting').PublicJobApplicationPayload): Promise<import('../types/jobPosting').PublicJobApplicationResult> => {
+    const response = await apiClient.post<import('../types/jobPosting').PublicJobApplicationResult>(
+      `/api/public/job-postings/${id}/apply`,
+      payload
+    );
     return response.data;
   },
 };

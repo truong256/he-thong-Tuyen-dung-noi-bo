@@ -17,6 +17,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  TimerOff,
 } from 'lucide-react';
 import { JobPosting, JobPostingStatus } from '../types/jobPosting';
 import jobPostingApi from '../api/jobPosting';
@@ -25,8 +26,13 @@ import { Department } from '../types/organization';
 import JobPostingDetailModal from '../components/recruitment/JobPostingDetailModal';
 import JobPostingFormModal from '../components/recruitment/JobPostingFormModal';
 import '../styles/job-postings.css';
+import { useAuth } from '../hooks/useAuth';
 
 export const JobPostingManagementPage: React.FC = () => {
+
+  const { hasRole, hasPermission } = useAuth();
+  const canUnpublish = hasRole('HR_MANAGER') || hasRole('ADMIN') || hasRole('RECRUITER') || Boolean(hasPermission?.('JOB_MANAGE'));
+  const [initialAction, setInitialAction] = useState<'unpublish' | undefined>();
 
   // State
   const [postings, setPostings] = useState<JobPosting[]>([]);
@@ -60,7 +66,9 @@ export const JobPostingManagementPage: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const requestVersion = useRef(0);
   const loadData = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     try {
       const deptId = departmentFilter !== 'ALL' ? Number(departmentFilter) : undefined;
@@ -72,13 +80,16 @@ export const JobPostingManagementPage: React.FC = () => {
         size,
       });
 
+      if (version !== requestVersion.current) return;
+      if (page > 0 && page >= res.totalPages) { setPage(Math.max(0, res.totalPages - 1)); return; }
       setPostings(res.content || []);
       setTotalElements(res.totalElements || 0);
       setTotalPages(res.totalPages || 1);
     } catch {
+      if (version !== requestVersion.current) return;
       showToast('error', 'Không thể nạp danh sách tin tuyển dụng.');
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, [statusFilter, departmentFilter, searchKeyword, page, size]);
 
@@ -92,13 +103,21 @@ export const JobPostingManagementPage: React.FC = () => {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => { if (!document.hidden && !detailModalOpen) void loadData(); }, 60000);
+    const refresh = () => { if (!document.hidden && !detailModalOpen) void loadData(); };
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', refresh); };
+  }, [loadData, detailModalOpen]);
+
   // Statistics calculation
   const totalCount = totalElements;
   const pendingCount = postings.filter((p) => p.status === 'PENDING_APPROVAL').length;
   const publishedCount = postings.filter((p) => p.status === 'PUBLISHED').length;
-  const unpublishedCount = postings.filter((p) => p.status === 'UNPUBLISHED' || p.status === 'CLOSED').length;
+  const unpublishedCount = postings.filter((p) => p.status === 'UNPUBLISHED' || p.status === 'CLOSED' || p.status === 'EXPIRED').length;
 
-  const handleOpenDetail = (id: number) => {
+  const handleOpenDetail = (id: number, action?: 'unpublish') => {
+    setInitialAction(action);
     setSelectedPostingId(id);
     setDetailModalOpen(true);
   };
@@ -167,6 +186,13 @@ export const JobPostingManagementPage: React.FC = () => {
           <span className="jp-status-pill jp-status-closed">
             <Lock size={13} className="jp-status-pill-icon" />
             <span>Đã đóng</span>
+          </span>
+        );
+      case 'EXPIRED':
+        return (
+          <span className="jp-status-pill jp-status-expired">
+            <TimerOff size={13} className="jp-status-pill-icon" />
+            <span>Hết hạn (tự động)</span>
           </span>
         );
       default:
@@ -240,7 +266,7 @@ export const JobPostingManagementPage: React.FC = () => {
 
         <div className="jp-stat-card">
           <div className="jp-stat-content">
-            <span className="jp-stat-label">Đã gỡ hoặc đóng</span>
+            <span className="jp-stat-label">Đã gỡ, đóng hoặc hết hạn</span>
             <span className="jp-stat-value">{unpublishedCount}</span>
           </div>
         </div>
@@ -284,6 +310,13 @@ export const JobPostingManagementPage: React.FC = () => {
             onClick={() => { setStatusFilter('UNPUBLISHED'); setPage(0); }}
           >
             Đã gỡ tin
+          </button>
+          <button
+            type="button"
+            className={`jp-tab-filter-btn ${statusFilter === 'EXPIRED' ? 'active' : ''}`}
+            onClick={() => { setStatusFilter('EXPIRED'); setPage(0); }}
+          >
+            Hết hạn
           </button>
           <button
             type="button"
@@ -468,6 +501,14 @@ export const JobPostingManagementPage: React.FC = () => {
                           <span className="sr-only">Xem trước & Duyệt</span>
                         </button>
 
+                        {canUnpublish && (p.status === 'PUBLISHED' || p.status === 'EXPIRED') && (
+                          <button type="button" className="jp-action-btn jp-action-unpublish"
+                            onClick={() => handleOpenDetail(p.id, 'unpublish')}
+                            title={`Gỡ tin ${p.jobCode}`} aria-label={`Gỡ tin ${p.jobCode}`}>
+                            <Lock size={18} />
+                          </button>
+                        )}
+
                         {p.status !== 'PUBLISHED' && (
                           <button
                             type="button"
@@ -521,6 +562,7 @@ export const JobPostingManagementPage: React.FC = () => {
       {/* Detail & Public Preview Modal */}
       <JobPostingDetailModal
         isOpen={detailModalOpen}
+        initialAction={initialAction}
         jobPostingId={selectedPostingId}
         onClose={() => {
           setDetailModalOpen(false);

@@ -14,6 +14,10 @@ import java.util.Optional;
 
 public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT j FROM JobPosting j WHERE j.id = :id")
+    Optional<JobPosting> findLockedById(@Param("id") Long id);
+
     Optional<JobPosting> findByJobCode(String jobCode);
 
     boolean existsByJobCode(String jobCode);
@@ -36,6 +40,16 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
             @Param("keyword") String keyword,
             Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT j FROM JobPosting j
+        WHERE j.status = 'PUBLISHED'
+          AND j.applicationDeadline IS NOT NULL
+          AND j.applicationDeadline < :currentDate
+        ORDER BY j.applicationDeadline ASC, j.id ASC
+    """)
+    List<JobPosting> findExpiredPublishedPostings(@Param("currentDate") LocalDate currentDate);
 
     @Query("""
         SELECT j FROM JobPosting j
@@ -62,6 +76,30 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
 
     @Query("""
         SELECT j FROM JobPosting j
+        WHERE j.status = 'PUBLISHED'
+          AND (:includeExpired = true OR j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
+          AND (:departmentId IS NULL OR j.departmentId = :departmentId)
+          AND (:workingModel IS NULL OR UPPER(j.workingModel) = UPPER(:workingModel))
+          AND (:workLocation IS NULL OR LOWER(j.workLocation) LIKE LOWER(CONCAT('%', :workLocation, '%')))
+          AND (:keyword IS NULL OR (
+                LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.jobDescription) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.requirements) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          ))
+        ORDER BY j.publishedAt DESC, j.createdAt DESC
+    """)
+    Page<JobPosting> findPublicPostingsWithExpired(
+            @Param("currentDate") LocalDate currentDate,
+            @Param("departmentId") Long departmentId,
+            @Param("workingModel") String workingModel,
+            @Param("workLocation") String workLocation,
+            @Param("keyword") String keyword,
+            @Param("includeExpired") boolean includeExpired,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT j FROM JobPosting j
         WHERE j.id = :id
           AND j.status = 'PUBLISHED'
           AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
@@ -82,4 +120,15 @@ public interface JobPostingRepository extends JpaRepository<JobPosting, Long> {
         ORDER BY d.name
     """)
     List<PublicJobDepartmentResponse> findPublicDepartments(@Param("currentDate") LocalDate currentDate);
+
+    @Query("""
+        SELECT DISTINCT j.workLocation
+        FROM JobPosting j
+        WHERE j.status = 'PUBLISHED'
+          AND (j.applicationDeadline IS NULL OR j.applicationDeadline >= :currentDate)
+          AND j.workLocation IS NOT NULL
+          AND TRIM(j.workLocation) != ''
+        ORDER BY j.workLocation
+    """)
+    List<String> findPublicLocations(@Param("currentDate") LocalDate currentDate);
 }
