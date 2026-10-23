@@ -2,7 +2,6 @@ package com.example.auth_service.controller;
 
 import com.example.auth_service.domain.sprint2.Department;
 import com.example.auth_service.domain.sprint2.JobTitle;
-import com.example.auth_service.domain.sprint2.RecruitmentRequisition;
 import com.example.auth_service.dto.CreateRequisitionRequest;
 import com.example.auth_service.dto.RequisitionDraftRequest;
 import com.example.auth_service.entity.Role;
@@ -45,6 +44,8 @@ class RequisitionIntegrationTest {
     @Autowired private DepartmentRepository departments;
     @Autowired private JobTitleRepository jobTitles;
     @Autowired private RecruitmentRequisitionRepository requisitions;
+    @Autowired private RequisitionApprovalConfigurationRepository configurations;
+    @Autowired private RequisitionApprovalConfigurationStepRepository configurationSteps;
 
     private User hiringManager;
     private User hrManager;
@@ -69,6 +70,20 @@ class RequisitionIntegrationTest {
         job.setMinSalary(15_000_000L);
         job.setMaxSalary(30_000_000L);
         job = jobTitles.save(job);
+
+        com.example.auth_service.entity.RequisitionApprovalConfiguration config = new com.example.auth_service.entity.RequisitionApprovalConfiguration();
+        config.setDepartmentId(dept.getId());
+        config.setVersion(1);
+        config.setActive(true);
+        config.setCreatedByUserId(hrManager.getId());
+        config = configurations.save(config);
+
+        com.example.auth_service.entity.RequisitionApprovalConfigurationStep step = new com.example.auth_service.entity.RequisitionApprovalConfigurationStep();
+        step.setConfigurationId(config.getId());
+        step.setStepOrder(1);
+        step.setMinimumSalary(0L);
+        step.setApproverUserId(hrManager.getId());
+        configurationSteps.save(step);
     }
 
     @AfterEach
@@ -213,6 +228,70 @@ class RequisitionIntegrationTest {
                         .header("Authorization", token(hiringManager)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"))
+                .andExpect(jsonPath("$.submittedAt").exists());
+    }
+
+    @Test
+    void putRequisitionsId_updatesAndSubmitsRequisitionDirectly() throws Exception {
+        // 1. Tạo bản nháp
+        RequisitionDraftRequest draft = new RequisitionDraftRequest(
+                "Bản nháp cần sửa",
+                dept.getId(),
+                job.getId(),
+                1,
+                "NEW_HEADCOUNT",
+                "Lý do ban đầu",
+                20_000_000L,
+                25_000_000L,
+                "VND",
+                null,
+                LocalDate.now().plusDays(10),
+                "JD ban đầu",
+                "Yêu cầu ban đầu",
+                null,
+                null,
+                "ONSITE"
+        );
+
+        String createdJson = mvc.perform(post("/api/requisitions/draft")
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(draft)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Long id = mapper.readTree(createdJson).get("id").asLong();
+
+        // 2. PUT /api/requisitions/{id} với isDraft = false để cập nhật và nộp duyệt
+        CreateRequisitionRequest updateSubmitReq = new CreateRequisitionRequest(
+                "Yêu cầu sau khi cập nhật bổ sung",
+                dept.getId(),
+                job.getId(),
+                2,
+                "NEW_HEADCOUNT",
+                "Đã bổ sung lý do chi tiết",
+                20_000_000L,
+                28_000_000L,
+                "VND",
+                null,
+                LocalDate.now().plusDays(20),
+                "Mô tả công việc đã cập nhật đầy đủ",
+                "Yêu cầu ứng viên đã cập nhật",
+                "Bảo hiểm đầy đủ",
+                "Hồ Chí Minh",
+                "HYBRID"
+        );
+        updateSubmitReq.setIsDraft(false);
+
+        mvc.perform(put("/api/requisitions/" + id)
+                        .header("Authorization", token(hiringManager))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(updateSubmitReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.title").value("Yêu cầu sau khi cập nhật bổ sung"))
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"))
+                .andExpect(jsonPath("$.quantity").value(2))
                 .andExpect(jsonPath("$.submittedAt").exists());
     }
 

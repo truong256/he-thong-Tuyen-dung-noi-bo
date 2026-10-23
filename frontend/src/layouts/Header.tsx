@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import LogoutConfirmModal from '../components/common/LogoutConfirmModal';
 import { getRoleLabel } from '../constants/rbac';
+import notificationApi from '../api/notification';
+import { NotificationItem } from '../types/notification';
 
 interface HeaderProps {
   onChangePasswordClick: () => void;
@@ -35,12 +37,69 @@ export const Header: React.FC<HeaderProps> = ({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [avatarImgError, setAvatarImgError] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   const avatarSrc = user?.avatarThumbnailUrl || user?.avatarUrl;
 
   useEffect(() => {
     setAvatarImgError(false);
   }, [avatarSrc]);
+
+  const isItemRead = (item: NotificationItem) => Boolean(item.isRead ?? item.read);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = () => {
+      notificationApi
+        .getUnreadCount()
+        .then((res) => setUnreadCount(res.unreadCount || 0))
+        .catch(() => {});
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 10000);
+    window.addEventListener('focus', fetchUnread);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchUnread);
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !notificationOpen) return;
+    notificationApi
+      .getNotifications({ size: 10 })
+      .then((res) => {
+        if (res && res.content) {
+          setNotifications(res.content);
+        }
+      })
+      .catch(() => {});
+  }, [user, notificationOpen]);
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await notificationApi.markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, isRead: true, read: true } : n))
+      );
+      setUnreadCount((c) => Math.max(0, c - 1));
+    } catch {
+      // Ignore notification read failure
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationApi.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true, read: true })));
+      setUnreadCount(0);
+    } catch {
+      // Ignore notification read-all failure
+    }
+  };
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -134,42 +193,101 @@ export const Header: React.FC<HeaderProps> = ({
               aria-expanded={notificationOpen}
             >
               <Bell size={18} />
-              <span className="notification-badge-dot" aria-hidden="true" />
+              {unreadCount > 0 && <span className="notification-badge-dot" aria-hidden="true" />}
             </button>
 
             {notificationOpen && (
-              <div className="dropdown-menu notification-dropdown" style={{ width: '300px' }} role="menu">
+              <div className="dropdown-menu notification-dropdown" style={{ width: '340px', maxHeight: '420px', overflowY: 'auto' }} role="menu">
                 <div className="dropdown-header">
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <strong className="dropdown-user-name">Thông báo hệ thống</strong>
-                    <span className="enterprise-badge badge-primary badge-sm">Mới</span>
+                    <strong className="dropdown-user-name">Thông báo</strong>
+                    {unreadCount > 0 ? (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllAsRead}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#2563EB',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          fontWeight: 500,
+                          padding: 0,
+                        }}
+                      >
+                        Đọc tất cả ({unreadCount})
+                      </button>
+                    ) : (
+                      <span className="enterprise-badge badge-primary badge-sm">Cập nhật</span>
+                    )}
                   </div>
                 </div>
 
                 <div className="notification-list">
-                  <div className="notification-item">
-                    <span className="notification-dot-indicator success" aria-hidden="true" />
-                    <div className="notification-item-content">
-                      <strong className="notification-item-title">Bảo mật tài khoản</strong>
-                      <span className="notification-item-desc">Hệ thống xác thực JWT & RBAC bảo vệ 100% dữ liệu tuyển dụng.</span>
-                    </div>
-                  </div>
+                  {notifications.length > 0 ? (
+                    notifications.map((item) => {
+                      const readStatus = isItemRead(item);
+                      return (
+                        <div
+                          key={item.id}
+                          className={`notification-item ${!readStatus ? 'unread' : ''}`}
+                          onClick={() => !readStatus && handleMarkAsRead(item.id)}
+                          style={{ cursor: !readStatus ? 'pointer' : 'default', opacity: readStatus ? 0.75 : 1 }}
+                        >
+                          <span
+                            className={`notification-dot-indicator ${
+                              item.type === 'CANDIDATE_WITHDRAWAL' || item.type === 'CANDIDATE_WITHDRAWN'
+                                ? 'danger'
+                                : readStatus
+                                ? 'info'
+                                : 'warning'
+                            }`}
+                            aria-hidden="true"
+                          />
+                          <div className="notification-item-content" style={{ flex: 1 }}>
+                          <strong className="notification-item-title" style={{ display: 'block', fontSize: '0.85rem' }}>
+                            {item.title}
+                          </strong>
+                          <span
+                            className="notification-item-desc"
+                            style={{ display: 'block', fontSize: '0.8rem', color: '#475569', marginTop: '2px' }}
+                          >
+                            {item.content}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#94A3B8', marginTop: '4px', display: 'block' }}>
+                            {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : ''}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })
+                  ) : (
+                    <>
+                      <div className="notification-item">
+                        <span className="notification-dot-indicator success" aria-hidden="true" />
+                        <div className="notification-item-content">
+                          <strong className="notification-item-title">Bảo mật tài khoản</strong>
+                          <span className="notification-item-desc">Hệ thống xác thực JWT & RBAC bảo vệ 100% dữ liệu tuyển dụng.</span>
+                        </div>
+                      </div>
 
-                  <div className="notification-item">
-                    <span className="notification-dot-indicator info" aria-hidden="true" />
-                    <div className="notification-item-content">
-                      <strong className="notification-item-title">Phiên làm việc tự động</strong>
-                      <span className="notification-item-desc">Tự động thu hồi phiên sau 5 phút không hoạt động để bảo vệ dữ liệu.</span>
-                    </div>
-                  </div>
+                      <div className="notification-item">
+                        <span className="notification-dot-indicator info" aria-hidden="true" />
+                        <div className="notification-item-content">
+                          <strong className="notification-item-title">Phiên làm việc tự động</strong>
+                          <span className="notification-item-desc">Tự động thu hồi phiên sau 5 phút không hoạt động để bảo vệ dữ liệu.</span>
+                        </div>
+                      </div>
 
-                  <div className="notification-item">
-                    <span className="notification-dot-indicator warning" aria-hidden="true" />
-                    <div className="notification-item-content">
-                      <strong className="notification-item-title">Sprint 2 Enterprise</strong>
-                      <span className="notification-item-desc">Đã hoàn thiện trọn bộ S2-01 đến S2-10 trên hệ thống.</span>
-                    </div>
-                  </div>
+                      <div className="notification-item">
+                        <span className="notification-dot-indicator warning" aria-hidden="true" />
+                        <div className="notification-item-content">
+                          <strong className="notification-item-title">Sprint Tuyển dụng</strong>
+                          <span className="notification-item-desc">Hệ thống sẵn sàng xử lý thông báo rút hồ sơ và pipeline.</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

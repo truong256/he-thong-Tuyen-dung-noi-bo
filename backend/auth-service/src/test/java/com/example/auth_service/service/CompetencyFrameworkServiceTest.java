@@ -7,7 +7,6 @@ import com.example.auth_service.dto.*;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
-import com.example.auth_service.repository.CompetencyCriterionRepository;
 import com.example.auth_service.repository.CompetencyFrameworkRepository;
 import com.example.auth_service.repository.InterviewQuestionRepository;
 import com.example.auth_service.repository.JobTitleRepository;
@@ -36,9 +35,6 @@ class CompetencyFrameworkServiceTest {
 
     @Mock
     private CompetencyFrameworkRepository competencyFrameworkRepository;
-
-    @Mock
-    private CompetencyCriterionRepository competencyCriterionRepository;
 
     @Mock
     private JobTitleRepository jobTitleRepository;
@@ -229,7 +225,7 @@ class CompetencyFrameworkServiceTest {
         assertThat(response.competencyName()).isEqualTo("Năng lực Backend Developer (Updated)");
         assertThat(response.criteria()).hasSize(2);
         // Ensure criterion IDs were preserved in-place
-        assertThat(response.criteria().stream().map(CompetencyCriterionResponse::getId).toList())
+        assertThat(response.criteria().stream().map(c -> c.getId()).toList())
                 .containsExactlyInAnyOrder(10L, 20L);
     }
 
@@ -267,7 +263,7 @@ class CompetencyFrameworkServiceTest {
         CompetencyFrameworkResponse response = service.updateFramework(1L, updateRequest);
 
         assertThat(response.jobTitlesCount()).isEqualTo(2);
-        assertThat(response.jobTitles()).extracting(JobTitleSummaryResponse::title)
+        assertThat(response.jobTitles()).extracting(r -> r.title())
                 .containsExactlyInAnyOrder("Backend Developer", "Senior Backend Engineer");
         verify(jobTitleRepository, times(2)).save(any(JobTitle.class));
     }
@@ -503,7 +499,7 @@ class CompetencyFrameworkServiceTest {
         CompetencyFrameworkResponse response = service.updateFramework(1L, updateRequest);
 
         assertThat(response.criteria()).hasSize(2);
-        assertThat(response.criteria()).extracting(CompetencyCriterionResponse::getCriterionCode)
+        assertThat(response.criteria()).extracting(c -> c.getCriterionCode())
                 .containsExactlyInAnyOrder("BE_01", "BE_03");
     }
 

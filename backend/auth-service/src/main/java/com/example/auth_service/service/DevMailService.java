@@ -59,8 +59,39 @@ public class DevMailService implements MailService {
         return sentPasswordResetRecipients;
     }
 
+    private final List<String> sentApplicationConfirmationRecipients = new CopyOnWriteArrayList<>();
+    private final List<String> sentRecruiterWithdrawalRecipients = new CopyOnWriteArrayList<>();
+
+    @Override
+    public void sendApplicationConfirmationEmail(String toEmail, String candidateName, String jobTitle, String withdrawToken) {
+        sentApplicationConfirmationRecipients.add(toEmail);
+        logger.info("==================================================================");
+        logger.info("[DEV MAIL SERVICE] Application confirmation simulated for: {} (Candidate: {}, Job: {})", toEmail, candidateName, jobTitle);
+        logger.info("[DEV MAIL SERVICE] Withdrawal token generated and linked: (masked for security)");
+        logger.info("==================================================================");
+    }
+
+    @Override
+    public void sendCandidateWithdrawnNotification(String recruiterEmail, String candidateName, String jobTitle, Long applicationId) {
+        sentRecruiterWithdrawalRecipients.add(recruiterEmail);
+        logger.info("==================================================================");
+        logger.info("[DEV MAIL SERVICE] Candidate withdrawal notification sent to recruiter: {} (Candidate: {}, Job: {}, AppId: {})",
+                recruiterEmail, candidateName, jobTitle, applicationId);
+        logger.info("==================================================================");
+    }
+
+    public List<String> getSentApplicationConfirmationRecipients() {
+        return sentApplicationConfirmationRecipients;
+    }
+
+    public List<String> getSentRecruiterWithdrawalRecipients() {
+        return sentRecruiterWithdrawalRecipients;
+    }
+
     public void clear() {
         sentActivationRecipients.clear();
         sentPasswordResetRecipients.clear();
+        sentApplicationConfirmationRecipients.clear();
+        sentRecruiterWithdrawalRecipients.clear();
     }
 }

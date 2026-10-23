@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,7 +45,6 @@ class CompetencyFrameworkIntegrationTest {
     @Autowired private UserRepository users;
     @Autowired private RoleRepository roles;
     @Autowired private CompetencyFrameworkRepository frameworks;
-    @Autowired private CompetencyCriterionRepository criteria;
     @Autowired private JobTitleRepository jobTitles;
     @Autowired private DepartmentRepository departments;
 

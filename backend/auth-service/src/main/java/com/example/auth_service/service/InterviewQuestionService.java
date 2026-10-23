@@ -77,7 +77,7 @@ public class InterviewQuestionService {
                             jId = jobTitleId;
                             jTitle = c.getCompetencyFramework().getJobTitles().stream()
                                     .filter(jt -> jobTitleId.equals(jt.getId()))
-                                    .map(JobTitle::getTitle)
+                                    .map(jt -> jt.getTitle())
                                     .findFirst().orElse(null);
                         } else if (!c.getCompetencyFramework().getJobTitles().isEmpty()) {
                             jId = c.getCompetencyFramework().getJobTitles().get(0).getId();

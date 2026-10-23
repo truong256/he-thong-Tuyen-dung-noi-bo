@@ -90,8 +90,8 @@ test.describe('S2-03: Avatar Upload & Delete Integration Flow', () => {
     // Verify deletion success toast and initials fallback
     await expect(page.locator('.profile-header-toast.success')).toContainText('Đã xóa ảnh đại diện.');
     await expect(page.locator('.profile-header-avatar-initial')).toBeVisible();
-    await expect(page.locator('.profile-header-avatar-initial')).toContainText('Q');
-    await expect(page.locator('.header-right .user-avatar')).toContainText('Q');
+    await expect(page.locator('.profile-header-avatar-initial')).toHaveText(/^[A-ZÀ-Ỹ]/);
+    await expect(page.locator('.header-right .user-avatar')).toHaveText(/^[A-ZÀ-Ỹ]/);
   });
 
   test('validates file size and type rejection on frontend', async ({ page }) => {

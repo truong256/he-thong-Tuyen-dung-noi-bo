@@ -7,7 +7,6 @@ import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
-import com.example.auth_service.repository.RecruitmentRequisitionRepository;
 import com.example.auth_service.repository.RoleRepository;
 import com.example.auth_service.repository.UserRepository;
 import com.example.auth_service.security.JwtUtils;
@@ -28,7 +27,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.util.Set;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -46,7 +44,8 @@ class RecruitmentRequisitionIntegrationTest {
     @Autowired private RoleRepository roles;
     @Autowired private DepartmentRepository departments;
     @Autowired private JobTitleRepository jobTitles;
-    @Autowired private RecruitmentRequisitionRepository requisitions;
+    @Autowired private com.example.auth_service.repository.RequisitionApprovalConfigurationRepository configurations;
+    @Autowired private com.example.auth_service.repository.RequisitionApprovalConfigurationStepRepository configurationSteps;
 
     private User hiringManager;
     private User otherManager;
@@ -85,6 +84,19 @@ class RecruitmentRequisitionIntegrationTest {
         devJob.setDepartment(itDept);
         devJob.setActive(true);
         devJob = jobTitles.saveAndFlush(devJob);
+        com.example.auth_service.entity.RequisitionApprovalConfiguration config = new com.example.auth_service.entity.RequisitionApprovalConfiguration();
+        config.setDepartmentId(itDept.getId());
+        config.setVersion(1);
+        config.setActive(true);
+        config.setCreatedByUserId(hrManager.getId());
+        config = configurations.save(config);
+
+        com.example.auth_service.entity.RequisitionApprovalConfigurationStep step = new com.example.auth_service.entity.RequisitionApprovalConfigurationStep();
+        step.setConfigurationId(config.getId());
+        step.setStepOrder(1);
+        step.setMinimumSalary(0L);
+        step.setApproverUserId(hrManager.getId());
+        configurationSteps.save(step);
     }
 
     @AfterEach
@@ -250,7 +262,7 @@ class RecruitmentRequisitionIntegrationTest {
         mvc.perform(post("/api/recruitment-requests/" + reqId + "/submit")
                         .header("Authorization", token(hiringManager)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("SUBMITTED"));
+                .andExpect(jsonPath("$.status").value("PENDING_APPROVAL"));
 
         // 3. Get detail
         mvc.perform(get("/api/recruitment-requests/" + reqId)
@@ -299,7 +311,11 @@ class RecruitmentRequisitionIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Long sourceId = mapper.readTree(createContent).get("id").asLong();
+ feature/scrum-128-129-clone-recruitment-request
         String sourceCode = mapper.readTree(createContent).get("requisitionCode").asText();
+
+        String sourceCode = mapper.readTree(createContent).get("requisitionCode").asString();
+ dev
 
         // 2. Thực hiện gọi API clone
         String cloneContent = mvc.perform(post("/api/recruitment-requests/" + sourceId + "/clone")
@@ -314,13 +330,20 @@ class RecruitmentRequisitionIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         Long clonedId = mapper.readTree(cloneContent).get("id").asLong();
+ feature/scrum-128-129-clone-recruitment-request
         String clonedCode = mapper.readTree(cloneContent).get("requisitionCode").asText();
+
+        String clonedCode = mapper.readTree(cloneContent).get("requisitionCode").asString();
+ dev
 
         // ID và mã bản sao phải khác bản gốc
         org.junit.jupiter.api.Assertions.assertNotEquals(sourceId, clonedId);
         org.junit.jupiter.api.Assertions.assertNotEquals(sourceCode, clonedCode);
     }
+feature/scrum-128-129-clone-recruitment-request
 
+
+ dev
     private User createUser(String emailPrefix, RoleName roleName) {
         User user = new User(emailPrefix + "@test.local", "password123");
         user.setFullName("User " + emailPrefix);

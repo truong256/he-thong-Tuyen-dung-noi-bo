@@ -16,6 +16,8 @@ import organizationApi from '../api/organization';
 import jobTitleApi from '../api/jobTitle';
 import categoryApi from '../api/category';
 import questionBankApi from '../api/questionBank';
+import jobPostingApi from '../api/jobPosting';
+import CandidateMyApplications from '../components/candidate/CandidateMyApplications';
 
 interface DashboardMetrics {
   userCount: number;
@@ -26,7 +28,7 @@ interface DashboardMetrics {
 }
 
 export const DashboardPage: React.FC = () => {
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, hasPermission } = useAuth();
   const navigate = useNavigate();
   const [showSecurityConfig, setShowSecurityConfig] = useState(false);
 
@@ -40,23 +42,32 @@ export const DashboardPage: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [openJobCount, setOpenJobCount] = useState<number | null>(null);
+  const canReadCatalog = hasPermission?.('CATALOG_READ') ?? false;
 
   const primaryRole = user?.roles && user.roles.length > 0 ? user.roles[0] : (user?.role || 'RECRUITER');
 
   const loadMetrics = useCallback(async () => {
     setIsLoading(true);
     setFetchError(null);
+    setOpenJobCount(null);
 
     try {
       const results = await Promise.allSettled([
         hasRole('ADMIN') ? adminApi.listUsers(undefined, 'ALL', 'ALL', 0, 1) : Promise.resolve(null),
-        organizationApi.getDepartments(),
-        jobTitleApi.getJobTitles(),
-        categoryApi.list(),
-        questionBankApi.search({ page: 0, size: 1 }),
+        canReadCatalog ? organizationApi.getDepartments() : Promise.resolve(null),
+        canReadCatalog ? jobTitleApi.getJobTitles() : Promise.resolve(null),
+        canReadCatalog ? categoryApi.list() : Promise.resolve(null),
+        canReadCatalog ? questionBankApi.search({ page: 0, size: 1 }) : Promise.resolve(null),
+        hasRole('CANDIDATE') ? jobPostingApi.listPublic({ page: 0, size: 1 }) : Promise.resolve(null),
       ]);
 
-      const [usersRes, deptsRes, jobsRes, catsRes, qBankRes] = results;
+      const [usersRes, deptsRes, jobsRes, catsRes, qBankRes, publicJobsRes] = results;
+      if (publicJobsRes.status === 'fulfilled' && publicJobsRes.value) {
+        setOpenJobCount(publicJobsRes.value.totalElements);
+      } else if (publicJobsRes.status === 'rejected') {
+        setFetchError('Không thể đồng bộ số vị trí đang mở. Vui lòng thử lại.');
+      }
 
       const userCount = usersRes.status === 'fulfilled' && usersRes.value ? usersRes.value.totalElements : 0;
       const departmentCount = deptsRes.status === 'fulfilled' && Array.isArray(deptsRes.value) ? deptsRes.value.length : 0;
@@ -76,7 +87,7 @@ export const DashboardPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [hasRole]);
+  }, [hasRole, canReadCatalog]);
 
   useEffect(() => {
     loadMetrics();
@@ -375,9 +386,9 @@ export const DashboardPage: React.FC = () => {
           </h2>
           <div className="dashboard-cards-grid">
             <div className="card">
-              <h3>Khám phá Vị trí Nghề nghiệp ({metrics.jobTitleCount})</h3>
+              <h3>Khám phá Vị trí Nghề nghiệp ({isLoading ? '...' : openJobCount ?? '—'})</h3>
               <p>Tìm hiểu các vị trí tuyển dụng, lộ trình thăng tiến và yêu cầu chuyên môn nội bộ.</p>
-              <button className="btn btn-outline" onClick={() => navigate('/job-titles')}>
+              <button className="btn btn-outline" onClick={() => navigate('/careers')}>
                 <span>Khám phá vị trí</span>
               </button>
             </div>
@@ -389,6 +400,9 @@ export const DashboardPage: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {/* Hồ sơ & CV ứng tuyển của tôi kèm tính năng Rút hồ sơ (S4-06) */}
+          <CandidateMyApplications />
         </div>
       )}
 

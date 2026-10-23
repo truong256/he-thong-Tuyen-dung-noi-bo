@@ -91,8 +91,10 @@ function mapToBackendPayload(payload: any) {
   const maxSal = payload.salaryMax !== undefined ? payload.salaryMax : (payload.proposedMaxSalary !== undefined ? payload.proposedMaxSalary : (payload.maxSalary !== undefined ? payload.maxSalary : undefined));
   const nDate = payload.neededDate || payload.targetDate || undefined;
   const reqs = payload.candidateRequirements || payload.requirements || undefined;
-  const rType = payload.recruitmentType || (payload.reason === 'REPLACEMENT' ? 'REPLACEMENT' : 'NEW_HEADCOUNT');
-  const rReason = payload.reason || (rType === 'REPLACEMENT' ? 'Thay thế nhân sự' : 'Tăng mới theo kế hoạch định biên');
+  const rType = payload.recruitmentType || (payload.reason === 'REPLACEMENT' || payload.reason === 'NEW_HEADCOUNT' ? payload.reason : 'NEW_HEADCOUNT');
+  const rReason = (payload.reason && payload.reason !== 'REPLACEMENT' && payload.reason !== 'NEW_HEADCOUNT')
+    ? payload.reason
+    : (payload.recruitmentDemandExplanation || (payload.isDraft ? (payload.reason || undefined) : payload.reason || ''));
 
   return {
     ...payload,
@@ -114,6 +116,7 @@ function mapFromBackendResponse(item: any): Requisition {
 
   return {
     ...item,
+ feature/scrum-128-129-clone-recruitment-request
     salaryMin: minSal,
     minSalary: minSal,
     proposedMinSalary: minSal,
@@ -124,16 +127,31 @@ function mapFromBackendResponse(item: any): Requisition {
     neededDate: tDate,
     candidateRequirements: reqs,
     requirements: reqs,
+
+    proposedMinSalary: item.salaryMin !== undefined ? item.salaryMin : item.proposedMinSalary,
+    proposedMaxSalary: item.salaryMax !== undefined ? item.salaryMax : item.proposedMaxSalary,
+    targetDate: item.neededDate || item.targetDate,
+    neededDate: item.neededDate || item.targetDate,
+    requirements: item.candidateRequirements || item.requirements,
+    candidateRequirements: item.candidateRequirements || item.requirements,
+    recruitmentType: item.recruitmentType || item.reason,
+    reason: item.reason,
+dev
   };
 }
 
 export const requisitionApi = {
-  list: async (params?: RequisitionFilterParams | { status?: string; departmentId?: number; search?: string; keyword?: string; page?: number; size?: number }): Promise<RequisitionPageResponse> => {
+  list: async (params?: RequisitionFilterParams): Promise<RequisitionPageResponse> => {
     const query = new URLSearchParams();
     if ((params as any)?.search) query.append('search', (params as any).search);
     if ((params as any)?.keyword) query.append('search', (params as any).keyword);
     if (params?.status && params.status !== 'ALL') query.append('status', params.status);
     if (params?.departmentId) query.append('departmentId', String(params.departmentId));
+    if (params?.fromDate) query.append('fromDate', params.fromDate);
+    if (params?.toDate) query.append('toDate', params.toDate);
+    if (params?.recruiterId) query.append('recruiterId', String(params.recruiterId));
+    if (params?.sla && params.sla !== 'ALL') query.append('sla', params.sla);
+    if (params?.sort) query.append('sort', params.sort);
     if (params?.page !== undefined) query.append('page', String(params.page));
     if (params?.size !== undefined) query.append('size', String(params.size));
 
@@ -228,10 +246,14 @@ export const requisitionApi = {
     return {
       ...item,
       salaryMin: minSal,
+ feature/scrum-128-129-clone-recruitment-request
       minSalary: minSal,
       proposedMinSalary: minSal,
       salaryMax: maxSal,
-      maxSalary: maxSal,
+
+      proposedMinSalary: minSal,
+      salaryMax: maxSal,
+ dev
       proposedMaxSalary: maxSal,
       targetDate: tDate,
       neededDate: tDate,
@@ -239,6 +261,7 @@ export const requisitionApi = {
       requirements: reqs,
     };
   },
+feature/scrum-128-129-clone-recruitment-request
 };
 
 export function extractApiErrorMessage(err: any, fallbackMessage: string = 'Đã xảy ra lỗi trong quá trình xử lý.'): string {
@@ -265,5 +288,87 @@ export function extractApiErrorMessage(err: any, fallbackMessage: string = 'Đã
   }
   return fallbackMessage;
 }
+
+
+  getApprovalTimeline: async (id: number) => {
+    const res = await client.get<any>(`/api/requisitions/${id}/timeline`);
+    return res.data;
+  },
+
+  approve: async (id: number, comments?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/approve`, comments ? { comments, comment: comments } : {});
+    return res.data;
+  },
+
+  reject: async (id: number, rejectionReason: string, comments?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/reject`, {
+      rejectionReason,
+      reason: rejectionReason,
+      comments: comments || rejectionReason,
+      comment: comments || rejectionReason,
+    });
+    return res.data;
+  },
+
+  getAssignableRecruiters: async (): Promise<import('../types/requisition').AssignableRecruiter[]> => {
+    const res = await client.get<import('../types/requisition').AssignableRecruiter[]>('/api/requisitions/assignable-recruiters');
+    return res.data;
+  },
+
+  getAssignments: async (id: number): Promise<import('../types/requisition').RequisitionAssignments> => {
+    const res = await client.get<import('../types/requisition').RequisitionAssignments>(`/api/requisitions/${id}/assignments`);
+    return res.data;
+  },
+
+  assignRecruiters: async (
+    id: number,
+    payload: import('../types/requisition').AssignRecruiterPayload
+  ): Promise<import('../types/requisition').RequisitionAssignments> => {
+    const res = await client.put<import('../types/requisition').RequisitionAssignments>(`/api/requisitions/${id}/assignments`, payload);
+    return res.data;
+  },
+
+  getAssignmentHistory: async (id: number): Promise<import('../types/requisition').AssignmentHistoryItem[]> => {
+    const res = await client.get<import('../types/requisition').AssignmentHistoryItem[]>(`/api/requisitions/${id}/assignments/history`);
+    return res.data;
+  },
+
+  hold: async (id: number, reason?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/hold`, { reason });
+    return res.data;
+  },
+
+  resume: async (id: number, reason?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/resume`, { reason });
+    return res.data;
+  },
+
+  close: async (id: number, reason?: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/close`, { reason });
+    return res.data;
+  },
+
+  cancel: async (id: number, reason: string): Promise<any> => {
+    const res = await client.post<any>(`/api/requisitions/${id}/cancel`, { reason });
+    return res.data;
+  },
+
+  getPipelineSummary: async (id: number): Promise<{
+    requisitionId: number;
+    totalCount: number;
+    activeCount: number;
+    countByStage: Record<string, number>;
+  }> => {
+    const res = await client.get<{
+      requisitionId: number;
+      totalCount: number;
+      activeCount: number;
+      countByStage: Record<string, number>;
+    }>(`/api/requisitions/${id}/pipeline-summary`);
+    return res.data;
+  },
+};
+
+ dev
 
 export default requisitionApi;

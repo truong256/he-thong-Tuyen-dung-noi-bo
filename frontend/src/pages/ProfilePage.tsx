@@ -7,13 +7,36 @@ import ProfileTabs, { ProfileTabType } from '../components/profile/ProfileTabs';
 import PersonalInfoTab, { ProfileFieldErrors } from '../components/profile/PersonalInfoTab';
 import RolesPermissionsTab from '../components/profile/RolesPermissionsTab';
 import SecuritySessionsTab from '../components/profile/SecuritySessionsTab';
+import { Check, X, AlertCircle, AlertTriangle } from 'lucide-react';
 import { PageHeader } from '../components/common/PageHeader';
 import '../styles/profile.css';
+
+export interface ProfileToastItem {
+  id: string;
+  message: string;
+  type: 'success' | 'warning' | 'error';
+}
 
 export const ProfilePage: React.FC = () => {
   const { user, refreshUser } = useAuth();
 
   const [activeTab, setActiveTab] = useState<ProfileTabType>('info');
+
+  // Unified floating toasts for ProfilePage & ProfileHeader
+  const [toasts, setToasts] = useState<ProfileToastItem[]>([]);
+
+  const showToast = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
+    const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
 
   // Form states
   const [fullName, setFullName] = useState(user?.fullName || '');
@@ -145,10 +168,19 @@ export const ProfilePage: React.FC = () => {
       await authApi.updateProfile(payload);
 
       // Refresh current user data across context and localStorage
-      await refreshUser();
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        // Server updated, but refresh failed — show warning, do not show full success
+        showToast(
+          'Hồ sơ đã được lưu nhưng chưa thể đồng bộ lại dữ liệu từ máy chủ. Vui lòng tải lại trang.',
+          'warning'
+        );
+        return;
+      }
 
       setSuccessMsg('Thông tin hồ sơ cá nhân đã được cập nhật thành công!');
-      setTimeout(() => setSuccessMsg(null), 5000);
+      showToast('Thông tin hồ sơ cá nhân đã được cập nhật thành công!', 'success');
+      setTimeout(() => setSuccessMsg(null), 4000);
     } catch (err: any) {
       const apiValidation = err.response?.data?.validationErrors;
       if (apiValidation && typeof apiValidation === 'object') {
@@ -168,6 +200,7 @@ export const ProfilePage: React.FC = () => {
         apiValidation?.recoveryEmail ||
         'Không thể cập nhật hồ sơ cá nhân. Vui lòng thử lại sau.';
       setErrorMsg(msg);
+      showToast(msg, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -187,10 +220,30 @@ export const ProfilePage: React.FC = () => {
         ]}
       />
 
-      {/* Floating success toast notification */}
-      {successMsg && (
-        <div className="profile-toast-success" role="status" aria-live="polite">
-          <span>{successMsg}</span>
+      {/* Floating unified toast notification (Fixed top-right, auto-dismiss 4s, manual close, no overlap) */}
+      {toasts.length > 0 && (
+        <div className="profile-toast-container" aria-live="polite">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`profile-header-toast ${toast.type}`}
+              role={toast.type === 'error' ? 'alert' : 'status'}
+              data-testid={`toast-${toast.type}`}
+            >
+              {toast.type === 'success' && <Check size={16} />}
+              {toast.type === 'warning' && <AlertTriangle size={16} />}
+              {toast.type === 'error' && <AlertCircle size={16} />}
+              <span>{toast.message}</span>
+              <button
+                type="button"
+                className="toast-close-btn"
+                onClick={() => removeToast(toast.id)}
+                aria-label="Đóng thông báo"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -200,6 +253,7 @@ export const ProfilePage: React.FC = () => {
         fullName={fullName}
         isAccountActive={isAccountActive}
         onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
+        onNotify={showToast}
       />
 
       {/* 2. Navigation Tabs (Clean underline highlight, responsive scroll) */}
@@ -241,8 +295,7 @@ export const ProfilePage: React.FC = () => {
         isOpen={isPasswordModalOpen}
         onClose={() => setIsPasswordModalOpen(false)}
         onSuccess={() => {
-          setSuccessMsg('Mật khẩu của bạn đã được thay đổi thành công!');
-          setTimeout(() => setSuccessMsg(null), 5000);
+          showToast('Mật khẩu của bạn đã được thay đổi thành công!', 'success');
         }}
       />
     </div>

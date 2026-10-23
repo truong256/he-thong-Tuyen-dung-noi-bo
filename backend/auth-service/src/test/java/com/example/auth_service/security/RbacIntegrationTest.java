@@ -45,6 +45,8 @@ class RbacIntegrationTest {
     @Autowired DepartmentRepository departments;
     @Autowired JobTitleRepository jobTitles;
     @Autowired RequisitionAssignmentRepository assignments;
+    @Autowired RequisitionApprovalConfigurationRepository configurations;
+    @Autowired RequisitionApprovalConfigurationStepRepository configurationSteps;
     @Autowired SalaryRangeRepository salaries;
     @Autowired RecruitmentReadService readService;
     @Autowired org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
@@ -568,6 +570,21 @@ class RbacIntegrationTest {
         jt.setMaxSalary(40000000L);
         jt = jobTitles.saveAndFlush(jt);
 
+        RequisitionApprovalConfiguration cfg = new RequisitionApprovalConfiguration();
+        cfg.setDepartmentId(dept.getId());
+        cfg.setVersion(1);
+        cfg.setActive(true);
+        cfg.setCreatedByUserId(hm.getId());
+        cfg = configurations.save(cfg);
+
+        User deptApprover = user("rbac-dept-approver", RoleName.APPROVER);
+        RequisitionApprovalConfigurationStep step = new RequisitionApprovalConfigurationStep();
+        step.setConfigurationId(cfg.getId());
+        step.setStepOrder(1);
+        step.setMinimumSalary(0L);
+        step.setApproverUserId(deptApprover.getId());
+        configurationSteps.save(step);
+
         // HM creates for own department -> 201 Created
         String payloadSuccess = """
             {
@@ -678,7 +695,7 @@ class RbacIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(outSalaryNoExpPayload))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Dải lương đề xuất nằm ngoài khung chuẩn của chức danh, bắt buộc nhập giải trình.")));
+                .andExpect(jsonPath("$.message").value("Dải lương nằm ngoài khung lương tiêu chuẩn của chức danh. Vui lòng nhập lý do giải trình dải lương."));
 
         // 3. Out of salary range WITH explanation -> 201 Created
         String outSalaryWithExpPayload = """

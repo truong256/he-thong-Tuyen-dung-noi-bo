@@ -18,29 +18,61 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [notice, setNotice] = useState<string | null>(null);
 
   const handleLinkClick = () => {
-    if (onClose) {
-      onClose();
-    }
+    onClose?.();
   };
 
   const handleUpcomingClick = (featureName: string) => {
-    setNotice(`Tính năng "${featureName}" đang được phát triển theo lộ trình Sprint tiếp theo.`);
+    setNotice(
+      `Tính năng "${featureName}" đang được phát triển theo lộ trình Sprint tiếp theo.`,
+    );
     setTimeout(() => setNotice(null), 3500);
     handleLinkClick();
   };
 
-  // Permission-based visibility flags (S1-06: Menu theo quyền) with role-based fallbacks
+  // Hiển thị menu theo quyền; sử dụng role làm phương án dự phòng.
   const checkPerm = (perm: string, fallbackRoles: string[]) =>
-    typeof hasPermission === 'function' ? hasPermission(perm) : (hasAnyRole ? hasAnyRole(fallbackRoles) : false);
+    typeof hasPermission === 'function'
+      ? hasPermission(perm)
+      : hasAnyRole(fallbackRoles);
 
-  const canReadCatalog = checkPerm('CATALOG_READ', ['ADMIN', 'HR_MANAGER', 'RECRUITER', 'HIRING_MANAGER', 'INTERVIEWER', 'APPROVER']);
+  const canReadCatalog = checkPerm('CATALOG_READ', [
+    'ADMIN',
+    'HR_MANAGER',
+    'RECRUITER',
+    'HIRING_MANAGER',
+    'INTERVIEWER',
+    'APPROVER',
+  ]);
+
   const canReadUsers = checkPerm('USER_READ', ['ADMIN', 'HR_MANAGER']);
   const canManageUsers = checkPerm('USER_MANAGE', ['ADMIN']);
+  const canReadRoles = checkPerm('ROLE_READ', ['ADMIN', 'HR_MANAGER']);
   const canReadAudit = checkPerm('AUDIT_READ', ['ADMIN', 'HR_MANAGER']);
+
+  const canReadRequisitions =
+    hasAnyRole([
+      'HIRING_MANAGER',
+      'HR_MANAGER',
+      'ADMIN',
+      'RECRUITER',
+      'APPROVER',
+    ]) ||
+    (typeof hasPermission === 'function' &&
+      [
+        'REQUISITION_CREATE',
+        'REQUISITION_READ_OWN',
+        'REQUISITION_READ_ALL',
+        'REQUISITION_APPROVE',
+      ].some((permission) => hasPermission(permission)));
+
+  const canReadRecruitment = hasAnyRole([
+    'RECRUITER',
+    'HR_MANAGER',
+    'ADMIN',
+  ]);
 
   return (
     <>
-      {/* Mobile backdrop overlay */}
       {isOpen && (
         <div
           className="sidebar-backdrop"
@@ -50,14 +82,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`app-sidebar ${isOpen ? 'mobile-open' : ''} ${isCollapsed ? 'is-collapsed' : ''}`}
+        className={`app-sidebar ${isOpen ? 'mobile-open' : ''} ${
+          isCollapsed ? 'is-collapsed' : ''
+        }`}
         aria-label="Menu điều hướng hệ thống"
       >
-        {/* Mobile Header with close button */}
         <div className="sidebar-mobile-header">
           <div className="sidebar-mobile-brand">
             <span>Menu Hệ thống</span>
           </div>
+
           <button
             type="button"
             className="sidebar-mobile-close-btn"
@@ -69,15 +103,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <nav className="sidebar-nav-container">
-          {/* Main Navigation Section */}
+          {/* Điều hướng chính */}
           <div className="sidebar-section">
             <span className="sidebar-title">ĐIỀU HƯỚNG</span>
             <ul className="sidebar-menu">
               <li>
                 <NavLink
                   to="/dashboard"
-                  className={({ isActive }) => (isActive ? 'active' : '')}
                   end
+                  className={({ isActive }) => (isActive ? 'active' : '')}
                   onClick={handleLinkClick}
                 >
                   <span>Tổng quan</span>
@@ -86,7 +120,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </ul>
           </div>
 
-          {/* Catalog & Organization Section - "Hồ sơ tổ chức" is removed from Sidebar */}
+          {/* Cơ cấu và danh mục */}
           {canReadCatalog && (
             <div className="sidebar-section">
               <span className="sidebar-title">CƠ CẤU & DANH MỤC</span>
@@ -100,7 +134,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Quản lý Chức danh</span>
                   </NavLink>
                 </li>
-
                 <li>
                   <NavLink
                     to="/categories"
@@ -110,7 +143,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Quản lý Danh mục</span>
                   </NavLink>
                 </li>
-
                 <li>
                   <NavLink
                     to="/competencies"
@@ -120,7 +152,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Khung Năng lực</span>
                   </NavLink>
                 </li>
-
                 <li>
                   <NavLink
                     to="/questions"
@@ -134,8 +165,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* User Administration Section */}
-          {(canReadUsers || canManageUsers) && (
+          {/* Quản trị tài khoản */}
+          {(canReadUsers || canManageUsers || canReadRoles) && (
             <div className="sidebar-section">
               <span className="sidebar-title">QUẢN TRỊ TÀI KHOẢN</span>
               <ul className="sidebar-menu">
@@ -146,7 +177,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       className={({ isActive }) => (isActive ? 'active' : '')}
                       onClick={handleLinkClick}
                     >
-                      <span>{canManageUsers ? 'Quản lý Tài khoản' : 'Danh sách tài khoản'}</span>
+                      <span>
+                        {canManageUsers
+                          ? 'Quản lý Tài khoản'
+                          : 'Danh sách tài khoản'}
+                      </span>
+                    </NavLink>
+                  </li>
+                )}
+
+                {canReadRoles && (
+                  <li>
+                    <NavLink
+                      to="/admin/permission-matrix"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
+                    >
+                      <span>Ma trận phân quyền</span>
                     </NavLink>
                   </li>
                 )}
@@ -166,12 +213,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Recruitment Process Section */}
-          {(hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN']) || hasRole('HIRING_MANAGER') || hasRole('APPROVER')) && (
+          {/* Quy trình tuyển dụng */}
+          {(canReadRecruitment ||
+            hasRole('HIRING_MANAGER') ||
+            hasRole('APPROVER')) && (
             <div className="sidebar-section">
               <span className="sidebar-title">QUY TRÌNH TUYỂN DỤNG</span>
               <ul className="sidebar-menu">
-                {(hasAnyRole(['HIRING_MANAGER', 'HR_MANAGER', 'ADMIN']) || (hasPermission && hasPermission('REQUISITION_CREATE'))) ? (
+                {canReadRequisitions && (
                   <li>
                     <NavLink
                       to="/recruitment/requisitions"
@@ -180,19 +229,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     >
                       <span>Yêu cầu tuyển dụng</span>
                     </NavLink>
-                  </li>
-                ) : (
-                  <li>
-                    <a
-                      href="#requisitions"
-                      className="sidebar-link-upcoming"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleUpcomingClick('Yêu cầu tuyển dụng');
-                      }}
-                    >
-                      <span>Yêu cầu tuyển dụng</span>
-                    </a>
                   </li>
                 )}
 
@@ -208,38 +244,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </li>
                 )}
 
-                {hasAnyRole(['RECRUITER', 'HR_MANAGER', 'ADMIN']) && (
+                {canReadRecruitment && (
                   <>
                     <li>
-                      <a
-                        href="#jobs"
-                        className="sidebar-link-upcoming"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleUpcomingClick('Tin tuyển dụng');
-                        }}
+                      <NavLink
+                        to="/recruitment/job-postings"
+                        className={({ isActive }) => (isActive ? 'active' : '')}
+                        onClick={handleLinkClick}
                       >
                         <span>Tin tuyển dụng</span>
-                      </a>
+                      </NavLink>
                     </li>
+
+                    {/* Hồ sơ ứng viên: chuyển đến trang Pipeline */}
                     <li>
-                      <a
-                        href="#pipeline"
-                        className="sidebar-link-upcoming"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleUpcomingClick('Hồ sơ & Pipeline');
-                        }}
+                      <NavLink
+                        to="/recruitment/candidates"
+                        className={({ isActive }) =>
+                          isActive ? 'active' : ''
+                        }
+                        onClick={handleLinkClick}
                       >
                         <span>Hồ sơ & Pipeline</span>
-                      </a>
+                      </NavLink>
                     </li>
+
                     <li>
                       <a
                         href="#interviews"
                         className="sidebar-link-upcoming"
-                        onClick={(e) => {
-                          e.preventDefault();
+                        onClick={(event) => {
+                          event.preventDefault();
                           handleUpcomingClick('Lịch phỏng vấn');
                         }}
                       >
@@ -249,26 +284,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </>
                 )}
 
-                {hasAnyRole(['HIRING_MANAGER', 'APPROVER', 'HR_MANAGER', 'ADMIN']) && (
+                {hasAnyRole([
+                  'HIRING_MANAGER',
+                  'APPROVER',
+                  'HR_MANAGER',
+                  'ADMIN',
+                ]) && (
                   <li>
-                    <a
-                      href="#approvals"
-                      className="sidebar-link-upcoming"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleUpcomingClick('Duyệt ứng viên & Offer');
-                      }}
+                    <NavLink
+                      to="/recruitment/candidates"
+                      className={({ isActive }) => (isActive ? 'active' : '')}
+                      onClick={handleLinkClick}
                     >
                       <span>Duyệt ứng viên & Offer</span>
-                    </a>
+                    </NavLink>
                   </li>
                 )}
               </ul>
             </div>
           )}
 
-          {/* Interviewer Section */}
-          {(hasRole('INTERVIEWER')) && (
+          {/* Phỏng vấn chuyên môn */}
+          {hasRole('INTERVIEWER') && (
             <div className="sidebar-section">
               <span className="sidebar-title">PHỎNG VẤN CHUYÊN MÔN</span>
               <ul className="sidebar-menu">
@@ -276,8 +313,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <a
                     href="#my-interviews"
                     className="sidebar-link-upcoming"
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={(event) => {
+                      event.preventDefault();
                       handleUpcomingClick('Lịch phỏng vấn của tôi');
                     }}
                   >
@@ -288,8 +325,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <a
                     href="#evaluation"
                     className="sidebar-link-upcoming"
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={(event) => {
+                      event.preventDefault();
                       handleUpcomingClick('Phiếu đánh giá ứng viên');
                     }}
                   >
@@ -300,40 +337,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Candidate Section */}
-          {(hasRole('CANDIDATE')) && (
+          {/* Cổng ứng viên */}
+          {hasRole('CANDIDATE') && (
             <div className="sidebar-section">
               <span className="sidebar-title">ỨNG VIÊN NỘI BỘ</span>
               <ul className="sidebar-menu">
                 <li>
-                  <a
-                    href="#jobs-candidate"
-                    className="sidebar-link-upcoming"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Việc làm đang mở');
-                    }}
+                  <NavLink
+                    to="/careers"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
                   >
                     <span>Việc làm đang mở</span>
-                  </a>
+                  </NavLink>
                 </li>
                 <li>
-                  <a
-                    href="#my-profile"
-                    className="sidebar-link-upcoming"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleUpcomingClick('Hồ sơ & CV của tôi');
-                    }}
+                  <NavLink
+                    to="/candidate/applications"
+                    className={({ isActive }) => (isActive ? 'active' : '')}
+                    onClick={handleLinkClick}
                   >
                     <span>Hồ sơ & CV của tôi</span>
-                  </a>
+                  </NavLink>
                 </li>
               </ul>
             </div>
           )}
 
-          {/* HR Manager – Audit/Nhật ký section (S1-07 / AUDIT_READ) */}
+          {/* Nhật ký hệ thống */}
           {canReadAudit && !canManageUsers && (
             <div className="sidebar-section">
               <span className="sidebar-title">NHẬT KÝ HỆ THỐNG</span>
@@ -342,8 +373,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <a
                     href="#audit-log"
                     className="sidebar-link-upcoming"
-                    onClick={(e) => {
-                      e.preventDefault();
+                    onClick={(event) => {
+                      event.preventDefault();
                       handleUpcomingClick('Nhật ký hoạt động');
                     }}
                   >
@@ -356,9 +387,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </aside>
 
-      {/* Roadmap notification toast */}
       {notice && (
-        <div className="sidebar-toast-notice" role="status" aria-live="polite">
+        <div
+          className="sidebar-toast-notice"
+          role="status"
+          aria-live="polite"
+        >
           <span>{notice}</span>
         </div>
       )}

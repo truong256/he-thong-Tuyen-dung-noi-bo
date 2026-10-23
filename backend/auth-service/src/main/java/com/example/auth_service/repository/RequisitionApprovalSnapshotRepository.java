@@ -8,12 +8,19 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface RequisitionApprovalSnapshotRepository extends JpaRepository<RequisitionApprovalSnapshot, Long> {
     List<RequisitionApprovalSnapshot> findAllByRequisitionIdOrderByStepOrderAsc(Long requisitionId);
 
     boolean existsByRequisitionId(Long requisitionId);
+
+    @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM RequisitionApprovalSnapshot s WHERE s.requisitionId = :requisitionId")
+    void deleteAllByRequisitionId(@Param("requisitionId") Long requisitionId);
+
+    List<RequisitionApprovalSnapshot> findAllByApproverUserId(Long approverUserId);
+
+    boolean existsByRequisitionIdAndApproverUserId(Long requisitionId, Long approverUserId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""

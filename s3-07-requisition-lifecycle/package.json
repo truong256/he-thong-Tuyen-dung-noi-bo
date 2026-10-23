@@ -1,0 +1,36 @@
+{
+  "name": "s3-07-requisition-lifecycle",
+  "version": "1.0.0",
+  "description": "S3-07 - Tạm dừng, đóng hoặc huỷ yêu cầu tuyển dụng (ATS nội bộ)",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "scripts": {
+    "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.fe.json",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "node --test --experimental-test-coverage --test-coverage-include=\"src/**/*.ts\" --test-coverage-include=\"frontend/**/*.ts\" --test-coverage-branches=60 --test-coverage-lines=60 --test-coverage-functions=60 \"test/*.test.ts\"",
+    "test:ac": "node --test \"test/acceptance.test.ts\"",
+    "test:fe": "tsx --tsconfig tsconfig.fe.json --test \"test/fe/dialog.smoke.test.tsx\"",
+    "test:360": "tsx --tsconfig tsconfig.fe.json --test \"test/fe/responsive360.test.tsx\"",
+    "demo": "node scripts/demo.ts",
+    "test:ac:chi-tiet": "node --test --test-reporter=spec \"test/acceptance.test.ts\"",
+    "verify": "npm run lint && npm run build && npm test",
+    "check": "npm run verify && npm run test:fe && npm run test:360 && npm run test:e2e && npm run demo",
+    "build:web": "node scripts/build-web.mjs",
+    "start": "npm run build:web && node server/index.ts",
+    "test:e2e": "npm run build:web && tsx --tsconfig tsconfig.fe.json --test \"test/e2e/*.test.ts\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.0",
+    "playwright": "1.56.0",
+    "esbuild": "^0.25.0"
+  }
+}

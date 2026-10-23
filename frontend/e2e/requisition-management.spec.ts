@@ -64,6 +64,6 @@ test.describe('S2-10 Recruitment Requisition UI & Workflow Verification (E2E)', 
     await page.locator('#btn-submit-requisition').click();
 
     // Expect validation message for past date
-    await expect(page.locator('.req-error-text')).toContainText(/Ngày cần người không được ở quá khứ/i);
+    await expect(page.locator('.req-error-text', { hasText: /Ngày cần người không được ở quá khứ/i })).toBeVisible();
   });
 });

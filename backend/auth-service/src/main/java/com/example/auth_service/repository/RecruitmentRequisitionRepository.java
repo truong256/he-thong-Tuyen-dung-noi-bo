@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -80,6 +82,101 @@ public interface RecruitmentRequisitionRepository extends JpaRepository<Recruitm
             @Param("status") String status,
             @Param("departmentId") Long departmentId,
             @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT r FROM RecruitmentRequisition r
+        WHERE ((:canReadAll = true)
+               OR (r.createdByUserId = :userId)
+               OR (r.id IN :assignedIds)
+               OR (r.departmentId IN :managedDepartmentIds))
+          AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+          AND (:departmentId IS NULL OR r.departmentId = :departmentId)
+          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+        ORDER BY r.createdAt DESC
+        """)
+    Page<RecruitmentRequisition> searchScoped(
+            @Param("canReadAll") boolean canReadAll,
+            @Param("userId") Long userId,
+            @Param("assignedIds") Collection<Long> assignedIds,
+            @Param("managedDepartmentIds") Collection<Long> managedDepartmentIds,
+            @Param("status") String status,
+            @Param("departmentId") Long departmentId,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT r FROM RecruitmentRequisition r
+        WHERE (:createdByUserId IS NULL OR r.createdByUserId = :createdByUserId)
+          AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+          AND (:departmentId IS NULL OR r.departmentId = :departmentId)
+          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:fromInstant IS NULL OR r.createdAt >= :fromInstant)
+          AND (:toInstant IS NULL OR r.createdAt < :toInstant)
+          AND (:hasRecruiterFilter = false OR r.id IN :recruiterReqIds)
+          AND (:sla IS NULL OR :sla = 'ALL' OR
+               (:sla = 'OVERDUE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) < :today) OR
+               (:sla = 'WARNING' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) >= :today AND COALESCE(r.targetDate, r.neededDate) <= :warningDate) OR
+               (:sla = 'SAFE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) > :warningDate) OR
+               (:sla = 'INACTIVE' AND (r.status IS NOT NULL AND UPPER(r.status) IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')))
+          )
+        ORDER BY r.createdAt DESC, r.id DESC
+        """)
+    Page<RecruitmentRequisition> searchWithFilters(
+            @Param("createdByUserId") Long createdByUserId,
+            @Param("status") String status,
+            @Param("departmentId") Long departmentId,
+            @Param("keyword") String keyword,
+            @Param("fromInstant") Instant fromInstant,
+            @Param("toInstant") Instant toInstant,
+            @Param("hasRecruiterFilter") boolean hasRecruiterFilter,
+            @Param("recruiterReqIds") Collection<Long> recruiterReqIds,
+            @Param("sla") String sla,
+            @Param("today") LocalDate today,
+            @Param("warningDate") LocalDate warningDate,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT r FROM RecruitmentRequisition r
+        WHERE ((:canReadAll = true)
+               OR (r.createdByUserId = :userId)
+               OR (r.id IN :assignedIds)
+               OR (r.departmentId IN :managedDepartmentIds))
+          AND (:status IS NULL OR UPPER(r.status) = UPPER(:status))
+          AND (:departmentId IS NULL OR r.departmentId = :departmentId)
+          AND (:keyword IS NULL OR LOWER(r.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+               OR LOWER(r.requisitionCode) LIKE LOWER(CONCAT('%', :keyword, '%')))
+          AND (:fromInstant IS NULL OR r.createdAt >= :fromInstant)
+          AND (:toInstant IS NULL OR r.createdAt < :toInstant)
+          AND (:hasRecruiterFilter = false OR r.id IN :recruiterReqIds)
+          AND (:sla IS NULL OR :sla = 'ALL' OR
+               (:sla = 'OVERDUE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) < :today) OR
+               (:sla = 'WARNING' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) >= :today AND COALESCE(r.targetDate, r.neededDate) <= :warningDate) OR
+               (:sla = 'SAFE' AND (r.status IS NULL OR UPPER(r.status) NOT IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')) AND COALESCE(r.targetDate, r.neededDate) > :warningDate) OR
+               (:sla = 'INACTIVE' AND (r.status IS NOT NULL AND UPPER(r.status) IN ('CLOSED', 'CANCELLED', 'REJECTED', 'FILLED')))
+          )
+        ORDER BY r.createdAt DESC, r.id DESC
+        """)
+    Page<RecruitmentRequisition> searchScopedWithFilters(
+            @Param("canReadAll") boolean canReadAll,
+            @Param("userId") Long userId,
+            @Param("assignedIds") Collection<Long> assignedIds,
+            @Param("managedDepartmentIds") Collection<Long> managedDepartmentIds,
+            @Param("status") String status,
+            @Param("departmentId") Long departmentId,
+            @Param("keyword") String keyword,
+            @Param("fromInstant") Instant fromInstant,
+            @Param("toInstant") Instant toInstant,
+            @Param("hasRecruiterFilter") boolean hasRecruiterFilter,
+            @Param("recruiterReqIds") Collection<Long> recruiterReqIds,
+            @Param("sla") String sla,
+            @Param("today") LocalDate today,
+            @Param("warningDate") LocalDate warningDate,
             Pageable pageable
     );
 

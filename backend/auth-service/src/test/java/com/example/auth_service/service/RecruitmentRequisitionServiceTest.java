@@ -10,7 +10,6 @@ import com.example.auth_service.entity.RoleName;
 import com.example.auth_service.entity.User;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
-import com.example.auth_service.exception.ResourceNotFoundException;
 import com.example.auth_service.repository.DepartmentRepository;
 import com.example.auth_service.repository.JobTitleRepository;
 import com.example.auth_service.repository.RecruitmentRequisitionRepository;
@@ -453,6 +452,7 @@ class RecruitmentRequisitionServiceTest {
         assertThat(cloned.status()).isEqualTo("DRAFT");
         assertThat(cloned.jobDescription()).isEqualTo("Lập trình RESTful API, thiết kế cơ sở dữ liệu");
         assertThat(cloned.candidateRequirements()).isEqualTo("Có kinh nghiệm Spring Boot 2 năm trở lên");
+ feature/scrum-128-129-clone-recruitment-request
         assertThat(cloned.requirements()).isEqualTo("Có kinh nghiệm Spring Boot 2 năm trở lên");
         assertThat(cloned.salaryMin()).isEqualTo(18_000_000L);
         assertThat(cloned.salaryMax()).isEqualTo(28_000_000L);
@@ -460,14 +460,22 @@ class RecruitmentRequisitionServiceTest {
         assertThat(cloned.maxSalary()).isEqualTo(28_000_000L);
         assertThat(cloned.proposedMinSalary()).isEqualTo(18_000_000L);
         assertThat(cloned.proposedMaxSalary()).isEqualTo(28_000_000L);
+
+dev
         assertThat(cloned.quantity()).isEqualTo(2);
         assertThat(cloned.title()).isEqualTo("Kỹ sư phần mềm Java");
         assertThat(cloned.departmentId()).isEqualTo(itDept.getId());
         assertThat(cloned.jobTitleId()).isEqualTo(devJob.getId());
+ feature/scrum-128-129-clone-recruitment-request
+
+        assertThat(cloned.salaryMin()).isEqualTo(18_000_000L);
+        assertThat(cloned.salaryMax()).isEqualTo(28_000_000L);
+ dev
         assertThat(cloned.requisitionCode()).isNotEqualTo("REQ-ORIGINAL-001");
     }
 
     @Test
+ feature/scrum-128-129-clone-recruitment-request
     @DisplayName("SCRUM-128: clone sao chép đầy đủ khi bản ghi gốc dùng proposedMinSalary/proposedMaxSalary/requirements")
     void clone_fallbackSalaryAndRequirements_success() {
         RecruitmentRequisition original = new RecruitmentRequisition();
@@ -480,6 +488,21 @@ class RecruitmentRequisitionServiceTest {
         original.setProposedMinSalary(15_000_000L);
         original.setProposedMaxSalary(25_000_000L);
         original.setRequirements("Thành thạo ReactJS, TypeScript");
+
+    @DisplayName("SCRUM-128: clone sao chép chính xác khi bản ghi gốc dùng các trường proposedMinSalary, proposedMaxSalary, requirements")
+    void clone_fallbackFields_copiedCorrectly() {
+        RecruitmentRequisition original = new RecruitmentRequisition();
+        original.setId(51L);
+        original.setRequisitionCode("REQ-FALLBACK-002");
+        original.setTitle("QA Automation Lead");
+        original.setDepartmentId(itDept.getId());
+        original.setJobTitleId(devJob.getId());
+        original.setQuantity(1);
+        original.setProposedMinSalary(12_000_000L);
+        original.setProposedMaxSalary(20_000_000L);
+        original.setRequirements("Kinh nghiệm kiểm thử tự động với Playwright");
+        original.setNeededDate(LocalDate.now().plusMonths(2));
+ dev
         original.setStatus("APPROVED");
         original.setCreatedByUserId(hiringManager.getId());
 
@@ -492,11 +515,17 @@ class RecruitmentRequisitionServiceTest {
 
         assertThat(cloned).isNotNull();
         assertThat(cloned.status()).isEqualTo("DRAFT");
+ feature/scrum-128-129-clone-recruitment-request
         assertThat(cloned.salaryMin()).isEqualTo(15_000_000L);
         assertThat(cloned.salaryMax()).isEqualTo(25_000_000L);
         assertThat(cloned.minSalary()).isEqualTo(15_000_000L);
         assertThat(cloned.maxSalary()).isEqualTo(25_000_000L);
         assertThat(cloned.candidateRequirements()).isEqualTo("Thành thạo ReactJS, TypeScript");
         assertThat(cloned.requirements()).isEqualTo("Thành thạo ReactJS, TypeScript");
+
+        assertThat(cloned.salaryMin()).isEqualTo(12_000_000L);
+        assertThat(cloned.salaryMax()).isEqualTo(20_000_000L);
+        assertThat(cloned.candidateRequirements()).isEqualTo("Kinh nghiệm kiểm thử tự động với Playwright");
+ dev
     }
 }

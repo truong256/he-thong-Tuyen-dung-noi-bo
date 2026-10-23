@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Trash2, X, Check, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { Camera, Trash2, X, Check, AlertCircle, AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import { UserSummary } from '../../types/auth';
 import { getRoleLabel } from '../../constants/rbac';
 import { useAuth } from '../../hooks/useAuth';
@@ -10,6 +10,7 @@ interface ProfileHeaderProps {
   fullName: string;
   isAccountActive: boolean;
   onOpenPasswordModal: () => void;
+  onNotify?: (message: string, type: 'success' | 'warning' | 'error') => void;
 }
 
 export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
@@ -17,6 +18,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   fullName,
   isAccountActive,
   onOpenPasswordModal,
+  onNotify,
 }) => {
   const { updateUser, refreshUser } = useAuth();
   const displayName = fullName.trim() || user?.fullName || user?.email || 'Người dùng';
@@ -39,17 +41,40 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [isDeleting, setIsDeleting] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [toastError, setToastError] = useState<string | null>(null);
+  const [localToasts, setLocalToasts] = useState<
+    Array<{ id: string; message: string; type: 'success' | 'warning' | 'error' }>
+  >([]);
+
+  const notify = (msg: string, type: 'success' | 'warning' | 'error') => {
+    if (onNotify) {
+      onNotify(msg, type);
+    } else {
+      const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      setLocalToasts((prev) => [...prev, { id, message: msg, type }]);
+      setTimeout(() => {
+        setLocalToasts((prev) => prev.filter((t) => t.id !== id));
+      }, 4000);
+    }
+  };
+
   const [imgError, setImgError] = useState(false);
 
-  const avatarUrl = user?.avatarUrl || user?.avatarThumbnailUrl;
-  const hasAvatar = !!avatarUrl && !imgError;
+  /**
+   * avatarDisplayUrl is derived from the current user prop, with a cache-busting param
+   * injected after any successful upload or delete (via a local version counter).
+   * This ensures the browser always fetches the latest image after changes.
+   */
+  const [avatarVersion, setAvatarVersion] = useState(0);
+  const rawAvatarUrl = user?.avatarUrl || user?.avatarThumbnailUrl;
+  const avatarDisplayUrl = rawAvatarUrl
+    ? `${rawAvatarUrl}${rawAvatarUrl.includes('?') ? '&' : '?'}v=${avatarVersion}`
+    : null;
+  const hasAvatar = !!rawAvatarUrl && !imgError;
 
-  // Reset imgError if avatarUrl changes
+  // Reset imgError whenever the underlying avatar URL changes
   useEffect(() => {
     setImgError(false);
-  }, [avatarUrl]);
+  }, [rawAvatarUrl]);
 
   // Clean up object URL when component unmounts
   useEffect(() => {
@@ -60,21 +85,6 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     };
   }, [previewUrl]);
 
-  // Auto-dismiss toasts
-  useEffect(() => {
-    if (toastMessage) {
-      const timer = setTimeout(() => setToastMessage(null), 4500);
-      return () => clearTimeout(timer);
-    }
-  }, [toastMessage]);
-
-  useEffect(() => {
-    if (toastError) {
-      const timer = setTimeout(() => setToastError(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [toastError]);
-
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
@@ -83,12 +93,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Reset input value so user can re-select the same file if needed
+    // Reset input value so user can re-select the same file if needed (AV-13)
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
 
-    // A. Validate file type: Only accept JPG or PNG
+    // A. Validate file type: Only accept JPG or PNG (AV-14)
     const validMimes = ['image/jpeg', 'image/jpg', 'image/png'];
     const fileName = file.name.toLowerCase();
     const isJpegExt = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg');
@@ -96,14 +106,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     const isMimeValid = validMimes.includes(file.type.toLowerCase());
 
     if (!isMimeValid && !isJpegExt && !isPngExt) {
-      setToastError('Chỉ chấp nhận ảnh JPG hoặc PNG.');
+      notify('Chỉ chấp nhận ảnh JPG hoặc PNG.', 'error');
       return;
     }
 
-    // B. Validate file size: Maximum 2MB
+    // B. Validate file size: Maximum 2MB (AV-14)
     const MAX_SIZE = 2 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      setToastError('Ảnh đại diện không được vượt quá 2MB.');
+      notify('Ảnh đại diện không được vượt quá 2MB.', 'error');
       return;
     }
 
@@ -138,6 +148,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     try {
       const res = await authApi.uploadAvatar(selectedFile);
 
+      // Step 1: Optimistically update AuthContext with the data from upload response
+      // This gives immediate feedback (AV-01, AV-02)
       if (updateUser) {
         if (res.user) {
           updateUser(res.user);
@@ -150,9 +162,29 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         }
       }
 
-      await refreshUser();
+      // Step 2: Bump the avatar version to force cache-busting on the img element
+      setAvatarVersion((v) => v + 1);
+
+      // Step 3: Confirm the update by fetching /api/auth/me from the server
+      // If this fails, we still show the optimistic state and warn the user (AV-09, AV-10)
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        // refreshUser failed (network error, token expired, etc.)
+        // We already applied the optimistic update, so the UI shows the new avatar,
+        // but we warn the user that the server state could not be confirmed.
+        notify(
+          'Ảnh đã được tải lên nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.',
+          'warning'
+        );
+        handleCloseModal();
+        return;
+      }
+
+      // Bump again after refreshUser so the freshly-fetched URL also gets a new cache-buster
+      setAvatarVersion((v) => v + 1);
+
       handleCloseModal();
-      setToastMessage('Cập nhật ảnh đại diện thành công.');
+      notify('Cập nhật ảnh đại diện thành công.', 'success');
     } catch (err: any) {
       const status = err.response?.status;
       if (status === 403) {
@@ -173,6 +205,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     try {
       await authApi.deleteAvatar();
 
+      // Step 1: Optimistically clear avatar in AuthContext (AV-03, AV-04)
       if (user && updateUser) {
         updateUser({
           ...user,
@@ -181,18 +214,30 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         });
       }
 
-      await refreshUser();
+      // Step 2: Confirm deletion by fetching /api/auth/me (AV-08)
+      const refreshed = await refreshUser();
+      if (!refreshed) {
+        // Server confirmation failed, but optimistic update already cleared the avatar UI.
+        // Warn the user.
+        notify(
+          'Ảnh đã được xóa nhưng không thể xác nhận trạng thái từ máy chủ. Vui lòng tải lại trang.',
+          'warning'
+        );
+        setIsDeleteModalOpen(false);
+        return;
+      }
+
       setIsDeleteModalOpen(false);
-      setToastMessage('Đã xóa ảnh đại diện.');
+      notify('Đã xóa ảnh đại diện.', 'success');
     } catch (err: any) {
       const status = err.response?.status;
       if (status === 403) {
-        setToastError('Bạn không có quyền xóa ảnh đại diện.');
+        notify('Bạn không có quyền xóa ảnh đại diện.', 'error');
       } else {
         const msg =
           err.response?.data?.message ||
           'Không thể xóa ảnh đại diện. Vui lòng thử lại sau.';
-        setToastError(msg);
+        notify(msg, 'error');
       }
     } finally {
       setIsDeleting(false);
@@ -207,34 +252,34 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   return (
     <section className="profile-summary-header" aria-label="Thông tin hồ sơ quản trị viên">
-      {/* Toast notifications */}
-      {toastMessage && (
-        <div className="profile-header-toast success" role="status">
-          <Check size={16} />
-          <span>{toastMessage}</span>
-          <button
-            type="button"
-            className="toast-close-btn"
-            onClick={() => setToastMessage(null)}
-            aria-label="Đóng thông báo"
-          >
-            <X size={14} />
-          </button>
-        </div>
-      )}
-
-      {toastError && (
-        <div className="profile-header-toast error" role="alert">
-          <AlertCircle size={16} />
-          <span>{toastError}</span>
-          <button
-            type="button"
-            className="toast-close-btn"
-            onClick={() => setToastError(null)}
-            aria-label="Đóng thông báo"
-          >
-            <X size={14} />
-          </button>
+      {/*
+        When onNotify is provided (e.g. within ProfilePage), toast notifications are handled centrally
+        by the page-level toast container to prevent duplicate containers or overlapping notifications.
+        When rendered standalone (e.g. isolated component unit tests), we render this local fallback container.
+      */}
+      {!onNotify && localToasts.length > 0 && (
+        <div className="profile-toast-container" aria-live="polite">
+          {localToasts.map((t) => (
+            <div
+              key={t.id}
+              className={`profile-header-toast ${t.type}`}
+              role={t.type === 'error' ? 'alert' : 'status'}
+              data-testid={`toast-${t.type}`}
+            >
+              {t.type === 'success' && <Check size={16} />}
+              {t.type === 'warning' && <AlertTriangle size={16} />}
+              {t.type === 'error' && <AlertCircle size={16} />}
+              <span>{t.message}</span>
+              <button
+                type="button"
+                className="toast-close-btn"
+                onClick={() => setLocalToasts((prev) => prev.filter((item) => item.id !== t.id))}
+                aria-label="Đóng thông báo"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -250,12 +295,12 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       />
 
       <div className="profile-header-main">
-        {/* Avatar with Status Indicator and Actions */}
+        {/* Avatar column: avatar circle + status dot + delete button */}
         <div className="profile-header-avatar-col">
           <div className="profile-header-avatar-box">
             <div
               className="profile-header-avatar"
-              aria-label="Ảnh đại diện"
+              aria-label="Ảnh đại diện — Nhấn để đổi ảnh"
               role="button"
               tabIndex={0}
               onClick={triggerFileInput}
@@ -270,7 +315,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             >
               {hasAvatar ? (
                 <img
-                  src={avatarUrl}
+                  src={avatarDisplayUrl!}
                   alt={displayName}
                   className="profile-header-avatar-img"
                   onError={() => setImgError(true)}
@@ -303,7 +348,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             />
           </div>
 
-          {/* Delete avatar button if user currently has an avatar */}
+          {/* Delete avatar button — only visible when user currently has an avatar (AV-04) */}
           {hasAvatar && (
             <button
               type="button"
@@ -339,13 +384,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
       </div>
 
-      {/* Action: Secondary Change Password Button */}
+      {/* Action: Change Password button — fixed position at the right side (AV-11) */}
       <div className="profile-header-actions">
         <button
           type="button"
           className="btn btn-secondary profile-btn-change-password"
           onClick={onOpenPasswordModal}
           title="Đổi mật khẩu tài khoản"
+          data-testid="change-password-btn"
         >
           <span>Đổi mật khẩu</span>
         </button>

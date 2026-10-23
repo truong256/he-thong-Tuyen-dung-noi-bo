@@ -7,7 +7,6 @@ import com.example.auth_service.dto.*;
 import com.example.auth_service.exception.BadRequestException;
 import com.example.auth_service.exception.ConflictException;
 import com.example.auth_service.exception.ResourceNotFoundException;
-import com.example.auth_service.repository.CompetencyCriterionRepository;
 import com.example.auth_service.repository.CompetencyFrameworkRepository;
 import com.example.auth_service.repository.InterviewQuestionRepository;
 import com.example.auth_service.repository.JobTitleRepository;
@@ -25,7 +24,6 @@ import java.util.stream.Collectors;
 public class CompetencyFrameworkServiceImpl implements CompetencyFrameworkService {
 
     private final CompetencyFrameworkRepository competencyFrameworkRepository;
-    private final CompetencyCriterionRepository competencyCriterionRepository;
     private final JobTitleRepository jobTitleRepository;
     private final InterviewQuestionRepository interviewQuestionRepository;
 
@@ -88,10 +86,10 @@ public class CompetencyFrameworkServiceImpl implements CompetencyFrameworkServic
         // In-place update for criteria to preserve existing criterion IDs (required for S2-07 interview questions)
         Map<Long, CompetencyCriterion> existingMap = framework.getCriteria().stream()
                 .filter(c -> c.getId() != null)
-                .collect(Collectors.toMap(CompetencyCriterion::getId, Function.identity()));
+                .collect(Collectors.toMap(c -> c.getId(), Function.identity()));
 
         Set<Long> requestedIds = request.criteria().stream()
-                .map(CompetencyCriterionRequest::id)
+                .map(r -> r.id())
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
