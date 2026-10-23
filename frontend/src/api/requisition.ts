@@ -116,7 +116,6 @@ function mapFromBackendResponse(item: any): Requisition {
 
   return {
     ...item,
- feature/scrum-128-129-clone-recruitment-request
     salaryMin: minSal,
     minSalary: minSal,
     proposedMinSalary: minSal,
@@ -127,17 +126,34 @@ function mapFromBackendResponse(item: any): Requisition {
     neededDate: tDate,
     candidateRequirements: reqs,
     requirements: reqs,
-
-    proposedMinSalary: item.salaryMin !== undefined ? item.salaryMin : item.proposedMinSalary,
-    proposedMaxSalary: item.salaryMax !== undefined ? item.salaryMax : item.proposedMaxSalary,
-    targetDate: item.neededDate || item.targetDate,
-    neededDate: item.neededDate || item.targetDate,
-    requirements: item.candidateRequirements || item.requirements,
-    candidateRequirements: item.candidateRequirements || item.requirements,
     recruitmentType: item.recruitmentType || item.reason,
     reason: item.reason,
-dev
   };
+}
+
+export function extractApiErrorMessage(err: any, fallbackMessage: string = 'Đã xảy ra lỗi trong quá trình xử lý.'): string {
+  if (!err) return fallbackMessage;
+  const data = err.response?.data;
+  if (data) {
+    if (data.validationErrors && typeof data.validationErrors === 'object') {
+      const details = Object.entries(data.validationErrors)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join('; ');
+      if (details) {
+        return data.message ? `${data.message} (${details})` : details;
+      }
+    }
+    if (data.message && typeof data.message === 'string') {
+      return data.message;
+    }
+    if (data.error && typeof data.error === 'string') {
+      return data.error;
+    }
+  }
+  if (err.message && typeof err.message === 'string') {
+    return err.message;
+  }
+  return fallbackMessage;
 }
 
 export const requisitionApi = {
@@ -246,14 +262,9 @@ export const requisitionApi = {
     return {
       ...item,
       salaryMin: minSal,
- feature/scrum-128-129-clone-recruitment-request
       minSalary: minSal,
       proposedMinSalary: minSal,
       salaryMax: maxSal,
-
-      proposedMinSalary: minSal,
-      salaryMax: maxSal,
- dev
       proposedMaxSalary: maxSal,
       targetDate: tDate,
       neededDate: tDate,
@@ -261,34 +272,6 @@ export const requisitionApi = {
       requirements: reqs,
     };
   },
-feature/scrum-128-129-clone-recruitment-request
-};
-
-export function extractApiErrorMessage(err: any, fallbackMessage: string = 'Đã xảy ra lỗi trong quá trình xử lý.'): string {
-  if (!err) return fallbackMessage;
-  const data = err.response?.data;
-  if (data) {
-    if (data.validationErrors && typeof data.validationErrors === 'object') {
-      const details = Object.entries(data.validationErrors)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join('; ');
-      if (details) {
-        return data.message ? `${data.message} (${details})` : details;
-      }
-    }
-    if (data.message && typeof data.message === 'string') {
-      return data.message;
-    }
-    if (data.error && typeof data.error === 'string') {
-      return data.error;
-    }
-  }
-  if (err.message && typeof err.message === 'string') {
-    return err.message;
-  }
-  return fallbackMessage;
-}
-
 
   getApprovalTimeline: async (id: number) => {
     const res = await client.get<any>(`/api/requisitions/${id}/timeline`);
@@ -368,7 +351,5 @@ export function extractApiErrorMessage(err: any, fallbackMessage: string = 'Đã
     return res.data;
   },
 };
-
- dev
 
 export default requisitionApi;

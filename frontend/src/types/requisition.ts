@@ -11,24 +11,16 @@ export interface Requisition {
   quantity: number;
   targetDate?: string;
   neededDate?: string;
- feature/scrum-128-129-clone-recruitment-request
-  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-  reason: 'REPLACEMENT' | 'NEW_HEADCOUNT';
-
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'ON_HOLD' | 'CLOSED' | 'OPEN' | string;
   rejectionReason?: string;
   reason?: string;
   recruitmentType?: 'REPLACEMENT' | 'NEW_HEADCOUNT' | string;
- dev
   proposedMinSalary?: number;
   proposedMaxSalary?: number;
   salaryMin?: number;
   salaryMax?: number;
- feature/scrum-128-129-clone-recruitment-request
   minSalary?: number;
   maxSalary?: number;
-
- dev
   salaryExplanation?: string;
   jobDescription?: string;
   requirements?: string;
@@ -135,4 +127,3 @@ export interface AssignRecruiterPayload {
   reason?: string;
   notes?: string;
 }
-
